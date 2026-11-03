@@ -20,6 +20,7 @@ const PORT = process.env.PORT || 3000;
 const TURN_TIMEOUT_MS = 30000;    // a stalled human seat is played by a bot
 const BOT_DELAY_MS = 750;         // bot "thinking" delay (watchable pace)
 const ROUND_PAUSE_MS = 6000;      // round-summary pause before next round
+const TRICK_PAUSE_MS = 1600;      // completed trick stays on the table before it is collected
 const RECONNECT_GRACE_MS = 120000; // seat+hand kept for a reconnecting player
 
 const INDEX_HTML = fs.readFileSync(path.join(__dirname, 'index.html'));
@@ -59,6 +60,8 @@ function createRoom() {
     match: null,
     turnTimer: null,
     roundTimer: null,
+    trickTimer: null,
+    trickHold: null, // { plays: [{seat, card}...], winnerSeat } while a finished trick is displayed
   };
   room.emit = (evt) => onMatchEvent(room, evt);
   rooms.set(room.code, room);
@@ -95,7 +98,10 @@ function stateFor(room, seatIdx) {
       cards: round ? round.hands[i].length : 0,
     })),
     hand: round ? round.hands[seatIdx].slice() : [],
-    trick: round ? round.trick.map((p) => ({ seat: p.seat, card: p.card })) : [],
+    trick: room.trickHold
+      ? room.trickHold.plays.map((p) => ({ seat: p.seat, card: p.card }))
+      : round ? round.trick.map((p) => ({ seat: p.seat, card: p.card })) : [],
+    trickWinner: room.trickHold ? room.trickHold.winnerSeat : null,
     turn: round && !round.finished ? round.turn : null,
     legal: round ? round.legalMovesFor(seatIdx) : [],
     scores: room.match ? room.match.scores.slice() : [0, 0],
@@ -140,10 +146,33 @@ function onMatchEvent(room, evt) {
 function doPlay(room, seat, card) {
   const round = room.match && room.match.round;
   if (!round) return false;
+  if (room.trickHold) return false; // finished trick still on display — plays wait for the pause
+  const tricksBefore = round.tricksPlayed;
+  const trickBefore = round.trick.slice();
   try {
     round.play(seat, card);
   } catch (e) {
     return false; // illegal — caller decides how to complain
+  }
+  if (round.tricksPlayed > tricksBefore) {
+    // Trick just completed. Rules-wise it is already scored and collected in
+    // game.js; presentation-wise we hold all 4 cards on the table for
+    // TRICK_PAUSE_MS so everyone can see the last card and who won, and only
+    // then show the empty table and arm the winner's lead.
+    room.trickHold = {
+      plays: trickBefore.concat([{ seat, card }]),
+      winnerSeat: round.turn, // play() leaves turn on the trick winner
+    };
+    clearTimeout(room.turnTimer);
+    broadcastState(room);
+    clearTimeout(room.trickTimer);
+    room.trickTimer = setTimeout(() => {
+      room.trickHold = null;
+      if (!rooms.has(room.code)) return;
+      broadcastState(room);
+      pumpTurn(room);
+    }, TRICK_PAUSE_MS);
+    return true;
   }
   broadcastState(room);
   pumpTurn(room);
@@ -161,6 +190,7 @@ function botPlay(room, seat) {
 /** (Re)arm the action for whoever is on turn: bot → quick, human → 30 s. */
 function pumpTurn(room) {
   clearTimeout(room.turnTimer);
+  if (room.trickHold) return; // the trick-pause timer re-arms the turn when it fires
   if (room.phase !== 'playing' || !room.match || !room.match.round) return;
   const round = room.match.round;
   if (round.finished) return;
@@ -171,6 +201,8 @@ function pumpTurn(room) {
 }
 
 function startMatch(room) {
+  clearTimeout(room.trickTimer);
+  room.trickHold = null;
   const botDigits = ['۱', '۲', '۳'];
   let botNo = 0;
   room.seats.forEach((s) => {
@@ -241,6 +273,7 @@ setInterval(() => {
     if (!anyHuman) {
       clearTimeout(room.turnTimer);
       clearTimeout(room.roundTimer);
+      clearTimeout(room.trickTimer);
       rooms.delete(room.code);
     }
   }
@@ -301,6 +334,7 @@ function handleMessage(ws, msg) {
     case 'play': {
       const room = rooms.get(ws._roomCode);
       if (!room || room.phase !== 'playing') return;
+      if (room.trickHold) { send(ws, stateFor(room, ws._seat)); return; } // trick on display — resync silently, no error
       if (!doPlay(room, ws._seat, String(msg.card || ''))) {
         // Illegal move: explain in Dari and resync the client.
         const round = room.match.round;

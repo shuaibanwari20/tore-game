@@ -118,6 +118,13 @@
   .trick .slot[data-pos="right"] .pcard { transform: rotate(7deg); }
   .trick .slot[data-pos="left"] .pcard { transform: rotate(-7deg); }
   .trick .slot.win .pcard { box-shadow: 0 0 0 3px #ffd75e, 0 0 22px 4px rgba(255,215,94,.75), 0 6px 14px rgba(0,0,0,.5); }
+  /* completed trick: the WINNING card pops hard while the trick rests on the table */
+  .trick .slot.winlast { z-index: 5; }
+  .trick .slot.winlast .pcard { box-shadow: 0 0 0 4px #ffd75e, 0 0 38px 12px rgba(255,215,94,.95), 0 8px 18px rgba(0,0,0,.55); }
+  .trick .slot.winlast[data-pos="bottom"] .pcard { transform: rotate(-5deg) scale(1.06); }
+  .trick .slot.winlast[data-pos="top"] .pcard { transform: rotate(4deg) scale(1.06); }
+  .trick .slot.winlast[data-pos="right"] .pcard { transform: rotate(7deg) scale(1.06); }
+  .trick .slot.winlast[data-pos="left"] .pcard { transform: rotate(-7deg) scale(1.06); }
 
   /* ---------- cards (real Byron Knoll deck faces, inlined data URIs) ---------- */
   .pcard {
@@ -152,7 +159,7 @@
   .hand .pcard.dragging { transition: none; box-shadow: 0 14px 22px rgba(0,0,0,.55); }
   .hand .pcard:first-child { margin-inline-start: 0; }
   .hand .pcard.playable { transform: rotate(var(--rot, 0deg)) translateY(-7px); box-shadow: 0 0 0 2px #ffd75e, 0 10px 16px rgba(0,0,0,.5); }
-  .hand .pcard.dim { opacity: .55; }
+  .hand .pcard.dimhard { opacity: .32; filter: saturate(.35) brightness(.8); }
   .hand .pcard:active { transform: rotate(var(--rot, 0deg)) translateY(-9px); }
 
   /* ---------- lobby ---------- */
@@ -576,6 +583,11 @@ function render(st) {
     });
   }
 
+  // a COMPLETE trick (4 cards, resting during the server's trick pause):
+  // its winner gets the strong 'winlast' highlight so the last play is clear
+  const trickComplete = st.trick.length === 4;
+  const finalWinSeat = trickComplete ? (st.trickWinner != null ? st.trickWinner : winSeat) : null;
+
   // seats: partner in the top bar, side players in vertical bars
   st.seats.forEach((s, i) => {
     const pos = relPos(i);
@@ -607,7 +619,7 @@ function render(st) {
     const key = p.seat + ':' + p.card;
     newKeys.add(key);
     const slot = document.createElement('div');
-    slot.className = 'slot' + (p.seat === winSeat ? ' win' : '');
+    slot.className = 'slot' + (p.seat === winSeat ? ' win' : '') + (p.seat === finalWinSeat ? ' winlast' : '');
     slot.dataset.pos = pos;
     const cel = cardEl(p.card);
     slot.appendChild(cel);
@@ -642,9 +654,16 @@ function render(st) {
   const sorted = st.hand.slice().sort((a, b) =>
     (SUIT_ORDER[suitOf(a)] - SUIT_ORDER[suitOf(b)]) || (RANK_VAL[a.slice(0, -1)] - RANK_VAL[b.slice(0, -1)]));
   const legal = new Set(st.legal || []);
+  const myTurn = st.phase === 'playing' && st.turn === mySeat;
+  // A suit was led (first card of the trick) and I hold that suit: the led-suit
+  // cards pop at full opacity (playable class); every OTHER card in my hand is
+  // dimmed HARD so the follow-suit choice reads instantly. Leading, free play
+  // (no led suit in hand) and waiting for my turn render the hand normally.
+  const ledSuit = st.trick.length ? suitOf(st.trick[0].card) : null;
+  const mustFollow = myTurn && ledSuit !== null && st.hand.some((c) => suitOf(c) === ledSuit);
   sorted.forEach((code, idx) => {
-    const playable = st.phase === 'playing' && st.turn === mySeat && legal.has(code);
-    const el = cardEl(code, playable ? 'playable' : (st.phase === 'playing' && st.turn === mySeat ? 'dim' : ''));
+    const playable = myTurn && legal.has(code);
+    const el = cardEl(code, playable ? 'playable' : (mustFollow ? 'dimhard' : ''));
     el.dataset.code = code;
     el.style.setProperty('--rot', ((idx - (sorted.length - 1) / 2) * FAN_ROT_STEP).toFixed(1) + 'deg'); // arc fan
     el.style.zIndex = idx + 1; // each card overlaps the previous one, rightmost on top
