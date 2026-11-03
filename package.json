@@ -1,0 +1,1 @@
+{"dependencies":{"ws":"^8.22.1"},"description":"TORE (توره) — online 4-player Kandahari card game","license":"ISC","name":"tore-game","scripts":{"sim":"node sim.js","start":"node server.js"},"version":"1.0.0"}
