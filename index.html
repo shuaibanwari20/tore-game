@@ -16,11 +16,11 @@
 -->
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; padding: 0; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
   body {
     font-family: system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
     background: radial-gradient(ellipse at top, #1d6a3c 0%, #0d3b21 70%, #082a17 100%);
-    color: #f5f2e8; min-height: 100vh; min-height: 100dvh;
+    color: #f5f2e8; height: 100vh; height: 100dvh;
     display: flex; flex-direction: column; align-items: center;
   }
   .wrap { width: 100%; max-width: 520px; padding: 10px 12px 18px; margin: 0 auto; }
@@ -49,9 +49,9 @@
 
   /* ---------- game screen: Afghan carpet ---------- */
   #scr-game {
-    border-radius: 18px; padding: 10px;
-    border: 3px solid #6e451f;
-    box-shadow: inset 0 0 46px rgba(59,32,8,.45), 0 4px 14px rgba(0,0,0,.35);
+    position: fixed; inset: 0; height: 100dvh; z-index: 10;
+    display: flex; flex-direction: column; overflow: hidden;
+    padding: 10px;
     background-color: #a97e4f; /* warm brown fallback while the carpet photo loads */
     background-image:
       linear-gradient(rgba(96,58,16,.10), rgba(64,36,8,.22)),
@@ -87,7 +87,7 @@
   .dot.on { background: #4ade80; }
 
   /* ---------- table (carpet shows through) ---------- */
-  .table { position: relative; height: 322px; margin: 2px 0 0; }
+  .table { position: relative; flex: 1 1 auto; min-height: 170px; margin: 2px 0 0; }
   .table .seat[data-pos="bottom"] { display: none; }
   .vbar {
     position: absolute; top: 50%; transform: translateY(-50%);
@@ -132,12 +132,12 @@
     box-shadow: 0 1px 4px rgba(0,0,0,.45); flex: 0 0 auto;
   }
   .vbar .backmini { width: 24px; }
-  .pcard .badge {
-    position: absolute; top: -7px; inset-inline-start: -6px; background: #ffb703; color: #3a2a00;
-    font-size: 10.5px; font-weight: 800; border-radius: 999px; padding: 1px 6px;
-    border: 1px solid #a86e00; box-shadow: 0 1px 4px rgba(0,0,0,.4); z-index: 7;
-  }
   .trick .pcard { width: 76px; height: 106px; }
+
+  /* ---------- card flight (throw animation) ---------- */
+  .flycard { position: fixed; z-index: 80; margin: 0; pointer-events: none; }
+  @keyframes flyin { from { opacity: .2; } to { opacity: 1; } }
+  .trick .pcard.flyin { animation: flyin .3s ease-out; }
 
   /* ---------- my hand (arc fan) + turn pill ---------- */
   .status {
@@ -147,12 +147,9 @@
     box-shadow: 0 3px 10px rgba(0,0,0,.35);
   }
   .hand { display: flex; direction: ltr; justify-content: center; align-items: flex-start; padding: 30px 6px 12px; overflow: visible; --cw: 74px; --step: 26px; margin-top: -6px; margin-inline-start: -10px; margin-inline-end: -10px; }
-  .hand .pcard { width: var(--cw); height: calc(var(--cw) * 1.4); margin-inline-start: calc(var(--step) - var(--cw)); cursor: pointer; transition: transform .12s; flex: 0 0 auto; transform: rotate(var(--rot, 0deg)); transform-origin: 50% 200%; border-radius: calc(var(--cw) * .12); }
+  .hand .pcard { width: var(--cw); height: calc(var(--cw) * 1.4); margin-inline-start: calc(var(--step) - var(--cw)); cursor: pointer; transition: transform .12s; flex: 0 0 auto; transform: rotate(var(--rot, 0deg)); transform-origin: 50% 200%; border-radius: calc(var(--cw) * .12); touch-action: none; }
   .hand .pcard img.face { border-radius: calc(var(--cw) * .12); }
-  /* تاوان chip: compact gold numeral disc inside the card's visible left wedge,
-     below the corner index — never collides with the next card or its chip. */
-  .hand .pcard .badge { top: 29%; inset-inline-start: 2px; width: 20px; height: 20px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12.5px; line-height: 1; }
-  .hand .pcard .badge .bw { display: none; }
+  .hand .pcard.dragging { transition: none; box-shadow: 0 14px 22px rgba(0,0,0,.55); }
   .hand .pcard:first-child { margin-inline-start: 0; }
   .hand .pcard.playable { transform: rotate(var(--rot, 0deg)) translateY(-7px); box-shadow: 0 0 0 2px #ffd75e, 0 10px 16px rgba(0,0,0,.5); }
   .hand .pcard.dim { opacity: .55; }
@@ -190,13 +187,13 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>🃏 توره</h1>
-  <div class="sub">بازی ورق چهارنفرهٔ قندهاری — تیمی، تا ۲۱۰</div>
   <div id="connbar"></div>
 
   <!-- ======== HOME ======== -->
   <section id="scr-home">
     <div class="cardbox">
+      <h1>🃏 توره</h1>
+      <div class="sub">بازی ورق چهارنفرهٔ قندهاری — تیمی، تا ۲۱۰</div>
       <label for="inp-name">نامت</label>
       <input id="inp-name" type="text" maxlength="20" placeholder="مثلاً احمد" autocomplete="name">
       <button id="btn-create">ساختن اتاق تازه</button>
@@ -313,13 +310,6 @@ function cardEl(code, extraClass) {
   img.alt = cardTitle(code);
   img.draggable = false;
   d.appendChild(img);
-  const pts = cardPoints(code);
-  if (pts) {
-    const b = document.createElement('div');
-    b.className = 'badge';
-    b.innerHTML = faNum(pts) + '<span class="bw"> تاوان</span>';
-    d.appendChild(b);
-  }
   return d;
 }
 let toastTimer = null;
@@ -432,6 +422,127 @@ function fitHand() {
 }
 window.addEventListener('resize', fitHand);
 
+// ---------- card flight + swipe-to-play ----------
+// When a card is played it must visibly FLY to the center trick:
+//  - local player: a fixed-position clone flies from the hand card (tap point
+//    or drag-release point) to the bottom trick slot, then the play is sent.
+//  - remote players / bots: when their card newly appears in the trick during
+//    render, it FLIPs in from their seat bar (top / left / right).
+const SLOT_ROT = { bottom: -5, top: 4, right: 7, left: -7 }; // must match .trick CSS
+let prevTrickKeys = new Set();   // "seat:card" keys present in the trick at last render
+const flownKeys = new Set();     // local plays whose flight the clone already showed
+
+function measureSlotRect(pos) {
+  const trickEl = $('#trick');
+  if (!trickEl) return null;
+  const slot = document.createElement('div');
+  slot.className = 'slot';
+  slot.dataset.pos = pos;
+  const probe = document.createElement('div');
+  probe.className = 'pcard';
+  probe.style.visibility = 'hidden';
+  slot.appendChild(probe);
+  trickEl.appendChild(slot);
+  const r = probe.getBoundingClientRect();
+  trickEl.removeChild(slot);
+  return r.width ? { left: r.left, top: r.top, width: r.width, height: r.height } : null;
+}
+
+function flyClone(code, fromRect) {
+  if (!fromRect || !fromRect.width) return;
+  const target = measureSlotRect('bottom');
+  const el = cardEl(code);
+  el.classList.add('flycard');
+  el.style.left = fromRect.left + 'px';
+  el.style.top = fromRect.top + 'px';
+  el.style.width = fromRect.width + 'px';
+  el.style.height = fromRect.height + 'px';
+  document.body.appendChild(el);
+  if (target) {
+    const dx = (target.left + target.width / 2) - (fromRect.left + fromRect.width / 2);
+    const dy = (target.top + target.height / 2) - (fromRect.top + fromRect.height / 2);
+    const s = target.width / fromRect.width;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      el.style.transition = 'transform .38s cubic-bezier(.22,.68,.31,1)';
+      el.style.transform = 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) rotate(' + SLOT_ROT.bottom + 'deg) scale(' + s.toFixed(3) + ')';
+    }));
+  }
+  setTimeout(() => el.remove(), 450);
+}
+
+function animateCardIn(el, fromRect, rotDeg) {
+  const t = el.getBoundingClientRect();
+  if (!t.width || !fromRect || !fromRect.width) { el.classList.add('flyin'); return; }
+  const dx = (fromRect.left + fromRect.width / 2) - (t.left + t.width / 2);
+  const dy = (fromRect.top + fromRect.height / 2) - (t.top + t.height / 2);
+  const s = Math.max(0.3, Math.min(1, fromRect.width / t.width));
+  el.style.transition = 'none';
+  el.style.transform = 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) rotate(' + rotDeg + 'deg) scale(' + s.toFixed(3) + ')';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.style.transition = 'transform .38s cubic-bezier(.22,.68,.31,1)';
+    el.style.transform = 'rotate(' + rotDeg + 'deg)';
+    setTimeout(() => { el.style.transition = ''; el.style.transform = ''; }, 430);
+  }));
+}
+
+function seatFromRect(seat) {
+  const el = $('#seat-' + relPos(seat));
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  if (!r.width) return null;
+  const w = 46, h = 64; // fly in from a card-sized point at the seat's center
+  return { left: r.left + r.width / 2 - w / 2, top: r.top + r.height / 2 - h / 2, width: w, height: h };
+}
+
+function playCard(code, fromRect) {
+  flownKeys.add(mySeat + ':' + code);
+  flyClone(code, fromRect);
+  send({ type: 'play', card: code });
+}
+
+// Tap = play. Drag up ≥50px and release = play (flight starts at the release
+// point). Release anywhere else = the card springs back into the fan.
+function attachPlayHandlers(el, code) {
+  let drag = null;
+  el.addEventListener('pointerdown', (e) => {
+    drag = { x: e.clientX, y: e.clientY, moved: false, z: el.style.zIndex };
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+      drag.moved = true;
+      el.classList.add('dragging');
+      el.style.zIndex = 60;
+      el.style.transform = 'translate(' + (dx * 0.4).toFixed(0) + 'px,' + dy.toFixed(0) + 'px) rotate(0deg)';
+    }
+  });
+  const finish = (e, commit) => {
+    if (!drag) return;
+    const dy = e.clientY - drag.y;
+    const wasDrag = drag.moved, z = drag.z;
+    drag = null;
+    el.classList.remove('dragging');
+    if (commit && (dy <= -50 || !wasDrag)) {
+      el.style.opacity = '0'; // the flying clone takes over from here
+      playCard(code, el.getBoundingClientRect());
+    } else {
+      el.style.transition = 'transform .25s ease';
+      el.style.transform = '';
+      setTimeout(() => { el.style.transition = ''; el.style.zIndex = z; }, 270);
+    }
+  };
+  el.addEventListener('pointerup', (e) => finish(e, true));
+  el.addEventListener('pointercancel', (e) => finish(e, false));
+}
+
+// the game screen must never scroll or rubber-band
+document.addEventListener('touchmove', (e) => {
+  if (!$('#scr-game').classList.contains('hidden')) e.preventDefault();
+}, { passive: false });
+
 // ---------- rendering ----------
 function show(id) {
   ['scr-home', 'scr-lobby', 'scr-game'].forEach((s) => $('#' + s).classList.toggle('hidden', s !== id));
@@ -486,20 +597,34 @@ function render(st) {
     }
   });
 
-  // center trick
+  // center trick — cards that are new since the last render fly in
   const trickEl = $('#trick');
   trickEl.innerHTML = '';
+  const newKeys = new Set();
+  const arrivals = [];
   st.trick.forEach((p) => {
+    const pos = relPos(p.seat);
+    const key = p.seat + ':' + p.card;
+    newKeys.add(key);
     const slot = document.createElement('div');
     slot.className = 'slot' + (p.seat === winSeat ? ' win' : '');
-    slot.dataset.pos = relPos(p.seat);
-    slot.appendChild(cardEl(p.card));
+    slot.dataset.pos = pos;
+    const cel = cardEl(p.card);
+    slot.appendChild(cel);
     const who = document.createElement('div');
     who.className = 'who';
     who.textContent = st.seats[p.seat].name;
     slot.appendChild(who);
     trickEl.appendChild(slot);
+    if (!prevTrickKeys.has(key)) arrivals.push({ el: cel, seat: p.seat, pos, key });
   });
+  arrivals.forEach((a) => {
+    if (flownKeys.has(a.key)) { flownKeys.delete(a.key); return; } // clone already flew it
+    animateCardIn(a.el, seatFromRect(a.seat), SLOT_ROT[a.pos]);
+  });
+  // drop stale flight suppressions (e.g. a play the server did not accept)
+  flownKeys.forEach((k) => { if (!newKeys.has(k)) flownKeys.delete(k); });
+  prevTrickKeys = newKeys;
 
   // status line
   const statusEl = $('#status');
@@ -520,9 +645,10 @@ function render(st) {
   sorted.forEach((code, idx) => {
     const playable = st.phase === 'playing' && st.turn === mySeat && legal.has(code);
     const el = cardEl(code, playable ? 'playable' : (st.phase === 'playing' && st.turn === mySeat ? 'dim' : ''));
+    el.dataset.code = code;
     el.style.setProperty('--rot', ((idx - (sorted.length - 1) / 2) * FAN_ROT_STEP).toFixed(1) + 'deg'); // arc fan
     el.style.zIndex = idx + 1; // each card overlaps the previous one, rightmost on top
-    if (playable) el.onclick = () => send({ type: 'play', card: code });
+    if (playable) attachPlayHandlers(el, code);
     handEl.appendChild(el);
   });
   fitHand();
