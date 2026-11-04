@@ -129,7 +129,7 @@
   /* collection flight: a collected trick's back is inserted with inline
      visibility:hidden while the flight travels into its slot, and
      settleCollect() unhides it in the frame the flip lands */
-  .collectfly { position: fixed; z-index: 86; margin: 0; pointer-events: none; will-change: transform; }
+  .pcard.collectfly { position: fixed; z-index: 86; margin: 0; pointer-events: none; will-change: transform; }
   /* the gathered stack that slides across the carpet with its faces up,
      then flips over into the row's newest back */
   .collectstack { position: fixed; z-index: 86; margin: 0; pointer-events: none; will-change: transform; }
@@ -680,6 +680,7 @@ function runCollectFlight(seat, col, rects, landing) {
   rects.forEach((r, idx) => {
     const el = cardEl(r.code);
     el.classList.add('collectfly');
+    el.style.position = 'fixed'; // belt-and-braces: .pcard's position:relative must never win
     el.style.left = r.rect.left + 'px';
     el.style.top = r.rect.top + 'px';
     el.style.width = r.rect.width + 'px';
@@ -688,7 +689,7 @@ function runCollectFlight(seat, col, rects, landing) {
     col.clones.push(el);
     try {
       el.animate([
-        { transform: 'rotate(' + SLOT_ROT[r.pos] + 'deg)' },
+        { transform: 'translate(0px, 0px) rotate(' + SLOT_ROT[r.pos] + 'deg)' },
         { transform: 'translate(' + (stackLeft + off(idx) - r.rect.left).toFixed(1) + 'px,' +
                       (stackTop + off(idx) - r.rect.top).toFixed(1) + 'px) rotate(0deg)' },
       ], { duration: GATHER_MS, easing: 'ease-out', fill: 'forwards' });
