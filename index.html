@@ -85,6 +85,43 @@
   .scorestrip .ss-mid { opacity: .85; font-size: 12px; white-space: nowrap; }
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #888; vertical-align: middle; }
   .dot.on { background: #4ade80; }
+  .tkstars { color: #ff3b30; font-size: 13px; letter-spacing: 1px; text-shadow: 0 0 6px rgba(255,59,48,.55); white-space: nowrap; }
+
+  /* ---------- takan banner + ۱۳ declaration ---------- */
+  #takanbanner {
+    position: fixed; top: 34%; left: 50%; z-index: 70; pointer-events: none;
+    transform: translate(-50%, -50%) scale(.6); opacity: 0;
+    font-size: 44px; font-weight: 900; color: #ffd75e; white-space: nowrap;
+    text-shadow: 0 0 18px rgba(255,59,48,.9), 0 4px 14px rgba(0,0,0,.7);
+  }
+  #takanbanner.show { animation: takanpop 1.9s ease-out forwards; }
+  @keyframes takanpop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); }
+    12% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+    22% { transform: translate(-50%, -50%) scale(1); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -56%) scale(1); }
+  }
+  #btn-13 {
+    width: auto; margin: 8px auto 0; display: block; padding: 11px 30px;
+    font-size: 19px; font-weight: 900; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(#e0342c, #9c1c14); color: #fff;
+    border: 2px solid #ffd75e; box-shadow: 0 4px 14px rgba(0,0,0,.5);
+  }
+  #btn-13:active { transform: scale(.97); }
+
+  /* ---------- won-trick piles (card backs only) ---------- */
+  .pile { display: inline-flex; align-items: center; gap: 5px; }
+  .pilestack { position: relative; width: 36px; height: 27px; flex: 0 0 auto; }
+  .pilestack img { position: absolute; top: 0; width: 19px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
+  .pilecount { font-size: 12.5px; font-weight: 800; color: #ffd75e; }
+  .vbar .pile { flex-direction: column; gap: 2px; }
+  .mypile {
+    position: absolute; bottom: 4px; inset-inline-end: 6px; z-index: 4;
+    display: none; align-items: center; gap: 6px;
+    background: rgba(26,16,5,.85); border: 1px solid rgba(217,179,128,.65);
+    border-radius: 999px; padding: 3px 10px 3px 4px; color: #f5e7c6; font-size: 12px;
+  }
 
   /* ---------- table (carpet shows through) ---------- */
   .table { position: relative; flex: 1 1 auto; min-height: 170px; margin: 2px 0 0; }
@@ -209,11 +246,14 @@
       <button id="btn-join" class="ghost">ورود به اتاق</button>
     </div>
     <div class="cardbox legend">
-      📜 <b>قانون امتیاز (تاوان):</b><br>
+      📜 <b>قانون امتیاز (تاوان = جریمه؛ کمتر بهتر است):</b><br>
       هر ورق <span class="red">♥</span> <b>لال</b> = ۱ تاوان (جمعاً ۱۳)<br>
       <b>غلام پشه</b> (J♣) = ۵ تاوان · <b>ماتکه کالا</b> (Q♠) = ۹ تاوان · <b>ده خشت</b> (10♦) = ۳ تاوان<br>
-      هر دست ۳۰ تاوان دارد؛ برندهٔ دست <b>۲۰</b> و بازنده <b>۱۰</b> می‌گیرد.<br>
-      مساوی ۱۵–۱۵؟ هر تیمی که <b>ماتکه کالا</b> را گرفته باشد، ۲۰ را می‌برد. مسابقه تا <b>۲۱۰</b> است.
+      هر دست ۳۰ تاوان دارد؛ تیمی که تاوانِ <b>کمتر</b> بگیرد <b>۲۰</b> و دیگری <b>۱۰</b> می‌گیرد.<br>
+      مساوی؟ تیمی که <b>ماتکه کالا</b> را <b>نگرفته</b> باشد، ۲۰ را می‌برد. مسابقه تا <b>۲۱۰</b> است.<br>
+      ⭐ <b>تکان:</b> خالی را شروع کنی که هیچ‌کس ندارد → <b>+۳۰ تاوان</b> و یک ستارهٔ قرمز برای تیمت!<br>
+      اگر فقط یک تیم تکان داشته باشد، <b>همهٔ تاوان دست به همان تیم می‌رسد</b>.<br>
+      🙋 دست آخر: اگر پیش از بازی بگویی <b>«۱۳ هست»</b>، تکان برایت حساب نمی‌شود.
     </div>
   </section>
 
@@ -235,9 +275,9 @@
       <button id="btn-leave" class="menubtn">منوی اصلی</button>
     </div>
     <div class="scorestrip">
-      <span>تیم ما <b id="sc-us">۰</b> <small>· تاوان: <span id="tw-us">۰</span></small></span>
+      <span>تیم ما <b id="sc-us">۰</b> <small>· تاوان: <span id="tw-us">۰</span></small> <span class="tkstars" id="tk-us"></span></span>
       <span class="ss-mid">دست <span id="round-no">۱</span> · هدف: ۲۱۰</span>
-      <span>تیم حریف <b id="sc-them">۰</b> <small>· تاوان: <span id="tw-them">۰</span></small></span>
+      <span>تیم حریف <b id="sc-them">۰</b> <small>· تاوان: <span id="tw-them">۰</span></small> <span class="tkstars" id="tk-them"></span></span>
     </div>
 
     <div class="table" id="table">
@@ -245,19 +285,25 @@
       <div class="seat vbar" data-pos="left"  id="seat-left"></div>
       <div class="seat" data-pos="bottom" id="seat-bottom"></div>
       <div class="trick" id="trick"></div>
+      <div class="mypile" id="mypile"></div>
     </div>
 
+    <button id="btn-13" class="hidden">🙋 ۱۳ هست!</button>
     <div class="hand" id="hand"></div>
     <div class="status" id="status"></div>
   </section>
 </div>
 
+<div id="takanbanner"></div>
+
 <!-- ======== ROUND END ======== -->
 <div class="overlay" id="ov-round">
   <div class="panel">
     <h2 id="ov-round-title">پایان دست</h2>
-    <div class="row"><span>تاوان تیم ما</span><b id="ov-tw-us">۰</b></div>
-    <div class="row"><span>تاوان تیم حریف</span><b id="ov-tw-them">۰</b></div>
+    <div class="row"><span>تاوان ورق‌ها</span><span><b id="ov-card-us">۰</b> · <b id="ov-card-them">۰</b></span></div>
+    <div class="row" id="ov-tk-row"><span>تکان ⭐</span><span><b id="ov-tk-us">—</b> · <b id="ov-tk-them">—</b></span></div>
+    <div class="row" id="ov-tr-row"><span>انتقال تکان</span><b id="ov-tr">—</b></div>
+    <div class="row big"><span>تاوان نهایی</span><span><b id="ov-tw-us">۰</b> · <b id="ov-tw-them">۰</b></span></div>
     <div class="row"><span>ماتکه کالا (Q♠) را گرفت</span><b id="ov-qs">—</b></div>
     <div class="row big"><span>امتیاز این دست</span><span><b id="ov-cr-us" style="color:#ffd75e">+۰</b> · <b id="ov-cr-them">+۰</b></span></div>
     <div class="row"><span>جمع مسابقه</span><b><span id="ov-sc-us">۰</span> — <span id="ov-sc-them">۰</span></b></div>
@@ -359,6 +405,10 @@ $('#btn-join').onclick = () => {
   connect(() => send({ type: 'join', code, name: myName() }));
 };
 $('#btn-start').onclick = () => send({ type: 'start' });
+$('#btn-13').onclick = () => {
+  send({ type: 'declare13' });
+  $('#btn-13').classList.add('hidden'); // until the confirming state arrives
+};
 $('#btn-newgame').onclick = () => {
   intentionalClose = true;
   localStorage.removeItem('tore.session');
@@ -380,6 +430,16 @@ function onMsg(msg) {
     state = msg;
     if (mySeat === null) mySeat = msg.mySeat;
     render(msg);
+  } else if (msg.type === 'takan') {
+    const mine = msg.team === (mySeat % 2);
+    const b = $('#takanbanner');
+    b.textContent = '⭐ تکان! ' + (mine ? 'تیم ما' : 'تیم حریف');
+    b.classList.remove('show');
+    void b.offsetWidth; // restart the pop animation
+    b.classList.add('show');
+  } else if (msg.type === 'declared13') {
+    const nm = state && state.seats[msg.seat] ? state.seats[msg.seat].name : 'بازیکن';
+    toast('🙋 ' + nm + ': ۱۳ هست!');
   } else if (msg.type === 'error') {
     toast(msg.message);
     if (msg.message.includes('نشست')) {
@@ -561,6 +621,18 @@ function teamLabel(team) {
   const myTeam = mySeat % 2;
   return team === myTeam ? 'تیم ما' : 'تیم حریف';
 }
+// Face-down won-trick pile for a seat: card BACKS only (never faces),
+// stacked with slight offsets, plus the trick count.
+function pileHTML(count) {
+  if (!count) return '';
+  let imgs = '';
+  const n = Math.min(count, 5);
+  for (let i = 0; i < n; i++) {
+    imgs += '<img src="' + CARD_IMGS.back + '" alt="" style="left:' + (i * 4) + 'px; z-index:' + i + '">';
+  }
+  return '<span class="pile"><span class="pilestack">' + imgs + '</span>' +
+    '<span class="pilecount">×' + faNum(count) + '</span></span>';
+}
 
 function render(st) {
   if (st.phase === 'lobby') { renderLobby(st); show('scr-lobby'); return; }
@@ -569,8 +641,11 @@ function render(st) {
 
   $('#sc-us').textContent = faNum(st.scores[myTeam]);
   $('#sc-them').textContent = faNum(st.scores[them]);
-  $('#tw-us').textContent = faNum(st.roundTawan[myTeam]);
-  $('#tw-them').textContent = faNum(st.roundTawan[them]);
+  const twTxt = (t) => faNum(st.roundTawan[t]) + (st.takanBonus[t] ? ' +' + faNum(st.takanBonus[t]) : '');
+  $('#tw-us').textContent = twTxt(myTeam);
+  $('#tw-them').textContent = twTxt(them);
+  $('#tk-us').textContent = st.takanCount[myTeam] ? '★'.repeat(st.takanCount[myTeam]) : '';
+  $('#tk-them').textContent = st.takanCount[them] ? '★'.repeat(st.takanCount[them]) : '';
   $('#round-no').textContent = faNum(st.roundNo || 1);
 
   // who is winning the current trick (drives the 👑 and the gold glow)
@@ -595,19 +670,28 @@ function render(st) {
     const isTurn = st.turn === i && st.phase === 'playing';
     el.classList.toggle('turn', isTurn);
     const crown = (winSeat === i && st.phase === 'playing') ? '👑 ' : '';
+    const pile = pileHTML(st.piles ? st.piles[i] : 0); // won tricks, backs only
     if (pos === 'left' || pos === 'right') {
       el.innerHTML = (i !== mySeat ? '<img class="backmini" src="' + CARD_IMGS.back + '" alt="">' : '') +
         '<div class="pname">' + crown + (s.name || 'خالی') + '</div>' +
-        '<div class="pmeta">' + faNum(s.cards) + '</div>';
+        '<div class="pmeta">' + faNum(s.cards) + '</div>' +
+        (pile ? '<div>' + pile + '</div>' : '');
     } else {
       let meta = '';
       if (s.kind === 'bot') meta = 'ربات · ';
       else if (s.kind === 'human') meta = '<span class="dot ' + (s.connected ? 'on' : '') + '"></span> ';
       el.innerHTML = '<div class="pname">' + crown + (s.name || 'خالی') + (i === mySeat ? ' (تو)' : '') + '</div>' +
         '<div class="pmeta">' + (i !== mySeat ? '<img class="backmini" src="' + CARD_IMGS.back + '" alt=""> ' : '') +
-        meta + faNum(s.cards) + ' ورق · ' + teamLabel(i % 2) + '</div>';
+        meta + faNum(s.cards) + ' ورق · ' + teamLabel(i % 2) + '</div>' +
+        (pos === 'top' && pile ? pile : '');
     }
   });
+
+  // my own won-trick pile, at the table edge in front of me
+  const mp = $('#mypile');
+  const myPile = st.piles ? st.piles[mySeat] : 0;
+  mp.style.display = myPile ? 'flex' : 'none';
+  mp.innerHTML = myPile ? pileHTML(myPile) + '<span>دست‌های من</span>' : '';
 
   // center trick — cards that are new since the last render fly in
   const trickEl = $('#trick');
@@ -641,11 +725,18 @@ function render(st) {
   // status line
   const statusEl = $('#status');
   if (st.phase === 'playing') {
-    statusEl.textContent = st.turn === mySeat ? '🎯 ' + (st.seats[mySeat] ? st.seats[mySeat].name : '') + '، نوبت توست!' :
+    if (st.declared13 && st.turn === mySeat) statusEl.textContent = '🙋 ۱۳ گفتی ✔ — حالا ورقت را بینداز';
+    else if (st.declared13) statusEl.textContent = '🙋 ' + (st.seats[st.turn] ? st.seats[st.turn].name : '') + ' ۱۳ گفت!';
+    else statusEl.textContent = st.turn === mySeat ? '🎯 ' + (st.seats[mySeat] ? st.seats[mySeat].name : '') + '، نوبت توست!' :
       'نوبت ' + (st.seats[st.turn] ? st.seats[st.turn].name : '') + ' است…';
   } else if (st.phase === 'roundEnd') statusEl.textContent = 'دست تمام شد';
   else if (st.phase === 'matchEnd') statusEl.textContent = 'مسابقه تمام شد';
   else statusEl.textContent = '';
+
+  // «۱۳ هست!» button: only in the exact final-trick takan situation,
+  // on my turn, before I play (and not after I already declared)
+  $('#btn-13').classList.toggle('hidden',
+    !(st.phase === 'playing' && st.canDeclare13 && !st.declared13));
 
   // my hand — grouped by suit (قره، لال، پشه، خشت), rank ascending low → high (A last), like the reference fan
   const handEl = $('#hand');
@@ -677,6 +768,14 @@ function render(st) {
   $('#ov-round').classList.toggle('show', st.phase === 'roundEnd' && !!r);
   if (r && st.phase === 'roundEnd') {
     $('#ov-round-title').textContent = 'پایان دست ' + faNum(r.roundNo);
+    $('#ov-card-us').textContent = faNum(r.cardTawan[myTeam]);
+    $('#ov-card-them').textContent = faNum(r.cardTawan[them]);
+    const tkTxt = (t) => r.takanCount[t] ? '★'.repeat(r.takanCount[t]) + ' +' + faNum(r.takanBonus[t]) : '—';
+    $('#ov-tk-row').style.display = (r.takanCount[0] + r.takanCount[1]) ? '' : 'none';
+    $('#ov-tk-us').textContent = tkTxt(myTeam);
+    $('#ov-tk-them').textContent = tkTxt(them);
+    $('#ov-tr-row').style.display = r.transferred ? '' : 'none';
+    if (r.transferred) $('#ov-tr').textContent = 'همهٔ تاوان به ' + teamLabel(r.transferTo) + ' رسید';
     $('#ov-tw-us').textContent = faNum(r.tawan[myTeam]);
     $('#ov-tw-them').textContent = faNum(r.tawan[them]);
     $('#ov-qs').textContent = teamLabel(r.qsTeam);

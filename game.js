@@ -9,6 +9,7 @@
 const MATCH_TARGET = 210;      // match points to win
 const ROUND_WIN_POINTS = 20;    // credited to round winner
 const ROUND_LOSE_POINTS = 10;   // credited to round loser
+const TAKAN_POINTS = 30;       // تکان bonus tawan (leading a suit nobody else holds)
 const PLAYERS = 4;
 const CARDS_PER_PLAYER = 13;
 
@@ -87,18 +88,36 @@ function tawanOf(cards) {
 }
 
 /**
- * Round scoring — the Tore rule.
- * tawan = [team0 captured, team1 captured]; qsTeam = team that captured Q♠ (ماتکه کالا).
- * More tawan wins; on 15–15 the Q♠ captor's team wins. Credits are always 20/10.
+ * Round scoring — the Tore rule (تاوان is a PENALTY: fewer is better).
+ * Inputs: cardTawan = tawan from captured cards; takanBonus / takanCount per
+ * team; qsTeam = team that captured Q♠ (ماتکه کالا).
+ *  1. Round tawan per team = cardTawan + takanBonus.
+ *  2. TAKAN TRANSFER: if EXACTLY ONE team has a takan, ALL of both teams'
+ *     round tawan is reassigned to the takan team (the other team gets 0).
+ *  3. The team with FEWER final tawan wins (20); the other gets 10.
+ *     On a tie (incl. the classic 15–15), the team that did NOT capture
+ *     Q♠ wins. Credits are always 20/10.
+ * Returns { tawan (final), transferred, transferTo, winner, credits }.
  */
-function scoreRound(tawan, qsTeam) {
+function scoreRound(cardTawan, takanBonus, takanCount, qsTeam) {
+  const raw = [cardTawan[0] + takanBonus[0], cardTawan[1] + takanBonus[1]];
+  let tawan = raw.slice();
+  let transferred = false;
+  let transferTo = null;
+  const has0 = takanCount[0] > 0, has1 = takanCount[1] > 0;
+  if (has0 !== has1) {
+    transferTo = has0 ? 0 : 1;
+    tawan = [0, 0];
+    tawan[transferTo] = raw[0] + raw[1];
+    transferred = true;
+  }
   let winner;
-  if (tawan[0] > tawan[1]) winner = 0;
-  else if (tawan[1] > tawan[0]) winner = 1;
-  else winner = qsTeam; // 15–15 tie → ماتکه کالا decides
+  if (tawan[0] < tawan[1]) winner = 0;
+  else if (tawan[1] < tawan[0]) winner = 1;
+  else winner = 1 - qsTeam; // tie → the team that did NOT take ماتکه کالا wins
   const credits = [ROUND_LOSE_POINTS, ROUND_LOSE_POINTS];
   credits[winner] = ROUND_WIN_POINTS;
-  return { winner, credits };
+  return { tawan, transferred, transferTo, winner, credits };
 }
 
 /**
@@ -115,7 +134,7 @@ function decideMatch(scores) {
 
 /**
  * One round (13 tricks). Authoritative state machine.
- * emit(evt) receives: cardPlayed, trickWon, roundFinished.
+ * emit(evt) receives: cardPlayed, trickWon, takan, declared13, roundFinished.
  */
 class Round {
   constructor(firstLeader, emit = () => {}, rng = Math.random) {
@@ -126,12 +145,42 @@ class Round {
     this.trick = [];                       // [{seat, card}]
     this.captured = [[], []];              // captured cards per team
     this.tricksPlayed = 0;
+    this.wonTricks = [0, 0, 0, 0];         // won-trick pile size per seat
+    this.takanCount = [0, 0];              // تکان events per team this round
+    this.takanBonus = [0, 0];              // تکان bonus tawan per team (30 × count)
+    this.declared13 = false;               // leader declared «۱۳» for the current trick
     this.finished = false;
-    this.result = null;                    // {tawan, qsTeam, winner, credits}
+    this.result = null;                    // see finish()
   }
 
   ledSuit() {
     return this.trick.length ? suitOf(this.trick[0].card) : null;
+  }
+
+  /** True if NO other player currently holds `suit` (checked pre-play). */
+  othersVoidIn(suit, seat) {
+    return [0, 1, 2, 3].every(
+      (s) => s === seat || !this.hands[s].some((c) => suitOf(c) === suit)
+    );
+  }
+
+  /**
+   * True when `seat` is leading the FINAL trick (everyone holds 1 card)
+   * with a card whose suit nobody else holds — i.e. playing it would be a
+   * takan unless they first declare «۱۳».
+   */
+  canDeclare13(seat) {
+    if (this.finished || this.declared13) return false;
+    if (seat !== this.turn || this.trick.length) return false;
+    if (!this.hands.every((h) => h.length === 1)) return false;
+    return this.othersVoidIn(suitOf(this.hands[seat][0]), seat);
+  }
+
+  /** Declare «۱۳» for the current (final) trick. Throws when not allowed. */
+  declare13(seat) {
+    if (!this.canDeclare13(seat)) throw new Error('cannot declare 13 now');
+    this.declared13 = true;
+    this.emit({ type: 'declared13', seat });
   }
 
   legalMovesFor(seat) {
@@ -149,6 +198,24 @@ class Round {
     if (!legalPlays(hand, this.ledSuit()).includes(card)) {
       throw new Error('must follow suit (' + SUIT_NAMES[this.ledSuit()] + ')');
     }
+
+    // TAKAN (تکان): leading a suit NONE of the other three players currently
+    // holds (checked now, before the card leaves the leader's hand). A «۱۳»
+    // declaration for this trick cancels it. +30 tawan to the leader's team.
+    if (this.trick.length === 0) {
+      const declared = this.declared13;
+      this.declared13 = false; // the flag belongs to this one lead only
+      if (!declared && this.othersVoidIn(suitOf(card), seat)) {
+        const team = teamOf(seat);
+        this.takanCount[team]++;
+        this.takanBonus[team] += TAKAN_POINTS;
+        this.emit({
+          type: 'takan', seat, team, card,
+          count: this.takanCount[team], bonus: this.takanBonus[team],
+        });
+      }
+    }
+
     hand.splice(idx, 1);
     this.trick.push({ seat, card });
     this.emit({ type: 'cardPlayed', seat, card });
@@ -161,6 +228,7 @@ class Round {
     const winnerSeat = trickWinnerSeat(this.trick);
     const wonCards = this.trick.map((p) => p.card);
     this.captured[teamOf(winnerSeat)].push(...wonCards);
+    this.wonTricks[winnerSeat]++;
     this.emit({
       type: 'trickWon', winnerSeat, cards: wonCards,
       tawan: tawanOf(wonCards), trickNo: this.tricksPlayed + 1,
@@ -174,10 +242,18 @@ class Round {
   }
 
   finish() {
-    const tawan = [tawanOf(this.captured[0]), tawanOf(this.captured[1])];
+    const cardTawan = [tawanOf(this.captured[0]), tawanOf(this.captured[1])];
     const qsTeam = this.captured[0].includes('QS') ? 0 : 1;
-    const { winner, credits } = scoreRound(tawan, qsTeam);
-    this.result = { tawan, qsTeam, winner, credits };
+    const s = scoreRound(cardTawan, this.takanBonus, this.takanCount, qsTeam);
+    this.result = {
+      cardTawan,                                  // tawan from captured cards (sums to 30)
+      takanBonus: this.takanBonus.slice(),        // تکان bonus per team
+      takanCount: this.takanCount.slice(),        // تکان count per team (red stars)
+      transferred: s.transferred,                 // takan transfer applied?
+      transferTo: s.transferTo,                   // team that received ALL tawan (or null)
+      tawan: s.tawan,                             // FINAL round tawan per team
+      qsTeam, winner: s.winner, credits: s.credits,
+    };
     this.finished = true;
     this.emit({ type: 'roundFinished', ...this.result });
   }
@@ -194,7 +270,7 @@ class Match {
     this.rng = rng;
     this.scores = [0, 0];
     this.roundNo = 0;
-    this.history = [];   // per-round: {roundNo, tawan, qsTeam, winner, credits, scoresAfter}
+    this.history = [];   // per-round: {roundNo, cardTawan, takanBonus, takanCount, transferred, transferTo, tawan, qsTeam, winner, credits, scoresAfter}
     this.finished = false;
     this.winner = null;
     this.round = null;
@@ -220,7 +296,10 @@ class Match {
     this.scores[0] += r.credits[0];
     this.scores[1] += r.credits[1];
     this.history.push({
-      roundNo: this.roundNo, tawan: r.tawan.slice(), qsTeam: r.qsTeam,
+      roundNo: this.roundNo, cardTawan: r.cardTawan.slice(),
+      takanBonus: r.takanBonus.slice(), takanCount: r.takanCount.slice(),
+      transferred: r.transferred, transferTo: r.transferTo,
+      tawan: r.tawan.slice(), qsTeam: r.qsTeam,
       winner: r.winner, credits: r.credits.slice(), scoresAfter: this.scores.slice(),
     });
     const winner = decideMatch(this.scores);
@@ -244,7 +323,7 @@ function seededRng(seed) {
 }
 
 module.exports = {
-  MATCH_TARGET, ROUND_WIN_POINTS, ROUND_LOSE_POINTS, PLAYERS, CARDS_PER_PLAYER,
+  MATCH_TARGET, ROUND_WIN_POINTS, ROUND_LOSE_POINTS, TAKAN_POINTS, PLAYERS, CARDS_PER_PLAYER,
   SUITS, SUIT_NAMES, RANK_NAMES, TOTAL_TAWAN,
   suitOf, rankOf, teamOf, partnerOf, cardName, cardPoints,
   makeDeck, shuffle, deal, legalPlays, trickWinnerSeat, tawanOf,

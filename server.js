@@ -107,6 +107,11 @@ function stateFor(room, seatIdx) {
     scores: room.match ? room.match.scores.slice() : [0, 0],
     roundTawan: round
       ? [G.tawanOf(round.captured[0]), G.tawanOf(round.captured[1])] : [0, 0],
+    takanCount: round ? round.takanCount.slice() : [0, 0],
+    takanBonus: round ? round.takanBonus.slice() : [0, 0],
+    piles: round ? round.wonTricks.slice() : [0, 0, 0, 0],
+    canDeclare13: round && !room.trickHold ? round.canDeclare13(seatIdx) : false,
+    declared13: round ? round.declared13 : false,
     roundNo: room.match ? room.match.roundNo : 0,
     roundResult: (room.phase === 'roundEnd' || room.phase === 'matchEnd') ? last : null,
     matchWinner: room.match && room.match.finished ? room.match.winner : null,
@@ -120,7 +125,20 @@ function broadcastState(room) {
 }
 
 // ------------------------------------------------------------ game flow
+function broadcastEvent(room, obj) {
+  room.seats.forEach((s) => {
+    if (s.kind === 'human' && s.connected && s.ws) send(s.ws, obj);
+  });
+}
+
 function onMatchEvent(room, evt) {
+  if (evt.type === 'takan') {
+    // Celebrate/flag the takan live; the following state push carries the
+    // updated star count and bonus.
+    broadcastEvent(room, { type: 'takan', seat: evt.seat, team: evt.team, count: evt.count });
+  } else if (evt.type === 'declared13') {
+    broadcastEvent(room, { type: 'declared13', seat: evt.seat });
+  }
   if (evt.type === 'roundFinished') {
     room.phase = 'roundEnd';
     clearTimeout(room.turnTimer);
@@ -179,9 +197,21 @@ function doPlay(room, seat, card) {
   return true;
 }
 
-function botPlay(room, seat) {
+/**
+ * Play a seat by bot logic. `mayDeclare` is true only for real bot seats:
+ * bots always declare «۱۳» on the final trick when it cancels a takan.
+ * A human seat auto-played by the turn timer plays WITHOUT declaring
+ * (spec: on timeout the takan stands).
+ */
+function botPlay(room, seat, mayDeclare) {
   const round = room.match && room.match.round;
   if (!round || round.finished || round.turn !== seat) return;
+  if (room.trickHold) return;
+  if (mayDeclare && bots.maybeDeclare13(round, seat)) {
+    broadcastState(room); // clients toast the declaration…
+    pumpTurn(room);       // …then the bot plays its card on the next tick
+    return;
+  }
   let card;
   try { card = bots.chooseCard(round, seat); } catch (e) { return; }
   doPlay(room, seat, card);
@@ -197,7 +227,7 @@ function pumpTurn(room) {
   const seat = round.turn;
   const info = room.seats[seat];
   const delay = info.kind === 'bot' ? BOT_DELAY_MS : TURN_TIMEOUT_MS;
-  room.turnTimer = setTimeout(() => botPlay(room, seat), delay);
+  room.turnTimer = setTimeout(() => botPlay(room, seat, info.kind === 'bot'), delay);
 }
 
 function startMatch(room) {
@@ -329,6 +359,21 @@ function handleMessage(ws, msg) {
       if (!room || room.phase !== 'lobby') return;
       if (ws._seat !== hostSeat(room)) return sendError(ws, 'فقط میزبان می‌تواند بازی را شروع کند');
       startMatch(room);
+      break;
+    }
+    case 'declare13': {
+      const room = rooms.get(ws._roomCode);
+      if (!room || room.phase !== 'playing') return;
+      if (room.trickHold) { send(ws, stateFor(room, ws._seat)); return; } // trick on display — resync silently
+      const round = room.match && room.match.round;
+      if (!round) return;
+      try {
+        round.declare13(ws._seat); // emits declared13 → clients toast it
+        broadcastState(room);
+      } catch (e) {
+        sendError(ws, 'الآن نمی‌توانی «۱۳» بگویی');
+        send(ws, stateFor(room, ws._seat));
+      }
       break;
     }
     case 'play': {
