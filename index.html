@@ -222,6 +222,7 @@
   }
   .panel h2 { margin: 0 0 10px; color: #ffd75e; font-size: 22px; }
   .panel .row { display: flex; justify-content: space-between; font-size: 15.5px; padding: 5px 2px; }
+  .panel .row small { font-size: 11px; font-weight: 400; opacity: .75; }
   .panel .big { font-size: 19px; font-weight: 800; }
   #toast {
     position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(90px);
@@ -258,6 +259,7 @@
       ⭐ <b>تکان:</b> خالی را شروع کنی که هیچ‌کس ندارد → <b>+۳۰ تاوان</b> و یک ستارهٔ قرمز برای تیمت!<br>
       اگر فقط یک تیم تکان داشته باشد، <b>همهٔ تاوان دست به همان تیم می‌رسد</b>.<br>
       🙋 دست آخر: اگر پیش از بازی بگویی <b>«۱۳ هست»</b>، تکان برایت حساب نمی‌شود.<br>
+      ⚠️ تیمی که در یک دست بیشتر از <b>۲۱</b> تاوان بگیرد، برایش <b>۳۰</b> تاوان نوشته می‌شود.<br>
       🏦 تاوانِ یک دست اگر <b>۱۰ یا بیشتر</b> باشد در بانکت <b>جمع می‌شود</b>؛ کمتر از ۱۰ باشد، حساب نمی‌شود.
     </div>
   </section>
@@ -308,15 +310,16 @@
 <div class="overlay" id="ov-round">
   <div class="panel">
     <h2 id="ov-round-title">پایان دست</h2>
-    <div class="row"><span>تاوان ورق‌ها</span><span><b id="ov-card-us">۰</b> · <b id="ov-card-them">۰</b></span></div>
-    <div class="row" id="ov-tk-row"><span>تکان ⭐</span><span><b id="ov-tk-us">—</b> · <b id="ov-tk-them">—</b></span></div>
+    <div class="row"><span>تاوان ورق‌ها</span><span><small>ما </small><b id="ov-card-us">۰</b> · <small>حریف </small><b id="ov-card-them">۰</b></span></div>
+    <div class="row" id="ov-tk-row"><span>تکان ⭐</span><span><small>ما </small><b id="ov-tk-us">—</b> · <small>حریف </small><b id="ov-tk-them">—</b></span></div>
     <div class="row" id="ov-tr-row"><span>انتقال تکان</span><b id="ov-tr">—</b></div>
-    <div class="row big"><span>تاوان نهایی</span><span><b id="ov-tw-us">۰</b> · <b id="ov-tw-them">۰</b></span></div>
-    <div class="row"><span>تاوان جمع‌شده (بانک)</span><span><b id="ov-bk-us">۰</b> · <b id="ov-bk-them">۰</b></span></div>
+    <div class="row big"><span>تاوان نهایی</span><b id="ov-tw">—</b></div>
+    <div id="ov-bump" style="font-size:13.5px; opacity:.9; padding:2px 2px 0"></div>
+    <div class="row"><span>تاوان جمع‌شده (بانک)</span><span><small>ما </small><b id="ov-bk-us">۰</b> · <small>حریف </small><b id="ov-bk-them">۰</b></span></div>
     <div id="ov-wipe" style="font-size:13.5px; opacity:.9; padding:2px 2px 0"></div>
     <div class="row"><span>ماتکه کالا (Q♠) را گرفت</span><b id="ov-qs">—</b></div>
-    <div class="row big"><span>امتیاز این دست</span><span><b id="ov-cr-us" style="color:#ffd75e">+۰</b> · <b id="ov-cr-them">+۰</b></span></div>
-    <div class="row"><span>جمع مسابقه</span><b><span id="ov-sc-us">۰</span> — <span id="ov-sc-them">۰</span></b></div>
+    <div class="row big"><span>امتیاز این دست</span><b id="ov-cr" style="color:#ffd75e">—</b></div>
+    <div class="row"><span>جمع مسابقه</span><b><small>ما </small><span id="ov-sc-us">۰</span> — <small>حریف </small><span id="ov-sc-them">۰</span></b></div>
     <div style="margin-top:10px; font-size:13.5px; opacity:.85">دست بعدی به‌زودی شروع می‌شود…</div>
   </div>
 </div>
@@ -325,7 +328,7 @@
 <div class="overlay" id="ov-match">
   <div class="panel">
     <h2 id="ov-match-title">🏆 پایان مسابقه</h2>
-    <div class="row big"><span>نتیجهٔ نهایی</span><b><span id="ov-f-us">۰</span> — <span id="ov-f-them">۰</span></b></div>
+    <div class="row big"><span>نتیجهٔ نهایی</span><b><small>ما </small><span id="ov-f-us">۰</span> — <small>حریف </small><span id="ov-f-them">۰</span></b></div>
     <button id="btn-newgame">بازی جدید</button>
   </div>
 </div>
@@ -777,6 +780,10 @@ function render(st) {
   $('#ov-round').classList.toggle('show', st.phase === 'roundEnd' && !!r);
   if (r && st.phase === 'roundEnd') {
     $('#ov-round-title').textContent = 'پایان دست ' + faNum(r.roundNo);
+    // Name the teams by their PLAYERS in every summary line that carries a
+    // per-team value, so no number can ever be read against the wrong team
+    // (bare "X · Y" pairs in an RTL panel caused exactly that misreading).
+    const teamNames = (t) => [t, t + 2].map((s) => st.seats[s] ? st.seats[s].name : 'بازیکن').join(' و ');
     $('#ov-card-us').textContent = faNum(r.cardTawan[myTeam]);
     $('#ov-card-them').textContent = faNum(r.cardTawan[them]);
     const tkTxt = (t) => r.takanCount[t] ? '★'.repeat(r.takanCount[t]) + ' +' + faNum(r.takanBonus[t]) : '—';
@@ -785,16 +792,19 @@ function render(st) {
     $('#ov-tk-them').textContent = tkTxt(them);
     $('#ov-tr-row').style.display = r.transferred ? '' : 'none';
     if (r.transferred) {
-      // name the teams by their PLAYERS so the direction can never be
-      // misread, and say who gave the takan.
-      const teamNames = (t) => [t, t + 2].map((s) => st.seats[s] ? st.seats[s].name : 'بازیکن').join(' و ');
       const givers = r.takanBy && r.takanBy[r.transferTo]
         ? [...new Set(r.takanBy[r.transferTo])].map((s) => st.seats[s] ? st.seats[s].name : 'بازیکن').join(' و ') : '';
       $('#ov-tr').textContent = 'همهٔ تاوان به تیمِ (' + teamNames(r.transferTo) + ') رسید' +
         (givers ? ' — تکان از ' + givers : '');
     }
-    $('#ov-tw-us').textContent = faNum(r.tawan[myTeam]);
-    $('#ov-tw-them').textContent = faNum(r.tawan[them]);
+    $('#ov-tw').textContent = 'تیمِ (' + teamNames(myTeam) + '): ' + faNum(r.tawan[myTeam]) +
+      ' — تیمِ (' + teamNames(them) + '): ' + faNum(r.tawan[them]);
+    const bumpedTeams = [0, 1].filter((t) => r.bumped && r.bumped[t]);
+    $('#ov-bump').style.display = bumpedTeams.length ? '' : 'none';
+    if (bumpedTeams.length) {
+      $('#ov-bump').textContent = bumpedTeams.map((t) =>
+        '⚠️ تیمِ (' + teamNames(t) + '): بیشتر از ۲۱ — ۳۰ نوشته شد').join(' · ');
+    }
     $('#ov-bk-us').textContent = faNum(r.bankedTawan ? r.bankedTawan[myTeam] : 0);
     $('#ov-bk-them').textContent = faNum(r.bankedTawan ? r.bankedTawan[them] : 0);
     const wiped = [myTeam, them].filter((t) => r.tawan[t] < 10);
@@ -804,8 +814,8 @@ function render(st) {
         'تاوان ' + teamLabel(t) + ' (' + faNum(r.tawan[t]) + ') کمتر از ۱۰ بود — حساب نشد').join(' · ');
     }
     $('#ov-qs').textContent = teamLabel(r.qsTeam);
-    $('#ov-cr-us').textContent = '+' + faNum(r.credits[myTeam]);
-    $('#ov-cr-them').textContent = '+' + faNum(r.credits[them]);
+    $('#ov-cr').textContent = 'تیمِ (' + teamNames(myTeam) + '): +' + faNum(r.credits[myTeam]) +
+      ' — تیمِ (' + teamNames(them) + '): +' + faNum(r.credits[them]);
     $('#ov-sc-us').textContent = faNum(st.scores[myTeam]);
     $('#ov-sc-them').textContent = faNum(st.scores[them]);
   }

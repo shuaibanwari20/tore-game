@@ -11,6 +11,8 @@ const ROUND_WIN_POINTS = 20;    // credited to round winner
 const ROUND_LOSE_POINTS = 10;   // credited to round loser
 const TAKAN_POINTS = 30;       // تکان bonus tawan (leading a suit nobody else holds)
 const TAWAN_BANK_MIN = 10;     // round tawan ≥ 10 banks into the match-long bank; ≤ 9 is wiped
+const TAWAN_BUMP_LIMIT = 21;   // a final round tawan ABOVE this (and below 30) is written as 30
+const TAWAN_BUMP_VALUE = 30;   // …the value written instead (finals already ≥ 30 stay as they are)
 const PLAYERS = 4;
 const CARDS_PER_PLAYER = 13;
 
@@ -95,10 +97,15 @@ function tawanOf(cards) {
  *  1. Round tawan per team = cardTawan + takanBonus.
  *  2. TAKAN TRANSFER: if EXACTLY ONE team has a takan, ALL of both teams'
  *     round tawan is reassigned to the takan team (the other team gets 0).
- *  3. The team with FEWER final tawan wins (20); the other gets 10.
+ *  3. BUMP: a final tawan above 21 (and below 30) is written as 30 —
+ *     «هر بازیکن که بیشتر از ۲۱ تاوان گرفت باید برایش ۳۰ تاوان نوشته شوه».
+ *     Finals already ≥ 30 (only reachable via takan/transfer) stay as-is.
+ *     The bump applies BEFORE the winner decision and BEFORE the bank.
+ *  4. The team with FEWER final tawan wins (20); the other gets 10.
  *     On a tie (incl. the classic 15–15), the team that did NOT capture
  *     Q♠ wins. Credits are always 20/10.
- * Returns { tawan (final), transferred, transferTo, winner, credits }.
+ * Returns { tawan (final, post-bump), bumped, transferred, transferTo,
+ *           winner, credits }.
  */
 function scoreRound(cardTawan, takanBonus, takanCount, qsTeam) {
   const raw = [cardTawan[0] + takanBonus[0], cardTawan[1] + takanBonus[1]];
@@ -112,13 +119,16 @@ function scoreRound(cardTawan, takanBonus, takanCount, qsTeam) {
     tawan[transferTo] = raw[0] + raw[1];
     transferred = true;
   }
+  const bumped = tawan.map((t) => t > TAWAN_BUMP_LIMIT && t < TAWAN_BUMP_VALUE);
+  if (bumped[0]) tawan[0] = TAWAN_BUMP_VALUE;
+  if (bumped[1]) tawan[1] = TAWAN_BUMP_VALUE;
   let winner;
   if (tawan[0] < tawan[1]) winner = 0;
   else if (tawan[1] < tawan[0]) winner = 1;
   else winner = 1 - qsTeam; // tie → the team that did NOT take ماتکه کالا wins
   const credits = [ROUND_LOSE_POINTS, ROUND_LOSE_POINTS];
   credits[winner] = ROUND_WIN_POINTS;
-  return { tawan, transferred, transferTo, winner, credits };
+  return { tawan, bumped, transferred, transferTo, winner, credits };
 }
 
 /**
@@ -255,7 +265,8 @@ class Round {
       takanBy: [this.takanBy[0].slice(), this.takanBy[1].slice()], // seats that gave the takans
       transferred: s.transferred,                 // takan transfer applied?
       transferTo: s.transferTo,                   // team that received ALL tawan (or null)
-      tawan: s.tawan,                             // FINAL round tawan per team
+      bumped: s.bumped,                           // >21 final written as 30, per team
+      tawan: s.tawan,                             // FINAL round tawan per team (post-bump)
       qsTeam, winner: s.winner, credits: s.credits,
     };
     this.finished = true;
@@ -275,7 +286,7 @@ class Match {
     this.scores = [0, 0];
     this.bankedTawan = [0, 0];   // match-long tawan bank: a round's final tawan banks only when ≥ TAWAN_BANK_MIN (≤ 9 is wiped)
     this.roundNo = 0;
-    this.history = [];   // per-round: {roundNo, cardTawan, takanBonus, takanCount, takanBy, transferred, transferTo, tawan, banked, bankedTawan, qsTeam, winner, credits, scoresAfter}
+    this.history = [];   // per-round: {roundNo, cardTawan, takanBonus, takanCount, takanBy, transferred, transferTo, bumped, tawan, banked, bankedTawan, qsTeam, winner, credits, scoresAfter}
     this.finished = false;
     this.winner = null;
     this.round = null;
@@ -300,9 +311,11 @@ class Match {
     const r = round.result;
     this.scores[0] += r.credits[0];
     this.scores[1] += r.credits[1];
-    // Tawan bank (user rule): the round's FINAL (post-transfer) tawan is
-    // added to the team's match-long bank only when it reaches
-    // TAWAN_BANK_MIN; a final of ≤ 9 is wiped and forgotten.
+    // Tawan bank (user rule): the round's FINAL (post-transfer, post-bump)
+    // tawan is added to the team's match-long bank only when it reaches
+    // TAWAN_BANK_MIN; a final of ≤ 9 is wiped and forgotten. scoreRound has
+    // already applied the >21→30 bump to r.tawan, so a bumped 30 banks
+    // as 30 and the ≤9 wipe is unaffected.
     const banked = r.tawan.map((t) => (t >= TAWAN_BANK_MIN ? t : 0));
     this.bankedTawan[0] += banked[0];
     this.bankedTawan[1] += banked[1];
@@ -311,6 +324,7 @@ class Match {
       takanBonus: r.takanBonus.slice(), takanCount: r.takanCount.slice(),
       takanBy: r.takanBy ? r.takanBy.map((a) => a.slice()) : [[], []],
       transferred: r.transferred, transferTo: r.transferTo,
+      bumped: r.bumped ? r.bumped.slice() : [false, false],
       tawan: r.tawan.slice(), banked: banked.slice(),
       bankedTawan: this.bankedTawan.slice(), qsTeam: r.qsTeam,
       winner: r.winner, credits: r.credits.slice(), scoresAfter: this.scores.slice(),
@@ -336,7 +350,7 @@ function seededRng(seed) {
 }
 
 module.exports = {
-  MATCH_TARGET, ROUND_WIN_POINTS, ROUND_LOSE_POINTS, TAKAN_POINTS, TAWAN_BANK_MIN, PLAYERS, CARDS_PER_PLAYER,
+  MATCH_TARGET, ROUND_WIN_POINTS, ROUND_LOSE_POINTS, TAKAN_POINTS, TAWAN_BANK_MIN, TAWAN_BUMP_LIMIT, TAWAN_BUMP_VALUE, PLAYERS, CARDS_PER_PLAYER,
   SUITS, SUIT_NAMES, RANK_NAMES, TOTAL_TAWAN,
   suitOf, rankOf, teamOf, partnerOf, cardName, cardPoints,
   makeDeck, shuffle, deal, legalPlays, trickWinnerSeat, tawanOf,
