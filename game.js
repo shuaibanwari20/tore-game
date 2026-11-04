@@ -10,6 +10,7 @@ const MATCH_TARGET = 210;      // match points to win
 const ROUND_WIN_POINTS = 20;    // credited to round winner
 const ROUND_LOSE_POINTS = 10;   // credited to round loser
 const TAKAN_POINTS = 30;       // تکان bonus tawan (leading a suit nobody else holds)
+const TAWAN_BANK_MIN = 10;     // round tawan ≥ 10 banks into the match-long bank; ≤ 9 is wiped
 const PLAYERS = 4;
 const CARDS_PER_PLAYER = 13;
 
@@ -148,6 +149,7 @@ class Round {
     this.wonTricks = [0, 0, 0, 0];         // won-trick pile size per seat
     this.takanCount = [0, 0];              // تکان events per team this round
     this.takanBonus = [0, 0];              // تکان bonus tawan per team (30 × count)
+    this.takanBy = [[], []];               // seats that gave each تکان, per team
     this.declared13 = false;               // leader declared «۱۳» for the current trick
     this.finished = false;
     this.result = null;                    // see finish()
@@ -209,6 +211,7 @@ class Round {
         const team = teamOf(seat);
         this.takanCount[team]++;
         this.takanBonus[team] += TAKAN_POINTS;
+        this.takanBy[team].push(seat);
         this.emit({
           type: 'takan', seat, team, card,
           count: this.takanCount[team], bonus: this.takanBonus[team],
@@ -249,6 +252,7 @@ class Round {
       cardTawan,                                  // tawan from captured cards (sums to 30)
       takanBonus: this.takanBonus.slice(),        // تکان bonus per team
       takanCount: this.takanCount.slice(),        // تکان count per team (red stars)
+      takanBy: [this.takanBy[0].slice(), this.takanBy[1].slice()], // seats that gave the takans
       transferred: s.transferred,                 // takan transfer applied?
       transferTo: s.transferTo,                   // team that received ALL tawan (or null)
       tawan: s.tawan,                             // FINAL round tawan per team
@@ -269,8 +273,9 @@ class Match {
     this.emit = emit;
     this.rng = rng;
     this.scores = [0, 0];
+    this.bankedTawan = [0, 0];   // match-long tawan bank: a round's final tawan banks only when ≥ TAWAN_BANK_MIN (≤ 9 is wiped)
     this.roundNo = 0;
-    this.history = [];   // per-round: {roundNo, cardTawan, takanBonus, takanCount, transferred, transferTo, tawan, qsTeam, winner, credits, scoresAfter}
+    this.history = [];   // per-round: {roundNo, cardTawan, takanBonus, takanCount, takanBy, transferred, transferTo, tawan, banked, bankedTawan, qsTeam, winner, credits, scoresAfter}
     this.finished = false;
     this.winner = null;
     this.round = null;
@@ -295,11 +300,19 @@ class Match {
     const r = round.result;
     this.scores[0] += r.credits[0];
     this.scores[1] += r.credits[1];
+    // Tawan bank (user rule): the round's FINAL (post-transfer) tawan is
+    // added to the team's match-long bank only when it reaches
+    // TAWAN_BANK_MIN; a final of ≤ 9 is wiped and forgotten.
+    const banked = r.tawan.map((t) => (t >= TAWAN_BANK_MIN ? t : 0));
+    this.bankedTawan[0] += banked[0];
+    this.bankedTawan[1] += banked[1];
     this.history.push({
       roundNo: this.roundNo, cardTawan: r.cardTawan.slice(),
       takanBonus: r.takanBonus.slice(), takanCount: r.takanCount.slice(),
+      takanBy: r.takanBy ? r.takanBy.map((a) => a.slice()) : [[], []],
       transferred: r.transferred, transferTo: r.transferTo,
-      tawan: r.tawan.slice(), qsTeam: r.qsTeam,
+      tawan: r.tawan.slice(), banked: banked.slice(),
+      bankedTawan: this.bankedTawan.slice(), qsTeam: r.qsTeam,
       winner: r.winner, credits: r.credits.slice(), scoresAfter: this.scores.slice(),
     });
     const winner = decideMatch(this.scores);
@@ -323,7 +336,7 @@ function seededRng(seed) {
 }
 
 module.exports = {
-  MATCH_TARGET, ROUND_WIN_POINTS, ROUND_LOSE_POINTS, TAKAN_POINTS, PLAYERS, CARDS_PER_PLAYER,
+  MATCH_TARGET, ROUND_WIN_POINTS, ROUND_LOSE_POINTS, TAKAN_POINTS, TAWAN_BANK_MIN, PLAYERS, CARDS_PER_PLAYER,
   SUITS, SUIT_NAMES, RANK_NAMES, TOTAL_TAWAN,
   suitOf, rankOf, teamOf, partnerOf, cardName, cardPoints,
   makeDeck, shuffle, deal, legalPlays, trickWinnerSeat, tawanOf,

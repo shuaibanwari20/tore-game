@@ -105,6 +105,7 @@ function stateFor(room, seatIdx) {
     turn: round && !round.finished ? round.turn : null,
     legal: round ? round.legalMovesFor(seatIdx) : [],
     scores: room.match ? room.match.scores.slice() : [0, 0],
+    bankedTawan: room.match ? room.match.bankedTawan.slice() : [0, 0],
     roundTawan: round
       ? [G.tawanOf(round.captured[0]), G.tawanOf(round.captured[1])] : [0, 0],
     takanCount: round ? round.takanCount.slice() : [0, 0],

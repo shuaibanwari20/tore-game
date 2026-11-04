@@ -110,18 +110,20 @@
   }
   #btn-13:active { transform: scale(.97); }
 
-  /* ---------- won-trick piles (card backs only) ---------- */
-  .pile { display: inline-flex; align-items: center; gap: 5px; }
-  .pilestack { position: relative; width: 36px; height: 27px; flex: 0 0 auto; }
-  .pilestack img { position: absolute; top: 0; width: 19px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
-  .pilecount { font-size: 12.5px; font-weight: 800; color: #ffd75e; }
-  .vbar .pile { flex-direction: column; gap: 2px; }
-  .mypile {
-    position: absolute; bottom: 4px; inset-inline-end: 6px; z-index: 4;
-    display: none; align-items: center; gap: 6px;
-    background: rgba(26,16,5,.85); border: 1px solid rgba(217,179,128,.65);
-    border-radius: 999px; padding: 3px 10px 3px 4px; color: #f5e7c6; font-size: 12px;
-  }
+  /* ---------- won-trick piles: plain card-back rows on the carpet ----------
+     One loose back per won trick, in front of the player who won it.
+     No container, no background, no label, no count. */
+  .pilerow { position: absolute; z-index: 1; display: none; pointer-events: none; direction: ltr; }
+  .pilerow.on { display: flex; }
+  .pilerow img { width: 32px; height: auto; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.45); flex: 0 0 auto; }
+  .pilerow[data-pos="bottom"] { bottom: 2px; left: 50%; transform: translateX(-50%); }
+  .pilerow[data-pos="top"] { top: 2px; left: 50%; transform: translateX(-50%); }
+  .pilerow[data-pos="bottom"] img, .pilerow[data-pos="top"] img { margin-left: -15px; }
+  .pilerow[data-pos="bottom"] img:first-child, .pilerow[data-pos="top"] img:first-child { margin-left: 0; }
+  .pilerow[data-pos="right"] { right: 46px; top: 50%; transform: translateY(-50%); flex-direction: column; }
+  .pilerow[data-pos="left"] { left: 46px; top: 50%; transform: translateY(-50%); flex-direction: column; }
+  .pilerow[data-pos="right"] img, .pilerow[data-pos="left"] img { margin-top: -28px; }
+  .pilerow[data-pos="right"] img:first-child, .pilerow[data-pos="left"] img:first-child { margin-top: 0; }
 
   /* ---------- table (carpet shows through) ---------- */
   .table { position: relative; flex: 1 1 auto; min-height: 170px; margin: 2px 0 0; }
@@ -253,7 +255,8 @@
       مساوی؟ تیمی که <b>ماتکه کالا</b> را <b>نگرفته</b> باشد، ۲۰ را می‌برد. مسابقه تا <b>۲۱۰</b> است.<br>
       ⭐ <b>تکان:</b> خالی را شروع کنی که هیچ‌کس ندارد → <b>+۳۰ تاوان</b> و یک ستارهٔ قرمز برای تیمت!<br>
       اگر فقط یک تیم تکان داشته باشد، <b>همهٔ تاوان دست به همان تیم می‌رسد</b>.<br>
-      🙋 دست آخر: اگر پیش از بازی بگویی <b>«۱۳ هست»</b>، تکان برایت حساب نمی‌شود.
+      🙋 دست آخر: اگر پیش از بازی بگویی <b>«۱۳ هست»</b>، تکان برایت حساب نمی‌شود.<br>
+      🏦 تاوانِ یک دست اگر <b>۱۰ یا بیشتر</b> باشد در بانکت <b>جمع می‌شود</b>؛ کمتر از ۱۰ باشد، حساب نمی‌شود.
     </div>
   </section>
 
@@ -275,17 +278,20 @@
       <button id="btn-leave" class="menubtn">منوی اصلی</button>
     </div>
     <div class="scorestrip">
-      <span>تیم ما <b id="sc-us">۰</b> <small>· تاوان: <span id="tw-us">۰</span></small> <span class="tkstars" id="tk-us"></span></span>
+      <span>تیم ما <b id="sc-us">۰</b> <small>· تاوان: <span id="tw-us">۰</span></small> <span class="tkstars" id="tk-us"></span> <small>· جمع‌شده: <span id="bk-us">۰</span></small></span>
       <span class="ss-mid">دست <span id="round-no">۱</span> · هدف: ۲۱۰</span>
-      <span>تیم حریف <b id="sc-them">۰</b> <small>· تاوان: <span id="tw-them">۰</span></small> <span class="tkstars" id="tk-them"></span></span>
+      <span>تیم حریف <b id="sc-them">۰</b> <small>· تاوان: <span id="tw-them">۰</span></small> <span class="tkstars" id="tk-them"></span> <small>· جمع‌شده: <span id="bk-them">۰</span></small></span>
     </div>
 
     <div class="table" id="table">
       <div class="seat vbar" data-pos="right" id="seat-right"></div>
       <div class="seat vbar" data-pos="left"  id="seat-left"></div>
       <div class="seat" data-pos="bottom" id="seat-bottom"></div>
+      <div class="pilerow" data-pos="top" id="pile-top"></div>
+      <div class="pilerow" data-pos="right" id="pile-right"></div>
+      <div class="pilerow" data-pos="left" id="pile-left"></div>
+      <div class="pilerow" data-pos="bottom" id="pile-bottom"></div>
       <div class="trick" id="trick"></div>
-      <div class="mypile" id="mypile"></div>
     </div>
 
     <button id="btn-13" class="hidden">🙋 ۱۳ هست!</button>
@@ -304,6 +310,8 @@
     <div class="row" id="ov-tk-row"><span>تکان ⭐</span><span><b id="ov-tk-us">—</b> · <b id="ov-tk-them">—</b></span></div>
     <div class="row" id="ov-tr-row"><span>انتقال تکان</span><b id="ov-tr">—</b></div>
     <div class="row big"><span>تاوان نهایی</span><span><b id="ov-tw-us">۰</b> · <b id="ov-tw-them">۰</b></span></div>
+    <div class="row"><span>تاوان جمع‌شده (بانک)</span><span><b id="ov-bk-us">۰</b> · <b id="ov-bk-them">۰</b></span></div>
+    <div id="ov-wipe" style="font-size:13.5px; opacity:.9; padding:2px 2px 0"></div>
     <div class="row"><span>ماتکه کالا (Q♠) را گرفت</span><b id="ov-qs">—</b></div>
     <div class="row big"><span>امتیاز این دست</span><span><b id="ov-cr-us" style="color:#ffd75e">+۰</b> · <b id="ov-cr-them">+۰</b></span></div>
     <div class="row"><span>جمع مسابقه</span><b><span id="ov-sc-us">۰</span> — <span id="ov-sc-them">۰</span></b></div>
@@ -621,17 +629,13 @@ function teamLabel(team) {
   const myTeam = mySeat % 2;
   return team === myTeam ? 'تیم ما' : 'تیم حریف';
 }
-// Face-down won-trick pile for a seat: card BACKS only (never faces),
-// stacked with slight offsets, plus the trick count.
-function pileHTML(count) {
-  if (!count) return '';
-  let imgs = '';
-  const n = Math.min(count, 5);
-  for (let i = 0; i < n; i++) {
-    imgs += '<img src="' + CARD_IMGS.back + '" alt="" style="left:' + (i * 4) + 'px; z-index:' + i + '">';
-  }
-  return '<span class="pile"><span class="pilestack">' + imgs + '</span>' +
-    '<span class="pilecount">×' + faNum(count) + '</span></span>';
+// Face-down won-trick pile for a seat: one loose card BACK per won trick,
+// laid in a row on the carpet in front of the player (see .pilerow CSS).
+// No container, no label, no count — just the backs.
+function pileRowHTML(count) {
+  let html = '';
+  for (let i = 0; i < count; i++) html += '<img src="' + CARD_IMGS.back + '" alt="">';
+  return html;
 }
 
 function render(st) {
@@ -646,6 +650,8 @@ function render(st) {
   $('#tw-them').textContent = twTxt(them);
   $('#tk-us').textContent = st.takanCount[myTeam] ? '★'.repeat(st.takanCount[myTeam]) : '';
   $('#tk-them').textContent = st.takanCount[them] ? '★'.repeat(st.takanCount[them]) : '';
+  $('#bk-us').textContent = faNum(st.bankedTawan ? st.bankedTawan[myTeam] : 0);
+  $('#bk-them').textContent = faNum(st.bankedTawan ? st.bankedTawan[them] : 0);
   $('#round-no').textContent = faNum(st.roundNo || 1);
 
   // who is winning the current trick (drives the 👑 and the gold glow)
@@ -670,28 +676,29 @@ function render(st) {
     const isTurn = st.turn === i && st.phase === 'playing';
     el.classList.toggle('turn', isTurn);
     const crown = (winSeat === i && st.phase === 'playing') ? '👑 ' : '';
-    const pile = pileHTML(st.piles ? st.piles[i] : 0); // won tricks, backs only
     if (pos === 'left' || pos === 'right') {
       el.innerHTML = (i !== mySeat ? '<img class="backmini" src="' + CARD_IMGS.back + '" alt="">' : '') +
         '<div class="pname">' + crown + (s.name || 'خالی') + '</div>' +
-        '<div class="pmeta">' + faNum(s.cards) + '</div>' +
-        (pile ? '<div>' + pile + '</div>' : '');
+        '<div class="pmeta">' + faNum(s.cards) + '</div>';
     } else {
       let meta = '';
       if (s.kind === 'bot') meta = 'ربات · ';
       else if (s.kind === 'human') meta = '<span class="dot ' + (s.connected ? 'on' : '') + '"></span> ';
       el.innerHTML = '<div class="pname">' + crown + (s.name || 'خالی') + (i === mySeat ? ' (تو)' : '') + '</div>' +
         '<div class="pmeta">' + (i !== mySeat ? '<img class="backmini" src="' + CARD_IMGS.back + '" alt=""> ' : '') +
-        meta + faNum(s.cards) + ' ورق · ' + teamLabel(i % 2) + '</div>' +
-        (pos === 'top' && pile ? pile : '');
+        meta + faNum(s.cards) + ' ورق · ' + teamLabel(i % 2) + '</div>';
     }
   });
 
-  // my own won-trick pile, at the table edge in front of me
-  const mp = $('#mypile');
-  const myPile = st.piles ? st.piles[mySeat] : 0;
-  mp.style.display = myPile ? 'flex' : 'none';
-  mp.innerHTML = myPile ? pileHTML(myPile) + '<span>دست‌های من</span>' : '';
+  // won-trick piles: a plain row of card backs on the carpet in front of
+  // each player (never inside the name bars, no label, no count)
+  st.seats.forEach((s, i) => {
+    const row = $('#pile-' + relPos(i));
+    if (!row) return;
+    const n = st.piles ? st.piles[i] : 0;
+    row.classList.toggle('on', n > 0);
+    if (row._n !== n) { row.innerHTML = pileRowHTML(n); row._n = n; }
+  });
 
   // center trick — cards that are new since the last render fly in
   const trickEl = $('#trick');
@@ -775,9 +782,25 @@ function render(st) {
     $('#ov-tk-us').textContent = tkTxt(myTeam);
     $('#ov-tk-them').textContent = tkTxt(them);
     $('#ov-tr-row').style.display = r.transferred ? '' : 'none';
-    if (r.transferred) $('#ov-tr').textContent = 'همهٔ تاوان به ' + teamLabel(r.transferTo) + ' رسید';
+    if (r.transferred) {
+      // name the teams by their PLAYERS so the direction can never be
+      // misread, and say who gave the takan.
+      const teamNames = (t) => [t, t + 2].map((s) => st.seats[s] ? st.seats[s].name : 'بازیکن').join(' و ');
+      const givers = r.takanBy && r.takanBy[r.transferTo]
+        ? [...new Set(r.takanBy[r.transferTo])].map((s) => st.seats[s] ? st.seats[s].name : 'بازیکن').join(' و ') : '';
+      $('#ov-tr').textContent = 'همهٔ تاوان به تیمِ (' + teamNames(r.transferTo) + ') رسید' +
+        (givers ? ' — تکان از ' + givers : '');
+    }
     $('#ov-tw-us').textContent = faNum(r.tawan[myTeam]);
     $('#ov-tw-them').textContent = faNum(r.tawan[them]);
+    $('#ov-bk-us').textContent = faNum(r.bankedTawan ? r.bankedTawan[myTeam] : 0);
+    $('#ov-bk-them').textContent = faNum(r.bankedTawan ? r.bankedTawan[them] : 0);
+    const wiped = [myTeam, them].filter((t) => r.tawan[t] < 10);
+    $('#ov-wipe').style.display = wiped.length ? '' : 'none';
+    if (wiped.length) {
+      $('#ov-wipe').textContent = wiped.map((t) =>
+        'تاوان ' + teamLabel(t) + ' (' + faNum(r.tawan[t]) + ') کمتر از ۱۰ بود — حساب نشد').join(' · ');
+    }
     $('#ov-qs').textContent = teamLabel(r.qsTeam);
     $('#ov-cr-us').textContent = '+' + faNum(r.credits[myTeam]);
     $('#ov-cr-them').textContent = '+' + faNum(r.credits[them]);
