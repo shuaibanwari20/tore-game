@@ -329,6 +329,7 @@
     <div class="row"><span>تاوان جمع‌شده (بانک)</span><span><small>ما </small><b id="ov-bk-us">۰</b> · <small>حریف </small><b id="ov-bk-them">۰</b></span></div>
     <div id="ov-wipe" style="font-size:13.5px; opacity:.9; padding:2px 2px 0"></div>
     <div class="row"><span>ماتکه کالا (Q♠) را گرفت</span><b id="ov-qs">—</b></div>
+    <div id="ov-tie" style="display:none; font-size:14.5px; font-weight:700; color:#ffd75e; padding:4px 2px 0"></div>
     <div class="row big"><span>امتیاز این دست</span><b id="ov-cr" style="color:#ffd75e">—</b></div>
     <div class="row"><span>جمع مسابقه</span><b><small>ما </small><span id="ov-sc-us">۰</span> — <small>حریف </small><span id="ov-sc-them">۰</span></b></div>
     <div style="margin-top:10px; font-size:13.5px; opacity:.85">دست بعدی به‌زودی شروع می‌شود…</div>
@@ -1072,6 +1073,14 @@ function render(st) {
         'تاوان ' + teamLabel(t) + ' (' + faNum(r.tawan[t]) + ') کمتر از ۱۰ بود — حساب نشد').join(' · ');
     }
     $('#ov-qs').textContent = teamLabel(r.qsTeam);
+    // Tie verdict, spelled out with names: on a tied final tawan the team
+    // that CAPTURED ماتکه کالا takes the 20. The check must be VISIBLE —
+    // a silent application read as a scoring error to the user (15–15 case).
+    const tiedFinal = r.tawan[0] === r.tawan[1];
+    $('#ov-tie').style.display = tiedFinal ? '' : 'none';
+    if (tiedFinal) {
+      $('#ov-tie').textContent = '⚖️ مساوی شد! ماتکه کالا را تیمِ (' + teamNames(r.qsTeam) + ') گرفت — ۲۰ برای همان تیم';
+    }
     $('#ov-cr').textContent = 'تیمِ (' + teamNames(myTeam) + '): +' + faNum(r.credits[myTeam]) +
       ' — تیمِ (' + teamNames(them) + '): +' + faNum(r.credits[them]);
     $('#ov-sc-us').textContent = faNum(st.scores[myTeam]);
