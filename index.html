@@ -324,6 +324,7 @@
     <div class="row"><span>تاوان ورق‌ها</span><span><small>ما </small><b id="ov-card-us">۰</b> · <small>حریف </small><b id="ov-card-them">۰</b></span></div>
     <div class="row" id="ov-tk-row"><span>تکان ⭐</span><span><small>ما </small><b id="ov-tk-us">—</b> · <small>حریف </small><b id="ov-tk-them">—</b></span></div>
     <div class="row" id="ov-tr-row"><span>انتقال تکان</span><b id="ov-tr">—</b></div>
+    <div id="ov-tr-blocked" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
     <div class="row big"><span>تاوان نهایی</span><b id="ov-tw">—</b></div>
     <div id="ov-bump" style="font-size:13.5px; opacity:.9; padding:2px 2px 0"></div>
     <div class="row"><span>تاوان جمع‌شده (بانک)</span><span><small>ما </small><b id="ov-bk-us">۰</b> · <small>حریف </small><b id="ov-bk-them">۰</b></span></div>
@@ -1055,6 +1056,15 @@ function render(st) {
         ? [...new Set(r.takanBy[r.transferTo])].map((s) => st.seats[s] ? st.seats[s].name : 'بازیکن').join(' و ') : '';
       $('#ov-tr').textContent = 'همهٔ تاوان به تیمِ (' + teamNames(r.transferTo) + ') رسید' +
         (givers ? ' — تکان از ' + givers : '');
+    }
+    // Blocked transfer, spelled out with names: a single takan stood (its
+    // team kept its tawan + bonus) but the pot did NOT move, because the
+    // other team's pre-round banked tawan (جمع‌شده) was below ۳۰.
+    $('#ov-tr-blocked').style.display = r.transferBlocked ? '' : 'none';
+    if (r.transferBlocked) {
+      const takanTeam = r.takanCount[0] > 0 ? 0 : 1;
+      $('#ov-tr-blocked').textContent = 'تکان برای تیمِ (' + teamNames(takanTeam) + ') ماند، اما انتقال نشد — جمع‌شدهٔ تیمِ (' +
+        teamNames(1 - takanTeam) + ') ' + faNum(r.transferGateBanked) + ' بود (کمتر از ۳۰)';
     }
     $('#ov-tw').textContent = 'تیمِ (' + teamNames(myTeam) + '): ' + faNum(r.tawan[myTeam]) +
       ' — تیمِ (' + teamNames(them) + '): ' + faNum(r.tawan[them]);

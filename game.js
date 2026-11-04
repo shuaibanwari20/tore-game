@@ -10,6 +10,7 @@ const MATCH_TARGET = 210;      // match points to win
 const ROUND_WIN_POINTS = 20;    // credited to round winner
 const ROUND_LOSE_POINTS = 10;   // credited to round loser
 const TAKAN_POINTS = 30;       // تکان bonus tawan (leading a suit nobody else holds)
+const TAKAN_TRANSFER_MIN_BANK = 30; // takan transfer fires only when the OTHER team's pre-round banked tawan (جمع‌شده) is at least this
 const TAWAN_BANK_MIN = 10;     // round tawan ≥ 10 banks into the match-long bank; ≤ 9 is wiped
 const TAWAN_BUMP_LIMIT = 21;   // a final round tawan ABOVE this (and below 30) is written as 30
 const TAWAN_BUMP_VALUE = 30;   // …the value written instead (finals already ≥ 30 stay as they are)
@@ -99,7 +100,14 @@ function tawanOf(cards) {
  *  1. Round tawan per team = cardTawan + takanBonus.
  *  2. TAKAN TRANSFER: if EXACTLY ONE team has a takan, ALL of both teams'
  *     round tawan is reassigned to the takan team (the other team gets 0) —
- *     a reward: the takan team takes the whole pot.
+ *     a reward: the takan team takes the whole pot. GATE (user rule): the
+ *     transfer fires ONLY when the non-takan team's PRE-ROUND banked tawan
+ *     (جمع‌شده — bankedTawan entering this round, before this round's own
+ *     banking) is ≥ TAKAN_TRANSFER_MIN_BANK. Below that, the takan stands
+ *     (its team keeps card tawan + bonus) but nothing transfers. The gate
+ *     applies only when `bankedBefore` is supplied (Match always supplies
+ *     it; a bare scoreRound/Round call without it keeps the ungated
+ *     behaviour). Both-takan and no-takan rounds are never gated.
  *  3. BUMP: a final tawan above 21 (and below 30) is written as 30 —
  *     «هر بازیکن که بیشتر از ۲۱ تاوان گرفت باید برایش ۳۰ تاوان نوشته شوه».
  *     Finals already ≥ 30 (only reachable via takan/transfer) stay as-is.
@@ -108,19 +116,35 @@ function tawanOf(cards) {
  *     On a tie (incl. the classic 15–15), the team that CAPTURED
  *     Q♠ wins. Credits are always 20/10.
  * Returns { tawan (final, post-bump), bumped, transferred, transferTo,
- *           winner, credits }.
+ *           transferBlocked, transferGateBanked, winner, credits }.
+ * transferBlocked is true when a single-takan transfer was stopped by the
+ * bank gate; transferGateBanked is then the non-takan team's pre-round
+ * banked tawan (the value that failed the gate), else null.
  */
-function scoreRound(cardTawan, takanBonus, takanCount, qsTeam) {
+function scoreRound(cardTawan, takanBonus, takanCount, qsTeam, bankedBefore) {
   const raw = [cardTawan[0] + takanBonus[0], cardTawan[1] + takanBonus[1]];
   let tawan = raw.slice();
   let transferred = false;
   let transferTo = null;
+  let transferBlocked = false;
+  let transferGateBanked = null;
   const has0 = takanCount[0] > 0, has1 = takanCount[1] > 0;
   if (has0 !== has1) {
-    transferTo = has0 ? 0 : 1;
-    tawan = [0, 0];
-    tawan[transferTo] = raw[0] + raw[1];
-    transferred = true;
+    const takanTeam = has0 ? 0 : 1;
+    const other = 1 - takanTeam;
+    // GATE: read the OTHER team's banked tawan as it stood BEFORE this
+    // round (bankedBefore is snapshotted by Match.startRound, before any
+    // of this round's banking is applied in Match.onRoundFinished).
+    const gated = Array.isArray(bankedBefore) && bankedBefore[other] < TAKAN_TRANSFER_MIN_BANK;
+    if (gated) {
+      transferBlocked = true;
+      transferGateBanked = bankedBefore[other];
+    } else {
+      transferTo = takanTeam;
+      tawan = [0, 0];
+      tawan[transferTo] = raw[0] + raw[1];
+      transferred = true;
+    }
   }
   const bumped = tawan.map((t) => t > TAWAN_BUMP_LIMIT && t < TAWAN_BUMP_VALUE);
   if (bumped[0]) tawan[0] = TAWAN_BUMP_VALUE;
@@ -131,7 +155,7 @@ function scoreRound(cardTawan, takanBonus, takanCount, qsTeam) {
   else winner = qsTeam; // tie → the team that captured ماتکه کالا wins
   const credits = [ROUND_LOSE_POINTS, ROUND_LOSE_POINTS];
   credits[winner] = ROUND_WIN_POINTS;
-  return { tawan, bumped, transferred, transferTo, winner, credits };
+  return { tawan, bumped, transferred, transferTo, transferBlocked, transferGateBanked, winner, credits };
 }
 
 /**
@@ -151,9 +175,13 @@ function decideMatch(scores) {
  * emit(evt) receives: cardPlayed, trickWon, takan, declared13, roundFinished.
  */
 class Round {
-  constructor(firstLeader, emit = () => {}, rng = Math.random) {
+  constructor(firstLeader, emit = () => {}, rng = Math.random, bankedBefore = null) {
     this.hands = deal(rng);
     this.emit = emit;
+    // Pre-round banked tawan (جمع‌شده) snapshot for the takan-transfer
+    // gate — Match passes its bankedTawan as it stands BEFORE this round;
+    // null for a bare Round (gate inactive, transfer behaves as before).
+    this.bankedBefore = bankedBefore ? bankedBefore.slice() : null;
     this.leader = firstLeader;
     this.turn = firstLeader;
     this.trick = [];                       // [{seat, card}]
@@ -260,14 +288,17 @@ class Round {
   finish() {
     const cardTawan = [tawanOf(this.captured[0]), tawanOf(this.captured[1])];
     const qsTeam = this.captured[0].includes('QS') ? 0 : 1;
-    const s = scoreRound(cardTawan, this.takanBonus, this.takanCount, qsTeam);
+    const s = scoreRound(cardTawan, this.takanBonus, this.takanCount, qsTeam, this.bankedBefore);
     this.result = {
       cardTawan,                                  // tawan from captured cards (sums to 30)
       takanBonus: this.takanBonus.slice(),        // تکان bonus per team
       takanCount: this.takanCount.slice(),        // تکان count per team (red stars)
       takanBy: [this.takanBy[0].slice(), this.takanBy[1].slice()], // seats that gave the takans
+      bankedBefore: this.bankedBefore ? this.bankedBefore.slice() : null, // جمع‌شده entering this round (transfer gate input)
       transferred: s.transferred,                 // takan transfer applied?
       transferTo: s.transferTo,                   // team that received ALL tawan (or null)
+      transferBlocked: s.transferBlocked,         // single takan, but the bank gate stopped the transfer
+      transferGateBanked: s.transferGateBanked,   // non-takan team's pre-round banked tawan when blocked (else null)
       bumped: s.bumped,                           // >21 final written as 30, per team
       tawan: s.tawan,                             // FINAL round tawan per team (post-bump)
       qsTeam, winner: s.winner, credits: s.credits,
@@ -289,7 +320,7 @@ class Match {
     this.scores = [0, 0];
     this.bankedTawan = [0, 0];   // match-long tawan bank: a round's final tawan banks only when ≥ TAWAN_BANK_MIN (≤ 9 is wiped)
     this.roundNo = 0;
-    this.history = [];   // per-round: {roundNo, cardTawan, takanBonus, takanCount, takanBy, transferred, transferTo, bumped, tawan, banked, bankedTawan, qsTeam, winner, credits, scoresAfter}
+    this.history = [];   // per-round: {roundNo, cardTawan, takanBonus, takanCount, takanBy, bankedBefore, transferred, transferTo, transferBlocked, transferGateBanked, bumped, tawan, banked, bankedTawan, qsTeam, winner, credits, scoresAfter}
     this.finished = false;
     this.winner = null;
     this.round = null;
@@ -302,10 +333,13 @@ class Match {
   startRound() {
     if (this.finished) throw new Error('match is finished');
     this.roundNo++;
+    // Snapshot the banked tawan NOW — this is the pre-round جمع‌شده the
+    // takan-transfer gate reads; this round's own banking is only added
+    // later, in onRoundFinished, after the round has been scored.
     const round = new Round(this.firstLeader(), (evt) => {
       this.emit(evt);
       if (evt.type === 'roundFinished') this.onRoundFinished(round);
-    }, this.rng);
+    }, this.rng, this.bankedTawan.slice());
     this.round = round;
     return round;
   }
@@ -326,7 +360,10 @@ class Match {
       roundNo: this.roundNo, cardTawan: r.cardTawan.slice(),
       takanBonus: r.takanBonus.slice(), takanCount: r.takanCount.slice(),
       takanBy: r.takanBy ? r.takanBy.map((a) => a.slice()) : [[], []],
+      bankedBefore: r.bankedBefore ? r.bankedBefore.slice() : null,
       transferred: r.transferred, transferTo: r.transferTo,
+      transferBlocked: !!r.transferBlocked,
+      transferGateBanked: r.transferGateBanked === undefined ? null : r.transferGateBanked,
       bumped: r.bumped ? r.bumped.slice() : [false, false],
       tawan: r.tawan.slice(), banked: banked.slice(),
       bankedTawan: this.bankedTawan.slice(), qsTeam: r.qsTeam,
@@ -353,7 +390,7 @@ function seededRng(seed) {
 }
 
 module.exports = {
-  MATCH_TARGET, ROUND_WIN_POINTS, ROUND_LOSE_POINTS, TAKAN_POINTS, TAWAN_BANK_MIN, TAWAN_BUMP_LIMIT, TAWAN_BUMP_VALUE, PLAYERS, CARDS_PER_PLAYER,
+  MATCH_TARGET, ROUND_WIN_POINTS, ROUND_LOSE_POINTS, TAKAN_POINTS, TAKAN_TRANSFER_MIN_BANK, TAWAN_BANK_MIN, TAWAN_BUMP_LIMIT, TAWAN_BUMP_VALUE, PLAYERS, CARDS_PER_PLAYER,
   SUITS, SUIT_NAMES, RANK_NAMES, TOTAL_TAWAN,
   suitOf, rankOf, teamOf, partnerOf, cardName, cardPoints,
   makeDeck, shuffle, deal, legalPlays, trickWinnerSeat, tawanOf,
