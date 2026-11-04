@@ -91,18 +91,21 @@ function tawanOf(cards) {
 }
 
 /**
- * Round scoring — the Tore rule (تاوان is a PENALTY: fewer is better).
+ * Round scoring — the Tore rule (تاوان is the PRIZE: MORE is better — the
+ * team that collects more tawan wins the round; confirmed by the user in
+ * live play, matching his original dictation and README-fa.md).
  * Inputs: cardTawan = tawan from captured cards; takanBonus / takanCount per
  * team; qsTeam = team that captured Q♠ (ماتکه کالا).
  *  1. Round tawan per team = cardTawan + takanBonus.
  *  2. TAKAN TRANSFER: if EXACTLY ONE team has a takan, ALL of both teams'
- *     round tawan is reassigned to the takan team (the other team gets 0).
+ *     round tawan is reassigned to the takan team (the other team gets 0) —
+ *     a reward: the takan team takes the whole pot.
  *  3. BUMP: a final tawan above 21 (and below 30) is written as 30 —
  *     «هر بازیکن که بیشتر از ۲۱ تاوان گرفت باید برایش ۳۰ تاوان نوشته شوه».
  *     Finals already ≥ 30 (only reachable via takan/transfer) stay as-is.
  *     The bump applies BEFORE the winner decision and BEFORE the bank.
- *  4. The team with FEWER final tawan wins (20); the other gets 10.
- *     On a tie (incl. the classic 15–15), the team that did NOT capture
+ *  4. The team with MORE final tawan wins (20); the other gets 10.
+ *     On a tie (incl. the classic 15–15), the team that CAPTURED
  *     Q♠ wins. Credits are always 20/10.
  * Returns { tawan (final, post-bump), bumped, transferred, transferTo,
  *           winner, credits }.
@@ -123,9 +126,9 @@ function scoreRound(cardTawan, takanBonus, takanCount, qsTeam) {
   if (bumped[0]) tawan[0] = TAWAN_BUMP_VALUE;
   if (bumped[1]) tawan[1] = TAWAN_BUMP_VALUE;
   let winner;
-  if (tawan[0] < tawan[1]) winner = 0;
-  else if (tawan[1] < tawan[0]) winner = 1;
-  else winner = 1 - qsTeam; // tie → the team that did NOT take ماتکه کالا wins
+  if (tawan[0] > tawan[1]) winner = 0;
+  else if (tawan[1] > tawan[0]) winner = 1;
+  else winner = qsTeam; // tie → the team that captured ماتکه کالا wins
   const credits = [ROUND_LOSE_POINTS, ROUND_LOSE_POINTS];
   credits[winner] = ROUND_WIN_POINTS;
   return { tawan, bumped, transferred, transferTo, winner, credits };

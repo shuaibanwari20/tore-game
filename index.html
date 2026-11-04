@@ -126,6 +126,13 @@
   .pilerow[data-pos="left"] { left: 40px; top: 50%; transform: translateY(-50%); flex-direction: column; }
   .pilerow[data-pos="right"] img, .pilerow[data-pos="left"] img { margin-top: -28px; }
   .pilerow[data-pos="right"] img:first-child, .pilerow[data-pos="left"] img:first-child { margin-top: 0; }
+  /* collection flight: the newest back stays hidden until the gathered
+     trick lands on it, then pops in */
+  .pilerow img.landwait { opacity: 0; }
+  .pilerow img.landpop { animation: landpop .18s ease-out; }
+  @keyframes landpop { from { transform: scale(1.3); } to { transform: scale(1); } }
+  .collectfly { position: fixed; z-index: 86; margin: 0; pointer-events: none; will-change: transform, opacity; }
+  .collectback { border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.45); }
 
   /* ---------- table (carpet shows through) ---------- */
   .table { position: relative; flex: 1 1 auto; min-height: 170px; margin: 2px 0 0; }
@@ -251,11 +258,11 @@
       <button id="btn-join" class="ghost">ورود به اتاق</button>
     </div>
     <div class="cardbox legend">
-      📜 <b>قانون امتیاز (تاوان = جریمه؛ کمتر بهتر است):</b><br>
+      📜 <b>قانون امتیاز (تاوان جمع کن؛ بیشتر بهتر است):</b><br>
       هر ورق <span class="red">♥</span> <b>لال</b> = ۱ تاوان (جمعاً ۱۳)<br>
       <b>غلام پشه</b> (J♣) = ۵ تاوان · <b>ماتکه کالا</b> (Q♠) = ۹ تاوان · <b>ده خشت</b> (10♦) = ۳ تاوان<br>
-      هر دست ۳۰ تاوان دارد؛ تیمی که تاوانِ <b>کمتر</b> بگیرد <b>۲۰</b> و دیگری <b>۱۰</b> می‌گیرد.<br>
-      مساوی؟ تیمی که <b>ماتکه کالا</b> را <b>نگرفته</b> باشد، ۲۰ را می‌برد. مسابقه تا <b>۲۱۰</b> است.<br>
+      هر دست ۳۰ تاوان دارد؛ تیمی که تاوانِ <b>بیشتر</b> جمع کند <b>۲۰</b> و دیگری <b>۱۰</b> می‌گیرد.<br>
+      مساوی؟ تیمی که <b>ماتکه کالا</b> را <b>گرفته</b> باشد، ۲۰ را می‌برد. مسابقه تا <b>۲۱۰</b> است.<br>
       ⭐ <b>تکان:</b> خالی را شروع کنی که هیچ‌کس ندارد → <b>+۳۰ تاوان</b> و یک ستارهٔ قرمز برای تیمت!<br>
       اگر فقط یک تیم تکان داشته باشد، <b>همهٔ تاوان دست به همان تیم می‌رسد</b>.<br>
       🙋 دست آخر: اگر پیش از بازی بگویی <b>«۱۳ هست»</b>، تکان برایت حساب نمی‌شود.<br>
@@ -282,9 +289,9 @@
       <button id="btn-leave" class="menubtn">منوی اصلی</button>
     </div>
     <div class="scorestrip">
-      <span>تیم ما <b id="sc-us">۰</b> <small>· تاوان: <span id="tw-us">۰</span></small> <span class="tkstars" id="tk-us"></span> <small>· جمع‌شده: <span id="bk-us">۰</span></small></span>
+      <span>تیم ما · جمع‌شده <b id="sc-us">۰</b> <small>· امتیاز: <span id="pt-us">۰</span> · تاوان: <span id="tw-us">۰</span></small> <span class="tkstars" id="tk-us"></span></span>
       <span class="ss-mid">دست <span id="round-no">۱</span> · هدف: ۲۱۰</span>
-      <span>تیم حریف <b id="sc-them">۰</b> <small>· تاوان: <span id="tw-them">۰</span></small> <span class="tkstars" id="tk-them"></span> <small>· جمع‌شده: <span id="bk-them">۰</span></small></span>
+      <span>تیم حریف · جمع‌شده <b id="sc-them">۰</b> <small>· امتیاز: <span id="pt-them">۰</span> · تاوان: <span id="tw-them">۰</span></small> <span class="tkstars" id="tk-them"></span></span>
     </div>
 
     <div class="table" id="table">
@@ -512,6 +519,93 @@ const SLOT_ROT = { bottom: -5, top: 4, right: 7, left: -7 }; // must match .tric
 let prevTrickKeys = new Set();   // "seat:card" keys present in the trick at last render
 const flownKeys = new Set();     // local plays whose flight the clone already showed
 
+// ---------- won-trick collection flight ----------
+// When a completed trick is picked up from the table, its 4 cards must
+// visibly GATHER and fly into the winner's pile row — never pop straight
+// in. Server semantics shape the detection: the winner's pile count
+// already includes the trick while it rests on the table (the hold), so
+// render() snapshots the completed trick + that count; on the first
+// render where the trick is gone and the count is unchanged, the flight
+// fires. The row's newest back waits hidden (.landwait) from the moment
+// the trick completes until the flight lands on it.
+let pendingCollect = null;  // {plays:[{seat,card}], winnerSeat, pileAtSnapshot}
+const pileFlights = {};     // seat -> {timers:[], clones:[]} while a flight runs
+let lastRoundNo = null;
+
+function revealPileBack(seat) {
+  const imgs = seat == null
+    ? document.querySelectorAll('.pilerow img.landwait')
+    : document.querySelectorAll('#pile-' + relPos(seat) + ' img.landwait');
+  imgs.forEach((img) => {
+    img.classList.remove('landwait');
+    img.classList.add('landpop');
+    setTimeout(() => img.classList.remove('landpop'), 220);
+  });
+}
+
+/** End a seat's collection flight (landed or cancelled): clones go away,
+ *  the waiting back appears in the row. Safe to call with no flight. */
+function settlePileFlight(seat) {
+  const flight = pileFlights[seat];
+  if (flight) {
+    delete pileFlights[seat];
+    flight.timers.forEach(clearTimeout);
+    flight.clones.forEach((el) => el.remove());
+  }
+  revealPileBack(seat);
+}
+
+function launchCollectFlight(seat, rects, target) {
+  const flight = pileFlights[seat];
+  if (!flight) return;
+  const DUR = 560; // ms, ease-in-out; transform/opacity only
+  const cx = rects.reduce((s, r) => s + r.rect.left + r.rect.width / 2, 0) / rects.length;
+  const cy = rects.reduce((s, r) => s + r.rect.top + r.rect.height / 2, 0) / rects.length;
+  const tx = target.left + target.width / 2, ty = target.top + target.height / 2;
+  rects.forEach((r, idx) => {
+    const el = cardEl(r.code);
+    el.classList.add('collectfly');
+    el.style.left = r.rect.left + 'px';
+    el.style.top = r.rect.top + 'px';
+    el.style.width = r.rect.width + 'px';
+    el.style.height = r.rect.height + 'px';
+    document.body.appendChild(el);
+    flight.clones.push(el);
+    const ccx = r.rect.left + r.rect.width / 2, ccy = r.rect.top + r.rect.height / 2;
+    // gather: converge toward the trick centre, straighten, shrink a bit
+    const gx = (cx + (idx - 1.5) * 7) - ccx, gy = (cy + (idx - 1.5) * 3) - ccy;
+    // travel: land centred on the row's newest back, at back size
+    const ex = tx - ccx, ey = ty - ccy;
+    const s = Math.max(0.2, target.width / r.rect.width);
+    try {
+      el.animate([
+        { transform: 'rotate(' + SLOT_ROT[r.pos] + 'deg)', opacity: 1 },
+        { transform: 'translate(' + gx.toFixed(1) + 'px,' + gy.toFixed(1) + 'px) rotate(0deg) scale(.8)', opacity: 1, offset: 0.35 },
+        { transform: 'translate(' + ex.toFixed(1) + 'px,' + ey.toFixed(1) + 'px) rotate(0deg) scale(' + s.toFixed(3) + ')', opacity: 1, offset: 0.8 },
+        { transform: 'translate(' + ex.toFixed(1) + 'px,' + ey.toFixed(1) + 'px) rotate(0deg) scale(' + s.toFixed(3) + ')', opacity: 0 },
+      ], { duration: DUR, easing: 'ease-in-out', fill: 'forwards' });
+    } catch (e) { /* no WAAPI: the settle below still reveals the back */ }
+  });
+  // the gathered stack flips into a single card back on the landing spot
+  const back = document.createElement('img');
+  back.src = CARD_IMGS.back;
+  back.alt = '';
+  back.className = 'collectfly collectback';
+  back.style.left = target.left + 'px';
+  back.style.top = target.top + 'px';
+  back.style.width = target.width + 'px';
+  back.style.height = target.height + 'px';
+  document.body.appendChild(back);
+  flight.clones.push(back);
+  try {
+    back.animate([
+      { transform: 'rotateY(90deg) scale(.7)', opacity: 0 },
+      { transform: 'rotateY(0deg) scale(1)', opacity: 1 },
+    ], { duration: 140, delay: DUR - 140, easing: 'ease-out', fill: 'backwards' });
+  } catch (e) { back.style.opacity = '0'; }
+  flight.timers.push(setTimeout(() => settlePileFlight(seat), DUR + 40));
+}
+
 function measureSlotRect(pos) {
   const trickEl = $('#trick');
   if (!trickEl) return null;
@@ -648,15 +742,17 @@ function render(st) {
   show('scr-game');
   const myTeam = mySeat % 2, them = 1 - myTeam;
 
-  $('#sc-us').textContent = faNum(st.scores[myTeam]);
-  $('#sc-them').textContent = faNum(st.scores[them]);
+  // Scoreboard headline = the BANKED tawan (جمع‌شده) per the user's order —
+  // the bank is what he reads as the score; match points stay visible small.
+  $('#sc-us').textContent = faNum(st.bankedTawan ? st.bankedTawan[myTeam] : 0);
+  $('#sc-them').textContent = faNum(st.bankedTawan ? st.bankedTawan[them] : 0);
+  $('#pt-us').textContent = faNum(st.scores[myTeam]);
+  $('#pt-them').textContent = faNum(st.scores[them]);
   const twTxt = (t) => faNum(st.roundTawan[t]) + (st.takanBonus[t] ? ' +' + faNum(st.takanBonus[t]) : '');
   $('#tw-us').textContent = twTxt(myTeam);
   $('#tw-them').textContent = twTxt(them);
   $('#tk-us').textContent = st.takanCount[myTeam] ? '★'.repeat(st.takanCount[myTeam]) : '';
   $('#tk-them').textContent = st.takanCount[them] ? '★'.repeat(st.takanCount[them]) : '';
-  $('#bk-us').textContent = faNum(st.bankedTawan ? st.bankedTawan[myTeam] : 0);
-  $('#bk-them').textContent = faNum(st.bankedTawan ? st.bankedTawan[them] : 0);
   $('#round-no').textContent = faNum(st.roundNo || 1);
 
   // who is winning the current trick (drives the 👑 and the gold glow)
@@ -673,6 +769,44 @@ function render(st) {
   // its winner gets the strong 'winlast' highlight so the last play is clear
   const trickComplete = st.trick.length === 4;
   const finalWinSeat = trickComplete ? (st.trickWinner != null ? st.trickWinner : winSeat) : null;
+
+  // --- collection flight: snapshot completed tricks, fire on pick-up ---
+  let collectLaunch = null;
+  if (lastRoundNo !== null && st.roundNo !== lastRoundNo) {
+    // new round: kill any stale flight/snapshot, show all backs as-is
+    Object.keys(pileFlights).forEach((s) => settlePileFlight(Number(s)));
+    revealPileBack(null);
+    pendingCollect = null;
+  }
+  lastRoundNo = st.roundNo;
+  if (st.phase === 'playing' && pendingCollect) {
+    const w = pendingCollect.winnerSeat;
+    const curKeys = new Set(st.trick.map((p) => p.seat + ':' + p.card));
+    const gone = pendingCollect.plays.every((p) => !curKeys.has(p.seat + ':' + p.card));
+    if (gone) {
+      if (st.piles && st.piles[w] === pendingCollect.pileAtSnapshot && st.piles[w] > 0) {
+        // the 4 cards are still on screen (this render has not rebuilt the
+        // trick yet) — capture their rects before they vanish
+        const slotEls = $('#trick').querySelectorAll('.slot .pcard');
+        const rects = [];
+        pendingCollect.plays.forEach((p, idx) => {
+          const el = slotEls[idx];
+          if (!el) return;
+          const r = el.getBoundingClientRect();
+          if (r.width) rects.push({ code: p.card, pos: relPos(p.seat), rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
+        });
+        if (rects.length === pendingCollect.plays.length) collectLaunch = { seat: w, rects };
+      }
+      pendingCollect = null;
+    }
+  }
+  if (st.phase === 'playing' && trickComplete && finalWinSeat != null) {
+    pendingCollect = {
+      plays: st.trick.map((p) => ({ seat: p.seat, card: p.card })),
+      winnerSeat: finalWinSeat,
+      pileAtSnapshot: st.piles ? st.piles[finalWinSeat] : 0,
+    };
+  }
 
   // seats: partner in the top bar, side players in vertical bars
   st.seats.forEach((s, i) => {
@@ -704,6 +838,37 @@ function render(st) {
     row.classList.toggle('on', n > 0);
     if (row._n !== n) { row.innerHTML = pileRowHTML(n); row._n = n; }
   });
+
+  // while a completed trick rests on the table, its back stays hidden in
+  // the winner's row — it appears only when the collection flight lands
+  if (pendingCollect) {
+    const wrow = $('#pile-' + relPos(pendingCollect.winnerSeat));
+    const wimg = wrow ? wrow.querySelector('img:last-child') : null;
+    if (wimg) wimg.classList.add('landwait');
+  }
+
+  // the trick was just picked up: fly its cards into the winner's row.
+  // Cosmetic overlay only — the state underneath renders normally.
+  if (collectLaunch) {
+    const w = collectLaunch.seat;
+    const stale = pileFlights[w];
+    if (stale) { // a still-running flight for this seat is superseded
+      stale.timers.forEach(clearTimeout);
+      stale.clones.forEach((el) => el.remove());
+      delete pileFlights[w];
+    }
+    const row = $('#pile-' + relPos(w));
+    const img = row ? row.querySelector('img:last-child') : null;
+    if (img) img.classList.add('landwait'); // stays hidden until landing
+    const tr = img ? img.getBoundingClientRect() : null;
+    if (tr && tr.width) {
+      pileFlights[w] = { timers: [], clones: [] };
+      launchCollectFlight(w, collectLaunch.rects,
+        { left: tr.left, top: tr.top, width: tr.width, height: tr.height });
+    } else {
+      revealPileBack(w); // nowhere to fly to — just show the back
+    }
+  }
 
   // center trick — cards that are new since the last render fly in
   const trickEl = $('#trick');
