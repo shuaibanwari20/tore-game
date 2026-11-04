@@ -112,16 +112,18 @@
 
   /* ---------- won-trick piles: plain card-back rows on the carpet ----------
      One loose back per won trick, in front of the player who won it.
-     No container, no background, no label, no count. */
+     No container, no background, no label, no count.
+     Piles paint UNDER the played cards: .pilerow z-index 1 < .trick z-index 6,
+     and each row is tucked flush against its player's edge of the table. */
   .pilerow { position: absolute; z-index: 1; display: none; pointer-events: none; direction: ltr; }
   .pilerow.on { display: flex; }
-  .pilerow img { width: 32px; height: auto; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.45); flex: 0 0 auto; }
-  .pilerow[data-pos="bottom"] { bottom: 2px; left: 50%; transform: translateX(-50%); }
-  .pilerow[data-pos="top"] { top: 2px; left: 50%; transform: translateX(-50%); }
+  .pilerow img { width: 28px; height: auto; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.45); flex: 0 0 auto; }
+  .pilerow[data-pos="bottom"] { bottom: 0; left: 50%; transform: translateX(-50%); }
+  .pilerow[data-pos="top"] { top: 0; left: 50%; transform: translateX(-50%); }
   .pilerow[data-pos="bottom"] img, .pilerow[data-pos="top"] img { margin-left: -15px; }
   .pilerow[data-pos="bottom"] img:first-child, .pilerow[data-pos="top"] img:first-child { margin-left: 0; }
-  .pilerow[data-pos="right"] { right: 46px; top: 50%; transform: translateY(-50%); flex-direction: column; }
-  .pilerow[data-pos="left"] { left: 46px; top: 50%; transform: translateY(-50%); flex-direction: column; }
+  .pilerow[data-pos="right"] { right: 40px; top: 50%; transform: translateY(-50%); flex-direction: column; }
+  .pilerow[data-pos="left"] { left: 40px; top: 50%; transform: translateY(-50%); flex-direction: column; }
   .pilerow[data-pos="right"] img, .pilerow[data-pos="left"] img { margin-top: -28px; }
   .pilerow[data-pos="right"] img:first-child, .pilerow[data-pos="left"] img:first-child { margin-top: 0; }
 
@@ -145,7 +147,7 @@
   .vbar.turn { box-shadow: 0 0 0 2px #ffd75e, 0 2px 10px rgba(0,0,0,.4); }
   .vbar.turn .pname { color: #ffd75e; }
 
-  .trick { position: absolute; inset: 0; }
+  .trick { position: absolute; inset: 0; z-index: 6; } /* above the won-trick piles (z 1): played cards always cover them */
   .trick .slot { position: absolute; width: 76px; text-align: center; }
   .trick .slot .who { display: none; }
   .trick .slot[data-pos="bottom"] { bottom: 3%; left: 50%; margin-left: -38px; }
