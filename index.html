@@ -126,9 +126,9 @@
   .pilerow[data-pos="left"] { left: 40px; top: 50%; transform: translateY(-50%); flex-direction: column; }
   .pilerow[data-pos="right"] img, .pilerow[data-pos="left"] img { margin-top: -28px; }
   .pilerow[data-pos="right"] img:first-child, .pilerow[data-pos="left"] img:first-child { margin-top: 0; }
-  /* collection flight: the newest back stays hidden (.landwait) until the
-     won trick has visibly travelled into its slot and flipped over */
-  .pilerow img.landwait { opacity: 0; }
+  /* collection flight: a collected trick's back is inserted with inline
+     visibility:hidden while the flight travels into its slot, and
+     settleCollect() unhides it in the frame the flip lands */
   .collectfly { position: fixed; z-index: 86; margin: 0; pointer-events: none; will-change: transform; }
   /* the gathered stack that slides across the carpet with its faces up,
      then flips over into the row's newest back */
@@ -523,23 +523,34 @@ const SLOT_ROT = { bottom: -5, top: 4, right: 7, left: -7 }; // must match .tric
 let prevTrickKeys = new Set();   // "seat:card" keys present in the trick at last render
 const flownKeys = new Set();     // local plays whose flight the clone already showed
 
-// ---------- won-trick collection flight ----------
-// When a completed trick is picked up from the table, it must be SEEN to
-// travel into the winner's pile row, inside the same field:
-//   (a) GATHER (~200 ms): the 4 played cards converge into one neat stack
-//       at the trick centre, faces up;
-//   (b) SLIDE (~600 ms, ease-in-out): the stack crosses the carpet on a
-//       slight arc to the winning player's pile row, shrinking steadily
-//       to back size — faces visible the whole way, nothing fades out;
-//   (c) FLIP (~200 ms): on arrival the stack turns over (rotateY) into
-//       the card back, and in the same frame the flip completes, the
-//       row's real newest back is revealed in exactly that slot.
-// Server semantics shape the detection: the winner's pile count already
-// includes the trick while it rests on the table (the hold), so render()
-// snapshots the completed trick + that count; on the first render where
-// the trick is gone and the count is unchanged, the flight fires. The
-// row's newest back waits hidden (.landwait) from the moment the trick
-// completes until the flip lands on its slot.
+// ---------- won-trick collection flight (SINGLE path) ----------
+// Exactly one sequence may ever show a won trick's new pile back:
+//   1. The trick completes and rests on the table (server hold). The
+//      collection state machine marks the collection PENDING — the
+//      winner's pile row is left completely untouched: the new back is
+//      not in the DOM at all, so it cannot pop in early, and the row
+//      cannot shift under the resting trick.
+//   2. The trick clears. The collection LAUNCHES (exactly once — the
+//      phase flips to 'flying' before anything is built): a placeholder
+//      back is inserted born-hidden (inline visibility:hidden, tracked
+//      by direct reference, never by positional queries), its exact
+//      slot is measured from its own layout box, and the flight runs
+//      off the resting trick's still-live DOM cards:
+//        (a) GATHER (~200 ms): the 4 played cards converge into one
+//            neat stack at the trick centre, faces up;
+//        (b) SLIDE (~600 ms, ease-in-out): the stack crosses the
+//            carpet on a slight arc to the winner's pile row,
+//            shrinking steadily to back size — faces visible the whole
+//            way, nothing fades out;
+//        (c) FLIP (~200 ms): on arrival the stack turns over
+//            (rotateY) into the card back.
+//   3. The flip completes → settleCollect() removes the clones and
+//      unhides exactly that placeholder back, in the same frame.
+// settleCollect() is the ONLY function that can reveal a collection's
+// back, and the phase/id guards make it run exactly once per
+// collection. Catch-up inserts (first sync, reconnect, busy seat)
+// bypass the flight entirely — an animation is never queued behind a
+// pop, so a pop can never precede a flight.
 const GATHER_MS = 200, SLIDE_MS = 600, FLIP_MS = 200; // ~1 s total
 const CAN_COLLECT_ANIM = (() => {
   try {
@@ -548,67 +559,116 @@ const CAN_COLLECT_ANIM = (() => {
     return true;
   } catch (e) { return false; }
 })();
-let pendingCollect = null;  // {plays:[{seat,card}], winnerSeat, pileAtSnapshot}
-const pileFlights = {};     // seat -> {timers:[], clones:[]} while a flight runs
+const collections = {};   // seat -> {id, phase:'pending'|'flying', plays, target, backEl, timers, clones}
+let pileShown = [0, 0, 0, 0];   // backs actually in each row's DOM — the ONLY input to row rendering
+let pileTarget = [0, 0, 0, 0];  // latest st.piles per seat
+let collectSeq = 0;
 let lastRoundNo = null;
 
-function revealPileBack(seat) {
-  const imgs = seat == null
-    ? document.querySelectorAll('.pilerow img.landwait')
-    : document.querySelectorAll('#pile-' + relPos(seat) + ' img.landwait');
-  imgs.forEach((img) => img.classList.remove('landwait'));
+function renderPileRow(seat) {
+  const row = $('#pile-' + relPos(seat));
+  if (!row) return;
+  const n = pileShown[seat];
+  row.classList.toggle('on', n > 0);
+  if (row._n !== n) { row.innerHTML = pileRowHTML(n); row._n = n; }
+}
+function renderPileRows() { for (let s = 0; s < 4; s++) renderPileRow(s); }
+
+/** End a seat's collection, exactly once: clones and timers die, and
+ *  the back the flight was carrying becomes visible (its placeholder is
+ *  unhidden — or, if the flight never got to insert one, the back is
+ *  inserted now). This is the ONLY reveal path for a collected trick. */
+function settleCollect(seat) {
+  const col = collections[seat];
+  if (!col) return;
+  delete collections[seat];
+  col.timers.forEach(clearTimeout);
+  col.clones.forEach((el) => el.remove());
+  if (col.backEl) { col.backEl.style.visibility = ''; col.backEl = null; }
+  // A back that arrived while this flight was running (unreachable in
+  // practice — a flight is shorter than a trick) is inserted now.
+  if (pileTarget[seat] > pileShown[seat]) { pileShown[seat] = pileTarget[seat]; renderPileRow(seat); }
 }
 
-/** End a seat's collection flight (landed or cancelled): clones go away,
- *  the waiting back appears in the row. Safe to call with no flight. */
-function settlePileFlight(seat) {
-  const flight = pileFlights[seat];
-  if (flight) {
-    delete pileFlights[seat];
-    flight.timers.forEach(clearTimeout);
-    flight.clones.forEach((el) => el.remove());
+/** New round: kill every collection outright. Placeholder backs die
+ *  with the row rebuild that the pileShown reset triggers. */
+function teardownCollections() {
+  for (let s = 0; s < 4; s++) {
+    const col = collections[s];
+    if (col) {
+      col.timers.forEach(clearTimeout);
+      col.clones.forEach((el) => el.remove());
+      delete collections[s];
+    }
   }
-  revealPileBack(seat);
+  pileShown = [0, 0, 0, 0];
 }
 
-/** Where the row's NEWEST back will sit, computed from the pile ROW
- *  container's own box — never from the hidden (.landwait) img, whose
- *  rect can be stale or zero in the launch frame. The newest back is the
- *  last in DOM order: the right end of a horizontal (bottom/top) row,
- *  the bottom of a vertical (left/right) column. The row box already
- *  reflects the final count (the row re-centres as it grows), so the
- *  slot computed here is exactly where the real back appears when it is
- *  revealed — the flip lands on it with no jump. Null = cannot measure. */
-function pileLandingRect(seat) {
-  const pos = relPos(seat);
-  const row = $('#pile-' + pos);
-  if (!row) return null;
-  const rr = row.getBoundingClientRect();
-  if (!rr.width || !rr.height) return null;
-  // back size: prefer a real, already-visible back in the same row
-  // (offset* = layout size, immune to any transform in flight)
-  let bw = 0, bh = 0;
-  const sib = row.querySelector('img:not(.landwait)');
-  if (sib && sib.offsetWidth) { bw = sib.offsetWidth; bh = sib.offsetHeight; }
-  if (!bw || !bh) { // derive from the row box + the deck's 176x245 aspect
-    if (pos === 'bottom' || pos === 'top') { bh = rr.height; bw = bh * 176 / 245; }
-    else { bw = rr.width; bh = bw * 245 / 176; }
+/** The collection state machine. Runs once per render, BEFORE the pile
+ *  rows and the trick are (re)built, so a launching flight can still
+ *  measure the resting trick's live DOM cards. */
+function syncCollections(st, trickComplete, finalWinSeat) {
+  if (lastRoundNo !== null && st.roundNo !== lastRoundNo) teardownCollections();
+  lastRoundNo = st.roundNo;
+  for (let seat = 0; seat < 4; seat++) pileTarget[seat] = st.piles ? st.piles[seat] : 0;
+
+  for (let seat = 0; seat < 4; seat++) {
+    const target = pileTarget[seat];
+    if (target < pileShown[seat]) { // server reset (new match safety)
+      if (collections[seat]) settleCollect(seat);
+      pileShown[seat] = target;
+    }
+    if (!collections[seat] && target > pileShown[seat]) {
+      if (trickComplete && finalWinSeat === seat && target === pileShown[seat] + 1) {
+        collections[seat] = { id: ++collectSeq, phase: 'pending',
+          plays: st.trick.map((p) => ({ seat: p.seat, card: p.card })),
+          target, backEl: null, timers: [], clones: [] };
+        // row deliberately untouched: the new back does not exist yet
+      } else {
+        pileShown[seat] = target; // catch-up: no resting trick to fly from
+      }
+    }
   }
-  if (!bw || !bh) return null;
-  let left, top;
-  if (pos === 'bottom' || pos === 'top') {
-    left = rr.right - bw;
-    top = rr.top + (rr.height - bh) / 2;
-  } else {
-    top = rr.bottom - bh;
-    left = rr.left + (rr.width - bw) / 2;
+  // Fire pending collections whose trick has left the table — in ANY
+  // phase (the final trick clears into roundEnd and still gets its
+  // flight). Each pending is consumed by exactly one launch.
+  for (let seat = 0; seat < 4; seat++) {
+    const col = collections[seat];
+    if (!col || col.phase !== 'pending') continue;
+    const cur = new Set(st.trick.map((p) => p.seat + ':' + p.card));
+    if (col.plays.every((p) => !cur.has(p.seat + ':' + p.card))) launchCollection(seat, col);
   }
-  return { left, top, width: bw, height: bh };
 }
 
-function launchCollectFlight(seat, rects, landing) {
-  const flight = pileFlights[seat];
-  if (!flight) return;
+/** Consume a pending collection: measure the resting trick, insert the
+ *  born-hidden placeholder back, measure its exact slot, fly. Any
+ *  failure along the way settles immediately (plain insert, no flight —
+ *  there is no second path waiting behind it). */
+function launchCollection(seat, col) {
+  col.phase = 'flying'; // consumed exactly once — no render can relaunch it
+  const slotEls = $('#trick').querySelectorAll('.slot .pcard');
+  const rects = [];
+  col.plays.forEach((p, idx) => {
+    const el = slotEls[idx];
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.width) rects.push({ code: p.card, pos: relPos(p.seat), rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
+  });
+  if (!CAN_COLLECT_ANIM || rects.length !== col.plays.length) { settleCollect(seat); return; }
+  // insert the placeholder back and hide it in the same task — it is
+  // never painted visible; its layout box IS the landing slot
+  pileShown[seat] = col.target;
+  renderPileRow(seat);
+  const row = $('#pile-' + relPos(seat));
+  const backEl = row ? row.querySelector('img:last-child') : null;
+  if (!backEl) { settleCollect(seat); return; }
+  backEl.style.visibility = 'hidden';
+  col.backEl = backEl;
+  const lr = backEl.getBoundingClientRect();
+  if (!lr.width) { settleCollect(seat); return; }
+  runCollectFlight(seat, col, rects, { left: lr.left, top: lr.top, width: lr.width, height: lr.height });
+}
+function runCollectFlight(seat, col, rects, landing) {
   const cardW = rects[0].rect.width, cardH = rects[0].rect.height;
   const cx = rects.reduce((s, r) => s + r.rect.left + r.rect.width / 2, 0) / rects.length;
   const cy = rects.reduce((s, r) => s + r.rect.top + r.rect.height / 2, 0) / rects.length;
@@ -625,7 +685,7 @@ function launchCollectFlight(seat, rects, landing) {
     el.style.width = r.rect.width + 'px';
     el.style.height = r.rect.height + 'px';
     document.body.appendChild(el);
-    flight.clones.push(el);
+    col.clones.push(el);
     try {
       el.animate([
         { transform: 'rotate(' + SLOT_ROT[r.pos] + 'deg)' },
@@ -637,10 +697,10 @@ function launchCollectFlight(seat, rects, landing) {
 
   // (b)+(c) once gathered: swap the loose clones for a single stack
   // element in exactly the same place, slide it to the row, flip it over
-  flight.timers.push(setTimeout(() => {
-    if (pileFlights[seat] !== flight) return; // superseded or settled
-    flight.clones.forEach((el) => el.remove());
-    flight.clones.length = 0;
+  col.timers.push(setTimeout(() => {
+    if (collections[seat] !== col) return; // superseded or settled
+    col.clones.forEach((el) => el.remove());
+    col.clones.length = 0;
 
     const stack = document.createElement('div');
     stack.className = 'collectstack';
@@ -668,7 +728,7 @@ function launchCollectFlight(seat, rects, landing) {
     inner.appendChild(backImg);
     stack.appendChild(inner);
     document.body.appendChild(stack);
-    flight.clones.push(stack);
+    col.clones.push(stack);
 
     // slide: centre-to-centre travel on a slight arc bowing toward the
     // table centre (so the path stays inside the field), shrinking
@@ -698,19 +758,18 @@ function launchCollectFlight(seat, rects, landing) {
     // flip: the arrived stack turns over into the card back; the moment
     // the flip completes, settle removes the stack and reveals the row's
     // real back in the same frame, in the same slot — no jump, no fade
-    flight.timers.push(setTimeout(() => {
-      if (pileFlights[seat] !== flight) return;
+    col.timers.push(setTimeout(() => {
+      if (collections[seat] !== col) return;
       try {
         inner.animate([
           { transform: 'rotateY(0deg)' },
           { transform: 'rotateY(180deg)' },
         ], { duration: FLIP_MS, easing: 'ease-in-out', fill: 'forwards' });
       } catch (e) { /* the settle below still reveals the back */ }
-      flight.timers.push(setTimeout(() => settlePileFlight(seat), FLIP_MS + 30));
+      col.timers.push(setTimeout(() => settleCollect(seat), FLIP_MS + 30));
     }, SLIDE_MS));
   }, GATHER_MS));
 }
-
 function measureSlotRect(pos) {
   const trickEl = $('#trick');
   if (!trickEl) return null;
@@ -875,44 +934,10 @@ function render(st) {
   const trickComplete = st.trick.length === 4;
   const finalWinSeat = trickComplete ? (st.trickWinner != null ? st.trickWinner : winSeat) : null;
 
-  // --- collection flight: snapshot completed tricks, fire on pick-up ---
-  let collectLaunch = null;
-  if (lastRoundNo !== null && st.roundNo !== lastRoundNo) {
-    // new round: kill any stale flight/snapshot, show all backs as-is
-    Object.keys(pileFlights).forEach((s) => settlePileFlight(Number(s)));
-    revealPileBack(null);
-    pendingCollect = null;
-  }
-  lastRoundNo = st.roundNo;
-  if (st.phase === 'playing' && pendingCollect) {
-    const w = pendingCollect.winnerSeat;
-    const curKeys = new Set(st.trick.map((p) => p.seat + ':' + p.card));
-    const gone = pendingCollect.plays.every((p) => !curKeys.has(p.seat + ':' + p.card));
-    if (gone) {
-      if (st.piles && st.piles[w] === pendingCollect.pileAtSnapshot && st.piles[w] > 0) {
-        // the 4 cards are still on screen (this render has not rebuilt the
-        // trick yet) — capture their rects before they vanish
-        const slotEls = $('#trick').querySelectorAll('.slot .pcard');
-        const rects = [];
-        pendingCollect.plays.forEach((p, idx) => {
-          const el = slotEls[idx];
-          if (!el) return;
-          const r = el.getBoundingClientRect();
-          if (r.width) rects.push({ code: p.card, pos: relPos(p.seat), rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
-        });
-        if (rects.length === pendingCollect.plays.length) collectLaunch = { seat: w, rects };
-      }
-      pendingCollect = null;
-    }
-  }
-  if (st.phase === 'playing' && trickComplete && finalWinSeat != null) {
-    pendingCollect = {
-      plays: st.trick.map((p) => ({ seat: p.seat, card: p.card })),
-      winnerSeat: finalWinSeat,
-      pileAtSnapshot: st.piles ? st.piles[finalWinSeat] : 0,
-    };
-  }
-
+  // --- collection flight: the single-path state machine (defined
+  // above). Runs before the pile rows and the trick are rebuilt, so a
+  // launching flight can still measure the resting trick's live cards. ---
+  syncCollections(st, trickComplete, finalWinSeat);
   // seats: partner in the top bar, side players in vertical bars
   st.seats.forEach((s, i) => {
     const pos = relPos(i);
@@ -934,43 +959,9 @@ function render(st) {
     }
   });
 
-  // won-trick piles: a plain row of card backs on the carpet in front of
-  // each player (never inside the name bars, no label, no count)
-  st.seats.forEach((s, i) => {
-    const row = $('#pile-' + relPos(i));
-    if (!row) return;
-    const n = st.piles ? st.piles[i] : 0;
-    row.classList.toggle('on', n > 0);
-    if (row._n !== n) { row.innerHTML = pileRowHTML(n); row._n = n; }
-  });
-
-  // while a completed trick rests on the table, its back stays hidden in
-  // the winner's row — it appears only when the collection flight lands
-  if (pendingCollect) {
-    const wrow = $('#pile-' + relPos(pendingCollect.winnerSeat));
-    const wimg = wrow ? wrow.querySelector('img:last-child') : null;
-    if (wimg) wimg.classList.add('landwait');
-  }
-
-  // the trick was just picked up: fly its cards into the winner's row.
-  // Cosmetic overlay only — the state underneath renders normally.
-  if (collectLaunch) {
-    const w = collectLaunch.seat;
-    settlePileFlight(w); // a still-running flight for this seat is superseded
-    const row = $('#pile-' + relPos(w));
-    const img = row ? row.querySelector('img:last-child') : null;
-    if (img) img.classList.add('landwait'); // stays hidden until the flip lands
-    // the landing slot comes from the row container's geometry, never
-    // from the hidden back's own rect; no animation capability → reveal
-    const landing = CAN_COLLECT_ANIM ? pileLandingRect(w) : null;
-    if (landing) {
-      pileFlights[w] = { timers: [], clones: [] };
-      launchCollectFlight(w, collectLaunch.rects, landing);
-    } else {
-      revealPileBack(w); // nowhere to fly to — just show the back
-    }
-  }
-
+  // won-trick piles: plain rows of card backs on the carpet in front of
+  // each player, rendered purely from pileShown by the state machine
+  renderPileRows();
   // center trick — cards that are new since the last render fly in
   const trickEl = $('#trick');
   trickEl.innerHTML = '';
