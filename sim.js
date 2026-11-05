@@ -27,6 +27,7 @@ function playMatch(seed, stats) {
   const rng = G.seededRng(seed);
   const match = new G.Match(() => {}, rng);
   let bankRun = [0, 0]; // running tawan bank, mirrored against match history
+  let pendingRun = [0, 0]; // running pending-takan claims, mirrored likewise
   let safety = 0;
   while (!match.finished) {
     if (++safety > 500) throw new Error('match did not terminate');
@@ -49,7 +50,6 @@ function playMatch(seed, stats) {
       round.play(seat, card); // throws on illegality → caught by caller → FAIL
     }
     stats.takans += round.takanCount[0] + round.takanCount[1];
-    if (round.result.transferred) stats.transfers++;
 
     // -- Piles: per-seat won tricks sum to 13 and match the captured piles --
     const pileSum = round.wonTricks.reduce((a, b) => a + b, 0);
@@ -76,81 +76,73 @@ function playMatch(seed, stats) {
     }
     if (!r.takanBy.every((seats, t) => seats.every((s) => s % 2 === t))) stats.takanErrors++;
 
-    // -- Tawan bank: final ≥ 10 banks fully, ≤ 9 wipes; bank accumulates --
-    const bankBefore = bankRun.slice(); // pre-round banked mirror — the transfer gate's input
+    // -- Tawan bank + PENDING TAKAN, mirrored exactly. Order per round:
+    //    (1) the round's final tawan banks (≥10) or wipes (≤9);
+    //    (2) claims are created — one per takan, only when EXACTLY ONE
+    //        team gave takan(s) this round;
+    //    (3) pending claims execute (team 0 first, then team 1): while a
+    //        team holds claims and the VICTIM's banked total is ≥ 30,
+    //        exactly 30 moves from the victim's bank to the holder's.
+    //    The engine decides match end AFTER these executions. --
     const hLast = match.history[match.history.length - 1];
     const wantBanked = r.tawan.map((t) => (t >= G.TAWAN_BANK_MIN ? t : 0));
     if (hLast.banked[0] !== wantBanked[0] || hLast.banked[1] !== wantBanked[1]) stats.bankErrors++;
-    bankRun = [bankRun[0] + wantBanked[0], bankRun[1] + wantBanked[1]];
+    const afterBank = [bankRun[0] + wantBanked[0], bankRun[1] + wantBanked[1]];
+    const singleTakan = (r.takanCount[0] > 0) !== (r.takanCount[1] > 0);
+    const wantCreated = [0, 1].map((t) => (singleTakan && r.takanCount[t] > 0 ? r.takanCount[t] : 0));
+    const pend = [pendingRun[0] + wantCreated[0], pendingRun[1] + wantCreated[1]];
+    const wantExecuted = [0, 0];
+    for (const t of [0, 1]) {
+      while (pend[t] > 0 && afterBank[1 - t] >= G.TAKAN_CLAIM_MIN_BANK) {
+        afterBank[1 - t] -= G.TAKAN_CLAIM_AMOUNT;
+        afterBank[t] += G.TAKAN_CLAIM_AMOUNT;
+        pend[t]--;
+        wantExecuted[t]++;
+      }
+    }
+    bankRun = afterBank;
+    pendingRun = pend;
     if (hLast.bankedTawan[0] !== bankRun[0] || hLast.bankedTawan[1] !== bankRun[1]) stats.bankErrors++;
     if (match.bankedTawan[0] !== bankRun[0] || match.bankedTawan[1] !== bankRun[1]) stats.bankErrors++;
-    // -- Final tawan: transfer moves the whole pot to the single takan team,
-    //    then the >21→30 bump rewrites any pre-bump final in 22..29 --
-    const rawSum = r.cardTawan[0] + r.cardTawan[1] + r.takanBonus[0] + r.takanBonus[1];
-    const preBump = r.transferred
-      ? [0, 1].map((t) => (t === r.transferTo ? rawSum : 0))
-      : [r.cardTawan[0] + r.takanBonus[0], r.cardTawan[1] + r.takanBonus[1]];
+    if (hLast.claimsCreated[0] !== wantCreated[0] || hLast.claimsCreated[1] !== wantCreated[1]) stats.pendingErrors++;
+    if (hLast.claimsExecuted[0] !== wantExecuted[0] || hLast.claimsExecuted[1] !== wantExecuted[1]) stats.pendingErrors++;
+    if (hLast.pendingTakan[0] !== pendingRun[0] || hLast.pendingTakan[1] !== pendingRun[1]) stats.pendingErrors++;
+    if (match.pendingTakan[0] !== pendingRun[0] || match.pendingTakan[1] !== pendingRun[1]) stats.pendingErrors++;
+    stats.claimsCreated += wantCreated[0] + wantCreated[1];
+    stats.claimsExecuted += wantExecuted[0] + wantExecuted[1];
+    // -- Final tawan: card tawan + takan bonus, then the >21→30 bump
+    //    rewrites any pre-bump final in 22..29 (NO transfer anymore) --
+    const preBump = [r.cardTawan[0] + r.takanBonus[0], r.cardTawan[1] + r.takanBonus[1]];
     const wantFinal = preBump.map((t) => (t > G.TAWAN_BUMP_LIMIT && t < G.TAWAN_BUMP_VALUE ? G.TAWAN_BUMP_VALUE : t));
     if (r.tawan[0] !== wantFinal[0] || r.tawan[1] !== wantFinal[1]) stats.bumpErrors++;
     const wantBumped = preBump.map((t) => t > G.TAWAN_BUMP_LIMIT && t < G.TAWAN_BUMP_VALUE);
     if (!r.bumped || r.bumped[0] !== wantBumped[0] || r.bumped[1] !== wantBumped[1]) stats.bumpErrors++;
     if (r.bumped && (r.bumped[0] || r.bumped[1])) stats.bumps++;
-    if (r.transferred) {
-      const other = 1 - r.transferTo;
-      if (r.tawan[other] !== 0 || r.tawan[r.transferTo] !== rawSum) stats.transferErrors++;
-      if (!(r.takanCount[r.transferTo] > 0 && r.takanCount[other] === 0)) stats.transferErrors++;
-      if (r.transferBlocked) stats.transferErrors++;
-    }
-    // -- Transfer GATE: with exactly one takan team, the transfer fires iff
-    //    the OTHER team's PRE-ROUND banked tawan (bankBefore mirror) reached
-    //    TAKAN_TRANSFER_MIN_BANK; below it the takan stands but the pot
-    //    stays split and the round is flagged transferBlocked. Both-takan
-    //    and no-takan rounds are never gated. The gate fields must also
-    //    reach the payload (history entry == roundResult) intact. --
-    {
-      const singleTakan = (r.takanCount[0] > 0) !== (r.takanCount[1] > 0);
-      const takanTeam = r.takanCount[0] > 0 ? 0 : 1;
-      const wantTransfer = singleTakan && bankBefore[1 - takanTeam] >= G.TAKAN_TRANSFER_MIN_BANK;
-      if (r.transferred !== wantTransfer) stats.transferErrors++;
-      if (!r.bankedBefore || r.bankedBefore[0] !== bankBefore[0] || r.bankedBefore[1] !== bankBefore[1]) stats.transferErrors++;
-      if (!hLast.bankedBefore || hLast.bankedBefore[0] !== bankBefore[0] || hLast.bankedBefore[1] !== bankBefore[1]) stats.transferErrors++;
-      if (hLast.transferBlocked !== r.transferBlocked) stats.transferErrors++;
-      if (singleTakan && !wantTransfer) {
-        if (r.transferBlocked !== true) stats.transferErrors++;
-        if (r.transferGateBanked !== bankBefore[1 - takanTeam]) stats.transferErrors++;
-        if (hLast.transferGateBanked !== r.transferGateBanked) stats.transferErrors++;
-        stats.blockedTransfers++;
-      } else if (r.transferBlocked) stats.transferErrors++;
-    }
 
-    // -- Acceptance 4: credits always 20/10; FEWER final tawan wins --
-    const sorted = r.credits.slice().sort((a, b) => a - b);
-    if (sorted[0] !== 10 || sorted[1] !== 20) stats.creditErrors++;
-    if (r.tawan[0] === r.tawan[1]) {
-      stats.ties++;
-      if (r.winner !== 1 - r.qsTeam) stats.tieErrors++; // tie → Q♠ captor LOSES
-      if (r.credits[r.qsTeam] !== 10) stats.tieErrors++;
-      if (r.credits[1 - r.qsTeam] !== 20) stats.tieErrors++;
-    } else if (r.winner !== (r.tawan[0] < r.tawan[1] ? 0 : 1)) {
-      stats.winnerErrors++;
-    }
+    // -- Acceptance 4: NO points anywhere — a round result (and its
+    //    history entry) carries no credits and no round winner; a tied
+    //    final tawan is just a tie. --
+    if (r.credits !== undefined || r.winner !== undefined) stats.noPointsErrors++;
+    if (hLast.credits !== undefined || hLast.winner !== undefined ||
+        hLast.scoresAfter !== undefined) stats.noPointsErrors++;
+    if (r.tawan[0] === r.tawan[1]) stats.ties++;
 
-    // -- Acceptance 5 (per-round part): above 210 the match may ONLY continue
-    //    on an exact tie (spec DEFAULT edge rule); otherwise it must have ended.
-    if (!match.finished && Math.max(...match.scores) >= 210 &&
-        match.scores[0] !== match.scores[1]) stats.earlyEndErrors++;
-    if (!match.finished && Math.max(...match.scores) >= 210) stats.extraRounds++;
+    // -- Acceptance 5 (per-round part): once a banked total is ≥ 210 the
+    //    match may ONLY continue when BOTH totals are ≥ 210 AND exactly
+    //    equal (no loser yet); any other crossing must have ended it. --
+    if (!match.finished) {
+      const bt = match.bankedTawan;
+      const crossed = bt[0] >= G.BANK_LOSE_TARGET || bt[1] >= G.BANK_LOSE_TARGET;
+      if (crossed && bt[0] !== bt[1]) stats.earlyEndErrors++;
+      if (crossed && bt[0] === bt[1]) stats.extraRounds++;
+    }
   }
 
-  // -- Acceptance 5: match ended exactly when a team reached ≥210 --
-  if (Math.max(...match.scores) < 210) stats.lateEndErrors++;
-  if (match.winner !== (match.scores[0] > match.scores[1] ? 0 : 1)) stats.matchWinnerErrors++;
-  // Scores in history must be the running sum of credits.
-  let run = [0, 0];
-  for (const h of match.history) {
-    run = [run[0] + h.credits[0], run[1] + h.credits[1]];
-    if (run[0] !== h.scoresAfter[0] || run[1] !== h.scoresAfter[1]) stats.historyErrors++;
-  }
+  // -- Acceptance 5: the match ended exactly when a banked total crossed
+  //    210, and the LOSER is the team with the HIGHER banked total. --
+  if (Math.max(...match.bankedTawan) < G.BANK_LOSE_TARGET) stats.lateEndErrors++;
+  if (match.loser !== (match.bankedTawan[0] > match.bankedTawan[1] ? 0 : 1)) stats.loserErrors++;
+  if (match.winner !== 1 - match.loser) stats.loserErrors++;
   stats.roundsTotal += match.history.length;
   return match;
 }
@@ -167,104 +159,134 @@ function main() {
   check(G.cardPoints('AS') === 0 && G.cardPoints('KD') === 0 && G.cardPoints('QC') === 0,
     'non-scoring cards = 0');
 
-  // Scoring direction — unit-tested directly (FEWER tawan wins the round;
-  // flipped at the user's explicit order, 2026-11-05)
-  const plain = G.scoreRound([10, 20], [0, 0], [0, 0], 0);
-  check(plain.winner === 0 && plain.credits[0] === 20 && plain.credits[1] === 10,
-    'fewer tawan wins: 10 vs 20 → the 10-team gets 20');
-  const plain2 = G.scoreRound([20, 10], [0, 0], [0, 0], 1);
-  check(plain2.winner === 1 && plain2.credits[1] === 20 && plain2.credits[0] === 10,
-    'fewer tawan wins: 20 vs 10 → the 10-team gets 20');
+  // No points (user order, 2026-11-05): scoreRound produces ONLY the
+  // final tawan — no winner, no credits, whatever the split.
+  const plain = G.scoreRound([10, 20], [0, 0], [0, 0]);
+  check(plain.tawan[0] === 10 && plain.tawan[1] === 20 &&
+        plain.winner === undefined && plain.credits === undefined,
+    'no points: 10 vs 20 → finals stand as-is, no winner/credits');
+  const plain2 = G.scoreRound([20, 10], [0, 0], [0, 0]);
+  check(plain2.tawan[0] === 20 && plain2.tawan[1] === 10 &&
+        plain2.winner === undefined && plain2.credits === undefined,
+    'no points: 20 vs 10 → finals stand as-is, no winner/credits');
 
-  // Tie rule — on ANY final tie (incl. classic 15–15) the team that
-  // CAPTURED Q♠ LOSES the tie: it gets the 10, the other team the 20.
-  const tie0 = G.scoreRound([15, 15], [0, 0], [0, 0], 0);
-  const tie1 = G.scoreRound([15, 15], [0, 0], [0, 0], 1);
-  check(tie0.winner === 1 && tie0.credits[0] === 10 && tie0.credits[1] === 20,
-    'tie 15–15, Q♠ with team 0 → captor (team 0) LOSES, gets 10');
-  check(tie1.winner === 0 && tie1.credits[1] === 10 && tie1.credits[0] === 20,
-    'tie 15–15, Q♠ with team 1 → captor (team 1) LOSES, gets 10');
+  // Tie rule — a tied final (incl. classic 15–15) is JUST a tie now:
+  // both finals stand, Q♠ decides nothing, no winner is produced.
+  const tie0 = G.scoreRound([15, 15], [0, 0], [0, 0]);
+  check(tie0.tawan[0] === 15 && tie0.tawan[1] === 15 &&
+        tie0.winner === undefined && tie0.credits === undefined,
+    'tie 15–15 → just a tie (both bank their own 15), no winner');
 
-  // Takan transfer — the user's example shape: totals 30 vs 10, the
-  // 10-team holds the takan → finals 0 and 40, takan team's pot is FULL.
-  const tr = G.scoreRound([30, 10], [0, 0], [0, 1], 0);
-  check(tr.transferred === true && tr.transferTo === 1 &&
-        tr.tawan[0] === 0 && tr.tawan[1] === 40,
-    'transfer: 30 vs 10 with takan on the 10-team → finals 0 / 40');
-  check(tr.winner === 0 && tr.credits[0] === 20 && tr.credits[1] === 10,
-    'transfer: the takan team is stuck with 40 tawan → the OTHER team (0) wins the round 20');
-  const trBoth = G.scoreRound([10, 10], [30, 30], [1, 1], 0);
-  check(trBoth.transferred === false && trBoth.tawan[0] === 40 && trBoth.tawan[1] === 40,
-    'both teams hold a takan → no transfer');
-  const trNone = G.scoreRound([10, 20], [0, 0], [0, 0], 0);
-  check(trNone.transferred === false && trNone.tawan[0] === 10 && trNone.tawan[1] === 20,
-    'no takan → no transfer');
+  // NO round-tawan transfer anymore (replaced by pending bank claims):
+  // scoreRound never moves one team's tawan to the other, takan or not.
+  const tr = G.scoreRound([30, 10], [0, 30]);
+  check(tr.tawan[0] === 30 && tr.tawan[1] === 40 && tr.transferred === undefined,
+    'no transfer: a takan bonus just adds to its own team (30 / 10+30)');
+  const trBoth = G.scoreRound([10, 10], [30, 30]);
+  check(trBoth.tawan[0] === 40 && trBoth.tawan[1] === 40 && trBoth.transferred === undefined,
+    'no transfer: both teams hold a takan → finals still stand separate');
 
-  // Transfer GATE (user rule): the transfer fires only when the NON-takan
-  // team's PRE-ROUND banked tawan (جمع‌شده, the 5th argument) is ≥ 30.
-  // (a) other team banked 29 → blocked: finals stay separate, the takan
-  //     team keeps its card tawan + its +30 bonus, credits follow the
-  //     FEWER final (48 vs 12 → the 12-team wins).
-  const gate29 = G.scoreRound([18, 12], [30, 0], [1, 0], 0, [0, 29]);
-  check(gate29.transferred === false && gate29.transferBlocked === true &&
-        gate29.transferGateBanked === 29 && gate29.transferTo === null &&
-        gate29.tawan[0] === 48 && gate29.tawan[1] === 12 &&
-        gate29.winner === 1 && gate29.credits[0] === 10 && gate29.credits[1] === 20,
-    'gate: other team banked 29 → NO transfer; finals stay 48/12 (bonus kept)');
-  // The gate reads the OTHER team's banked — the takan team's own high
-  // banked total does not unlock it.
-  const gateOwn = G.scoreRound([18, 12], [30, 0], [1, 0], 0, [99, 5]);
-  check(gateOwn.transferred === false && gateOwn.transferBlocked === true &&
-        gateOwn.transferGateBanked === 5,
-    'gate: takan team banked 99 but other team 5 → still blocked');
-  // (b) other team banked exactly 30 → the transfer fires as before.
-  const gate30 = G.scoreRound([18, 12], [30, 0], [1, 0], 0, [0, 30]);
-  check(gate30.transferred === true && gate30.transferTo === 0 &&
-        gate30.transferBlocked === false && gate30.transferGateBanked === null &&
-        gate30.tawan[0] === 60 && gate30.tawan[1] === 0,
-    'gate: other team banked exactly 30 → transfer fires (finals 60/0)');
-  // (c) other team banked 45 → the transfer fires.
-  const gate45 = G.scoreRound([20, 10], [0, 30], [0, 1], 1, [45, 7]);
-  check(gate45.transferred === true && gate45.transferTo === 1 &&
-        gate45.transferBlocked === false &&
-        gate45.tawan[0] === 0 && gate45.tawan[1] === 60,
-    'gate: other team banked 45 → transfer fires');
-  // (d) both-takan and no-takan rounds are completely unaffected by the gate.
-  const gateBoth = G.scoreRound([10, 10], [30, 30], [1, 1], 0, [0, 0]);
-  check(gateBoth.transferred === false && gateBoth.transferBlocked === false &&
-        gateBoth.tawan[0] === 40 && gateBoth.tawan[1] === 40,
-    'gate: both teams hold a takan → unaffected (no transfer, no block)');
-  const gateNone = G.scoreRound([10, 20], [0, 0], [0, 0], 0, [3, 4]);
-  check(gateNone.transferred === false && gateNone.transferBlocked === false &&
-        gateNone.tawan[0] === 10 && gateNone.tawan[1] === 20,
-    'gate: no takan → unaffected');
+  // PENDING TAKAN (تکان معلق — user rule, 2026-11-05): a takan creates a
+  // claim of exactly 30 BANKED tawan against the other team. Claims are
+  // evaluated at round end, AFTER that round's banking: while the holder
+  // has claims and the victim's banked total is ≥ 30, one claim moves
+  // exactly 30 from the victim's bank to the holder's. Otherwise the
+  // claim stays pending (the ★ remains) into later rounds.
+  {
+    const fakeR = (tawan, takanCount) => ({ result: {
+      cardTawan: [0, 0], takanBonus: takanCount.map((c) => c * 30), takanCount,
+      takanBy: [[], []], tawan, qsTeam: 0 } });
+    const lastH = (m) => m.history[m.history.length - 1];
 
-  // Decisive scenario, re-pinned after the user's explicit flip order
-  // (2026-11-05): round 1, card tawan 30 vs 0, NO takan — the bank still
-  // shows the 30 for the team that took it, but the match score now goes
-  // the other way: the 0-team (fewer tawan) gets the 20, the 30-team 10.
-  const userScenario = G.scoreRound([30, 0], [0, 0], [0, 0], 0);
+    // (a) The user's core example: victim banked 0 → claim created, NO
+    //     movement, star pending. Then victim at 20 → still nothing.
+    //     Then the victim crosses ≥ 30 in a later round → exactly 30 moves.
+    const mP = new G.Match(() => {}, G.seededRng(21));
+    mP.onRoundFinished(fakeR([5, 5], [1, 0])); // both finals ≤9 wipe; team 0 takan
+    check(lastH(mP).claimsCreated[0] === 1 && lastH(mP).claimsExecuted[0] === 0 &&
+          mP.pendingTakan[0] === 1 && mP.pendingTakan[1] === 0 &&
+          mP.bankedTawan[0] === 0 && mP.bankedTawan[1] === 0,
+      'pending: victim banked 0 → claim created, no movement, ★ pending');
+    mP.onRoundFinished(fakeR([0, 20], [0, 0])); // victim banks 20 → [0, 20]
+    check(lastH(mP).claimsExecuted[0] === 0 && mP.pendingTakan[0] === 1 &&
+          mP.bankedTawan[0] === 0 && mP.bankedTawan[1] === 20,
+      'pending: victim banked 20 (< 30) → claim still pending, no movement');
+    mP.onRoundFinished(fakeR([0, 15], [0, 0])); // victim banks 15 → 35, then claim fires
+    check(lastH(mP).claimsExecuted[0] === 1 && mP.pendingTakan[0] === 0 &&
+          mP.bankedTawan[0] === 30 && mP.bankedTawan[1] === 5,
+      'pending: victim crosses ≥30 later → exactly 30 moves (35→5, holder 0→30)');
+
+    // (b) Immediate execution: the victim is already ≥ 30 after banking
+    //     in the very round the takan is earned.
+    const mI = new G.Match(() => {}, G.seededRng(21));
+    mI.bankedTawan = [50, 40];
+    mI.onRoundFinished(fakeR([0, 0], [0, 1])); // team 1 takan vs team 0 (banked 50)
+    check(lastH(mI).claimsCreated[1] === 1 && lastH(mI).claimsExecuted[1] === 1 &&
+          mI.pendingTakan[1] === 0 &&
+          mI.bankedTawan[0] === 20 && mI.bankedTawan[1] === 70,
+      'pending: victim already ≥30 → claim executes the same round (50→20, holder 40→70)');
+
+    // (c) Multiple claims drain one after another while the victim stays ≥ 30.
+    const mM = new G.Match(() => {}, G.seededRng(21));
+    mM.bankedTawan = [0, 95];
+    mM.onRoundFinished(fakeR([0, 0], [2, 0])); // two takans by team 0
+    check(lastH(mM).claimsCreated[0] === 2 && lastH(mM).claimsExecuted[0] === 2 &&
+          mM.pendingTakan[0] === 0 &&
+          mM.bankedTawan[0] === 60 && mM.bankedTawan[1] === 35,
+      'pending: two claims vs banked 95 → both execute (95→35, holder +60)');
+
+    // (d) Both teams takan in the same round → NO claims either way.
+    const mBoth = new G.Match(() => {}, G.seededRng(21));
+    mBoth.bankedTawan = [40, 40];
+    mBoth.onRoundFinished(fakeR([0, 0], [1, 1]));
+    check(lastH(mBoth).claimsCreated[0] === 0 && lastH(mBoth).claimsCreated[1] === 0 &&
+          mBoth.pendingTakan[0] === 0 && mBoth.pendingTakan[1] === 0 &&
+          mBoth.bankedTawan[0] === 40 && mBoth.bankedTawan[1] === 40,
+      'pending: both-takan round → no claims created, banks untouched');
+
+    // (e) Match end is checked AFTER executions: a pending claim can
+    //     pull a crossed team back below 210 (no loser), and can push
+    //     the claim HOLDER over 210 (the holder loses).
+    const mE = new G.Match(() => {}, G.seededRng(21));
+    mE.bankedTawan = [195, 20];
+    mE.pendingTakan = [0, 1]; // team 1 holds a claim against team 0
+    mE.onRoundFinished(fakeR([20, 15], [0, 0])); // banks → [215, 35]; execution → [185, 65]
+    check(mE.bankedTawan[0] === 185 && mE.bankedTawan[1] === 65 &&
+          mE.finished === false && mE.loser === null,
+      'pending: execution before match-end — 215 pulled back to 185, match continues');
+    const mE2 = new G.Match(() => {}, G.seededRng(21));
+    mE2.bankedTawan = [180, 190];
+    mE2.pendingTakan = [1, 0]; // team 0 holds a claim against team 1 (190)
+    mE2.onRoundFinished(fakeR([0, 0], [0, 0])); // execution → [210, 160]
+    check(mE2.bankedTawan[0] === 210 && mE2.bankedTawan[1] === 160 &&
+          mE2.finished === true && mE2.loser === 0 && mE2.winner === 1,
+      'pending: execution pushes the HOLDER to exactly 210 → the holder loses');
+  }
+
+  // Decisive scenario (2026-11-05): round 1, card tawan 30 vs 0, NO
+  // takan — the 30 stands and banks for the team that took it; there is
+  // no score going anywhere (match points removed at the user's order).
+  const userScenario = G.scoreRound([30, 0], [0, 0], [0, 0]);
   check(userScenario.tawan[0] === 30 && userScenario.tawan[1] === 0 &&
-        userScenario.winner === 1 && userScenario.credits[0] === 10 && userScenario.credits[1] === 20 &&
+        userScenario.winner === undefined && userScenario.credits === undefined &&
         userScenario.bumped[0] === false && userScenario.bumped[1] === false,
-    'user scenario: card tawan 30 vs 0, no takan → credits 10/20 (fewer wins)');
+    'user scenario: card tawan 30 vs 0, no takan → finals 30/0 stand, no points');
 
   // Bump rule (user rule): a final tawan above 21 (and below 30) is written
-  // as 30 — applied AFTER transfer, BEFORE credits and BEFORE the bank.
-  const bump1 = G.scoreRound([24, 6], [0, 0], [0, 0], 0);
+  // as 30 — applied BEFORE the bank.
+  const bump1 = G.scoreRound([24, 6], [0, 0]);
   check(bump1.tawan[0] === 30 && bump1.tawan[1] === 6 &&
-        bump1.bumped[0] === true && bump1.bumped[1] === false &&
-        bump1.winner === 1 && bump1.credits[0] === 10 && bump1.credits[1] === 20,
-    'bump: finals 24/6 → written 30/6, credits follow the bumped finals (6 wins)');
-  const bumpEdge = G.scoreRound([21, 9], [0, 0], [0, 0], 1);
+        bump1.bumped[0] === true && bump1.bumped[1] === false,
+    'bump: finals 24/6 → written 30/6 (before the bank)');
+  const bumpEdge = G.scoreRound([21, 9], [0, 0]);
   check(bumpEdge.tawan[0] === 21 && bumpEdge.bumped[0] === false && bumpEdge.bumped[1] === false,
     'bump: a final of exactly 21 is NOT bumped');
-  const bump22 = G.scoreRound([22, 8], [0, 0], [0, 0], 1);
+  const bump22 = G.scoreRound([22, 8], [0, 0]);
   check(bump22.tawan[0] === 30 && bump22.bumped[0] === true && bump22.bumped[1] === false,
     'bump: a final of 22 IS bumped to 30');
-  const bumpHigh = G.scoreRound([20, 10], [0, 30], [0, 1], 0); // transfer → [0, 60]
-  check(bumpHigh.tawan[1] === 60 && bumpHigh.bumped[1] === false,
-    'bump: finals already ≥ 30 (takan transfer) stay as they are');
+  const bumpHigh = G.scoreRound([20, 10], [40, 0]); // raw 60/10 via a takan bonus
+  check(bumpHigh.tawan[0] === 60 && bumpHigh.bumped[0] === false,
+    'bump: finals already ≥ 30 (takan bonus) stay as they are');
 
   // --- Constructed scenario: a void-suit LEAD is a takan (+30, count 1) ---
   {
@@ -326,7 +348,9 @@ function main() {
     check(threw, 'declare13 throws when the situation does not allow it');
   }
 
-  // --- Constructed scenario: transfer at Round level (finish path) ---
+  // --- Constructed scenario: single takan at Round level (finish path).
+  // There is NO round-level transfer anymore: the raw finals stand and
+  // the takan becomes a pending BANK claim only at Match level. ---
   {
     const round = new G.Round(0, () => {}, G.seededRng(17));
     round.hands = [['AS'], ['KH'], ['QD'], ['JC']];
@@ -340,22 +364,52 @@ function main() {
     round.takanBonus = [30, 0];
     round.declare13(0); // keep the final AS lead from adding a second takan
     round.play(0, 'AS'); round.play(1, 'KH'); round.play(2, 'QD'); round.play(3, 'JC');
-    // last trick adds KH(1) + JC(5) to team 0 → card 22 / 14, raw 52 / 14,
-    // single takan on team 0 → ALL 66 dumped on team 0, team 1 = 0 → team 1
-    // wins (penalty model: the takan team is stuck with the pot AND the 10).
+    // last trick adds KH(1) + JC(5) to team 0 → card 22 / 14, raw 52 / 14.
+    // Nothing moves between teams at round level.
     const r = round.result;
-    check(r.transferred === true && r.transferTo === 0 &&
-          r.tawan[0] === 66 && r.tawan[1] === 0,
-      'round-level transfer: single-takan team is dumped with the whole pot');
-    check(r.winner === 1 && r.credits[1] === 20 && r.credits[0] === 10,
-      'round-level transfer: the takan team (66 tawan) gets the 10');
+    check(r.tawan[0] === 52 && r.tawan[1] === 14 && r.transferred === undefined,
+      'round-level: single takan → raw finals stand (52/14), no transfer');
+    check(r.winner === undefined && r.credits === undefined,
+      'round-level: no points either — just the two finals');
+  }
+
+  // --- Pending claims from REAL rounds: a declared «۱۳» creates NO
+  // claim; the same final trick WITHOUT the declaration creates one,
+  // and it executes at once because the victim is already ≥ 30. ---
+  {
+    const rigFinal = (declare) => {
+      const round = new G.Round(0, () => {}, G.seededRng(11));
+      round.hands = [['AS'], ['KH'], ['QD'], ['JC']]; // only seat 0 holds قره
+      round.captured = [[], []];
+      round.tricksPlayed = 12;
+      round.leader = 0; round.turn = 0;
+      if (declare) round.declare13(0);
+      round.play(0, 'AS'); round.play(1, 'KH'); round.play(2, 'QD'); round.play(3, 'JC');
+      return round;
+    };
+    const mDecl = new G.Match(() => {}, G.seededRng(21));
+    mDecl.bankedTawan = [0, 40];
+    mDecl.onRoundFinished(rigFinal(true));
+    check(mDecl.pendingTakan[0] === 0 && mDecl.pendingTakan[1] === 0 &&
+          mDecl.history[0].claimsCreated[0] === 0,
+      'pending: «۱۳»-declared final trick → takan cancelled, NO claim created');
+    const mNoDecl = new G.Match(() => {}, G.seededRng(21));
+    mNoDecl.bankedTawan = [0, 40];
+    mNoDecl.onRoundFinished(rigFinal(false));
+    // round final: team 0 = 6 card + 30 bonus = 36 → banks 36; victim
+    // team 1 sits at 40 ≥ 30 → the new claim executes immediately.
+    check(mNoDecl.history[0].claimsCreated[0] === 1 &&
+          mNoDecl.history[0].claimsExecuted[0] === 1 &&
+          mNoDecl.pendingTakan[0] === 0 &&
+          mNoDecl.bankedTawan[0] === 66 && mNoDecl.bankedTawan[1] === 10,
+      'pending: undeclared takan vs banked 40 → claim created AND executed (36+30 / 40−30)');
   }
 
   // --- Constructed scenarios: EXACT 15–15 tie through the real finish()
-  // path (user's screenshot case, pinned). Credits must go AGAINST the
-  // team that CAPTURED Q♠ (the captor LOSES the tie), and qsTeam must be
-  // the CAPTURING team (the trick winner's team) — NEVER the team of the
-  // player who played the card. ---
+  // path (user's screenshot case, pinned). A tie is JUST a tie now —
+  // both teams bank their own 15 and no winner/credits exist — and
+  // qsTeam must still be the CAPTURING team (the trick winner's team),
+  // NEVER the team of the player who played the card. ---
   {
     const HEARTS = G.makeDeck().filter((c) => G.suitOf(c) === 'H');
     // Pile-rig both ways: QS+JC+1 heart = 15 vs TD+12 hearts = 15.
@@ -371,13 +425,13 @@ function main() {
     const t0 = rig(0);
     check(t0.cardTawan[0] === 15 && t0.cardTawan[1] === 15 &&
           t0.tawan[0] === 15 && t0.tawan[1] === 15 &&
-          t0.qsTeam === 0 && t0.winner === 1 && t0.credits[0] === 10 && t0.credits[1] === 20,
-      'round tie 15–15: Q♠ captured by team 0 → captor loses, credits [10,20]');
+          t0.qsTeam === 0 && t0.winner === undefined && t0.credits === undefined,
+      'round tie 15–15 (Q♠ with team 0) → just a tie, no winner, no points');
     const t1 = rig(1);
     check(t1.cardTawan[0] === 15 && t1.cardTawan[1] === 15 &&
           t1.tawan[0] === 15 && t1.tawan[1] === 15 &&
-          t1.qsTeam === 1 && t1.winner === 0 && t1.credits[0] === 20 && t1.credits[1] === 10,
-      'round tie 15–15: Q♠ captured by team 1 → captor loses, credits [20,10]');
+          t1.qsTeam === 1 && t1.winner === undefined && t1.credits === undefined,
+      'round tie 15–15 (Q♠ with team 1) → just a tie, no winner, no points');
     // The same result must reach the payload: Match history (== roundResult).
     const mTie = new G.Match(() => {}, G.seededRng(101));
     const rigRound = new G.Round(0, () => {}, G.seededRng(101));
@@ -386,9 +440,10 @@ function main() {
     rigRound.finish();
     mTie.onRoundFinished(rigRound);
     const hTie = mTie.history[mTie.history.length - 1];
-    check(hTie.qsTeam === 0 && hTie.credits[0] === 10 && hTie.credits[1] === 20 &&
+    check(hTie.qsTeam === 0 && hTie.credits === undefined && hTie.winner === undefined &&
+          hTie.banked[0] === 15 && hTie.banked[1] === 15 &&
           hTie.tawan[0] === 15 && hTie.tawan[1] === 15,
-      'tie 15–15 payload (roundResult): captor team 0 loses, credits [10,20]');
+      'tie 15–15 payload (roundResult): both teams bank their own 15, no credits');
 
     // Played-by-A-captured-by-B, through real play(): the Q♠ player LOSES
     // the trick to the A♠ of the other team → the OTHER team is the captor.
@@ -414,9 +469,9 @@ function main() {
     c0.captured[1].push('JC', 'TD', ...HEARTS.slice(6));   // 5 + 3 + 7 = 15
     c0.finish();
     check(c0.result.cardTawan[0] === 15 && c0.result.cardTawan[1] === 15 &&
-          c0.result.qsTeam === 0 && c0.result.winner === 1 &&
-          c0.result.credits[0] === 10 && c0.result.credits[1] === 20,
-      'tie 15–15, Q♠ played by team 1: CAPTURING team 0 LOSES the tie (10)');
+          c0.result.qsTeam === 0 && c0.result.winner === undefined &&
+          c0.result.credits === undefined,
+      'tie 15–15, Q♠ played by team 1: CAPTURING team 0 recorded — still just a tie');
     // Q♠ played by seat 2 (team 0), captured by seat 3 (team 1) via A♠.
     const c1 = cross(1, 2, 3, 0);
     check(c1.captured[1].includes('QS') && !c1.captured[0].includes('QS') &&
@@ -426,9 +481,9 @@ function main() {
     c1.captured[0].push('TD', ...HEARTS.slice(1));         // 3 + 12 = 15
     c1.finish();
     check(c1.result.cardTawan[0] === 15 && c1.result.cardTawan[1] === 15 &&
-          c1.result.qsTeam === 1 && c1.result.winner === 0 &&
-          c1.result.credits[0] === 20 && c1.result.credits[1] === 10,
-      'tie 15–15, Q♠ played by team 0: CAPTURING team 1 LOSES the tie (10)');
+          c1.result.qsTeam === 1 && c1.result.winner === undefined &&
+          c1.result.credits === undefined,
+      'tie 15–15, Q♠ played by team 0: CAPTURING team 1 recorded — still just a tie');
   }
 
   // --- Bot behaviour probes (AVOIDANCE + FEED THE OPPONENTS, user order
@@ -518,91 +573,77 @@ function main() {
   // Tawan bank — unit: ≤9 wipes, ≥10 banks fully, accumulates over rounds
   {
     const m = new G.Match(() => {}, G.seededRng(3));
-    const fake = (tawan, credits) => ({ result: {
+    const fake = (tawan) => ({ result: {
       cardTawan: [0, 0], takanBonus: [0, 0], takanCount: [0, 0], takanBy: [[], []],
-      transferred: false, transferTo: null, tawan, qsTeam: 0,
-      winner: tawan[0] < tawan[1] ? 0 : 1, credits } });
-    m.onRoundFinished(fake([9, 21], [10, 20])); // team 0: 9 → wiped; team 1: 21 → banked
+      tawan, qsTeam: 0 } });
+    m.onRoundFinished(fake([9, 21])); // team 0: 9 → wiped; team 1: 21 → banked
     check(m.bankedTawan[0] === 0 && m.bankedTawan[1] === 21 &&
           m.history[0].banked[0] === 0 && m.history[0].banked[1] === 21,
       'bank: a ≤9 round banks 0; a ≥10 round banks the full amount');
-    m.onRoundFinished(fake([10, 35], [10, 20])); // 10 is the threshold → banks
+    m.onRoundFinished(fake([10, 35])); // 10 is the threshold → banks
     check(m.bankedTawan[0] === 10 && m.bankedTawan[1] === 56 &&
           m.history[1].bankedTawan[0] === 10 && m.history[1].bankedTawan[1] === 56,
       'bank: accumulates across two rounds (10 banks fully)');
     // Bump BEFORE bank: card tawan 24/6 is written 30/6 by scoreRound, so
     // the bank must receive 30 (not 24); the 6 still wipes (≤ 9).
-    const bumpedRound = G.scoreRound([24, 6], [0, 0], [0, 0], 0);
+    const bumpedRound = G.scoreRound([24, 6], [0, 0]);
     m.onRoundFinished({ result: {
       cardTawan: [24, 6], takanBonus: [0, 0], takanCount: [0, 0], takanBy: [[], []],
-      transferred: false, transferTo: null, tawan: bumpedRound.tawan, bumped: bumpedRound.bumped,
-      qsTeam: 0, winner: bumpedRound.winner, credits: bumpedRound.credits } });
+      tawan: bumpedRound.tawan, bumped: bumpedRound.bumped,
+      qsTeam: 0 } });
     check(m.bankedTawan[0] === 40 && m.bankedTawan[1] === 56 &&
           m.history[2].banked[0] === 30 && m.history[2].banked[1] === 0 &&
           m.history[2].bumped[0] === true && m.history[2].bumped[1] === false,
       'bank: a bumped 30 banks as 30; the other team\'s 6 still wipes');
   }
 
-  // Transfer gate at Match level: the pre-round banked snapshot must
-  // thread from Match.startRound (bankedTawan BEFORE this round) into
-  // scoring — this round's own tawan never counts toward its own gate.
-  // Banking and credits then follow the (un-)transferred finals exactly.
-  {
-    const rigGateRound = (m) => {
-      const round = m.startRound();
-      // card tawan 20 vs 10 — team 0: QS(9)+JC(5)+TD(3)+3 hearts; team 1: 10 hearts
-      const HEARTS = G.makeDeck().filter((c) => G.suitOf(c) === 'H');
-      round.captured = [
-        ['QS', 'JC', 'TD', ...HEARTS.slice(0, 3)],
-        HEARTS.slice(3),
-      ];
-      round.takanCount = [1, 0]; // single takan, team 0
-      round.takanBonus = [30, 0];
-      round.takanBy = [[0], []];
-      round.finish();
-      return round.result;
-    };
-    // (a) other team enters the round banked at 29 → NO transfer: finals
-    //     stay 50/10, both bank in full (≥ 10), credits follow the FEWER
-    //     final (50 vs 10 → team 1 wins the round).
-    const mA = new G.Match(() => {}, G.seededRng(5));
-    mA.bankedTawan = [10, 29];
-    const rA = rigGateRound(mA);
-    const hA = mA.history[mA.history.length - 1];
-    check(rA.transferred === false && rA.transferBlocked === true &&
-          rA.transferGateBanked === 29 &&
-          rA.bankedBefore[0] === 10 && rA.bankedBefore[1] === 29 &&
-          rA.tawan[0] === 50 && rA.tawan[1] === 10 &&
-          rA.winner === 1 && rA.credits[0] === 10 && rA.credits[1] === 20 &&
-          hA.banked[0] === 50 && hA.banked[1] === 10 &&
-          hA.transferBlocked === true && hA.transferGateBanked === 29 &&
-          mA.bankedTawan[0] === 60 && mA.bankedTawan[1] === 39,
-      'match gate: banked 29 entering → no transfer; bank/credits from the 50/10 finals');
-    // (b) other team enters banked at exactly 30 → the transfer fires.
-    const mB = new G.Match(() => {}, G.seededRng(5));
-    mB.bankedTawan = [10, 30];
-    const rB = rigGateRound(mB);
-    check(rB.transferred === true && rB.transferTo === 0 &&
-          rB.transferBlocked === false &&
-          rB.tawan[0] === 60 && rB.tawan[1] === 0 &&
-          mB.bankedTawan[0] === 70 && mB.bankedTawan[1] === 30,
-      'match gate: banked exactly 30 entering → transfer fires (finals 60/0)');
-  }
+  // Match-end rule (user order): a banked total reaching 210 LOSES.
+  check(G.decideMatchLoser([215, 205]) === 0, 'both ≥210 → the HIGHER banked total loses (team 0)');
+  check(G.decideMatchLoser([205, 215]) === 1, 'both ≥210 → the HIGHER banked total loses (team 1)');
+  check(G.decideMatchLoser([210, 210]) === null, 'both at exactly 210, equal → no loser yet, another round');
+  check(G.decideMatchLoser([250, 250]) === null, 'both above 210 but exactly equal → no loser yet');
+  check(G.decideMatchLoser([200, 190]) === null, 'below 210 → match continues');
+  check(G.decideMatchLoser([210, 100]) === 0, 'single team at 210 → THAT team loses');
+  check(G.decideMatchLoser([100, 210]) === 1, 'single team at 210 → THAT team loses (team 1)');
 
-  // Match-edge rule (spec DEFAULT): both cross 210 same round
-  check(G.decideMatch([215, 205]) === 0, 'both ≥210 → higher total wins (team 0)');
-  check(G.decideMatch([205, 215]) === 1, 'both ≥210 → higher total wins (team 1)');
-  check(G.decideMatch([210, 210]) === null, 'exact tie at 210 → extra round');
-  check(G.decideMatch([200, 190]) === null, 'below 210 → match continues');
-  check(G.decideMatch([210, 100]) === 0, 'single team at 210 → wins');
+  // Match end-to-end (bank → loser), via onRoundFinished with rigged rounds.
+  {
+    const fake = (tawan) => ({ result: {
+      cardTawan: [0, 0], takanBonus: [0, 0], takanCount: [0, 0], takanBy: [[], []],
+      tawan, qsTeam: 0 } });
+    const evtsA = [];
+    const mA = new G.Match((e) => evtsA.push(e), G.seededRng(9));
+    mA.bankedTawan = [200, 100];
+    mA.onRoundFinished(fake([15, 12])); // banks → [215, 112]: only team 0 crossed
+    check(mA.finished === true && mA.loser === 0 && mA.winner === 1 &&
+          mA.bankedTawan[0] === 215 && mA.bankedTawan[1] === 112,
+      'match end: banked 215 vs 112 → team 0 (≥210) LOSES, team 1 wins');
+    const fin = evtsA.find((e) => e.type === 'matchFinished');
+    check(!!fin && fin.loser === 0 && fin.winner === 1 &&
+          fin.bankedTawan[0] === 215 && fin.bankedTawan[1] === 112,
+      'matchFinished event carries winner, loser and the banked totals');
+    const mB = new G.Match(() => {}, G.seededRng(9));
+    mB.bankedTawan = [205, 200];
+    mB.onRoundFinished(fake([10, 25])); // banks → [215, 225]: both crossed, higher loses
+    check(mB.finished === true && mB.loser === 1 && mB.winner === 0,
+      'match end: both cross in one round (215 vs 225) → the HIGHER total (team 1) loses');
+    const mC = new G.Match(() => {}, G.seededRng(9));
+    mC.bankedTawan = [200, 200];
+    mC.onRoundFinished(fake([15, 15])); // banks → [215, 215]: equal → play on
+    check(mC.finished === false && mC.loser === null && mC.winner === null,
+      'match end: both cross at EXACTLY equal totals (215/215) → no loser yet');
+    mC.onRoundFinished(fake([10, 20])); // banks → [225, 235]: now team 1 is higher
+    check(mC.finished === true && mC.loser === 1 && mC.winner === 0,
+      'match end: after the extra round, the higher total (team 1) loses');
+  }
 
   const stats = {
     rounds: 0, deckErrors: 0, dealErrors: 0, illegalBotPlays: 0,
-    tawanErrors: 0, captureErrors: 0, qsErrors: 0, creditErrors: 0,
-    ties: 0, tieErrors: 0, winnerErrors: 0, earlyEndErrors: 0, extraRounds: 0,
-    lateEndErrors: 0, matchWinnerErrors: 0, historyErrors: 0, roundsTotal: 0,
-    takans: 0, declarations: 0, transfers: 0, blockedTransfers: 0,
-    pileErrors: 0, takanErrors: 0, transferErrors: 0, bankErrors: 0,
+    tawanErrors: 0, captureErrors: 0, qsErrors: 0, noPointsErrors: 0,
+    ties: 0, earlyEndErrors: 0, extraRounds: 0,
+    lateEndErrors: 0, loserErrors: 0, roundsTotal: 0,
+    takans: 0, declarations: 0, claimsCreated: 0, claimsExecuted: 0,
+    pileErrors: 0, takanErrors: 0, pendingErrors: 0, bankErrors: 0,
     bumpErrors: 0, bumps: 0,
   };
 
@@ -620,23 +661,20 @@ function main() {
   check(stats.captureErrors === 0, 'every round: all 52 cards captured by the two teams');
   check(stats.tawanErrors === 0, 'every round: captured CARD tawan sums to exactly 30 (before bonuses)');
   check(stats.qsErrors === 0, 'ماتکه کالا (Q♠) captor team recorded correctly every round');
-  check(stats.creditErrors === 0, 'every round: credits are always 20/10');
-  check(stats.winnerErrors === 0, 'every non-tie round: winner = team with FEWER final tawan');
-  check(stats.tieErrors === 0, 'every tied round: 20 went to the team that did NOT capture Q♠ (captor loses)',
+  check(stats.noPointsErrors === 0, 'every round: no credits, no round winner, no points totals anywhere',
     stats.ties + ' natural tie rounds occurred');
   check(stats.pileErrors === 0, 'every round: won-trick piles sum to 13 and match captured cards');
   check(stats.takanErrors === 0, 'every round: takan bonus is exactly 30 × takan count',
     stats.takans + ' takans, ' + stats.declarations + ' «۱۳» declarations in bot play');
-  check(stats.transferErrors === 0, 'every round: transfer fires exactly when a single takan clears the pre-round bank gate',
-    stats.transfers + ' transferred, ' + stats.blockedTransfers + ' gate-blocked rounds occurred');
+  check(stats.pendingErrors === 0, 'every round: pending takan — claims only from a single-takan round, executions move exactly 30 while the victim bank is ≥30',
+    stats.claimsCreated + ' claims created, ' + stats.claimsExecuted + ' executed in bot play');
   check(stats.bankErrors === 0, 'every round: tawan bank wipes ≤9, banks ≥10, and accumulates exactly');
   check(stats.bumpErrors === 0, 'every round: finals in 22..29 are written as 30 and bump flags are exact',
     stats.bumps + ' bumped team-rounds occurred');
-  check(stats.earlyEndErrors === 0, 'above 210 the match continued ONLY on an exact tie (extra-round rule)',
+  check(stats.earlyEndErrors === 0, 'a crossed bank (≥210) continued ONLY when both totals were exactly equal',
     stats.extraRounds + ' extra rounds played');
-  check(stats.lateEndErrors === 0, 'every match ended once a team reached ≥210');
-  check(stats.matchWinnerErrors === 0, 'match winner always the higher total');
-  check(stats.historyErrors === 0, 'round history scores are exact running sums');
+  check(stats.lateEndErrors === 0, 'every match ended once a banked total reached ≥210');
+  check(stats.loserErrors === 0, 'match loser is always the team with the HIGHER banked total; winner is the other team');
 
   console.log('\n' + (checks - failures) + '/' + checks + ' checks passed · ' +
     stats.roundsTotal + ' rounds · ' + stats.ties + ' tie rounds · ' +

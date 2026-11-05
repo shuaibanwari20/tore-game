@@ -1,8 +1,7 @@
 'use strict';
 /**
  * TORE (توره) — authoritative game server.
- * Node + ws. Serves the self-contained client (./index.html — every image
- * inlined as a data URI, no public/ folder needed) and runs all game rules
+ * Node + ws. Serves the client from ./public and runs all game rules
  * through game.js (the same module sim.js tests). Clients only render.
  *
  * Run:  PORT=3000 node server.js     (PORT env, default 3000)
@@ -23,15 +22,17 @@ const ROUND_PAUSE_MS = 6000;      // round-summary pause before next round
 const TRICK_PAUSE_MS = 1600;      // completed trick stays on the table before it is collected
 const RECONNECT_GRACE_MS = 120000; // seat+hand kept for a reconnecting player
 
-const INDEX_HTML = fs.readFileSync(path.join(__dirname, 'index.html'));
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.svg': 'image/svg+xml', '.webp': 'image/webp' };
 
 const httpServer = http.createServer((req, res) => {
-  const url = req.url.split('?')[0];
-  if (url === '/' || url === '/index.html') {
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    return res.end(INDEX_HTML);
+  let file = req.url === '/' ? 'index.html' : req.url.split('?')[0].replace(/^\/+/, '');
+  const full = path.join(PUBLIC_DIR, file);
+  if (!full.startsWith(PUBLIC_DIR) || !fs.existsSync(full) || fs.statSync(full).isDirectory()) {
+    res.writeHead(404); return res.end('not found');
   }
-  res.writeHead(404); return res.end('not found');
+  res.writeHead(200, { 'Content-Type': MIME[path.extname(full)] || 'application/octet-stream' });
+  fs.createReadStream(full).pipe(res);
 });
 
 const wss = new WebSocketServer({ server: httpServer });
@@ -92,7 +93,7 @@ function stateFor(room, seatIdx) {
     code: room.code,
     mySeat: seatIdx,
     hostSeat: hostSeat(room),
-    target: G.MATCH_TARGET,
+    target: G.BANK_LOSE_TARGET,
     seats: room.seats.map((s, i) => ({
       name: s.name, kind: s.kind, connected: s.connected,
       cards: round ? round.hands[i].length : 0,
@@ -104,11 +105,11 @@ function stateFor(room, seatIdx) {
     trickWinner: room.trickHold ? room.trickHold.winnerSeat : null,
     turn: round && !round.finished ? round.turn : null,
     legal: round ? round.legalMovesFor(seatIdx) : [],
-    scores: room.match ? room.match.scores.slice() : [0, 0],
     bankedTawan: room.match ? room.match.bankedTawan.slice() : [0, 0],
     roundTawan: round
       ? [G.tawanOf(round.captured[0]), G.tawanOf(round.captured[1])] : [0, 0],
     takanCount: round ? round.takanCount.slice() : [0, 0],
+    pendingTakan: room.match ? room.match.pendingTakan.slice() : [0, 0],
     takanBonus: round ? round.takanBonus.slice() : [0, 0],
     piles: round ? round.wonTricks.slice() : [0, 0, 0, 0],
     canDeclare13: round && !room.trickHold ? round.canDeclare13(seatIdx) : false,
@@ -116,6 +117,7 @@ function stateFor(room, seatIdx) {
     roundNo: room.match ? room.match.roundNo : 0,
     roundResult: (room.phase === 'roundEnd' || room.phase === 'matchEnd') ? last : null,
     matchWinner: room.match && room.match.finished ? room.match.winner : null,
+    matchLoser: room.match && room.match.finished ? room.match.loser : null,
   };
 }
 
