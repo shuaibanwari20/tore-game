@@ -558,6 +558,38 @@ const SLOT_ROT = { bottom: -5, top: 4, right: 7, left: -7 }; // must match .tric
 let prevTrickKeys = new Set();   // "seat:card" keys present in the trick at last render
 const flownKeys = new Set();     // local plays whose flight the clone already showed
 
+// ---------- optimistic slot for my own throw ----------
+// The fly clone dies on a fixed 450 ms timer, but the authoritative
+// state echo can arrive seconds later on a real connection — in
+// between, the thrown card existed NOWHERE: not in the hand (hidden
+// at throw time), not on the table (render suppresses its arrival
+// because the clone "showed" it). That was the user's bug: «ورق را
+// پرت می‌کنم چند ثانیه hide می‌شود، دوباره پیدا می‌شود».
+// Bridge: playCard() records the throw in pendingPlay; when the clone
+// lands and no confirming render has arrived yet, placePendingPlay()
+// parks an optimistic copy in my trick slot. render() then resolves
+// the pending throw exactly once — confirmed (the card is in
+// st.trick; the state-rendered card takes over seamlessly), rejected
+// (the card is still in my hand on my turn — e.g. a throw during the
+// trick hold, which the server silently resyncs; the hand render in
+// the same pass shows the card again), or consumed by the round/match
+// end. A 6 s safety timer guarantees no ghost card can outlive a
+// lost echo.
+let pendingPlay = null;   // { seat, card, id } — my throw awaiting its echo
+let pendingSeq = 0;
+
+function placePendingPlay() {
+  if (!pendingPlay || !state || state.phase !== 'playing') return;
+  if (state.trick.some((p) => p.seat === pendingPlay.seat && p.card === pendingPlay.card)) return;
+  const trickEl = $('#trick');
+  if (!trickEl || trickEl.querySelector('.slot.opt-pending')) return;
+  const slot = document.createElement('div');
+  slot.className = 'slot opt-pending';
+  slot.dataset.pos = relPos(pendingPlay.seat);
+  slot.appendChild(cardEl(pendingPlay.card));
+  trickEl.appendChild(slot);
+}
+
 // ---------- won-trick collection flight (SINGLE path) ----------
 // Exactly one sequence may ever show a won trick's new pile back:
 //   1. The trick completes and rests on the table (server hold). The
@@ -841,7 +873,10 @@ function flyClone(code, fromRect) {
       el.style.transform = 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) rotate(' + SLOT_ROT.bottom + 'deg) scale(' + s.toFixed(3) + ')';
     }));
   }
-  setTimeout(() => el.remove(), 450);
+  // the clone dies at 450 ms; if the state echo has not confirmed the
+  // throw by then, an optimistic card takes its place in the slot so
+  // the played card never vanishes while the echo is in flight
+  setTimeout(() => { el.remove(); placePendingPlay(); }, 450);
 }
 
 function animateCardIn(el, fromRect, rotDeg) {
@@ -870,6 +905,9 @@ function seatFromRect(seat) {
 
 function playCard(code, fromRect) {
   flownKeys.add(mySeat + ':' + code);
+  const pid = ++pendingSeq;
+  pendingPlay = { seat: mySeat, card: code, id: pid };
+  setTimeout(() => { if (pendingPlay && pendingPlay.id === pid) pendingPlay = null; }, 6000);
   flyClone(code, fromRect);
   send({ type: 'play', card: code });
 }
@@ -971,6 +1009,16 @@ function render(st) {
   const trickComplete = st.trick.length === 4;
   const finalWinSeat = trickComplete ? (st.trickWinner != null ? st.trickWinner : winSeat) : null;
 
+  // --- my optimistic throw (see placePendingPlay): resolve it against
+  // this state exactly once — confirmed / rejected / consumed. ---
+  if (pendingPlay) {
+    const inTrick = st.trick.some((p) => p.seat === mySeat && p.card === pendingPlay.card);
+    const inHand = (st.hand || []).includes(pendingPlay.card);
+    if (inTrick) pendingPlay = null; // echo confirmed it — the rendered card below takes over
+    else if (inHand && st.turn === mySeat) pendingPlay = null; // the throw never landed (e.g. during the trick hold): the card is back in my hand in this same render
+    else if (st.phase !== 'playing' && !inHand) pendingPlay = null; // scored into the round/match end
+  }
+
   // --- collection flight: the single-path state machine (defined
   // above). Runs before the pile rows and the trick are rebuilt, so a
   // launching flight can still measure the resting trick's live cards. ---
@@ -1028,6 +1076,9 @@ function render(st) {
   // drop stale flight suppressions (e.g. a play the server did not accept)
   flownKeys.forEach((k) => { if (!newKeys.has(k)) flownKeys.delete(k); });
   prevTrickKeys = newKeys;
+  // if my throw is still unconfirmed after this rebuild (its echo is
+  // still in flight), keep the optimistic card parked in my slot
+  placePendingPlay();
 
   // status line
   const statusEl = $('#status');
