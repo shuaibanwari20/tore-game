@@ -21,7 +21,7 @@ const RANK_VALUE = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9'
 
 // Kandahari names (for UI / logs)
 const SUIT_NAMES = { H: 'لال', D: 'خشت', C: 'پشه', S: 'قره' };
-const RANK_NAMES = { A: 'آس', K: 'شاه', Q: 'ماتکه', J: 'غلام', T: '۱۰', '9': '۹', '8': '۸', '7': '۷', '6': '۶', '5': '۵', '4': '۴', '3': '۳', '2': '۲' };
+const RANK_NAMES = { A: 'آس', K: 'شاه', Q: 'ماتکه', J: 'غلام', T: '10', '9': '9', '8': '8', '7': '7', '6': '6', '5': '5', '4': '4', '3': '3', '2': '2' };
 
 const suitOf = (card) => card[card.length - 1];
 const rankOf = (card) => RANK_VALUE[card.slice(0, -1)];
@@ -97,7 +97,7 @@ function tawanOf(cards) {
  * معلق — see Match.onRoundFinished). The two teams' card tawan always
  * sums to exactly 30 before the bump.
  *  BUMP: a final tawan above 21 (and below 30) is written as 30 —
- *  «هر بازیکن که بیشتر از ۲۱ تاوان گرفت باید برایش ۳۰ تاوان نوشته شوه».
+ *  «هر بازیکن که بیشتر از 21 تاوان گرفت باید برایش 30 تاوان نوشته شوه».
  *  A final of exactly 30 stays as-is. The bump applies BEFORE the bank.
  * There are NO match points (removed at the user's explicit order,
  * 2026-11-05): a round only produces the final tawan, which banks in
@@ -145,7 +145,7 @@ class Round {
     this.wonTricks = [0, 0, 0, 0];         // won-trick pile size per seat
     this.takanCount = [0, 0];              // تکان events per team this round
     this.takanBy = [[], []];               // seats that gave each تکان, per team
-    this.declared13 = false;               // leader declared «۱۳» for the current trick
+    this.declared13 = false;               // leader declared «13» for the current trick
     this.finished = false;
     this.result = null;                    // see finish()
   }
@@ -164,7 +164,7 @@ class Round {
   /**
    * True when `seat` is leading the FINAL trick (everyone holds 1 card)
    * with a card whose suit nobody else holds — i.e. playing it would be a
-   * takan unless they first declare «۱۳».
+   * takan unless they first declare «13».
    */
   canDeclare13(seat) {
     if (this.finished || this.declared13) return false;
@@ -173,7 +173,7 @@ class Round {
     return this.othersVoidIn(suitOf(this.hands[seat][0]), seat);
   }
 
-  /** Declare «۱۳» for the current (final) trick. Throws when not allowed. */
+  /** Declare «13» for the current (final) trick. Throws when not allowed. */
   declare13(seat) {
     if (!this.canDeclare13(seat)) throw new Error('cannot declare 13 now');
     this.declared13 = true;
@@ -197,7 +197,7 @@ class Round {
     }
 
     // TAKAN (تکان): leading a suit NONE of the other three players currently
-    // holds (checked now, before the card leaves the leader's hand). A «۱۳»
+    // holds (checked now, before the card leaves the leader's hand). A «13»
     // declaration for this trick cancels it. A takan adds NO round tawan —
     // it only counts toward a pending BANK claim at Match level (تکان معلق).
     if (this.trick.length === 0) {
@@ -307,7 +307,7 @@ class Match {
     // PENDING TAKAN (تکان معلق — user rule, 2026-11-05): if EXACTLY ONE
     // team gave takan(s) this round, that team gains one pending claim
     // per takan against the other (victim) team. (Both-takan rounds
-    // create nothing; a «۱۳»-cancelled takan never reaches takanCount,
+    // create nothing; a «13»-cancelled takan never reaches takanCount,
     // so it creates nothing either.) Then — AFTER this round's banking —
     // pending claims execute: while a team holds claims and the VICTIM's
     // banked tawan is ≥ TAKAN_CLAIM_MIN_BANK, one claim moves exactly
