@@ -367,13 +367,22 @@ function cardTitle(c) {
   const r = { A: 'آس', K: 'شاه', Q: 'ماتکه', J: 'غلام', T: 'ده', '9':'نه','8':'هشت','7':'هفت','6':'شش','5':'پنج','4':'چهار','3':'سه','2':'دو' }[c.slice(0, -1)];
   return r + ' ' + SUIT_NAME[suitOf(c)];
 }
+// ---------- asset resolver ----------
+// EVERY image the page loads goes through ASSET(). In the self-contained
+// bundle, build-deploy.js injects window.__ASSETS__ mapping each relative
+// path ('carpet.jpg', 'cards/<code>.png', 'cards/back.png') to a data URI,
+// because the deploy server serves ONLY the page itself. In plain mode
+// (served from public/) no map is injected and paths pass through as-is.
+const __ASSETS__ = window.__ASSETS__ || {};
+function ASSET(u) { return __ASSETS__[u] || u; }
+
 // Real deck faces: cards/<code>.png (Byron Knoll public-domain deck).
 // Preload the carpet + every face + the back so play never waits on images.
 (function preloadAssets() {
-  const bg = new Image(); bg.src = 'carpet.jpg';
+  const bg = new Image(); bg.src = ASSET('carpet.jpg');
   ['H', 'D', 'C', 'S'].forEach((s) => ['A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K']
-    .forEach((r) => { const i = new Image(); i.src = 'cards/' + r + s + '.png'; }));
-  const bk = new Image(); bk.src = 'cards/back.png';
+    .forEach((r) => { const i = new Image(); i.src = ASSET('cards/' + r + s + '.png'); }));
+  const bk = new Image(); bk.src = ASSET('cards/back.png');
 })();
 function cardEl(code, extraClass) {
   const d = document.createElement('div');
@@ -381,7 +390,7 @@ function cardEl(code, extraClass) {
   d.title = cardTitle(code);
   const img = document.createElement('img');
   img.className = 'face';
-  img.src = 'cards/' + code + '.png';
+  img.src = ASSET('cards/' + code + '.png');
   img.alt = cardTitle(code);
   img.draggable = false;
   d.appendChild(img);
@@ -720,7 +729,7 @@ function runCollectFlight(seat, col, rects, landing) {
       faces.appendChild(f);
     });
     const backImg = document.createElement('img');
-    backImg.src = 'cards/back.png';
+    backImg.src = ASSET('cards/back.png');
     backImg.alt = '';
     backImg.className = 'collectbackface';
     inner.appendChild(faces);
@@ -896,7 +905,7 @@ function teamLabel(team) {
 // No container, no label, no count — just the backs.
 function pileRowHTML(count) {
   let html = '';
-  for (let i = 0; i < count; i++) html += '<img src="cards/back.png" alt="">';
+  for (let i = 0; i < count; i++) html += '<img src="' + ASSET('cards/back.png') + '" alt="">';
   return html;
 }
 
@@ -946,7 +955,7 @@ function render(st) {
     el.classList.toggle('turn', isTurn);
     const crown = (winSeat === i && st.phase === 'playing') ? '👑 ' : '';
     if (pos === 'left' || pos === 'right') {
-      el.innerHTML = (i !== mySeat ? '<img class="backmini" src="cards/back.png" alt="">' : '') +
+      el.innerHTML = (i !== mySeat ? '<img class="backmini" src="' + ASSET('cards/back.png') + '" alt="">' : '') +
         '<div class="pname">' + crown + (s.name || 'خالی') + '</div>' +
         '<div class="pmeta">' + faNum(s.cards) + '</div>';
     } else {
@@ -954,7 +963,7 @@ function render(st) {
       if (s.kind === 'bot') meta = 'ربات · ';
       else if (s.kind === 'human') meta = '<span class="dot ' + (s.connected ? 'on' : '') + '"></span> ';
       el.innerHTML = '<div class="pname">' + crown + (s.name || 'خالی') + (i === mySeat ? ' (تو)' : '') + '</div>' +
-        '<div class="pmeta">' + (i !== mySeat ? '<img class="backmini" src="cards/back.png" alt=""> ' : '') +
+        '<div class="pmeta">' + (i !== mySeat ? '<img class="backmini" src="' + ASSET('cards/back.png') + '" alt=""> ' : '') +
         meta + faNum(s.cards) + ' ورق · ' + teamLabel(i % 2) + '</div>';
     }
   });
