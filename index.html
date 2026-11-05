@@ -262,11 +262,11 @@
       <button id="btn-join" class="ghost">ورود به اتاق</button>
     </div>
     <div class="cardbox legend">
-      📜 <b>قانون امتیاز (تاوان جمع کن؛ بیشتر بهتر است):</b><br>
+      📜 <b>قانون امتیاز (از تاوان فرار کن؛ کمتر بهتر است):</b><br>
       هر ورق <span class="red">♥</span> <b>لال</b> = ۱ تاوان (جمعاً ۱۳)<br>
       <b>غلام پشه</b> (J♣) = ۵ تاوان · <b>ماتکه کالا</b> (Q♠) = ۹ تاوان · <b>ده خشت</b> (10♦) = ۳ تاوان<br>
-      هر دست ۳۰ تاوان دارد؛ تیمی که تاوانِ <b>بیشتر</b> جمع کند <b>۲۰</b> و دیگری <b>۱۰</b> می‌گیرد.<br>
-      مساوی؟ تیمی که <b>ماتکه کالا</b> را <b>گرفته</b> باشد، ۲۰ را می‌برد. مسابقه تا <b>۲۱۰</b> است.<br>
+      هر دست ۳۰ تاوان دارد؛ تیمی که تاوانِ <b>کمتر</b> گرفته باشد <b>۲۰</b> و دیگری <b>۱۰</b> می‌گیرد.<br>
+      مساوی؟ تیمی که <b>ماتکه کالا</b> را <b>گرفته</b> باشد، <b>۱۰</b> می‌گیرد و تیمِ دیگر ۲۰ را می‌برد. مسابقه تا <b>۲۱۰</b> است.<br>
       ⭐ <b>تکان:</b> خالی را شروع کنی که هیچ‌کس ندارد → <b>+۳۰ تاوان</b> و یک ستارهٔ قرمز برای تیمت!<br>
       اگر فقط یک تیم تکان داشته باشد، <b>همهٔ تاوان دست به همان تیم می‌رسد</b>.<br>
       🙋 دست آخر: اگر پیش از بازی بگویی <b>«۱۳ هست»</b>، تکان برایت حساب نمی‌شود.<br>
@@ -1084,12 +1084,13 @@ function render(st) {
     }
     $('#ov-qs').textContent = teamLabel(r.qsTeam);
     // Tie verdict, spelled out with names: on a tied final tawan the team
-    // that CAPTURED ماتکه کالا takes the 20. The check must be VISIBLE —
-    // a silent application read as a scoring error to the user (15–15 case).
+    // that CAPTURED ماتکه کالا LOSES the tie (takes the 10); the 20 goes
+    // to the other team. The check must be VISIBLE — a silent application
+    // read as a scoring error to the user (15–15 case).
     const tiedFinal = r.tawan[0] === r.tawan[1];
     $('#ov-tie').style.display = tiedFinal ? '' : 'none';
     if (tiedFinal) {
-      $('#ov-tie').textContent = '⚖️ مساوی شد! ماتکه کالا را تیمِ (' + teamNames(r.qsTeam) + ') گرفت — ۲۰ برای همان تیم';
+      $('#ov-tie').textContent = '⚖️ مساوی شد! ماتکه کالا را تیمِ (' + teamNames(r.qsTeam) + ') گرفت — ۱۰ برای همان تیم، ۲۰ برای تیمِ (' + teamNames(1 - r.qsTeam) + ')';
     }
     $('#ov-cr').textContent = 'تیمِ (' + teamNames(myTeam) + '): +' + faNum(r.credits[myTeam]) +
       ' — تیمِ (' + teamNames(them) + '): +' + faNum(r.credits[them]);
