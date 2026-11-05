@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>توره — بازی ورق قندهاری</title>
+<!--
+  Asset credits:
+  - Carpet background (carpet.jpg): photograph of an antique Oushak carpet,
+    Nazmiyal Collection, via Wikimedia Commons — CC BY 3.0
+    https://commons.wikimedia.org/wiki/File:Antique_Oushak_Carpet_from_Turkey.jpg
+    (center-cropped to portrait and warm color-graded)
+  - Card faces (cards/*.png): the classic public-domain vector playing-card
+    deck by Byron Knoll (public domain), PNG set as distributed by the
+    Deck of Cards API project (deckofcardsapi.com).
+-->
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+    background: radial-gradient(ellipse at top, #1d6a3c 0%, #0d3b21 70%, #082a17 100%);
+    color: #f5f2e8; height: 100vh; height: 100dvh;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .wrap { width: 100%; max-width: 520px; padding: 10px 12px 18px; margin: 0 auto; }
+  h1 { text-align: center; margin: 6px 0 2px; font-size: 30px; color: #ffd75e; text-shadow: 0 2px 6px rgba(0,0,0,.5); }
+  .sub { text-align: center; opacity: .85; font-size: 13px; margin-bottom: 10px; }
+  .cardbox {
+    background: rgba(0,0,0,.28); border: 1px solid rgba(255,215,94,.35);
+    border-radius: 14px; padding: 14px; margin-bottom: 12px;
+  }
+  label { display: block; font-size: 14px; margin: 8px 0 4px; opacity: .9; }
+  input {
+    width: 100%; padding: 12px; font-size: 17px; border-radius: 10px;
+    border: 1px solid #9db8a6; background: #fdfdf8; color: #123;
+  }
+  input.code { text-align: center; letter-spacing: 6px; text-transform: uppercase; font-weight: 700; }
+  button {
+    width: 100%; padding: 13px; margin-top: 10px; font-size: 17px; font-weight: 700;
+    border: 0; border-radius: 10px; background: #ffd75e; color: #33270a; cursor: pointer;
+  }
+  button:active { transform: scale(.98); }
+  button.ghost { background: transparent; color: #ffd75e; border: 1px solid #ffd75e; }
+  button:disabled { opacity: .45; }
+  .legend { font-size: 13px; line-height: 2; opacity: .95; }
+  .legend b { color: #ffd75e; }
+  .red { color: #d7263d; } .blk { color: #1c2430; }
+
+  /* ---------- game screen: Afghan carpet ---------- */
+  #scr-game {
+    position: fixed; inset: 0; height: 100dvh; z-index: 10;
+    display: flex; flex-direction: column; overflow: hidden;
+    padding: 10px;
+    background-color: #a97e4f; /* warm brown fallback while the carpet photo loads */
+    background-image:
+      linear-gradient(rgba(96,58,16,.10), rgba(64,36,8,.22)),
+      url("carpet.jpg");
+    background-size: cover, cover;
+    background-position: center, center;
+  }
+  .ghead { display: flex; gap: 8px; align-items: stretch; margin-bottom: 8px; }
+  .menubtn {
+    width: auto; margin: 0; padding: 8px 10px; font-size: 13px; line-height: 1.3;
+    background: linear-gradient(#7d2231, #4d1019); color: #ffe9c9;
+    border: 1px solid #d9b380; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.4);
+  }
+  .partnerbar {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    background: linear-gradient(rgba(26,16,5,.93), rgba(26,16,5,.86));
+    border: 1px solid #d9b380; border-radius: 12px; padding: 7px 12px; min-height: 46px;
+    color: #f5e7c6; box-shadow: 0 2px 8px rgba(0,0,0,.35);
+  }
+  .partnerbar .pname { flex: 1; text-align: center; font-size: 17px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .partnerbar .pmeta { font-size: 11.5px; opacity: .9; white-space: nowrap; }
+  .partnerbar.turn { box-shadow: 0 0 0 2px #ffd75e, 0 2px 10px rgba(0,0,0,.4); }
+  .partnerbar.turn .pname { color: #ffd75e; }
+  .scorestrip {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: rgba(26,16,5,.85); border: 1px solid rgba(217,179,128,.65);
+    border-radius: 10px; padding: 5px 12px; margin-bottom: 8px; color: #f5e7c6; font-size: 13px;
+  }
+  .scorestrip b { color: #ffd75e; font-size: 19px; font-weight: 900; }
+  .scorestrip small { opacity: .85; font-size: 11.5px; }
+  .scorestrip .ss-mid { opacity: .85; font-size: 12px; white-space: nowrap; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #888; vertical-align: middle; }
+  .dot.on { background: #4ade80; }
+  .tkstars { color: #ff3b30; font-size: 13px; letter-spacing: 1px; text-shadow: 0 0 6px rgba(255,59,48,.55); white-space: nowrap; }
+
+  /* ---------- takan banner + ۱۳ declaration ---------- */
+  #takanbanner {
+    position: fixed; top: 34%; left: 50%; z-index: 70; pointer-events: none;
+    transform: translate(-50%, -50%) scale(.6); opacity: 0;
+    font-size: 44px; font-weight: 900; color: #ffd75e; white-space: nowrap;
+    text-shadow: 0 0 18px rgba(255,59,48,.9), 0 4px 14px rgba(0,0,0,.7);
+  }
+  #takanbanner.show { animation: takanpop 1.9s ease-out forwards; }
+  @keyframes takanpop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); }
+    12% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+    22% { transform: translate(-50%, -50%) scale(1); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -56%) scale(1); }
+  }
+  #btn-13 {
+    width: auto; margin: 8px auto 0; display: block; padding: 11px 30px;
+    font-size: 19px; font-weight: 900; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(#e0342c, #9c1c14); color: #fff;
+    border: 2px solid #ffd75e; box-shadow: 0 4px 14px rgba(0,0,0,.5);
+  }
+  #btn-13:active { transform: scale(.97); }
+
+  /* ---------- won-trick piles: plain card-back rows on the carpet ----------
+     One loose back per won trick, in front of the player who won it.
+     No container, no background, no label, no count.
+     Piles paint UNDER the played cards: .pilerow z-index 1 < .trick z-index 6,
+     and each row is tucked flush against its player's edge of the table. */
+  .pilerow { position: absolute; z-index: 1; display: none; pointer-events: none; direction: ltr; }
+  .pilerow.on { display: flex; }
+  .pilerow img { width: 28px; height: auto; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.45); flex: 0 0 auto; }
+  .pilerow[data-pos="bottom"] { bottom: 0; left: 50%; transform: translateX(-50%); }
+  .pilerow[data-pos="top"] { top: 0; left: 50%; transform: translateX(-50%); }
+  .pilerow[data-pos="bottom"] img, .pilerow[data-pos="top"] img { margin-left: -15px; }
+  .pilerow[data-pos="bottom"] img:first-child, .pilerow[data-pos="top"] img:first-child { margin-left: 0; }
+  .pilerow[data-pos="right"] { right: 40px; top: 50%; transform: translateY(-50%); flex-direction: column; }
+  .pilerow[data-pos="left"] { left: 40px; top: 50%; transform: translateY(-50%); flex-direction: column; }
+  .pilerow[data-pos="right"] img, .pilerow[data-pos="left"] img { margin-top: -28px; }
+  .pilerow[data-pos="right"] img:first-child, .pilerow[data-pos="left"] img:first-child { margin-top: 0; }
+  /* collection flight: a collected trick's back is inserted with inline
+     visibility:hidden while the flight travels into its slot, and
+     settleCollect() unhides it in the frame the flip lands */
+  .pcard.collectfly { position: fixed; z-index: 86; margin: 0; pointer-events: none; will-change: transform; }
+  /* the gathered stack that slides across the carpet with its faces up,
+     then flips over into the row's newest back */
+  .collectstack { position: fixed; z-index: 86; margin: 0; pointer-events: none; will-change: transform; }
+  .collectinner { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
+  .collectfaces, .collectbackface { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .collectfaces .pcard { position: absolute; margin: 0; }
+  .collectbackface { transform: rotateY(180deg); width: 100%; height: 100%; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.45); }
+
+  /* ---------- table (carpet shows through) ---------- */
+  .table { position: relative; flex: 1 1 auto; min-height: 170px; margin: 2px 0 0; }
+  .table .seat[data-pos="bottom"] { display: none; }
+  .vbar {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 38px; height: 66%; z-index: 3;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    gap: 8px; padding: 12px 0;
+    background: linear-gradient(rgba(26,16,5,.93), rgba(26,16,5,.86));
+    border: 1px solid #d9b380; border-radius: 999px; color: #f5e7c6;
+    box-shadow: 0 2px 8px rgba(0,0,0,.35);
+  }
+  .vbar[data-pos="right"] { right: 0; }
+  .vbar[data-pos="left"] { left: 0; }
+  .vbar .pname { writing-mode: vertical-rl; font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-height: 78%; }
+  .vbar[data-pos="left"] .pname { transform: rotate(180deg); }
+  .vbar .pmeta { font-size: 12px; font-weight: 800; color: #ffd75e; background: rgba(0,0,0,.35); border-radius: 999px; padding: 1px 7px; line-height: 1.5; }
+  .vbar.turn { box-shadow: 0 0 0 2px #ffd75e, 0 2px 10px rgba(0,0,0,.4); }
+  .vbar.turn .pname { color: #ffd75e; }
+
+  .trick { position: absolute; inset: 0; z-index: 6; } /* above the won-trick piles (z 1): played cards always cover them */
+  .trick .slot { position: absolute; width: 76px; text-align: center; }
+  .trick .slot .who { display: none; }
+  .trick .slot[data-pos="bottom"] { bottom: 3%; left: 50%; margin-left: -38px; }
+  .trick .slot[data-pos="top"]    { top: 3%; left: 50%; margin-left: -38px; }
+  .trick .slot[data-pos="right"]  { right: 50px; top: 50%; transform: translateY(-50%); }
+  .trick .slot[data-pos="left"]   { left: 50px; top: 50%; transform: translateY(-50%); }
+  .trick .slot[data-pos="bottom"] .pcard { transform: rotate(-5deg); }
+  .trick .slot[data-pos="top"] .pcard { transform: rotate(4deg); }
+  .trick .slot[data-pos="right"] .pcard { transform: rotate(7deg); }
+  .trick .slot[data-pos="left"] .pcard { transform: rotate(-7deg); }
+  .trick .slot.win .pcard { box-shadow: 0 0 0 3px #ffd75e, 0 0 22px 4px rgba(255,215,94,.75), 0 6px 14px rgba(0,0,0,.5); }
+  /* completed trick: the WINNING card pops hard while the trick rests on the table */
+  .trick .slot.winlast { z-index: 5; }
+  .trick .slot.winlast .pcard { box-shadow: 0 0 0 4px #ffd75e, 0 0 38px 12px rgba(255,215,94,.95), 0 8px 18px rgba(0,0,0,.55); }
+  .trick .slot.winlast[data-pos="bottom"] .pcard { transform: rotate(-5deg) scale(1.06); }
+  .trick .slot.winlast[data-pos="top"] .pcard { transform: rotate(4deg) scale(1.06); }
+  .trick .slot.winlast[data-pos="right"] .pcard { transform: rotate(7deg) scale(1.06); }
+  .trick .slot.winlast[data-pos="left"] .pcard { transform: rotate(-7deg) scale(1.06); }
+
+  /* ---------- cards (real Byron Knoll deck faces, cards/<code>.png) ---------- */
+  .pcard {
+    position: relative; width: 64px; height: 90px; border-radius: 9px; background: #fffef9;
+    box-shadow: 0 3px 9px rgba(0,0,0,.45); display: inline-block; user-select: none;
+  }
+  .pcard img.face {
+    width: 100%; height: 100%; display: block; border-radius: 9px; pointer-events: none;
+  }
+  .backmini {
+    width: 21px; height: auto; border-radius: 3px; vertical-align: middle;
+    box-shadow: 0 1px 4px rgba(0,0,0,.45); flex: 0 0 auto;
+  }
+  .vbar .backmini { width: 24px; }
+  .trick .pcard { width: 76px; height: 106px; }
+
+  /* ---------- card flight (throw animation) ---------- */
+  .flycard { position: fixed; z-index: 80; margin: 0; pointer-events: none; }
+  @keyframes flyin { from { opacity: .2; } to { opacity: 1; } }
+  .trick .pcard.flyin { animation: flyin .3s ease-out; }
+
+  /* ---------- my hand (arc fan) + turn pill ---------- */
+  .status {
+    text-align: center; font-size: 15.5px; font-weight: 700; color: #ffe9a8;
+    background: rgba(24,14,4,.92); border: 1px solid rgba(217,179,128,.65);
+    border-radius: 999px; padding: 9px 14px; margin-top: 10px; min-height: 20px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.35);
+  }
+  .hand { display: flex; direction: ltr; justify-content: center; align-items: flex-start; padding: 30px 6px 12px; overflow: visible; --cw: 74px; --step: 26px; margin-top: -6px; margin-inline-start: -10px; margin-inline-end: -10px; }
+  .hand .pcard { width: var(--cw); height: calc(var(--cw) * 1.4); margin-inline-start: calc(var(--step) - var(--cw)); cursor: pointer; transition: transform .12s; flex: 0 0 auto; transform: rotate(var(--rot, 0deg)); transform-origin: 50% 200%; border-radius: calc(var(--cw) * .12); touch-action: none; }
+  .hand .pcard img.face { border-radius: calc(var(--cw) * .12); }
+  .hand .pcard.dragging { transition: none; box-shadow: 0 14px 22px rgba(0,0,0,.55); }
+  .hand .pcard:first-child { margin-inline-start: 0; }
+  .hand .pcard.playable { transform: rotate(var(--rot, 0deg)) translateY(-7px); box-shadow: 0 0 0 2px #ffd75e, 0 10px 16px rgba(0,0,0,.5); }
+  .hand .pcard.dimhard { opacity: .32; filter: saturate(.35) brightness(.8); }
+  .hand .pcard:active { transform: rotate(var(--rot, 0deg)) translateY(-9px); }
+
+  /* ---------- lobby ---------- */
+  .roomcode { text-align: center; font-size: 40px; font-weight: 900; letter-spacing: 10px; color: #ffd75e; margin: 4px 0; }
+  .seatrow { display: flex; justify-content: space-between; padding: 9px 4px; border-bottom: 1px dashed rgba(255,255,255,.2); font-size: 15px; }
+  .seatrow:last-child { border-bottom: 0; }
+  .teamtag { font-size: 12px; opacity: .8; }
+
+  /* ---------- overlays / toast ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.72); display: none;
+    align-items: center; justify-content: center; z-index: 40; padding: 16px;
+  }
+  .overlay.show { display: flex; }
+  .panel {
+    background: linear-gradient(165deg, #4a2f16, #2a1a09); border: 2px solid #d9b380; border-radius: 16px;
+    padding: 20px; width: 100%; max-width: 420px; text-align: center; color: #f5e7c6;
+    box-shadow: inset 0 0 34px rgba(0,0,0,.5);
+  }
+  .panel h2 { margin: 0 0 10px; color: #ffd75e; font-size: 22px; }
+  .panel .row { display: flex; justify-content: space-between; font-size: 15.5px; padding: 5px 2px; }
+  .panel .row small { font-size: 11px; font-weight: 400; opacity: .75; }
+  .panel .big { font-size: 19px; font-weight: 800; }
+  #toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(90px);
+    background: #7f1d1d; color: #fff; padding: 11px 18px; border-radius: 10px; font-size: 15px;
+    z-index: 60; transition: transform .25s; max-width: 92vw; text-align: center;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #connbar { text-align: center; font-size: 12.5px; color: #ffd75e; min-height: 18px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="connbar"></div>
+
+  <!-- ======== HOME ======== -->
+  <section id="scr-home">
+    <div class="cardbox">
+      <h1>🃏 توره</h1>
+      <div class="sub">بازی ورق چهارنفرهٔ قندهاری — تیمی، تا ۲۱۰</div>
+      <label for="inp-name">نامت</label>
+      <input id="inp-name" type="text" maxlength="20" placeholder="مثلاً احمد" autocomplete="name">
+      <button id="btn-create">ساختن اتاق تازه</button>
+      <label for="inp-code" style="margin-top:16px">یا با کد اتاق وارد شو</label>
+      <input id="inp-code" class="code" type="text" maxlength="4" placeholder="کد اتاق">
+      <button id="btn-join" class="ghost">ورود به اتاق</button>
+    </div>
+    <div class="cardbox legend">
+      📜 <b>قانون امتیاز (از تاوان فرار کن؛ کمتر بهتر است):</b><br>
+      هر ورق <span class="red">♥</span> <b>لال</b> = ۱ تاوان (جمعاً ۱۳)<br>
+      <b>غلام پشه</b> (J♣) = ۵ تاوان · <b>ماتکه کالا</b> (Q♠) = ۹ تاوان · <b>ده خشت</b> (10♦) = ۳ تاوان<br>
+      هر دست ۳۰ تاوان دارد؛ تیمی که تاوانِ <b>کمتر</b> گرفته باشد <b>۲۰</b> و دیگری <b>۱۰</b> می‌گیرد.<br>
+      مساوی؟ تیمی که <b>ماتکه کالا</b> را <b>گرفته</b> باشد، <b>۱۰</b> می‌گیرد و تیمِ دیگر ۲۰ را می‌برد. مسابقه تا <b>۲۱۰</b> است.<br>
+      ⭐ <b>تکان:</b> خالی را شروع کنی که هیچ‌کس ندارد → <b>+۳۰ تاوان</b> و یک ستارهٔ قرمز برای تیمت!<br>
+      اگر فقط یک تیم تکان داشته باشد، <b>همهٔ تاوان دست به همان تیم می‌رسد</b>.<br>
+      🙋 دست آخر: اگر پیش از بازی بگویی <b>«۱۳ هست»</b>، تکان برایت حساب نمی‌شود.<br>
+      ⚠️ تیمی که در یک دست بیشتر از <b>۲۱</b> تاوان بگیرد، برایش <b>۳۰</b> تاوان نوشته می‌شود.<br>
+      🏦 تاوانِ یک دست اگر <b>۱۰ یا بیشتر</b> باشد در بانکت <b>جمع می‌شود</b>؛ کمتر از ۱۰ باشد، حساب نمی‌شود.
+    </div>
+  </section>
+
+  <!-- ======== LOBBY ======== -->
+  <section id="scr-lobby" class="hidden">
+    <div class="cardbox">
+      <div style="text-align:center; font-size:14px; opacity:.85">کد اتاق — به دوست‌هایت بگو</div>
+      <div class="roomcode" id="lobby-code">····</div>
+      <div id="lobby-seats"></div>
+      <button id="btn-start">شروع بازی</button>
+      <div id="lobby-note" style="text-align:center; font-size:13px; opacity:.85; margin-top:8px"></div>
+    </div>
+  </section>
+
+  <!-- ======== GAME ======== -->
+  <section id="scr-game" class="hidden">
+    <div class="ghead">
+      <div class="seat partnerbar" data-pos="top" id="seat-top"></div>
+      <button id="btn-leave" class="menubtn">منوی اصلی</button>
+    </div>
+    <div class="scorestrip">
+      <span>تیم ما · جمع‌شده <b id="sc-us">۰</b> <small>· امتیاز: <span id="pt-us">۰</span> · تاوان: <span id="tw-us">۰</span></small> <span class="tkstars" id="tk-us"></span></span>
+      <span class="ss-mid">دست <span id="round-no">۱</span> · هدف: ۲۱۰</span>
+      <span>تیم حریف · جمع‌شده <b id="sc-them">۰</b> <small>· امتیاز: <span id="pt-them">۰</span> · تاوان: <span id="tw-them">۰</span></small> <span class="tkstars" id="tk-them"></span></span>
+    </div>
+
+    <div class="table" id="table">
+      <div class="seat vbar" data-pos="right" id="seat-right"></div>
+      <div class="seat vbar" data-pos="left"  id="seat-left"></div>
+      <div class="seat" data-pos="bottom" id="seat-bottom"></div>
+      <div class="pilerow" data-pos="top" id="pile-top"></div>
+      <div class="pilerow" data-pos="right" id="pile-right"></div>
+      <div class="pilerow" data-pos="left" id="pile-left"></div>
+      <div class="pilerow" data-pos="bottom" id="pile-bottom"></div>
+      <div class="trick" id="trick"></div>
+    </div>
+
+    <button id="btn-13" class="hidden">🙋 ۱۳ هست!</button>
+    <div class="hand" id="hand"></div>
+    <div class="status" id="status"></div>
+  </section>
+</div>
+
+<div id="takanbanner"></div>
+
+<!-- ======== ROUND END ======== -->
+<div class="overlay" id="ov-round">
+  <div class="panel">
+    <h2 id="ov-round-title">پایان دست</h2>
+    <div class="row"><span>تاوان ورق‌ها</span><span><small>ما </small><b id="ov-card-us">۰</b> · <small>حریف </small><b id="ov-card-them">۰</b></span></div>
+    <div class="row" id="ov-tk-row"><span>تکان ⭐</span><span><small>ما </small><b id="ov-tk-us">—</b> · <small>حریف </small><b id="ov-tk-them">—</b></span></div>
+    <div class="row" id="ov-tr-row"><span>انتقال تکان</span><b id="ov-tr">—</b></div>
+    <div id="ov-tr-blocked" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
+    <div class="row big"><span>تاوان نهایی</span><b id="ov-tw">—</b></div>
+    <div id="ov-bump" style="font-size:13.5px; opacity:.9; padding:2px 2px 0"></div>
+    <div class="row"><span>تاوان جمع‌شده (بانک)</span><span><small>ما </small><b id="ov-bk-us">۰</b> · <small>حریف </small><b id="ov-bk-them">۰</b></span></div>
+    <div id="ov-wipe" style="font-size:13.5px; opacity:.9; padding:2px 2px 0"></div>
+    <div class="row"><span>ماتکه کالا (Q♠) را گرفت</span><b id="ov-qs">—</b></div>
+    <div id="ov-tie" style="display:none; font-size:14.5px; font-weight:700; color:#ffd75e; padding:4px 2px 0"></div>
+    <div class="row big"><span>امتیاز این دست</span><b id="ov-cr" style="color:#ffd75e">—</b></div>
+    <div class="row"><span>جمع مسابقه</span><b><small>ما </small><span id="ov-sc-us">۰</span> — <small>حریف </small><span id="ov-sc-them">۰</span></b></div>
+    <div style="margin-top:10px; font-size:13.5px; opacity:.85">دست بعدی به‌زودی شروع می‌شود…</div>
+  </div>
+</div>
+
+<!-- ======== MATCH END ======== -->
+<div class="overlay" id="ov-match">
+  <div class="panel">
+    <h2 id="ov-match-title">🏆 پایان مسابقه</h2>
+    <div class="row big"><span>نتیجهٔ نهایی</span><b><small>ما </small><span id="ov-f-us">۰</span> — <small>حریف </small><span id="ov-f-them">۰</span></b></div>
+    <button id="btn-newgame">بازی جدید</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+// ---------- helpers ----------
+const $ = (s) => document.querySelector(s);
+const FA = '۰۱۲۳۴۵۶۷۸۹';
+const faNum = (n) => String(n).replace(/\d/g, (d) => FA[d]);
+const SUIT_NAME = { H: 'لال', D: 'خشت', C: 'پشه', S: 'قره' };
+const RANK_VAL = { '2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,T:10,J:11,Q:12,K:13,A:14 };
+const suitOf = (c) => c[c.length - 1];
+function cardPoints(c) {
+  if (suitOf(c) === 'H') return 1;
+  if (c === 'JC') return 5;
+  if (c === 'QS') return 9;
+  if (c === 'TD') return 3;
+  return 0;
+}
+function cardTitle(c) {
+  const r = { A: 'آس', K: 'شاه', Q: 'ماتکه', J: 'غلام', T: 'ده', '9':'نه','8':'هشت','7':'هفت','6':'شش','5':'پنج','4':'چهار','3':'سه','2':'دو' }[c.slice(0, -1)];
+  return r + ' ' + SUIT_NAME[suitOf(c)];
+}
+// Real deck faces: cards/<code>.png (Byron Knoll public-domain deck).
+// Preload the carpet + every face + the back so play never waits on images.
+(function preloadAssets() {
+  const bg = new Image(); bg.src = 'carpet.jpg';
+  ['H', 'D', 'C', 'S'].forEach((s) => ['A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K']
+    .forEach((r) => { const i = new Image(); i.src = 'cards/' + r + s + '.png'; }));
+  const bk = new Image(); bk.src = 'cards/back.png';
+})();
+function cardEl(code, extraClass) {
+  const d = document.createElement('div');
+  d.className = 'pcard' + (extraClass ? ' ' + extraClass : '');
+  d.title = cardTitle(code);
+  const img = document.createElement('img');
+  img.className = 'face';
+  img.src = 'cards/' + code + '.png';
+  img.alt = cardTitle(code);
+  img.draggable = false;
+  d.appendChild(img);
+  return d;
+}
+let toastTimer = null;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3600);
+}
+
+// ---------- session / connection ----------
+let ws = null, mySeat = null, state = null, intentionalClose = false;
+let session = null;
+try { session = JSON.parse(localStorage.getItem('tore.session') || 'null'); } catch (e) { session = null; }
+$('#inp-name').value = localStorage.getItem('tore.name') || '';
+
+function myName() {
+  const n = $('#inp-name').value.trim() || session?.name || 'بازیکن';
+  localStorage.setItem('tore.name', n);
+  return n;
+}
+function connect(onOpen) {
+  const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+  ws = new WebSocket(proto + location.host);
+  ws.onopen = onOpen;
+  ws.onmessage = (ev) => { try { onMsg(JSON.parse(ev.data)); } catch (e) {} };
+  ws.onclose = () => {
+    if (intentionalClose) return;
+    $('#connbar').textContent = 'اتصال قطع شد — در حال اتصال دوباره…';
+    setTimeout(() => { if (session) connect(() => send({ type: 'reconnect', code: session.code, token: session.token })); }, 2500);
+  };
+}
+function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+
+$('#btn-create').onclick = () => connect(() => send({ type: 'create', name: myName() }));
+$('#btn-join').onclick = () => {
+  const code = $('#inp-code').value.trim().toUpperCase();
+  if (code.length !== 4) return toast('کد اتاق ۴ حرفی است');
+  connect(() => send({ type: 'join', code, name: myName() }));
+};
+$('#btn-start').onclick = () => send({ type: 'start' });
+$('#btn-13').onclick = () => {
+  send({ type: 'declare13' });
+  $('#btn-13').classList.add('hidden'); // until the confirming state arrives
+};
+$('#btn-newgame').onclick = () => {
+  intentionalClose = true;
+  localStorage.removeItem('tore.session');
+  location.reload();
+};
+$('#btn-leave').onclick = () => {
+  intentionalClose = true;
+  localStorage.removeItem('tore.session');
+  location.reload();
+};
+
+function onMsg(msg) {
+  if (msg.type === 'room') {
+    mySeat = msg.seat;
+    session = { code: msg.code, token: msg.token, name: myName() };
+    localStorage.setItem('tore.session', JSON.stringify(session));
+    $('#connbar').textContent = '';
+  } else if (msg.type === 'state') {
+    state = msg;
+    if (mySeat === null) mySeat = msg.mySeat;
+    render(msg);
+  } else if (msg.type === 'takan') {
+    const mine = msg.team === (mySeat % 2);
+    const b = $('#takanbanner');
+    b.textContent = '⭐ تکان! ' + (mine ? 'تیم ما' : 'تیم حریف');
+    b.classList.remove('show');
+    void b.offsetWidth; // restart the pop animation
+    b.classList.add('show');
+  } else if (msg.type === 'declared13') {
+    const nm = state && state.seats[msg.seat] ? state.seats[msg.seat].name : 'بازیکن';
+    toast('🙋 ' + nm + ': ۱۳ هست!');
+  } else if (msg.type === 'error') {
+    toast(msg.message);
+    if (msg.message.includes('نشست')) {
+      localStorage.removeItem('tore.session');
+      session = null;
+      show('scr-home');
+    }
+  }
+}
+
+// resume a previous session on load
+if (session && session.code && session.token) {
+  connect(() => send({ type: 'reconnect', code: session.code, token: session.token }));
+}
+
+// ---------- hand fit ----------
+// Arc-fan fit: cards stay ~19vw (64–86px). The fan's true width includes the
+// rotation spread — end cards rotate around a pivot 200% below their top, so
+// their top corners swing outward by swing() px on each side. Pitch is solved
+// from: avail = cw + 2*swing + (n-1)*pitch. Fewer cards → same card size,
+// pitch capped, fan just narrows. Only if pitch would drop under 13px do the
+// cards themselves shrink a little.
+const FAN_ROT_STEP = 3.2;   // degrees per card from center (must match render)
+const FAN_ORIGIN = 2.0;     // transform-origin 50% 200% (must match CSS)
+function fitHand() {
+  const handEl = $('#hand');
+  if (!handEl) return;
+  const n = handEl.children.length;
+  if (!n) return;
+  const avail = handEl.clientWidth - 12; // minus horizontal padding (6px × 2)
+  if (avail <= 0) return;
+  const thetaMax = n > 1 ? (FAN_ROT_STEP * (n - 1) / 2) * Math.PI / 180 : 0;
+  const swingK = FAN_ORIGIN * 1.4 * Math.sin(thetaMax) - 0.5 * (1 - Math.cos(thetaMax)); // swing per unit cw
+  let cw = Math.min(86, Math.max(64, window.innerWidth * 0.19));
+  let step = 0;
+  if (n > 1) {
+    step = (avail - cw * (1 + 2 * swingK)) / (n - 1);
+    const stepCap = cw * 0.42; // natural overlap — small hands stay compact
+    if (step > stepCap) step = stepCap;
+    if (step < 13) {
+      cw = Math.max(40, (avail - 13 * (n - 1)) / (1 + 2 * swingK));
+      step = (avail - cw * (1 + 2 * swingK)) / (n - 1);
+    }
+  }
+  handEl.style.setProperty('--cw', cw.toFixed(1) + 'px');
+  handEl.style.setProperty('--step', step.toFixed(1) + 'px');
+}
+window.addEventListener('resize', fitHand);
+
+// ---------- card flight + swipe-to-play ----------
+// When a card is played it must visibly FLY to the center trick:
+//  - local player: a fixed-position clone flies from the hand card (tap point
+//    or drag-release point) to the bottom trick slot, then the play is sent.
+//  - remote players / bots: when their card newly appears in the trick during
+//    render, it FLIPs in from their seat bar (top / left / right).
+const SLOT_ROT = { bottom: -5, top: 4, right: 7, left: -7 }; // must match .trick CSS
+let prevTrickKeys = new Set();   // "seat:card" keys present in the trick at last render
+const flownKeys = new Set();     // local plays whose flight the clone already showed
+
+// ---------- won-trick collection flight (SINGLE path) ----------
+// Exactly one sequence may ever show a won trick's new pile back:
+//   1. The trick completes and rests on the table (server hold). The
+//      collection state machine marks the collection PENDING — the
+//      winner's pile row is left completely untouched: the new back is
+//      not in the DOM at all, so it cannot pop in early, and the row
+//      cannot shift under the resting trick.
+//   2. The trick clears. The collection LAUNCHES (exactly once — the
+//      phase flips to 'flying' before anything is built): a placeholder
+//      back is inserted born-hidden (inline visibility:hidden, tracked
+//      by direct reference, never by positional queries), its exact
+//      slot is measured from its own layout box, and the flight runs
+//      off the resting trick's still-live DOM cards:
+//        (a) GATHER (~200 ms): the 4 played cards converge into one
+//            neat stack at the trick centre, faces up;
+//        (b) SLIDE (~600 ms, ease-in-out): the stack crosses the
+//            carpet on a slight arc to the winner's pile row,
+//            shrinking steadily to back size — faces visible the whole
+//            way, nothing fades out;
+//        (c) FLIP (~200 ms): on arrival the stack turns over
+//            (rotateY) into the card back.
+//   3. The flip completes → settleCollect() removes the clones and
+//      unhides exactly that placeholder back, in the same frame.
+// settleCollect() is the ONLY function that can reveal a collection's
+// back, and the phase/id guards make it run exactly once per
+// collection. Catch-up inserts (first sync, reconnect, busy seat)
+// bypass the flight entirely — an animation is never queued behind a
+// pop, so a pop can never precede a flight.
+const GATHER_MS = 200, SLIDE_MS = 600, FLIP_MS = 200; // ~1 s total
+const CAN_COLLECT_ANIM = (() => {
+  try {
+    if (!('animate' in document.createElement('div'))) return false;
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    return true;
+  } catch (e) { return false; }
+})();
+const collections = {};   // seat -> {id, phase:'pending'|'flying', plays, target, backEl, timers, clones}
+let pileShown = [0, 0, 0, 0];   // backs actually in each row's DOM — the ONLY input to row rendering
+let pileTarget = [0, 0, 0, 0];  // latest st.piles per seat
+let collectSeq = 0;
+let lastRoundNo = null;
+
+function renderPileRow(seat) {
+  const row = $('#pile-' + relPos(seat));
+  if (!row) return;
+  const n = pileShown[seat];
+  row.classList.toggle('on', n > 0);
+  if (row._n !== n) { row.innerHTML = pileRowHTML(n); row._n = n; }
+}
+function renderPileRows() { for (let s = 0; s < 4; s++) renderPileRow(s); }
+
+/** End a seat's collection, exactly once: clones and timers die, and
+ *  the back the flight was carrying becomes visible (its placeholder is
+ *  unhidden — or, if the flight never got to insert one, the back is
+ *  inserted now). This is the ONLY reveal path for a collected trick. */
+function settleCollect(seat) {
+  const col = collections[seat];
+  if (!col) return;
+  delete collections[seat];
+  col.timers.forEach(clearTimeout);
+  col.clones.forEach((el) => el.remove());
+  if (col.backEl) { col.backEl.style.visibility = ''; col.backEl = null; }
+  // A back that arrived while this flight was running (unreachable in
+  // practice — a flight is shorter than a trick) is inserted now.
+  if (pileTarget[seat] > pileShown[seat]) { pileShown[seat] = pileTarget[seat]; renderPileRow(seat); }
+}
+
+/** New round: kill every collection outright. Placeholder backs die
+ *  with the row rebuild that the pileShown reset triggers. */
+function teardownCollections() {
+  for (let s = 0; s < 4; s++) {
+    const col = collections[s];
+    if (col) {
+      col.timers.forEach(clearTimeout);
+      col.clones.forEach((el) => el.remove());
+      delete collections[s];
+    }
+  }
+  pileShown = [0, 0, 0, 0];
+}
+
+/** The collection state machine. Runs once per render, BEFORE the pile
+ *  rows and the trick are (re)built, so a launching flight can still
+ *  measure the resting trick's live DOM cards. */
+function syncCollections(st, trickComplete, finalWinSeat) {
+  if (lastRoundNo !== null && st.roundNo !== lastRoundNo) teardownCollections();
+  lastRoundNo = st.roundNo;
+  for (let seat = 0; seat < 4; seat++) pileTarget[seat] = st.piles ? st.piles[seat] : 0;
+
+  for (let seat = 0; seat < 4; seat++) {
+    const target = pileTarget[seat];
+    if (target < pileShown[seat]) { // server reset (new match safety)
+      if (collections[seat]) settleCollect(seat);
+      pileShown[seat] = target;
+    }
+    if (!collections[seat] && target > pileShown[seat]) {
+      if (trickComplete && finalWinSeat === seat && target === pileShown[seat] + 1) {
+        collections[seat] = { id: ++collectSeq, phase: 'pending',
+          plays: st.trick.map((p) => ({ seat: p.seat, card: p.card })),
+          target, backEl: null, timers: [], clones: [] };
+        // row deliberately untouched: the new back does not exist yet
+      } else {
+        pileShown[seat] = target; // catch-up: no resting trick to fly from
+      }
+    }
+  }
+  // Fire pending collections whose trick has left the table — in ANY
+  // phase (the final trick clears into roundEnd and still gets its
+  // flight). Each pending is consumed by exactly one launch.
+  for (let seat = 0; seat < 4; seat++) {
+    const col = collections[seat];
+    if (!col || col.phase !== 'pending') continue;
+    const cur = new Set(st.trick.map((p) => p.seat + ':' + p.card));
+    if (col.plays.every((p) => !cur.has(p.seat + ':' + p.card))) launchCollection(seat, col);
+  }
+}
+
+/** Consume a pending collection: measure the resting trick, insert the
+ *  born-hidden placeholder back, measure its exact slot, fly. Any
+ *  failure along the way settles immediately (plain insert, no flight —
+ *  there is no second path waiting behind it). */
+function launchCollection(seat, col) {
+  col.phase = 'flying'; // consumed exactly once — no render can relaunch it
+  const slotEls = $('#trick').querySelectorAll('.slot .pcard');
+  const rects = [];
+  col.plays.forEach((p, idx) => {
+    const el = slotEls[idx];
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.width) rects.push({ code: p.card, pos: relPos(p.seat), rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
+  });
+  if (!CAN_COLLECT_ANIM || rects.length !== col.plays.length) { settleCollect(seat); return; }
+  // insert the placeholder back and hide it in the same task — it is
+  // never painted visible; its layout box IS the landing slot
+  pileShown[seat] = col.target;
+  renderPileRow(seat);
+  const row = $('#pile-' + relPos(seat));
+  const backEl = row ? row.querySelector('img:last-child') : null;
+  if (!backEl) { settleCollect(seat); return; }
+  backEl.style.visibility = 'hidden';
+  col.backEl = backEl;
+  const lr = backEl.getBoundingClientRect();
+  if (!lr.width) { settleCollect(seat); return; }
+  runCollectFlight(seat, col, rects, { left: lr.left, top: lr.top, width: lr.width, height: lr.height });
+}
+function runCollectFlight(seat, col, rects, landing) {
+  const cardW = rects[0].rect.width, cardH = rects[0].rect.height;
+  const cx = rects.reduce((s, r) => s + r.rect.left + r.rect.width / 2, 0) / rects.length;
+  const cy = rects.reduce((s, r) => s + r.rect.top + r.rect.height / 2, 0) / rects.length;
+  const stackLeft = cx - cardW / 2, stackTop = cy - cardH / 2;
+  const off = (i) => i * 2; // neat-stack peek offset per card
+
+  // (a) gather: each played card flies from its slot to its place in one
+  // stack at the trick centre — faces up, straightening as it arrives
+  rects.forEach((r, idx) => {
+    const el = cardEl(r.code);
+    el.classList.add('collectfly');
+    el.style.position = 'fixed'; // belt-and-braces: .pcard's position:relative must never win
+    el.style.left = r.rect.left + 'px';
+    el.style.top = r.rect.top + 'px';
+    el.style.width = r.rect.width + 'px';
+    el.style.height = r.rect.height + 'px';
+    document.body.appendChild(el);
+    col.clones.push(el);
+    try {
+      el.animate([
+        { transform: 'translate(0px, 0px) rotate(' + SLOT_ROT[r.pos] + 'deg)' },
+        { transform: 'translate(' + (stackLeft + off(idx) - r.rect.left).toFixed(1) + 'px,' +
+                      (stackTop + off(idx) - r.rect.top).toFixed(1) + 'px) rotate(0deg)' },
+      ], { duration: GATHER_MS, easing: 'ease-out', fill: 'forwards' });
+    } catch (e) { /* no WAAPI: the settle below still reveals the back */ }
+  });
+
+  // (b)+(c) once gathered: swap the loose clones for a single stack
+  // element in exactly the same place, slide it to the row, flip it over
+  col.timers.push(setTimeout(() => {
+    if (collections[seat] !== col) return; // superseded or settled
+    col.clones.forEach((el) => el.remove());
+    col.clones.length = 0;
+
+    const stack = document.createElement('div');
+    stack.className = 'collectstack';
+    stack.style.left = stackLeft + 'px';
+    stack.style.top = stackTop + 'px';
+    stack.style.width = cardW + 'px';
+    stack.style.height = cardH + 'px';
+    const inner = document.createElement('div');
+    inner.className = 'collectinner';
+    const faces = document.createElement('div');
+    faces.className = 'collectfaces';
+    rects.forEach((r, idx) => {
+      const f = cardEl(r.code);
+      f.style.left = off(idx) + 'px';
+      f.style.top = off(idx) + 'px';
+      f.style.width = cardW + 'px';
+      f.style.height = cardH + 'px';
+      faces.appendChild(f);
+    });
+    const backImg = document.createElement('img');
+    backImg.src = 'cards/back.png';
+    backImg.alt = '';
+    backImg.className = 'collectbackface';
+    inner.appendChild(faces);
+    inner.appendChild(backImg);
+    stack.appendChild(inner);
+    document.body.appendChild(stack);
+    col.clones.push(stack);
+
+    // slide: centre-to-centre travel on a slight arc bowing toward the
+    // table centre (so the path stays inside the field), shrinking
+    // steadily to the landing back's exact size; faces stay visible
+    const lx = landing.left + landing.width / 2, ly = landing.top + landing.height / 2;
+    const dx = lx - cx, dy = ly - cy;
+    const dist = Math.hypot(dx, dy) || 1;
+    const bow = Math.min(30, Math.max(8, dist * 0.18));
+    let mx = dx / 2 + (-dy / dist) * bow, my = dy / 2 + (dx / dist) * bow;
+    const tableEl = $('#table');
+    if (tableEl) { // pick the bow side that passes nearer the table centre
+      const tr = tableEl.getBoundingClientRect();
+      const tcx = tr.left + tr.width / 2, tcy = tr.top + tr.height / 2;
+      const dNow = Math.hypot(cx + mx - tcx, cy + my - tcy);
+      const dFlip = Math.hypot(cx + (dx - mx) - tcx, cy + (dy - my) - tcy);
+      if (dFlip < dNow) { mx = dx - mx; my = dy - my; }
+    }
+    const sEnd = Math.max(0.1, landing.width / cardW), sMid = (1 + sEnd) / 2;
+    try {
+      stack.animate([
+        { transform: 'translate(0px, 0px) scale(1)' },
+        { transform: 'translate(' + mx.toFixed(1) + 'px,' + my.toFixed(1) + 'px) scale(' + sMid.toFixed(3) + ')', offset: 0.5 },
+        { transform: 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) scale(' + sEnd.toFixed(3) + ')' },
+      ], { duration: SLIDE_MS, easing: 'ease-in-out', fill: 'forwards' });
+    } catch (e) { /* the flip/settle below still reveals the back */ }
+
+    // flip: the arrived stack turns over into the card back; the moment
+    // the flip completes, settle removes the stack and reveals the row's
+    // real back in the same frame, in the same slot — no jump, no fade
+    col.timers.push(setTimeout(() => {
+      if (collections[seat] !== col) return;
+      try {
+        inner.animate([
+          { transform: 'rotateY(0deg)' },
+          { transform: 'rotateY(180deg)' },
+        ], { duration: FLIP_MS, easing: 'ease-in-out', fill: 'forwards' });
+      } catch (e) { /* the settle below still reveals the back */ }
+      col.timers.push(setTimeout(() => settleCollect(seat), FLIP_MS + 30));
+    }, SLIDE_MS));
+  }, GATHER_MS));
+}
+function measureSlotRect(pos) {
+  const trickEl = $('#trick');
+  if (!trickEl) return null;
+  const slot = document.createElement('div');
+  slot.className = 'slot';
+  slot.dataset.pos = pos;
+  const probe = document.createElement('div');
+  probe.className = 'pcard';
+  probe.style.visibility = 'hidden';
+  slot.appendChild(probe);
+  trickEl.appendChild(slot);
+  const r = probe.getBoundingClientRect();
+  trickEl.removeChild(slot);
+  return r.width ? { left: r.left, top: r.top, width: r.width, height: r.height } : null;
+}
+
+function flyClone(code, fromRect) {
+  if (!fromRect || !fromRect.width) return;
+  const target = measureSlotRect('bottom');
+  const el = cardEl(code);
+  el.classList.add('flycard');
+  el.style.left = fromRect.left + 'px';
+  el.style.top = fromRect.top + 'px';
+  el.style.width = fromRect.width + 'px';
+  el.style.height = fromRect.height + 'px';
+  document.body.appendChild(el);
+  if (target) {
+    const dx = (target.left + target.width / 2) - (fromRect.left + fromRect.width / 2);
+    const dy = (target.top + target.height / 2) - (fromRect.top + fromRect.height / 2);
+    const s = target.width / fromRect.width;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      el.style.transition = 'transform .38s cubic-bezier(.22,.68,.31,1)';
+      el.style.transform = 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) rotate(' + SLOT_ROT.bottom + 'deg) scale(' + s.toFixed(3) + ')';
+    }));
+  }
+  setTimeout(() => el.remove(), 450);
+}
+
+function animateCardIn(el, fromRect, rotDeg) {
+  const t = el.getBoundingClientRect();
+  if (!t.width || !fromRect || !fromRect.width) { el.classList.add('flyin'); return; }
+  const dx = (fromRect.left + fromRect.width / 2) - (t.left + t.width / 2);
+  const dy = (fromRect.top + fromRect.height / 2) - (t.top + t.height / 2);
+  const s = Math.max(0.3, Math.min(1, fromRect.width / t.width));
+  el.style.transition = 'none';
+  el.style.transform = 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) rotate(' + rotDeg + 'deg) scale(' + s.toFixed(3) + ')';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.style.transition = 'transform .38s cubic-bezier(.22,.68,.31,1)';
+    el.style.transform = 'rotate(' + rotDeg + 'deg)';
+    setTimeout(() => { el.style.transition = ''; el.style.transform = ''; }, 430);
+  }));
+}
+
+function seatFromRect(seat) {
+  const el = $('#seat-' + relPos(seat));
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  if (!r.width) return null;
+  const w = 46, h = 64; // fly in from a card-sized point at the seat's center
+  return { left: r.left + r.width / 2 - w / 2, top: r.top + r.height / 2 - h / 2, width: w, height: h };
+}
+
+function playCard(code, fromRect) {
+  flownKeys.add(mySeat + ':' + code);
+  flyClone(code, fromRect);
+  send({ type: 'play', card: code });
+}
+
+// Tap = play. Drag up ≥50px and release = play (flight starts at the release
+// point). Release anywhere else = the card springs back into the fan.
+function attachPlayHandlers(el, code) {
+  let drag = null;
+  el.addEventListener('pointerdown', (e) => {
+    drag = { x: e.clientX, y: e.clientY, moved: false, z: el.style.zIndex };
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+      drag.moved = true;
+      el.classList.add('dragging');
+      el.style.zIndex = 60;
+      el.style.transform = 'translate(' + (dx * 0.4).toFixed(0) + 'px,' + dy.toFixed(0) + 'px) rotate(0deg)';
+    }
+  });
+  const finish = (e, commit) => {
+    if (!drag) return;
+    const dy = e.clientY - drag.y;
+    const wasDrag = drag.moved, z = drag.z;
+    drag = null;
+    el.classList.remove('dragging');
+    if (commit && (dy <= -50 || !wasDrag)) {
+      el.style.opacity = '0'; // the flying clone takes over from here
+      playCard(code, el.getBoundingClientRect());
+    } else {
+      el.style.transition = 'transform .25s ease';
+      el.style.transform = '';
+      setTimeout(() => { el.style.transition = ''; el.style.zIndex = z; }, 270);
+    }
+  };
+  el.addEventListener('pointerup', (e) => finish(e, true));
+  el.addEventListener('pointercancel', (e) => finish(e, false));
+}
+
+// the game screen must never scroll or rubber-band
+document.addEventListener('touchmove', (e) => {
+  if (!$('#scr-game').classList.contains('hidden')) e.preventDefault();
+}, { passive: false });
+
+// ---------- rendering ----------
+function show(id) {
+  ['scr-home', 'scr-lobby', 'scr-game'].forEach((s) => $('#' + s).classList.toggle('hidden', s !== id));
+}
+function relPos(seat) { // position relative to me: 0 bottom, 1 right, 2 top, 3 left
+  return ['bottom', 'right', 'top', 'left'][(seat - mySeat + 4) % 4];
+}
+function teamLabel(team) {
+  const myTeam = mySeat % 2;
+  return team === myTeam ? 'تیم ما' : 'تیم حریف';
+}
+// Face-down won-trick pile for a seat: one loose card BACK per won trick,
+// laid in a row on the carpet in front of the player (see .pilerow CSS).
+// No container, no label, no count — just the backs.
+function pileRowHTML(count) {
+  let html = '';
+  for (let i = 0; i < count; i++) html += '<img src="cards/back.png" alt="">';
+  return html;
+}
+
+function render(st) {
+  if (st.phase === 'lobby') { renderLobby(st); show('scr-lobby'); return; }
+  show('scr-game');
+  const myTeam = mySeat % 2, them = 1 - myTeam;
+
+  // Scoreboard headline = the BANKED tawan (جمع‌شده) per the user's order —
+  // the bank is what he reads as the score; match points stay visible small.
+  $('#sc-us').textContent = faNum(st.bankedTawan ? st.bankedTawan[myTeam] : 0);
+  $('#sc-them').textContent = faNum(st.bankedTawan ? st.bankedTawan[them] : 0);
+  $('#pt-us').textContent = faNum(st.scores[myTeam]);
+  $('#pt-them').textContent = faNum(st.scores[them]);
+  const twTxt = (t) => faNum(st.roundTawan[t]) + (st.takanBonus[t] ? ' +' + faNum(st.takanBonus[t]) : '');
+  $('#tw-us').textContent = twTxt(myTeam);
+  $('#tw-them').textContent = twTxt(them);
+  $('#tk-us').textContent = st.takanCount[myTeam] ? '★'.repeat(st.takanCount[myTeam]) : '';
+  $('#tk-them').textContent = st.takanCount[them] ? '★'.repeat(st.takanCount[them]) : '';
+  $('#round-no').textContent = faNum(st.roundNo || 1);
+
+  // who is winning the current trick (drives the 👑 and the gold glow)
+  let winSeat = null;
+  if (st.trick.length) {
+    const led = suitOf(st.trick[0].card);
+    let best = -1;
+    st.trick.forEach((p) => {
+      if (suitOf(p.card) === led && RANK_VAL[p.card.slice(0, -1)] > best) { best = RANK_VAL[p.card.slice(0, -1)]; winSeat = p.seat; }
+    });
+  }
+
+  // a COMPLETE trick (4 cards, resting during the server's trick pause):
+  // its winner gets the strong 'winlast' highlight so the last play is clear
+  const trickComplete = st.trick.length === 4;
+  const finalWinSeat = trickComplete ? (st.trickWinner != null ? st.trickWinner : winSeat) : null;
+
+  // --- collection flight: the single-path state machine (defined
+  // above). Runs before the pile rows and the trick are rebuilt, so a
+  // launching flight can still measure the resting trick's live cards. ---
+  syncCollections(st, trickComplete, finalWinSeat);
+  // seats: partner in the top bar, side players in vertical bars
+  st.seats.forEach((s, i) => {
+    const pos = relPos(i);
+    const el = $('#seat-' + pos);
+    const isTurn = st.turn === i && st.phase === 'playing';
+    el.classList.toggle('turn', isTurn);
+    const crown = (winSeat === i && st.phase === 'playing') ? '👑 ' : '';
+    if (pos === 'left' || pos === 'right') {
+      el.innerHTML = (i !== mySeat ? '<img class="backmini" src="cards/back.png" alt="">' : '') +
+        '<div class="pname">' + crown + (s.name || 'خالی') + '</div>' +
+        '<div class="pmeta">' + faNum(s.cards) + '</div>';
+    } else {
+      let meta = '';
+      if (s.kind === 'bot') meta = 'ربات · ';
+      else if (s.kind === 'human') meta = '<span class="dot ' + (s.connected ? 'on' : '') + '"></span> ';
+      el.innerHTML = '<div class="pname">' + crown + (s.name || 'خالی') + (i === mySeat ? ' (تو)' : '') + '</div>' +
+        '<div class="pmeta">' + (i !== mySeat ? '<img class="backmini" src="cards/back.png" alt=""> ' : '') +
+        meta + faNum(s.cards) + ' ورق · ' + teamLabel(i % 2) + '</div>';
+    }
+  });
+
+  // won-trick piles: plain rows of card backs on the carpet in front of
+  // each player, rendered purely from pileShown by the state machine
+  renderPileRows();
+  // center trick — cards that are new since the last render fly in
+  const trickEl = $('#trick');
+  trickEl.innerHTML = '';
+  const newKeys = new Set();
+  const arrivals = [];
+  st.trick.forEach((p) => {
+    const pos = relPos(p.seat);
+    const key = p.seat + ':' + p.card;
+    newKeys.add(key);
+    const slot = document.createElement('div');
+    slot.className = 'slot' + (p.seat === winSeat ? ' win' : '') + (p.seat === finalWinSeat ? ' winlast' : '');
+    slot.dataset.pos = pos;
+    const cel = cardEl(p.card);
+    slot.appendChild(cel);
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = st.seats[p.seat].name;
+    slot.appendChild(who);
+    trickEl.appendChild(slot);
+    if (!prevTrickKeys.has(key)) arrivals.push({ el: cel, seat: p.seat, pos, key });
+  });
+  arrivals.forEach((a) => {
+    if (flownKeys.has(a.key)) { flownKeys.delete(a.key); return; } // clone already flew it
+    animateCardIn(a.el, seatFromRect(a.seat), SLOT_ROT[a.pos]);
+  });
+  // drop stale flight suppressions (e.g. a play the server did not accept)
+  flownKeys.forEach((k) => { if (!newKeys.has(k)) flownKeys.delete(k); });
+  prevTrickKeys = newKeys;
+
+  // status line
+  const statusEl = $('#status');
+  if (st.phase === 'playing') {
+    if (st.declared13 && st.turn === mySeat) statusEl.textContent = '🙋 ۱۳ گفتی ✔ — حالا ورقت را بینداز';
+    else if (st.declared13) statusEl.textContent = '🙋 ' + (st.seats[st.turn] ? st.seats[st.turn].name : '') + ' ۱۳ گفت!';
+    else statusEl.textContent = st.turn === mySeat ? '🎯 ' + (st.seats[mySeat] ? st.seats[mySeat].name : '') + '، نوبت توست!' :
+      'نوبت ' + (st.seats[st.turn] ? st.seats[st.turn].name : '') + ' است…';
+  } else if (st.phase === 'roundEnd') statusEl.textContent = 'دست تمام شد';
+  else if (st.phase === 'matchEnd') statusEl.textContent = 'مسابقه تمام شد';
+  else statusEl.textContent = '';
+
+  // «۱۳ هست!» button: only in the exact final-trick takan situation,
+  // on my turn, before I play (and not after I already declared)
+  $('#btn-13').classList.toggle('hidden',
+    !(st.phase === 'playing' && st.canDeclare13 && !st.declared13));
+
+  // my hand — grouped by suit (قره، لال، پشه، خشت), rank ascending low → high (A last), like the reference fan
+  const handEl = $('#hand');
+  handEl.innerHTML = '';
+  const SUIT_ORDER = { S: 0, H: 1, C: 2, D: 3 };
+  const sorted = st.hand.slice().sort((a, b) =>
+    (SUIT_ORDER[suitOf(a)] - SUIT_ORDER[suitOf(b)]) || (RANK_VAL[a.slice(0, -1)] - RANK_VAL[b.slice(0, -1)]));
+  const legal = new Set(st.legal || []);
+  const myTurn = st.phase === 'playing' && st.turn === mySeat;
+  // A suit was led (first card of the trick) and I hold that suit: the led-suit
+  // cards pop at full opacity (playable class); every OTHER card in my hand is
+  // dimmed HARD so the follow-suit choice reads instantly. Leading, free play
+  // (no led suit in hand) and waiting for my turn render the hand normally.
+  const ledSuit = st.trick.length ? suitOf(st.trick[0].card) : null;
+  const mustFollow = myTurn && ledSuit !== null && st.hand.some((c) => suitOf(c) === ledSuit);
+  sorted.forEach((code, idx) => {
+    const playable = myTurn && legal.has(code);
+    const el = cardEl(code, playable ? 'playable' : (mustFollow ? 'dimhard' : ''));
+    el.dataset.code = code;
+    el.style.setProperty('--rot', ((idx - (sorted.length - 1) / 2) * FAN_ROT_STEP).toFixed(1) + 'deg'); // arc fan
+    el.style.zIndex = idx + 1; // each card overlaps the previous one, rightmost on top
+    if (playable) attachPlayHandlers(el, code);
+    handEl.appendChild(el);
+  });
+  fitHand();
+
+  // overlays
+  const r = st.roundResult;
+  $('#ov-round').classList.toggle('show', st.phase === 'roundEnd' && !!r);
+  if (r && st.phase === 'roundEnd') {
+    $('#ov-round-title').textContent = 'پایان دست ' + faNum(r.roundNo);
+    // Name the teams by their PLAYERS in every summary line that carries a
+    // per-team value, so no number can ever be read against the wrong team
+    // (bare "X · Y" pairs in an RTL panel caused exactly that misreading).
+    const teamNames = (t) => [t, t + 2].map((s) => st.seats[s] ? st.seats[s].name : 'بازیکن').join(' و ');
+    $('#ov-card-us').textContent = faNum(r.cardTawan[myTeam]);
+    $('#ov-card-them').textContent = faNum(r.cardTawan[them]);
+    const tkTxt = (t) => r.takanCount[t] ? '★'.repeat(r.takanCount[t]) + ' +' + faNum(r.takanBonus[t]) : '—';
+    $('#ov-tk-row').style.display = (r.takanCount[0] + r.takanCount[1]) ? '' : 'none';
+    $('#ov-tk-us').textContent = tkTxt(myTeam);
+    $('#ov-tk-them').textContent = tkTxt(them);
+    $('#ov-tr-row').style.display = r.transferred ? '' : 'none';
+    if (r.transferred) {
+      const givers = r.takanBy && r.takanBy[r.transferTo]
+        ? [...new Set(r.takanBy[r.transferTo])].map((s) => st.seats[s] ? st.seats[s].name : 'بازیکن').join(' و ') : '';
+      $('#ov-tr').textContent = 'همهٔ تاوان به تیمِ (' + teamNames(r.transferTo) + ') رسید' +
+        (givers ? ' — تکان از ' + givers : '');
+    }
+    // Blocked transfer, spelled out with names: a single takan stood (its
+    // team kept its tawan + bonus) but the pot did NOT move, because the
+    // other team's pre-round banked tawan (جمع‌شده) was below ۳۰.
+    $('#ov-tr-blocked').style.display = r.transferBlocked ? '' : 'none';
+    if (r.transferBlocked) {
+      const takanTeam = r.takanCount[0] > 0 ? 0 : 1;
+      $('#ov-tr-blocked').textContent = 'تکان برای تیمِ (' + teamNames(takanTeam) + ') ماند، اما انتقال نشد — جمع‌شدهٔ تیمِ (' +
+        teamNames(1 - takanTeam) + ') ' + faNum(r.transferGateBanked) + ' بود (کمتر از ۳۰)';
+    }
+    $('#ov-tw').textContent = 'تیمِ (' + teamNames(myTeam) + '): ' + faNum(r.tawan[myTeam]) +
+      ' — تیمِ (' + teamNames(them) + '): ' + faNum(r.tawan[them]);
+    const bumpedTeams = [0, 1].filter((t) => r.bumped && r.bumped[t]);
+    $('#ov-bump').style.display = bumpedTeams.length ? '' : 'none';
+    if (bumpedTeams.length) {
+      $('#ov-bump').textContent = bumpedTeams.map((t) =>
+        '⚠️ تیمِ (' + teamNames(t) + '): بیشتر از ۲۱ — ۳۰ نوشته شد').join(' · ');
+    }
+    $('#ov-bk-us').textContent = faNum(r.bankedTawan ? r.bankedTawan[myTeam] : 0);
+    $('#ov-bk-them').textContent = faNum(r.bankedTawan ? r.bankedTawan[them] : 0);
+    const wiped = [myTeam, them].filter((t) => r.tawan[t] < 10);
+    $('#ov-wipe').style.display = wiped.length ? '' : 'none';
+    if (wiped.length) {
+      $('#ov-wipe').textContent = wiped.map((t) =>
+        'تاوان ' + teamLabel(t) + ' (' + faNum(r.tawan[t]) + ') کمتر از ۱۰ بود — حساب نشد').join(' · ');
+    }
+    $('#ov-qs').textContent = teamLabel(r.qsTeam);
+    // Tie verdict, spelled out with names: on a tied final tawan the team
+    // that CAPTURED ماتکه کالا LOSES the tie (takes the 10); the 20 goes
+    // to the other team. The check must be VISIBLE — a silent application
+    // read as a scoring error to the user (15–15 case).
+    const tiedFinal = r.tawan[0] === r.tawan[1];
+    $('#ov-tie').style.display = tiedFinal ? '' : 'none';
+    if (tiedFinal) {
+      $('#ov-tie').textContent = '⚖️ مساوی شد! ماتکه کالا را تیمِ (' + teamNames(r.qsTeam) + ') گرفت — ۱۰ برای همان تیم، ۲۰ برای تیمِ (' + teamNames(1 - r.qsTeam) + ')';
+    }
+    $('#ov-cr').textContent = 'تیمِ (' + teamNames(myTeam) + '): +' + faNum(r.credits[myTeam]) +
+      ' — تیمِ (' + teamNames(them) + '): +' + faNum(r.credits[them]);
+    $('#ov-sc-us').textContent = faNum(st.scores[myTeam]);
+    $('#ov-sc-them').textContent = faNum(st.scores[them]);
+  }
+  $('#ov-match').classList.toggle('show', st.phase === 'matchEnd');
+  if (st.phase === 'matchEnd') {
+    $('#ov-match-title').textContent = st.matchWinner === myTeam ? '🏆 تیم شما برنده شد!' : 'تیم حریف برنده شد';
+    $('#ov-f-us').textContent = faNum(st.scores[myTeam]);
+    $('#ov-f-them').textContent = faNum(st.scores[them]);
+  }
+}
+
+function renderLobby(st) {
+  $('#lobby-code').textContent = st.code.split('').join(' ');
+  const box = $('#lobby-seats');
+  box.innerHTML = '';
+  st.seats.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'seatrow';
+    const team = i % 2 === 0 ? 'تیم الف' : 'تیم ب';
+    row.innerHTML = '<span>' + (s.kind === 'empty' ? '— خالی —' : s.name) +
+      (i === mySeat ? ' (تو)' : '') + (s.kind === 'bot' ? ' 🤖' : '') + '</span>' +
+      '<span class="teamtag">' + team + (i === st.hostSeat ? ' · میزبان' : '') + '</span>';
+    box.appendChild(row);
+  });
+  const isHost = mySeat === st.hostSeat;
+  $('#btn-start').disabled = !isHost;
+  $('#lobby-note').textContent = isHost
+    ? 'هر وقت آماده بودی شروع کن — جای‌های خالی با ربات پر می‌شود.'
+    : 'منتظر میزبان برای شروع بازی…';
+}
+</script>
+</body>
+</html>
