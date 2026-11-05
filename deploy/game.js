@@ -7,7 +7,6 @@
 
 // ---- Spec constants (DEFAULTs live here, change in one line) ----
 const BANK_LOSE_TARGET = 210;  // a team whose BANKED tawan (جمع‌شده) reaches this LOSES the match — there are no match points
-const TAKAN_POINTS = 30;       // تکان bonus tawan (leading a suit nobody else holds)
 const TAKAN_CLAIM_AMOUNT = 30; // تکان معلق: one takan claim moves exactly this much BANKED tawan
 const TAKAN_CLAIM_MIN_BANK = 30; // a pending claim executes only while the VICTIM's banked tawan (جمع‌شده) is at least this
 const TAWAN_BANK_MIN = 10;     // round tawan ≥ 10 banks into the match-long bank; ≤ 9 is wiped
@@ -92,25 +91,23 @@ function tawanOf(cards) {
 
 /**
  * Round scoring — the Tore rule (تاوان is a PENALTY: FEWER is better).
- * Inputs: cardTawan = tawan from captured cards; takanBonus per team.
- *  1. Round tawan per team = cardTawan + takanBonus (the takan's +30
- *     ROUND tawan — separate from the pending BANK claim in Match).
- *  2. BUMP: a final tawan above 21 (and below 30) is written as 30 —
- *     «هر بازیکن که بیشتر از ۲۱ تاوان گرفت باید برایش ۳۰ تاوان نوشته شوه».
- *     Finals already ≥ 30 (only reachable via a takan bonus) stay as-is.
- *     The bump applies BEFORE the bank.
+ * Input: cardTawan = tawan from captured cards ONLY. A takan adds NO
+ * round tawan (user's clarified model, 2026-11-06): it only creates a
+ * PENDING claim on the other team's BANK, executed by Match (تکان
+ * معلق — see Match.onRoundFinished). The two teams' card tawan always
+ * sums to exactly 30 before the bump.
+ *  BUMP: a final tawan above 21 (and below 30) is written as 30 —
+ *  «هر بازیکن که بیشتر از ۲۱ تاوان گرفت باید برایش ۳۰ تاوان نوشته شوه».
+ *  A final of exactly 30 stays as-is. The bump applies BEFORE the bank.
  * There are NO match points (removed at the user's explicit order,
  * 2026-11-05): a round only produces the final tawan, which banks in
  * Match (see TAWAN_BANK_MIN) toward BANK_LOSE_TARGET. A tied final —
  * incl. the classic 15–15 — is simply a tie: both teams bank their
- * own equal tawan; Q♠ decides nothing. There is NO round-tawan
- * transfer anymore either: a takan instead creates a PENDING claim
- * on the other team's BANK, executed by Match (تکان معلق — see
- * Match.onRoundFinished).
+ * own equal tawan; Q♠ decides nothing.
  * Returns { tawan (final, post-bump), bumped }.
  */
-function scoreRound(cardTawan, takanBonus) {
-  const tawan = [cardTawan[0] + takanBonus[0], cardTawan[1] + takanBonus[1]];
+function scoreRound(cardTawan) {
+  const tawan = cardTawan.slice();
   const bumped = tawan.map((t) => t > TAWAN_BUMP_LIMIT && t < TAWAN_BUMP_VALUE);
   if (bumped[0]) tawan[0] = TAWAN_BUMP_VALUE;
   if (bumped[1]) tawan[1] = TAWAN_BUMP_VALUE;
@@ -147,7 +144,6 @@ class Round {
     this.tricksPlayed = 0;
     this.wonTricks = [0, 0, 0, 0];         // won-trick pile size per seat
     this.takanCount = [0, 0];              // تکان events per team this round
-    this.takanBonus = [0, 0];              // تکان bonus tawan per team (30 × count)
     this.takanBy = [[], []];               // seats that gave each تکان, per team
     this.declared13 = false;               // leader declared «۱۳» for the current trick
     this.finished = false;
@@ -202,18 +198,18 @@ class Round {
 
     // TAKAN (تکان): leading a suit NONE of the other three players currently
     // holds (checked now, before the card leaves the leader's hand). A «۱۳»
-    // declaration for this trick cancels it. +30 tawan to the leader's team.
+    // declaration for this trick cancels it. A takan adds NO round tawan —
+    // it only counts toward a pending BANK claim at Match level (تکان معلق).
     if (this.trick.length === 0) {
       const declared = this.declared13;
       this.declared13 = false; // the flag belongs to this one lead only
       if (!declared && this.othersVoidIn(suitOf(card), seat)) {
         const team = teamOf(seat);
         this.takanCount[team]++;
-        this.takanBonus[team] += TAKAN_POINTS;
         this.takanBy[team].push(seat);
         this.emit({
           type: 'takan', seat, team, card,
-          count: this.takanCount[team], bonus: this.takanBonus[team],
+          count: this.takanCount[team],
         });
       }
     }
@@ -246,11 +242,10 @@ class Round {
   finish() {
     const cardTawan = [tawanOf(this.captured[0]), tawanOf(this.captured[1])];
     const qsTeam = this.captured[0].includes('QS') ? 0 : 1;
-    const s = scoreRound(cardTawan, this.takanBonus);
+    const s = scoreRound(cardTawan);
     this.result = {
       cardTawan,                                  // tawan from captured cards (sums to 30)
-      takanBonus: this.takanBonus.slice(),        // تکان bonus per team
-      takanCount: this.takanCount.slice(),        // تکان count per team this round
+      takanCount: this.takanCount.slice(),        // تکان count per team this round (claims only — no round tawan)
       takanBy: [this.takanBy[0].slice(), this.takanBy[1].slice()], // seats that gave the takans
       bumped: s.bumped,                           // >21 final written as 30, per team
       tawan: s.tawan,                             // FINAL round tawan per team (post-bump)
@@ -276,7 +271,7 @@ class Match {
     this.bankedTawan = [0, 0];   // match-long tawan bank: a round's final tawan banks only when ≥ TAWAN_BANK_MIN (≤ 9 is wiped)
     this.pendingTakan = [0, 0];  // تکان معلق: pending claims per team — each claim takes TAKAN_CLAIM_AMOUNT from the OTHER team's bank once it reaches TAKAN_CLAIM_MIN_BANK
     this.roundNo = 0;
-    this.history = [];   // per-round: {roundNo, cardTawan, takanBonus, takanCount, takanBy, bumped, tawan, banked, claimsCreated, claimsExecuted, pendingTakan, bankedTawan, qsTeam}
+    this.history = [];   // per-round: {roundNo, cardTawan, takanCount, takanBy, bumped, tawan, banked, claimsCreated, claimsExecuted, pendingTakan, bankedTawan, qsTeam}
     this.finished = false;
     this.winner = null;   // the team that did NOT cross the target
     this.loser = null;    // the team whose banked tawan reached BANK_LOSE_TARGET
@@ -342,7 +337,7 @@ class Match {
 
     this.history.push({
       roundNo: this.roundNo, cardTawan: r.cardTawan.slice(),
-      takanBonus: r.takanBonus.slice(), takanCount: r.takanCount.slice(),
+      takanCount: r.takanCount.slice(),
       takanBy: r.takanBy ? r.takanBy.map((a) => a.slice()) : [[], []],
       bumped: r.bumped ? r.bumped.slice() : [false, false],
       tawan: r.tawan.slice(), banked: banked.slice(),
@@ -380,7 +375,7 @@ function seededRng(seed) {
 }
 
 module.exports = {
-  BANK_LOSE_TARGET, TAKAN_POINTS, TAKAN_CLAIM_AMOUNT, TAKAN_CLAIM_MIN_BANK, TAWAN_BANK_MIN, TAWAN_BUMP_LIMIT, TAWAN_BUMP_VALUE, PLAYERS, CARDS_PER_PLAYER,
+  BANK_LOSE_TARGET, TAKAN_CLAIM_AMOUNT, TAKAN_CLAIM_MIN_BANK, TAWAN_BANK_MIN, TAWAN_BUMP_LIMIT, TAWAN_BUMP_VALUE, PLAYERS, CARDS_PER_PLAYER,
   SUITS, SUIT_NAMES, RANK_NAMES, TOTAL_TAWAN,
   suitOf, rankOf, teamOf, partnerOf, cardName, cardPoints,
   makeDeck, shuffle, deal, legalPlays, trickWinnerSeat, tawanOf,

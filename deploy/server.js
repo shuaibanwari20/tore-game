@@ -109,7 +109,6 @@ function stateFor(room, seatIdx) {
       ? [G.tawanOf(round.captured[0]), G.tawanOf(round.captured[1])] : [0, 0],
     takanCount: round ? round.takanCount.slice() : [0, 0],
     pendingTakan: room.match ? room.match.pendingTakan.slice() : [0, 0],
-    takanBonus: round ? round.takanBonus.slice() : [0, 0],
     piles: round ? round.wonTricks.slice() : [0, 0, 0, 0],
     canDeclare13: round && !room.trickHold ? round.canDeclare13(seatIdx) : false,
     declared13: round ? round.declared13 : false,
@@ -136,7 +135,7 @@ function broadcastEvent(room, obj) {
 function onMatchEvent(room, evt) {
   if (evt.type === 'takan') {
     // Celebrate/flag the takan live; the following state push carries the
-    // updated star count and bonus.
+    // updated star count.
     broadcastEvent(room, { type: 'takan', seat: evt.seat, team: evt.team, count: evt.count });
   } else if (evt.type === 'declared13') {
     broadcastEvent(room, { type: 'declared13', seat: evt.seat });
