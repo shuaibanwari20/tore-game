@@ -283,8 +283,8 @@
       <b>غلام پشه</b> (J♣) = ۵ تاوان · <b>ماتکه کالا</b> (Q♠) = ۹ تاوان · <b>ده خشت</b> (10♦) = ۳ تاوان<br>
       هر دست ۳۰ تاوان دارد و در این بازی <b>امتیاز نیست</b> — فقط تاوان است.<br>
       تیمی که تاوانِ <b>جمع‌شده‌اش</b> (بانک) به <b>۲۱۰</b> برسد، مسابقه را <b>می‌بازد</b> و تیمِ دیگر برنده است.<br>
-      ⭐ <b>تکان:</b> خالی را شروع کنی که هیچ‌کس ندارد → <b>+۳۰ تاوان</b> و یک ستارهٔ قرمز برای تیمت!<br>
-      ⭐ <b>تکان معلق:</b> تکان یعنی طلبِ <b>۳۰ تاوان</b> از جمع‌شدهٔ تیمِ حریف — هر وقت جمع‌شدهٔ حریف به <b>۳۰</b> برسد یا از آن بگذرد، ۳۰ تاوان از بانک او کم و به بانک تیمِ تکان‌دار داده می‌شود؛ تا آن وقت تکان می‌ماند و ستاره‌اش (★) روی تخته دیده می‌شود.<br>
+      ⭐ <b>تکان:</b> خالی را شروع کنی که هیچ‌کس ندارد → فقط یک <b>ستارهٔ قرمز (★)</b> برای تیمت؛ تکان هیچ تاوانی به این دست اضافه نمی‌کند.<br>
+      ⭐ <b>تکان معلق:</b> آن ستاره یعنی طلبِ <b>۳۰ تاوان</b> از جمع‌شدهٔ تیمِ حریف — هر وقت جمع‌شدهٔ حریف به <b>۳۰</b> برسد یا از آن بگذرد، ۳۰ تاوان از بانک او کم و به بانک تیمِ تکان‌دار داده می‌شود؛ تا آن وقت فقط ستاره می‌ماند و هیچ پولی جابه‌جا نمی‌شود.<br>
       🙋 دست آخر: اگر پیش از بازی بگویی <b>«۱۳ هست»</b>، تکان برایت حساب نمی‌شود.<br>
       ⚠️ تیمی که در یک دست بیشتر از <b>۲۱</b> تاوان بگیرد، برایش <b>۳۰</b> تاوان نوشته می‌شود.<br>
       🏦 تاوانِ یک دست اگر <b>۱۰ یا بیشتر</b> باشد در بانکت <b>جمع می‌شود</b>؛ کمتر از ۱۰ باشد، حساب نمی‌شود.
@@ -985,7 +985,7 @@ function render(st) {
   // the bank is the only score there is: no match points anywhere.
   $('#sc-us').textContent = faNum(st.bankedTawan ? st.bankedTawan[myTeam] : 0);
   $('#sc-them').textContent = faNum(st.bankedTawan ? st.bankedTawan[them] : 0);
-  const twTxt = (t) => faNum(st.roundTawan[t]) + (st.takanBonus[t] ? ' +' + faNum(st.takanBonus[t]) : '');
+  const twTxt = (t) => faNum(st.roundTawan[t]); // card tawan only — a takan adds nothing to the round
   $('#tw-us').textContent = twTxt(myTeam);
   $('#tw-them').textContent = twTxt(them);
   // Scoreboard stars = PENDING takan claims (تکان معلق) — they persist
@@ -1133,7 +1133,7 @@ function render(st) {
     const teamNames = (t) => [t, t + 2].map((s) => st.seats[s] ? st.seats[s].name : 'بازیکن').join(' و ');
     $('#ov-card-us').textContent = faNum(r.cardTawan[myTeam]);
     $('#ov-card-them').textContent = faNum(r.cardTawan[them]);
-    const tkTxt = (t) => r.takanCount[t] ? '★'.repeat(r.takanCount[t]) + ' +' + faNum(r.takanBonus[t]) : '—';
+    const tkTxt = (t) => r.takanCount[t] ? '★'.repeat(r.takanCount[t]) : '—'; // stars only — a takan is a claim, not round tawan
     $('#ov-tk-row').style.display = (r.takanCount[0] + r.takanCount[1]) ? '' : 'none';
     $('#ov-tk-us').textContent = tkTxt(myTeam);
     $('#ov-tk-them').textContent = tkTxt(them);
