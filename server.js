@@ -201,7 +201,7 @@ function doPlay(room, seat, card) {
 
 /**
  * Play a seat by bot logic. `mayDeclare` is true only for real bot seats:
- * bots always declare «۱۳» on the final trick when it cancels a takan.
+ * bots always declare «13» on the final trick when it cancels a takan.
  * A human seat auto-played by the turn timer plays WITHOUT declaring
  * (spec: on timeout the takan stands).
  */
@@ -235,7 +235,7 @@ function pumpTurn(room) {
 function startMatch(room) {
   clearTimeout(room.trickTimer);
   room.trickHold = null;
-  const botDigits = ['۱', '۲', '۳'];
+  const botDigits = ['1', '2', '3'];
   let botNo = 0;
   room.seats.forEach((s) => {
     if (s.kind === 'empty') {
@@ -373,7 +373,7 @@ function handleMessage(ws, msg) {
         round.declare13(ws._seat); // emits declared13 → clients toast it
         broadcastState(room);
       } catch (e) {
-        sendError(ws, 'الآن نمی‌توانی «۱۳» بگویی');
+        sendError(ws, 'الآن نمی‌توانی «13» بگویی');
         send(ws, stateFor(room, ws._seat));
       }
       break;

@@ -4,8 +4,8 @@
  * and sim.js (full bot-vs-bot matches). Always returns a LEGAL card.
  *
  * Strategy — AVOIDANCE + FEED THE OPPONENTS (تاوان is a PENALTY: the team
- * that ends the round with FEWER tawan wins, and a takan adds +30 tawan
- * to the takan team's OWN total — flipped at the user's order 2026-11-05):
+ * that ends the round with FEWER tawan wins; a takan adds NO round tawan
+ * but hands the OTHER team a pending claim on OUR bank — avoid giving it):
  *  - FEED: whenever an OPPONENT is winning the trick, push our tawan
  *    into THEIR captured pile — discarding while void, or ducking while
  *    following suit, we dump the BIGGEST scoring card we legally can
@@ -23,11 +23,11 @@
  *    their trick); win only when forced, and then with the lowest
  *    sufficient card — a tawan trick we are forced to take costs us
  *    the least that way.
- *  - Leading → a dead-suit lead is a takan: +30 tawan lands on OUR OWN
- *    team, so avoid dead suits; lead a cheap non-scoring card from a
- *    live suit. Only when every lead is a dead suit (or every card
- *    scores) take the cheapest way out.
- *  - On the final trick bots do NOT declare «۱۳» (unchanged — the
+ *  - Leading → a dead-suit lead is a takan: it creates a pending claim
+ *    AGAINST our own bank for the opponents, so avoid dead suits; lead
+ *    a cheap non-scoring card from a live suit. Only when every lead is
+ *    a dead suit (or every card scores) take the cheapest way out.
+ *  - On the final trick bots do NOT declare «13» (unchanged — the
  *    declaration mechanic remains available to humans only).
  */
 const G = require('./game');
@@ -57,9 +57,9 @@ function biggestScoring(cards) {
 }
 
 function pickLead(round, seat, legal) {
-  // A takan lead (+30 tawan to OUR OWN team) happens when nobody else
-  // holds the suit — AVOID those suits now; the bonus is a penalty and
-  // the uncontested trick comes back to us with everyone's dumps in it.
+  // A takan lead happens when nobody else holds the suit — AVOID those
+  // suits now; a takan hands the opponents a pending claim on our bank,
+  // and the uncontested trick comes back to us with everyone's dumps in it.
   const live = legal.filter((c) => !round.othersVoidIn(G.suitOf(c), seat));
   const pool = live.length ? live : legal;
   // Live suit: cheap non-scoring probe — scoring cards stay in hand,
@@ -70,7 +70,7 @@ function pickLead(round, seat, legal) {
 }
 
 /**
- * Bots never declare «۱۳» — unchanged under the flipped rules: the
+ * Bots never declare «13» — unchanged under the flipped rules: the
  * declaration mechanic remains a human-only play. Returns false always.
  * (The server calls this before asking for a card.)
  */
