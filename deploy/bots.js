@@ -1,0 +1,148 @@
+'use strict';
+/**
+ * TORE bot heuristic — shared by server.js (empty seats + turn timeouts)
+ * and sim.js (full bot-vs-bot matches). Always returns a LEGAL card.
+ *
+ * Strategy — AVOIDANCE + FEED THE OPPONENTS (تاوان is a PENALTY: the team
+ * that ends the round with FEWER tawan wins, and a takan adds +30 tawan
+ * to the takan team's OWN total — flipped at the user's order 2026-11-05):
+ *  - FEED: whenever an OPPONENT is winning the trick, push our tawan
+ *    into THEIR captured pile — discarding while void, or ducking while
+ *    following suit, we dump the BIGGEST scoring card we legally can
+ *    (Q♠ first, then J♣, 10♦, then hearts). Never hand tawan to our own
+ *    partner's winning trick.
+ *  - Discarding (void in the led suit) → if partner is winning, shed
+ *    NON-scoring cards only (highest dead card); forced to shed a
+ *    scoring card → the cheapest one. If an opponent is winning, feed
+ *    them the biggest scoring card (see FEED above).
+ *  - Following suit with partner winning → never overtake, never add
+ *    tawan: low safe (non-scoring) cards under the win; forced to
+ *    overtake → the cheapest safe winner.
+ *  - Following suit with an opponent winning → duck under whenever a
+ *    legal card allows it (feeding our biggest scoring loser onto
+ *    their trick); win only when forced, and then with the lowest
+ *    sufficient card — a tawan trick we are forced to take costs us
+ *    the least that way.
+ *  - Leading → a dead-suit lead is a takan: +30 tawan lands on OUR OWN
+ *    team, so avoid dead suits; lead a cheap non-scoring card from a
+ *    live suit. Only when every lead is a dead suit (or every card
+ *    scores) take the cheapest way out.
+ *  - On the final trick bots do NOT declare «۱۳» (unchanged — the
+ *    declaration mechanic remains available to humans only).
+ */
+const G = require('./game');
+
+function lowestRank(cards) {
+  return cards.slice().sort((a, b) => G.rankOf(a) - G.rankOf(b))[0];
+}
+
+function highestRank(cards) {
+  return cards.slice().sort((a, b) => G.rankOf(b) - G.rankOf(a))[0];
+}
+
+/** Cheapest card to give away: fewest tawan points, then lowest rank. */
+function cheapestGiveaway(cards) {
+  return cards.slice().sort(
+    (a, b) => (G.cardPoints(a) - G.cardPoints(b)) || (G.rankOf(a) - G.rankOf(b))
+  )[0];
+}
+
+/** Biggest scoring card in `cards` (most tawan, then highest rank), or null. */
+function biggestScoring(cards) {
+  const scoring = cards.filter((c) => G.cardPoints(c) > 0);
+  if (!scoring.length) return null;
+  return scoring.slice().sort(
+    (a, b) => (G.cardPoints(b) - G.cardPoints(a)) || (G.rankOf(b) - G.rankOf(a))
+  )[0];
+}
+
+function pickLead(round, seat, legal) {
+  // A takan lead (+30 tawan to OUR OWN team) happens when nobody else
+  // holds the suit — AVOID those suits now; the bonus is a penalty and
+  // the uncontested trick comes back to us with everyone's dumps in it.
+  const live = legal.filter((c) => !round.othersVoidIn(G.suitOf(c), seat));
+  const pool = live.length ? live : legal;
+  // Live suit: cheap non-scoring probe — scoring cards stay in hand,
+  // waiting to be fed to the opponents.
+  const nonScoring = pool.filter((c) => G.cardPoints(c) === 0);
+  if (nonScoring.length) return lowestRank(nonScoring);
+  return cheapestGiveaway(pool);
+}
+
+/**
+ * Bots never declare «۱۳» — unchanged under the flipped rules: the
+ * declaration mechanic remains a human-only play. Returns false always.
+ * (The server calls this before asking for a card.)
+ */
+function maybeDeclare13(round, seat) {
+  return false;
+}
+
+/**
+ * Choose a card for `seat` in the given Round. Returns a card code that is
+ * guaranteed to be in round.legalMovesFor(seat).
+ */
+function chooseCard(round, seat) {
+  const legal = round.legalMovesFor(seat);
+  if (!legal.length) throw new Error('bot asked to move out of turn');
+  if (legal.length === 1) return legal[0];
+
+  const trick = round.trick;
+
+  // --- Leading the trick ---
+  if (!trick.length) return pickLead(round, seat, legal);
+
+  const ledSuit = G.suitOf(trick[0].card);
+  const winnerSeat = G.trickWinnerSeat(trick);
+  const partnerWinning = G.teamOf(winnerSeat) === G.teamOf(seat);
+
+  // --- Void in the led suit: discard ---
+  if (!legal.some((c) => G.suitOf(c) === ledSuit)) {
+    if (partnerWinning) {
+      // The points land with OUR team — NEVER feed tawan to partner:
+      // shed dead weight, keep scoring cards for the opponents.
+      const deadCards = legal.filter((c) => G.cardPoints(c) === 0);
+      if (deadCards.length) return highestRank(deadCards);
+      return cheapestGiveaway(legal); // forced: give away the cheapest points
+    }
+    // An opponent takes this trick: FEED them — the biggest tawan card
+    // we hold lands in THEIR captured pile (Q♠ above all).
+    const feed = biggestScoring(legal);
+    if (feed) return feed;
+    return highestRank(legal); // nothing scoring: shed the biggest dead card
+  }
+
+  // Following suit (legal = only led-suit cards here).
+  const currentBest = Math.max(
+    ...trick.filter((p) => G.suitOf(p.card) === ledSuit).map((p) => G.rankOf(p.card))
+  );
+  const winners = legal.filter((c) => G.rankOf(c) > currentBest);
+  const losers = legal.filter((c) => G.rankOf(c) < currentBest);
+
+  // --- Partner is winning: never overtake, never add tawan ---
+  if (partnerWinning) {
+    const safeLosers = losers.filter((c) => G.cardPoints(c) === 0);
+    if (safeLosers.length) return lowestRank(safeLosers); // low safe card under the win
+    if (losers.length) return cheapestGiveaway(losers);  // forced scoring loser: cheapest
+    // Forced to overtake: cheapest SAFE winner so the trick stays ours
+    // without adding new tawan.
+    const safeWinners = winners.filter((c) => G.cardPoints(c) === 0);
+    if (safeWinners.length) return lowestRank(safeWinners);
+    return lowestRank(winners);
+  }
+
+  // --- Opponent is winning: duck under — and FEED the trick ---
+  if (losers.length) {
+    // Our biggest scoring loser lands in the OPPONENTS' captured pile.
+    const feed = biggestScoring(losers);
+    if (feed) return feed;
+    return highestRank(losers); // duck under, shed the biggest dead card
+  }
+
+  // --- Forced to win: take it with the lowest sufficient card ---
+  // (Clean or tawan trick alike — winning costs us the capture, so
+  // spend the cheapest card that does it.)
+  return lowestRank(winners);
+}
+
+module.exports = { chooseCard, maybeDeclare13 };
