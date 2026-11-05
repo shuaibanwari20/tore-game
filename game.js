@@ -92,15 +92,15 @@ function tawanOf(cards) {
 }
 
 /**
- * Round scoring — the Tore rule (تاوان is the PRIZE: MORE is better — the
- * team that collects more tawan wins the round; confirmed by the user in
- * live play, matching his original dictation and README-fa.md).
+ * Round scoring — the Tore rule (تاوان is a PENALTY: FEWER is better — the
+ * team that ends the round with LESS tawan wins it. Flipped at the user's
+ * explicit order on 2026-11-05, superseding his earlier collection rule).
  * Inputs: cardTawan = tawan from captured cards; takanBonus / takanCount per
  * team; qsTeam = team that captured Q♠ (ماتکه کالا).
  *  1. Round tawan per team = cardTawan + takanBonus.
  *  2. TAKAN TRANSFER: if EXACTLY ONE team has a takan, ALL of both teams'
  *     round tawan is reassigned to the takan team (the other team gets 0) —
- *     a reward: the takan team takes the whole pot. GATE (user rule): the
+ *     a penalty: the takan team is stuck with the whole pot. GATE (user rule): the
  *     transfer fires ONLY when the non-takan team's PRE-ROUND banked tawan
  *     (جمع‌شده — bankedTawan entering this round, before this round's own
  *     banking) is ≥ TAKAN_TRANSFER_MIN_BANK. Below that, the takan stands
@@ -112,9 +112,10 @@ function tawanOf(cards) {
  *     «هر بازیکن که بیشتر از ۲۱ تاوان گرفت باید برایش ۳۰ تاوان نوشته شوه».
  *     Finals already ≥ 30 (only reachable via takan/transfer) stay as-is.
  *     The bump applies BEFORE the winner decision and BEFORE the bank.
- *  4. The team with MORE final tawan wins (20); the other gets 10.
+ *  4. The team with FEWER final tawan wins (20); the other gets 10.
  *     On a tie (incl. the classic 15–15), the team that CAPTURED
- *     Q♠ wins. Credits are always 20/10.
+ *     Q♠ LOSES the tie — it gets 10 and the other team gets 20.
+ *     Credits are always 20/10.
  * Returns { tawan (final, post-bump), bumped, transferred, transferTo,
  *           transferBlocked, transferGateBanked, winner, credits }.
  * transferBlocked is true when a single-takan transfer was stopped by the
@@ -150,9 +151,9 @@ function scoreRound(cardTawan, takanBonus, takanCount, qsTeam, bankedBefore) {
   if (bumped[0]) tawan[0] = TAWAN_BUMP_VALUE;
   if (bumped[1]) tawan[1] = TAWAN_BUMP_VALUE;
   let winner;
-  if (tawan[0] > tawan[1]) winner = 0;
-  else if (tawan[1] > tawan[0]) winner = 1;
-  else winner = qsTeam; // tie → the team that captured ماتکه کالا wins
+  if (tawan[0] < tawan[1]) winner = 0;
+  else if (tawan[1] < tawan[0]) winner = 1;
+  else winner = 1 - qsTeam; // tie → the team that captured ماتکه کالا LOSES
   const credits = [ROUND_LOSE_POINTS, ROUND_LOSE_POINTS];
   credits[winner] = ROUND_WIN_POINTS;
   return { tawan, bumped, transferred, transferTo, transferBlocked, transferGateBanked, winner, credits };
