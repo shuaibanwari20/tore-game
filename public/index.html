@@ -253,7 +253,7 @@
   <section id="scr-home">
     <div class="cardbox">
       <h1>🃏 توره</h1>
-      <div class="sub">بازی ورق چهارنفرهٔ قندهاری — تیمی، تا ۲۱۰</div>
+      <div class="sub">بازی ورق چهارنفرهٔ قندهاری — تیمی؛ هر تیمی که تاوانِ جمع‌شده‌اش به ۲۱۰ برسد، می‌بازد</div>
       <label for="inp-name">نامت</label>
       <input id="inp-name" type="text" maxlength="20" placeholder="مثلاً احمد" autocomplete="name">
       <button id="btn-create">ساختن اتاق تازه</button>
@@ -262,13 +262,13 @@
       <button id="btn-join" class="ghost">ورود به اتاق</button>
     </div>
     <div class="cardbox legend">
-      📜 <b>قانون امتیاز (از تاوان فرار کن؛ کمتر بهتر است):</b><br>
+      📜 <b>قانون بازی (از تاوان فرار کن؛ کمتر بهتر است):</b><br>
       هر ورق <span class="red">♥</span> <b>لال</b> = ۱ تاوان (جمعاً ۱۳)<br>
       <b>غلام پشه</b> (J♣) = ۵ تاوان · <b>ماتکه کالا</b> (Q♠) = ۹ تاوان · <b>ده خشت</b> (10♦) = ۳ تاوان<br>
-      هر دست ۳۰ تاوان دارد؛ تیمی که تاوانِ <b>کمتر</b> گرفته باشد <b>۲۰</b> و دیگری <b>۱۰</b> می‌گیرد.<br>
-      مساوی؟ تیمی که <b>ماتکه کالا</b> را <b>گرفته</b> باشد، <b>۱۰</b> می‌گیرد و تیمِ دیگر ۲۰ را می‌برد. مسابقه تا <b>۲۱۰</b> است.<br>
+      هر دست ۳۰ تاوان دارد و در این بازی <b>امتیاز نیست</b> — فقط تاوان است.<br>
+      تیمی که تاوانِ <b>جمع‌شده‌اش</b> (بانک) به <b>۲۱۰</b> برسد، مسابقه را <b>می‌بازد</b> و تیمِ دیگر برنده است.<br>
       ⭐ <b>تکان:</b> خالی را شروع کنی که هیچ‌کس ندارد → <b>+۳۰ تاوان</b> و یک ستارهٔ قرمز برای تیمت!<br>
-      اگر فقط یک تیم تکان داشته باشد، <b>همهٔ تاوان دست به همان تیم می‌رسد</b>.<br>
+      ⭐ <b>تکان معلق:</b> تکان یعنی طلبِ <b>۳۰ تاوان</b> از جمع‌شدهٔ تیمِ حریف — هر وقت جمع‌شدهٔ حریف به <b>۳۰</b> برسد یا از آن بگذرد، ۳۰ تاوان از بانک او کم و به بانک تیمِ تکان‌دار داده می‌شود؛ تا آن وقت تکان می‌ماند و ستاره‌اش (★) روی تخته دیده می‌شود.<br>
       🙋 دست آخر: اگر پیش از بازی بگویی <b>«۱۳ هست»</b>، تکان برایت حساب نمی‌شود.<br>
       ⚠️ تیمی که در یک دست بیشتر از <b>۲۱</b> تاوان بگیرد، برایش <b>۳۰</b> تاوان نوشته می‌شود.<br>
       🏦 تاوانِ یک دست اگر <b>۱۰ یا بیشتر</b> باشد در بانکت <b>جمع می‌شود</b>؛ کمتر از ۱۰ باشد، حساب نمی‌شود.
@@ -293,9 +293,9 @@
       <button id="btn-leave" class="menubtn">منوی اصلی</button>
     </div>
     <div class="scorestrip">
-      <span>تیم ما · جمع‌شده <b id="sc-us">۰</b> <small>· امتیاز: <span id="pt-us">۰</span> · تاوان: <span id="tw-us">۰</span></small> <span class="tkstars" id="tk-us"></span></span>
-      <span class="ss-mid">دست <span id="round-no">۱</span> · هدف: ۲۱۰</span>
-      <span>تیم حریف · جمع‌شده <b id="sc-them">۰</b> <small>· امتیاز: <span id="pt-them">۰</span> · تاوان: <span id="tw-them">۰</span></small> <span class="tkstars" id="tk-them"></span></span>
+      <span>تیم ما · جمع‌شده <b id="sc-us">۰</b> <small>· تاوان: <span id="tw-us">۰</span></small> <span class="tkstars" id="tk-us"></span></span>
+      <span class="ss-mid">دست <span id="round-no">۱</span> · رسیدن به ۲۱۰ = باخت</span>
+      <span>تیم حریف · جمع‌شده <b id="sc-them">۰</b> <small>· تاوان: <span id="tw-them">۰</span></small> <span class="tkstars" id="tk-them"></span></span>
     </div>
 
     <div class="table" id="table">
@@ -323,16 +323,14 @@
     <h2 id="ov-round-title">پایان دست</h2>
     <div class="row"><span>تاوان ورق‌ها</span><span><small>ما </small><b id="ov-card-us">۰</b> · <small>حریف </small><b id="ov-card-them">۰</b></span></div>
     <div class="row" id="ov-tk-row"><span>تکان ⭐</span><span><small>ما </small><b id="ov-tk-us">—</b> · <small>حریف </small><b id="ov-tk-them">—</b></span></div>
-    <div class="row" id="ov-tr-row"><span>انتقال تکان</span><b id="ov-tr">—</b></div>
-    <div id="ov-tr-blocked" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
+    <div id="ov-pend" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
+    <div id="ov-exec" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
     <div class="row big"><span>تاوان نهایی</span><b id="ov-tw">—</b></div>
     <div id="ov-bump" style="font-size:13.5px; opacity:.9; padding:2px 2px 0"></div>
     <div class="row"><span>تاوان جمع‌شده (بانک)</span><span><small>ما </small><b id="ov-bk-us">۰</b> · <small>حریف </small><b id="ov-bk-them">۰</b></span></div>
     <div id="ov-wipe" style="font-size:13.5px; opacity:.9; padding:2px 2px 0"></div>
     <div class="row"><span>ماتکه کالا (Q♠) را گرفت</span><b id="ov-qs">—</b></div>
-    <div id="ov-tie" style="display:none; font-size:14.5px; font-weight:700; color:#ffd75e; padding:4px 2px 0"></div>
-    <div class="row big"><span>امتیاز این دست</span><b id="ov-cr" style="color:#ffd75e">—</b></div>
-    <div class="row"><span>جمع مسابقه</span><b><small>ما </small><span id="ov-sc-us">۰</span> — <small>حریف </small><span id="ov-sc-them">۰</span></b></div>
+    <div id="ov-tie" style="display:none; font-size:13.5px; opacity:.9; padding:4px 2px 0"></div>
     <div style="margin-top:10px; font-size:13.5px; opacity:.85">دست بعدی به‌زودی شروع می‌شود…</div>
   </div>
 </div>
@@ -341,7 +339,8 @@
 <div class="overlay" id="ov-match">
   <div class="panel">
     <h2 id="ov-match-title">🏆 پایان مسابقه</h2>
-    <div class="row big"><span>نتیجهٔ نهایی</span><b><small>ما </small><span id="ov-f-us">۰</span> — <small>حریف </small><span id="ov-f-them">۰</span></b></div>
+    <div class="row big"><span>تاوان جمع‌شدهٔ نهایی</span><b><small>ما </small><span id="ov-f-us">۰</span> — <small>حریف </small><span id="ov-f-them">۰</span></b></div>
+    <div id="ov-f-why" style="font-size:14px; font-weight:700; padding:4px 2px 0"></div>
     <button id="btn-newgame">بازی جدید</button>
   </div>
 </div>
@@ -907,16 +906,17 @@ function render(st) {
   const myTeam = mySeat % 2, them = 1 - myTeam;
 
   // Scoreboard headline = the BANKED tawan (جمع‌شده) per the user's order —
-  // the bank is what he reads as the score; match points stay visible small.
+  // the bank is the only score there is: no match points anywhere.
   $('#sc-us').textContent = faNum(st.bankedTawan ? st.bankedTawan[myTeam] : 0);
   $('#sc-them').textContent = faNum(st.bankedTawan ? st.bankedTawan[them] : 0);
-  $('#pt-us').textContent = faNum(st.scores[myTeam]);
-  $('#pt-them').textContent = faNum(st.scores[them]);
   const twTxt = (t) => faNum(st.roundTawan[t]) + (st.takanBonus[t] ? ' +' + faNum(st.takanBonus[t]) : '');
   $('#tw-us').textContent = twTxt(myTeam);
   $('#tw-them').textContent = twTxt(them);
-  $('#tk-us').textContent = st.takanCount[myTeam] ? '★'.repeat(st.takanCount[myTeam]) : '';
-  $('#tk-them').textContent = st.takanCount[them] ? '★'.repeat(st.takanCount[them]) : '';
+  // Scoreboard stars = PENDING takan claims (تکان معلق) — they persist
+  // across rounds until the claim executes, per the user's order.
+  const pend = st.pendingTakan || [0, 0];
+  $('#tk-us').textContent = pend[myTeam] ? '★'.repeat(pend[myTeam]) : '';
+  $('#tk-them').textContent = pend[them] ? '★'.repeat(pend[them]) : '';
   $('#round-no').textContent = faNum(st.roundNo || 1);
 
   // who is winning the current trick (drives the 👑 and the gold glow)
@@ -1047,21 +1047,25 @@ function render(st) {
     $('#ov-tk-row').style.display = (r.takanCount[0] + r.takanCount[1]) ? '' : 'none';
     $('#ov-tk-us').textContent = tkTxt(myTeam);
     $('#ov-tk-them').textContent = tkTxt(them);
-    $('#ov-tr-row').style.display = r.transferred ? '' : 'none';
-    if (r.transferred) {
-      const givers = r.takanBy && r.takanBy[r.transferTo]
-        ? [...new Set(r.takanBy[r.transferTo])].map((s) => st.seats[s] ? st.seats[s].name : 'بازیکن').join(' و ') : '';
-      $('#ov-tr').textContent = 'همهٔ تاوان به تیمِ (' + teamNames(r.transferTo) + ') رسید' +
-        (givers ? ' — تکان از ' + givers : '');
+    // Pending takan (تکان معلق): a claim created this round that did NOT
+    // execute stays pending — its line says so and the ★ stays on the
+    // scoreboard. An executed claim moved exactly ۳۰ per claim from the
+    // victim team's bank to the takan team's bank — spelled out with
+    // names, like every other per-team line in this summary.
+    const created = r.claimsCreated || [0, 0];
+    const executed = r.claimsExecuted || [0, 0];
+    const pendTeams = [0, 1].filter((t) => created[t] > executed[t]);
+    $('#ov-pend').style.display = pendTeams.length ? '' : 'none';
+    if (pendTeams.length) {
+      $('#ov-pend').textContent = pendTeams.map((t) =>
+        'تکانِ تیمِ (' + teamNames(t) + ') ماند برای دست‌های بعد ⭐').join(' · ');
     }
-    // Blocked transfer, spelled out with names: a single takan stood (its
-    // team kept its tawan + bonus) but the pot did NOT move, because the
-    // other team's pre-round banked tawan (جمع‌شده) was below ۳۰.
-    $('#ov-tr-blocked').style.display = r.transferBlocked ? '' : 'none';
-    if (r.transferBlocked) {
-      const takanTeam = r.takanCount[0] > 0 ? 0 : 1;
-      $('#ov-tr-blocked').textContent = 'تکان برای تیمِ (' + teamNames(takanTeam) + ') ماند، اما انتقال نشد — جمع‌شدهٔ تیمِ (' +
-        teamNames(1 - takanTeam) + ') ' + faNum(r.transferGateBanked) + ' بود (کمتر از ۳۰)';
+    const execTeams = [0, 1].filter((t) => executed[t] > 0);
+    $('#ov-exec').style.display = execTeams.length ? '' : 'none';
+    if (execTeams.length) {
+      $('#ov-exec').textContent = execTeams.map((t) =>
+        faNum(30 * executed[t]) + ' تاوان از جمع‌شدهٔ تیمِ (' + teamNames(1 - t) + ') کم شد و به تیمِ (' +
+        teamNames(t) + ') داده شد').join(' · ');
     }
     $('#ov-tw').textContent = 'تیمِ (' + teamNames(myTeam) + '): ' + faNum(r.tawan[myTeam]) +
       ' — تیمِ (' + teamNames(them) + '): ' + faNum(r.tawan[them]);
@@ -1080,25 +1084,28 @@ function render(st) {
         'تاوان ' + teamLabel(t) + ' (' + faNum(r.tawan[t]) + ') کمتر از ۱۰ بود — حساب نشد').join(' · ');
     }
     $('#ov-qs').textContent = teamLabel(r.qsTeam);
-    // Tie verdict, spelled out with names: on a tied final tawan the team
-    // that CAPTURED ماتکه کالا LOSES the tie (takes the 10); the 20 goes
-    // to the other team. The check must be VISIBLE — a silent application
-    // read as a scoring error to the user (15–15 case).
+    // A tied final tawan is just a tie now (no points, no Q♠ verdict):
+    // a plain note, and both teams bank their own equal tawan.
     const tiedFinal = r.tawan[0] === r.tawan[1];
     $('#ov-tie').style.display = tiedFinal ? '' : 'none';
     if (tiedFinal) {
-      $('#ov-tie').textContent = '⚖️ مساوی شد! ماتکه کالا را تیمِ (' + teamNames(r.qsTeam) + ') گرفت — ۱۰ برای همان تیم، ۲۰ برای تیمِ (' + teamNames(1 - r.qsTeam) + ')';
+      $('#ov-tie').textContent = '⚖️ مساوی — تاوانِ نهایی دو تیم برابر شد؛ هر تیم تاوان خودش را بانک می‌کند';
     }
-    $('#ov-cr').textContent = 'تیمِ (' + teamNames(myTeam) + '): +' + faNum(r.credits[myTeam]) +
-      ' — تیمِ (' + teamNames(them) + '): +' + faNum(r.credits[them]);
-    $('#ov-sc-us').textContent = faNum(st.scores[myTeam]);
-    $('#ov-sc-them').textContent = faNum(st.scores[them]);
   }
   $('#ov-match').classList.toggle('show', st.phase === 'matchEnd');
   if (st.phase === 'matchEnd') {
     $('#ov-match-title').textContent = st.matchWinner === myTeam ? '🏆 تیم شما برنده شد!' : 'تیم حریف برنده شد';
-    $('#ov-f-us').textContent = faNum(st.scores[myTeam]);
-    $('#ov-f-them').textContent = faNum(st.scores[them]);
+    $('#ov-f-us').textContent = faNum(st.bankedTawan ? st.bankedTawan[myTeam] : 0);
+    $('#ov-f-them').textContent = faNum(st.bankedTawan ? st.bankedTawan[them] : 0);
+    // Say plainly who lost and why: the team whose banked tawan reached ۲۱۰.
+    if (st.matchLoser != null) {
+      const loserNames = [st.matchLoser, st.matchLoser + 2]
+        .map((s) => st.seats[s] ? st.seats[s].name : 'بازیکن').join(' و ');
+      $('#ov-f-why').textContent = 'جمع‌شدهٔ تیمِ (' + loserNames + ') به ۲۱۰ رسید (' +
+        faNum(st.bankedTawan ? st.bankedTawan[st.matchLoser] : 0) + ') — همان تیم باخت';
+    } else {
+      $('#ov-f-why').textContent = '';
+    }
   }
 }
 
