@@ -49,7 +49,7 @@ function newCode() {
 }
 
 function emptySeat() {
-  return { kind: 'empty', name: '', avatar: null, country: '', token: null, ws: null, connected: false, disconnectAt: null };
+  return { kind: 'empty', name: '', avatar: null, country: '', photo: null, token: null, ws: null, connected: false, disconnectAt: null };
 }
 
 function createRoom() {
@@ -95,7 +95,7 @@ function stateFor(room, seatIdx) {
     target: G.BANK_LOSE_TARGET,
     seats: room.seats.map((s, i) => ({
       name: s.name, kind: s.kind, connected: s.connected,
-      avatar: s.avatar, country: s.country,
+      avatar: s.avatar, country: s.country, photo: s.photo,
       cards: round ? round.hands[i].length : 0,
     })),
     hand: round ? round.hands[seatIdx].slice() : [],
@@ -253,17 +253,27 @@ function startMatch(room) {
 }
 
 // --------------------------------------------------------- seat lifecycle
-// Profile fields (avatar + country) ride along with create/join/reconnect.
-// The client owns the avatar catalogue (portrait ids 'av1'…'av12'); the
-// server only checks the id against that known set, so a seat can never
-// carry markup or an unbounded string. Anything else becomes null and
-// the client falls back to the default avatar (av1).
+// Profile fields (avatar + country, and the Google photo) ride along
+// with create/join/reconnect. The client owns the avatar catalogue
+// (portrait ids 'av1'…'av12', plus the 'google' kind = the player's
+// Google profile photo); the server only checks the id against that
+// known set, so a seat can never carry markup or an unbounded string.
+// Anything else becomes null and the client falls back to the default
+// avatar (av1). The photo is carried ONLY for the 'google' avatar and
+// is validated just as strictly (short https googleusercontent URL);
+// an invalid photo is dropped silently — the seat still joins.
 const AVATAR_IDS = ['av1', 'av2', 'av3', 'av4', 'av5', 'av6', 'av7', 'av8', 'av9', 'av10', 'av11', 'av12'];
 function cleanAvatar(av) {
-  return (typeof av === 'string' && AVATAR_IDS.includes(av)) ? av : null;
+  return (typeof av === 'string' && (AVATAR_IDS.includes(av) || av === 'google')) ? av : null;
 }
 function cleanCountry(c) {
   return String(c || '').trim().slice(0, 40);
+}
+function cleanPhoto(p) {
+  if (typeof p !== 'string' || p.length > 300) return null;
+  if (!p.startsWith('https://')) return null;
+  if (!p.includes('googleusercontent.com')) return null;
+  return p;
 }
 
 function attachPlayer(ws, room, seatIdx, name, prof) {
@@ -272,6 +282,7 @@ function attachPlayer(ws, room, seatIdx, name, prof) {
   seat.name = name;
   seat.avatar = cleanAvatar(prof && prof.avatar);
   seat.country = cleanCountry(prof && prof.country);
+  seat.photo = seat.avatar === 'google' ? cleanPhoto(prof && prof.photo) : null;
   seat.token = crypto.randomBytes(8).toString('hex');
   seat.ws = ws;
   seat.connected = true;
@@ -310,6 +321,7 @@ setInterval(() => {
           s.kind = 'bot'; // bot takes over the seat and its hand
           s.avatar = null;
           s.country = '';
+          s.photo = null;
           s.connected = true;
           changed = true;
           pumpTurn(room);
@@ -365,6 +377,11 @@ function handleMessage(ws, msg) {
       // was created before profiles existed) — refresh what it carries.
       const av = cleanAvatar(msg.avatar); if (av) seat.avatar = av;
       const co = cleanCountry(msg.country); if (co) seat.country = co;
+      if (seat.avatar === 'google') {
+        const ph = cleanPhoto(msg.photo); if (ph) seat.photo = ph;
+      } else {
+        seat.photo = null; // the photo belongs to the 'google' avatar only
+      }
       seat.ws = ws;
       seat.connected = true;
       seat.disconnectAt = null;
