@@ -284,7 +284,7 @@
       هر دست 30 تاوان دارد و در این بازی <b>امتیاز نیست</b> — فقط تاوان است.<br>
       تیمی که تاوانِ <b>جمع‌شده‌اش</b> (بانک) به <b>210</b> برسد، مسابقه را <b>می‌بازد</b> و تیمِ دیگر برنده است.<br>
       ⭐ <b>تکان:</b> خالی را شروع کنی که هیچ‌کس ندارد → فقط یک <b>ستارهٔ قرمز (★)</b> برای تیمت؛ تکان هیچ تاوانی به این دست اضافه نمی‌کند.<br>
-      ⭐ <b>تکان معلق:</b> آن ستاره یعنی طلبِ <b>30 تاوان</b> از جمع‌شدهٔ تیمِ حریف — هر وقت جمع‌شدهٔ حریف به <b>30</b> برسد یا از آن بگذرد، 30 تاوان از بانک او کم و به بانک تیمِ تکان‌دار داده می‌شود؛ تا آن وقت فقط ستاره می‌ماند و هیچ پولی جابه‌جا نمی‌شود.<br>
+      ⭐ <b>تکان معلق:</b> آن ستاره یعنی طلبِ <b>30 تاوان</b> از جمع‌شدهٔ تیمِ حریف — هر وقت جمع‌شدهٔ حریف به <b>30</b> برسد یا از آن بگذرد، 30 تاوان از بانک او کم و به بانک تیمِ تکان‌دار داده می‌شود؛ تا آن وقت فقط ستاره می‌ماند و هیچ پولی جابه‌جا نمی‌شود. اگر هر دو تیم در یک دست تکان بدهند، <b>تکان‌ها جفت‌جفت با هم ادا می‌شوند</b> و حذف می‌شوند — فقط تکانِ اضافهٔ یک تیم ستاره می‌شود.<br>
       🙋 دست آخر: اگر پیش از بازی بگویی <b>«13 هست»</b>، تکان برایت حساب نمی‌شود.<br>
       🏦 <b>جمع‌شدن در بانک (بندهای ده‌تایی):</b> تاوانِ نهایی هر دست این‌طور در بانکت جمع می‌شود: 0 تا 9 → <b>0</b> · 10 تا 15 → <b>10</b> · 16 تا 20 → <b>20</b> · 21 تا 30 → <b>30</b>.<br>
       ⚖️ <b>مساوی 15-15:</b> تیمی که <b>ماتکه کالا</b> (Q♠) را گرفته، <b>20</b> جمع می‌کند و تیمِ دیگر <b>10</b>.
@@ -348,6 +348,7 @@
     <h2 id="ov-round-title">پایان دست</h2>
     <div class="row"><span>تاوان ورق‌ها</span><span><small>ما </small><b id="ov-card-us">0</b> · <small>حریف </small><b id="ov-card-them">0</b></span></div>
     <div class="row" id="ov-tk-row"><span>تکان ⭐</span><span><small>ما </small><b id="ov-tk-us">—</b> · <small>حریف </small><b id="ov-tk-them">—</b></span></div>
+    <div id="ov-cancel" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
     <div id="ov-pend" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
     <div id="ov-exec" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
     <div class="row big"><span>تاوان نهایی</span><b id="ov-tw">—</b></div>
@@ -1138,6 +1139,18 @@ function render(st) {
     $('#ov-tk-row').style.display = (r.takanCount[0] + r.takanCount[1]) ? '' : 'none';
     $('#ov-tk-us').textContent = tkTxt(myTeam);
     $('#ov-tk-them').textContent = tkTxt(them);
+    // Pairwise cancellation (تکان با تکان ادا می‌شود): when BOTH teams
+    // takaned, their takans annihilate one-for-one with no accounting —
+    // only the surplus became claims (claimsCreated already carries the
+    // net). Say how many pairs were cancelled, with names and counts.
+    const cancelled = r.takanCancelled != null ? r.takanCancelled
+      : Math.min(r.takanCount[0], r.takanCount[1]);
+    $('#ov-cancel').style.display = cancelled > 0 ? '' : 'none';
+    if (cancelled > 0) {
+      $('#ov-cancel').textContent = '🤝 تکان‌ها با هم ادا شدند: تیمِ (' + teamNames(0) + ') ' +
+        faNum(r.takanCount[0]) + ' تکان و تیمِ (' + teamNames(1) + ') ' + faNum(r.takanCount[1]) +
+        ' تکان — ' + faNum(cancelled) + ' جفت حذف شد، بدون حساب';
+    }
     // Pending takan (تکان معلق): a claim created this round that did NOT
     // execute stays pending — its line says so and the ★ stays on the
     // scoreboard. An executed claim moved exactly 30 per claim from the

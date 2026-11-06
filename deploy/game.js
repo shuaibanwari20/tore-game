@@ -278,7 +278,7 @@ class Match {
     this.bankedTawan = [0, 0];   // match-long tawan bank: each round's final tawan banks by the ten-bands (see bankAmount)
     this.pendingTakan = [0, 0];  // تکان معلق: pending claims per team — each claim takes TAKAN_CLAIM_AMOUNT from the OTHER team's bank once it reaches TAKAN_CLAIM_MIN_BANK
     this.roundNo = 0;
-    this.history = [];   // per-round: {roundNo, cardTawan, takanCount, takanBy, tawan, banked, qsTieBoost, claimsCreated, claimsExecuted, pendingTakan, bankedTawan, qsTeam}
+    this.history = [];   // per-round: {roundNo, cardTawan, takanCount, takanBy, tawan, banked, qsTieBoost, takanCancelled, claimsCreated, claimsExecuted, pendingTakan, bankedTawan, qsTeam}
     this.finished = false;
     this.winner = null;   // the team that did NOT cross the target
     this.loser = null;    // the team whose banked tawan reached BANK_LOSE_TARGET
@@ -313,25 +313,30 @@ class Match {
     this.bankedTawan[0] += banked[0];
     this.bankedTawan[1] += banked[1];
 
-    // PENDING TAKAN (تکان معلق — user rule, 2026-11-05): if EXACTLY ONE
-    // team gave takan(s) this round, that team gains one pending claim
-    // per takan against the other (victim) team. (Both-takan rounds
-    // create nothing; a «13»-cancelled takan never reaches takanCount,
-    // so it creates nothing either.) Then — AFTER this round's banking —
-    // pending claims execute: while a team holds claims and the VICTIM's
-    // banked tawan is ≥ TAKAN_CLAIM_MIN_BANK, one claim moves exactly
-    // TAKAN_CLAIM_AMOUNT from the victim's bank to the claim holder's
-    // bank. A claim earned this round can execute this same round; an
-    // unexecuted claim stays pending (its ★ stays on the board) into
-    // later rounds. Team 0's claims are processed before team 1's, so
-    // the order is deterministic when both teams hold claims.
-    const claimsCreated = [0, 0];
-    const singleTakan = (r.takanCount[0] > 0) !== (r.takanCount[1] > 0);
-    if (singleTakan) {
-      const t = r.takanCount[0] > 0 ? 0 : 1;
-      claimsCreated[t] = r.takanCount[t];
-      this.pendingTakan[t] += r.takanCount[t];
-    }
+    // PENDING TAKAN (تکان معلق — user rules, 2026-11-05 + 2026-11-06):
+    // each takan is a pending claim of exactly TAKAN_CLAIM_AMOUNT banked
+    // tawan against the other (victim) team — BUT takans first cancel
+    // PAIRWISE across the two teams («تکان با تکان ادا می‌شود»): one
+    // takan from each team annihilate each other with no accounting, so
+    // a team only creates claims for its SURPLUS takans:
+    // claimsCreated[t] = max(0, takanCount[t] − takanCount[1−t]).
+    // (Equal counts → no claims; a «13»-cancelled takan never reaches
+    // takanCount, so it creates nothing either.) Then — AFTER this
+    // round's banking — pending claims execute: while a team holds
+    // claims and the VICTIM's banked tawan is ≥ TAKAN_CLAIM_MIN_BANK,
+    // one claim moves exactly TAKAN_CLAIM_AMOUNT from the victim's bank
+    // to the claim holder's bank. A claim earned this round can execute
+    // this same round; an unexecuted claim stays pending (its ★ stays
+    // on the board) into later rounds. Team 0's claims are processed
+    // before team 1's, so the order is deterministic when both teams
+    // hold claims.
+    const takanCancelled = Math.min(r.takanCount[0], r.takanCount[1]);
+    const claimsCreated = [
+      r.takanCount[0] - takanCancelled,
+      r.takanCount[1] - takanCancelled,
+    ];
+    this.pendingTakan[0] += claimsCreated[0];
+    this.pendingTakan[1] += claimsCreated[1];
     const claimsExecuted = [0, 0];
     for (const t of [0, 1]) {
       const victim = 1 - t;
@@ -350,6 +355,7 @@ class Match {
       takanBy: r.takanBy ? r.takanBy.map((a) => a.slice()) : [[], []],
       tawan: r.tawan.slice(), banked: banked.slice(),
       qsTieBoost,                                     // team that got the 15–15 Q♠ bank boost, or -1
+      takanCancelled,                                 // takans annihilated pairwise this round (تکان با تکان ادا شد)
       claimsCreated, claimsExecuted,
       pendingTakan: this.pendingTakan.slice(),
       bankedTawan: this.bankedTawan.slice(), qsTeam: r.qsTeam,
