@@ -769,6 +769,10 @@ async function main() {
   // spawn the real Node server and drive it over WebSocket.
   await serverPhotoChecks();
 
+  // Chat / voice / RTC relay protocol (2026-11-06): the same real
+  // server, driven over WebSocket by three clients in one room.
+  await serverChatRtcChecks();
+
   console.log('\n' + (checks - failures) + '/' + checks + ' checks passed · ' +
     stats.roundsTotal + ' rounds · ' + stats.ties + ' tie rounds · ' +
     (failures ? failures + ' FAILURES' : 'ALL GREEN'));
@@ -863,6 +867,185 @@ async function serverPhotoChecks() {
     check(false, 'server photo protocol checks', e.message);
   } finally {
     clients.forEach((c) => { try { c.ws.close(); } catch (e) { /* already closed */ } });
+    srv.kill();
+  }
+}
+
+// Chat, voice flags and WebRTC signaling all ride the game socket as a
+// strict server relay. These checks boot the real server.js on a
+// scratch port with three clients in one room (plus one outsider in a
+// second room) and speak the real protocol.
+async function serverChatRtcChecks() {
+  const { spawn } = require('child_process');
+  const path = require('path');
+  const WebSocket = require('ws');
+  const PORT = 3220;
+  const srv = spawn(process.execPath, [path.join(__dirname, 'server.js')], {
+    env: { ...process.env, PORT: String(PORT) },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const clients = [];
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  function openClient() {
+    return new Promise((resolve, reject) => {
+      const ws = new WebSocket('ws://127.0.0.1:' + PORT);
+      const c = {
+        ws, msgs: [], waiters: [],
+        send(o) { ws.send(JSON.stringify(o)); },
+        waitFor(pred, label) {
+          return new Promise((res, rej) => {
+            const found = c.msgs.find(pred);
+            if (found) return res(found);
+            const to = setTimeout(() => rej(new Error('timeout: ' + label)), 8000);
+            c.waiters.push({ pred, res: (m) => { clearTimeout(to); res(m); } });
+          });
+        },
+        // like waitFor, but only over messages received from index `mark`
+        waitFrom(mark, pred, label) {
+          return new Promise((res, rej) => {
+            const scan = () => c.msgs.slice(mark).find(pred);
+            const found = scan();
+            if (found) return res(found);
+            const to = setTimeout(() => rej(new Error('timeout: ' + label)), 8000);
+            c.waiters.push({
+              pred: (m) => c.msgs.indexOf(m) >= mark && pred(m),
+              res: (m) => { clearTimeout(to); res(m); },
+            });
+          });
+        },
+        countFrom(mark, pred) { return c.msgs.slice(mark).filter(pred).length; },
+      };
+      ws.on('message', (d) => {
+        let m; try { m = JSON.parse(String(d)); } catch (e) { return; }
+        c.msgs.push(m);
+        c.waiters = c.waiters.filter((w) => {
+          if (w.pred(m)) { w.res(m); return false; }
+          return true;
+        });
+      });
+      ws.on('open', () => resolve(c));
+      ws.on('error', reject);
+      clients.push(c);
+    });
+  }
+  try {
+    await new Promise((resolve, reject) => {
+      const to = setTimeout(() => reject(new Error('server.js did not start')), 8000);
+      srv.stdout.on('data', (d) => {
+        if (String(d).includes('listening')) { clearTimeout(to); resolve(); }
+      });
+      srv.on('exit', () => reject(new Error('server.js exited early')));
+    });
+
+    // Room 1: A (host) + B + C. Room 2: E alone (cross-room canary).
+    const a = await openClient();
+    a.send({ type: 'create', name: 'احمد' });
+    const roomA = await a.waitFor((m) => m.type === 'room', 'room A');
+    const b = await openClient();
+    b.send({ type: 'join', code: roomA.code, name: 'بلال' });
+    const roomB = await b.waitFor((m) => m.type === 'room', 'room B');
+    const c = await openClient();
+    c.send({ type: 'join', code: roomA.code, name: 'کارل' });
+    const roomC = await c.waitFor((m) => m.type === 'room', 'room C');
+    const e = await openClient();
+    e.send({ type: 'create', name: 'بیرونی' });
+    await e.waitFor((m) => m.type === 'room', 'room E');
+
+    // 1) chat relay: text reaches the other members (and echoes to the
+    // sender — clients render from the relay only), with seat + name.
+    const eMark0 = e.msgs.length;
+    a.send({ type: 'chat', text: 'سلام ټولو ته' });
+    const chatB = await b.waitFor((m) => m.type === 'chat', 'chat at B');
+    check(chatB.seat === roomA.seat && chatB.name === 'احمد' && chatB.text === 'سلام ټولو ته',
+      'server: chat relay reaches room members with seat/name/text');
+    const chatA = await a.waitFor((m) => m.type === 'chat', 'chat echo at A');
+    check(chatA.seat === roomA.seat && chatA.text === 'سلام ټولو ته',
+      'server: chat echoes to the sender (render-from-relay)');
+    await sleep(300);
+    check(e.countFrom(eMark0, (m) => m.type === 'chat') === 0,
+      'server: chat never leaks into another room');
+
+    // 2) over-length chat is clipped to exactly 200 chars.
+    await sleep(900);
+    a.send({ type: 'chat', text: 'x'.repeat(250) });
+    const chatLong = await b.waitFor((m) => m.type === 'chat' && m.text.length > 50, 'long chat at B');
+    check(chatLong.text.length === 200, 'server: chat over 200 chars clipped to 200');
+
+    // 3) control characters are stripped; whitespace-only is dropped.
+    await sleep(900);
+    const aMark1 = a.msgs.length;
+    b.send({ type: 'chat', text: 'ab\u0007c\u0000d\n' });
+    const chatCtl = await a.waitFrom(aMark1, (m) => m.type === 'chat', 'control-char chat at A');
+    check(chatCtl.text === 'abcd', 'server: chat control characters stripped');
+    b.send({ type: 'chat', text: '   ' });
+    await sleep(400);
+    check(a.countFrom(aMark1, (m) => m.type === 'chat') === 1,
+      'server: empty chat dropped');
+
+    // 4) rate limit: a second chat within 800 ms is dropped; after the
+    // window the next one goes through.
+    await sleep(900);
+    const bMark2 = b.msgs.length;
+    a.send({ type: 'chat', text: 'لومړی' });
+    await a.waitFrom(0, (m) => m.type === 'chat' && m.text === 'لومړی', 'rate-limit first at A');
+    a.send({ type: 'chat', text: 'دوهم' });
+    await sleep(500);
+    check(b.countFrom(bMark2, (m) => m.type === 'chat' && m.text === 'دوهم') === 0,
+      'server: chat faster than 1/800ms dropped');
+    await sleep(900);
+    a.send({ type: 'chat', text: 'درېم' });
+    await b.waitFrom(bMark2, (m) => m.type === 'chat' && m.text === 'درېم', 'rate-limit third at B');
+    check(true, 'server: chat allowed again after the 800 ms window');
+
+    // 5) a socket that never joined a room cannot chat into one.
+    const d = await openClient();
+    const bMark3 = b.msgs.length;
+    d.send({ type: 'chat', text: 'له بهره' });
+    await sleep(400);
+    check(b.countFrom(bMark3, (m) => m.type === 'chat') === 0,
+      'server: chat from a seat not in a room ignored');
+
+    // 6) voice flags: broadcast to the room and carried in state.
+    a.send({ type: 'voice', on: true });
+    const voiceB = await b.waitFor((m) => m.type === 'voice', 'voice at B');
+    check(voiceB.seat === roomA.seat && voiceB.on === true,
+      'server: voice-on broadcast reaches room members');
+    b.send({ type: 'voice', on: true });
+    await c.waitFor((m) => m.type === 'voice' && m.seat === roomB.seat, 'voice B at C');
+    a.send({ type: 'start' }); // any state push now carries the flags
+    const stVoice = await c.waitFor((m) => m.type === 'state' && m.phase === 'playing', 'playing state at C');
+    check(stVoice.seats[roomA.seat].voice === true && stVoice.seats[roomB.seat].voice === true &&
+      stVoice.seats[3].voice === false,
+      'server: voice flags ride in state (bot seat silent)');
+    a.send({ type: 'voice', on: false });
+    const voiceOff = await b.waitFor((m) => m.type === 'voice' && m.on === false, 'voice-off at B');
+    check(voiceOff.seat === roomA.seat, 'server: voice-off broadcast reaches room members');
+
+    // 7) RTC signaling: reaches ONLY the addressed seat in the room.
+    const cMark4 = c.msgs.length;
+    a.send({ type: 'rtc', to: roomB.seat, data: { kind: 'sdp', sdp: { type: 'offer', sdp: 'v=0 test' } } });
+    const rtcB = await b.waitFor((m) => m.type === 'rtc', 'rtc at B');
+    check(rtcB.from === roomA.seat && rtcB.data.sdp.sdp === 'v=0 test',
+      'server: rtc relay reaches the target seat with payload intact');
+    await sleep(400);
+    check(c.countFrom(cMark4, (m) => m.type === 'rtc') === 0,
+      'server: rtc relay does NOT reach other seats');
+    // …not a bot seat, and not when the payload exceeds ~16 KB.
+    a.send({ type: 'rtc', to: 3, data: { kind: 'sdp', sdp: 'x' } });
+    a.send({ type: 'rtc', to: roomC.seat, data: { kind: 'sdp', sdp: 'y'.repeat(17000) } });
+    await sleep(400);
+    check(c.countFrom(cMark4, (m) => m.type === 'rtc') === 0,
+      'server: rtc to a bot seat and oversized rtc dropped');
+
+    // 8) the room still works after all the dropped traffic.
+    await sleep(900);
+    a.send({ type: 'chat', text: 'وروستی' });
+    await b.waitFor((m) => m.type === 'chat' && m.text === 'وروستی', 'post-checks chat at B');
+    check(true, 'server: room healthy after chat/rtc checks');
+  } catch (e2) {
+    check(false, 'server chat/rtc protocol checks', e2.message);
+  } finally {
+    clients.forEach((cl) => { try { cl.ws.close(); } catch (e3) { /* already closed */ } });
     srv.kill();
   }
 }
