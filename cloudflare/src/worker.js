@@ -10,6 +10,7 @@
  *   GET  /auth/google/callback    Google OAuth callback
  *   GET  /auth/facebook           start Facebook OAuth
  *   GET  /auth/facebook/callback  Facebook OAuth callback
+ *   POST /auth/firebase           Firebase ID token → session cookie
  *   GET  /auth/logout             clear the session cookie
  *   GET  /privacy                 privacy policy page (for OAuth consent)
  *   GET  /data-deletion           data deletion instructions page (for Facebook)
@@ -163,6 +164,12 @@ export default {
       const user = await auth.readSession(request, env);
       if (!user) return new Response('unauthorized', { status: 401 });
       return Response.json(user);
+    }
+    if (path === '/auth/firebase') {
+      // The gate POSTs a Firebase ID token here; auth.js verifies it
+      // against Google's securetoken JWKS and mints the session cookie.
+      if (request.method !== 'POST') return new Response('method not allowed', { status: 405 });
+      return auth.handleFirebaseToken(request, env);
     }
     if (path === '/auth/google') return auth.startGoogle(request, env);
     if (path === '/auth/google/callback') return auth.handleGoogleCallback(request, env);

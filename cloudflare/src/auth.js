@@ -13,6 +13,11 @@
  *   https://<domain>/auth/google/callback
  *   https://<domain>/auth/facebook/callback
  *
+ * Firebase Authentication sign-in lives further down: the gate gets a
+ * Firebase ID token in the browser and POSTs it to /auth/firebase;
+ * the token is verified against Google's securetoken JWKS and, on
+ * success, mints the same session cookie (provider "firebase").
+ *
  * Session = `<b64url(json)>.<b64url(HMAC-SHA256(json))>` in an HttpOnly
  * cookie; the payload is { provider, sub, name, email, picture, exp }.
  * The id_token returned by Google's token endpoint is accepted because
@@ -240,6 +245,109 @@ async function callbackFacebook(request, env) {
     name: me.name || '',
     email: me.email || '',
     picture: (me.picture && me.picture.data && me.picture.data.url) || '',
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Firebase Authentication — sign-in with a Firebase ID token.         */
+/*                                                                     */
+/* The gate signs the player in with Firebase in the browser (Google   */
+/* provider) and POSTs the resulting ID token to /auth/firebase. The   */
+/* token is verified HERE, properly: RS256 signature against Google's  */
+/* securetoken JWKS (cached, keyed by kid), then iss / aud / exp /     */
+/* iat / sub claims. On success we mint the very same HMAC session     */
+/* cookie the OAuth flows above use — the game server cannot tell      */
+/* the difference. No Firebase Admin SDK and no service-account key:   */
+/* public JWKS verification only.                                      */
+
+const SECURETOKEN_JWKS_URL =
+  'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
+let jwksCache = { keys: new Map(), expiresAt: 0 };
+
+async function securetokenKeys() {
+  if (jwksCache.keys.size && jwksCache.expiresAt > Date.now()) return jwksCache.keys;
+  const res = await fetch(SECURETOKEN_JWKS_URL);
+  if (!res.ok) throw new Error('securetoken jwks http ' + res.status);
+  const body = await res.json();
+  const keys = new Map();
+  for (const jwk of body.keys || []) if (jwk && jwk.kid) keys.set(jwk.kid, jwk);
+  if (!keys.size) throw new Error('securetoken jwks empty');
+  // Honor the response's Cache-Control max-age (Google sends hours).
+  let ttlSec = 3600;
+  const m = /max-age=(\d+)/.exec(res.headers.get('Cache-Control') || '');
+  if (m) ttlSec = Math.min(Math.max(parseInt(m[1], 10), 60), 86400);
+  jwksCache = { keys, expiresAt: Date.now() + ttlSec * 1000 };
+  return keys;
+}
+
+async function verifyFirebaseIdToken(idToken, projectId) {
+  if (typeof idToken !== 'string' || !idToken || idToken.length > 8192) return null;
+  const parts = idToken.split('.');
+  if (parts.length !== 3) return null;
+  let header, claims;
+  try {
+    header = JSON.parse(td.decode(b64urlDecode(parts[0])));
+    claims = JSON.parse(td.decode(b64urlDecode(parts[1])));
+  } catch { return null; }
+  if (!header || header.alg !== 'RS256' || !header.kid || !claims) return null;
+  let jwk = null;
+  try {
+    jwk = (await securetokenKeys()).get(header.kid) || null;
+    if (!jwk) { // unknown kid — keys may have rotated; refetch once
+      jwksCache = { keys: new Map(), expiresAt: 0 };
+      jwk = (await securetokenKeys()).get(header.kid) || null;
+    }
+  } catch { return null; }
+  if (!jwk) return null;
+  let sig;
+  try { sig = b64urlDecode(parts[2]); } catch { return null; }
+  const key = await crypto.subtle
+    .importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify'])
+    .catch(() => null);
+  if (!key) return null;
+  const ok = await crypto.subtle
+    .verify('RSASSA-PKCS1-v1_5', key, sig, te.encode(parts[0] + '.' + parts[1]))
+    .catch(() => false);
+  if (!ok) return null;
+  const now = Math.floor(Date.now() / 1000);
+  if (claims.iss !== 'https://securetoken.google.com/' + projectId) return null;
+  if (claims.aud !== projectId) return null;
+  if (typeof claims.sub !== 'string' || !claims.sub || claims.sub.length > 128) return null;
+  if (typeof claims.exp !== 'number' || claims.exp <= now) return null;
+  // iat sane: not in the future (5 min clock skew) and not ancient.
+  if (typeof claims.iat !== 'number' || claims.iat > now + 300 || claims.iat < now - 7 * 24 * 3600) return null;
+  // Firebase ID tokens live exactly one hour; allow a little slack.
+  if (claims.exp - claims.iat > 3600 + 300) return null;
+  return claims;
+}
+
+/**
+ * POST /auth/firebase  { idToken } → 200 + the session cookie, or 401.
+ * Any verification failure is a plain 401 JSON with no cookie.
+ */
+export async function handleFirebaseToken(request, env) {
+  const unauthorized = () => Response.json({ ok: false, error: 'unauthorized' }, { status: 401 });
+  if (!env.SESSION_SECRET) {
+    // Same rule as the OAuth flows: without the secret there is no
+    // session — refuse safely, never mint an unsigned one.
+    return Response.json({ ok: false, error: 'sign-in is not configured on this server' }, { status: 500 });
+  }
+  let body = null;
+  try { body = await request.json(); } catch { return unauthorized(); }
+  const projectId = env.FIREBASE_PROJECT_ID || 'tore-game';
+  const claims = await verifyFirebaseIdToken(body && body.idToken, projectId);
+  if (!claims) return unauthorized();
+  const email = typeof claims.email === 'string' ? claims.email : '';
+  const payload = {
+    provider: 'firebase',
+    sub: claims.sub,
+    name: (typeof claims.name === 'string' && claims.name) || (email ? email.split('@')[0] : ''),
+    email,
+    picture: typeof claims.picture === 'string' ? claims.picture : '',
+  };
+  const value = await signValue({ ...payload, exp: Date.now() + SESSION_TTL_MS }, env.SESSION_SECRET);
+  return Response.json({ ok: true, user: payload }, {
+    headers: { 'Set-Cookie': cookieHeader(SESSION_COOKIE, value, SESSION_TTL_MS / 1000) },
   });
 }
 
