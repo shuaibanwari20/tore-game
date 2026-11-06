@@ -72,7 +72,8 @@
     border: 1px solid #d9b380; border-radius: 10px; padding: 2px 10px; min-height: 31px;
     color: #f5e7c6; box-shadow: 0 2px 8px rgba(0,0,0,.35);
   }
-  .partnerbar .pname { justify-self: start; min-width: 0; font-size: 14.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .partnerbar .pname { justify-self: start; min-width: 0; display: flex; align-items: center; gap: 6px; font-size: 14.5px; font-weight: 800; }
+  .partnerbar .pname .pnm { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .partnerbar .pteam {
     justify-self: center; font-size: 10.5px; font-weight: 700; white-space: nowrap;
     color: #ffd75e; background: rgba(0,0,0,.3);
@@ -268,6 +269,7 @@
   .pavatar { border-radius: 24%; overflow: hidden; flex: 0 0 auto; display: inline-flex;
     border: 1.5px solid #d9b380; line-height: 0; user-select: none; background: rgba(255,255,255,.07); }
   .pavatar svg { width: 100%; height: 100%; display: block; }
+  .pavatar img { width: 100%; height: 100%; display: block; object-fit: cover; }
   .pavatar.empty { border-radius: 50%; align-items: center; justify-content: center; font-weight: 800; line-height: 1;
     background: rgba(255,255,255,.07); color: rgba(245,231,198,.45); border-style: dashed; box-shadow: none; }
   .hm-gear { width: 42px; height: 42px; margin: 0; padding: 0; flex: 0 0 auto;
@@ -797,7 +799,10 @@ const COUNTRIES = [
   'مصر', 'مراکش', 'الجزایر', 'تونس', 'لیبی', 'سودان', 'اتیوپی', 'کنیا', 'نیجریه', 'آفریقای جنوبی',
 ];
 function validAvatar(av) {
-  return typeof av === 'string' && Object.prototype.hasOwnProperty.call(AVATAR_ART, av);
+  // 'google' is a thirteenth kind: the player's Google profile photo
+  // (rendered from the photo URL, not from AVATAR_ART).
+  return av === 'google' ||
+    (typeof av === 'string' && Object.prototype.hasOwnProperty.call(AVATAR_ART, av));
 }
 function loadProfile() {
   let p = null;
@@ -808,6 +813,7 @@ function loadProfile() {
     name: (typeof p.name === 'string' && p.name.trim()) ? p.name.trim().slice(0, 20) : oldName.slice(0, 20),
     avatar: validAvatar(p.avatar) ? p.avatar : 'av1',
     country: (typeof p.country === 'string' && p.country.trim()) ? p.country.trim() : 'افغانستان',
+    photo: (typeof p.photo === 'string' && p.photo.startsWith('https://')) ? p.photo.slice(0, 300) : '',
   };
 }
 let profile = loadProfile();
@@ -819,27 +825,44 @@ function saveProfile() {
 function myName() {
   return (profile.name || '').trim() || session?.name || 'بازیکن';
 }
+// The {avatar, country} pair every seat message carries; the Google
+// photo rides along ONLY while the 'google' avatar is in use.
+function profileMsg() {
+  const m = { avatar: profile.avatar, country: profile.country };
+  if (profile.avatar === 'google' && profile.photo) m.photo = profile.photo;
+  return m;
+}
 function profilePayload() {
-  return { name: myName(), avatar: profile.avatar, country: profile.country };
+  return { name: myName(), ...profileMsg() };
 }
 
-// One avatar renderer for the top-bar button, the popup and lobby rows:
-// the portrait SVG fills a rounded-square tile at any size. `name` is
-// kept in the signature for the existing call sites; portraits do not
-// depend on it. Any missing/invalid avatar falls back to av1 (default).
-function avatarEl(name, av, px) {
+// One avatar renderer for the top-bar button, the popup, lobby rows and
+// the table name bars: the portrait SVG fills a rounded-square tile at
+// any size; the 'google' kind fills it with the player's Google profile
+// photo instead. `name` is kept in the signature for the existing call
+// sites; portraits do not depend on it. Any missing/invalid avatar (or
+// a 'google' avatar whose photo is gone) falls back to av1 (default).
+function avatarEl(name, av, px, photo) {
   const d = document.createElement('span');
   d.className = 'pavatar';
   if (px) { d.style.width = px + 'px'; d.style.height = px + 'px'; }
-  d.innerHTML = (av && typeof av === 'object' && av.t === 'bot')
-    ? AVATAR_BOT_SVG
-    : AVATAR_ART[validAvatar(av) ? av : 'av1'].svg;
+  if (av && typeof av === 'object' && av.t === 'bot') {
+    d.innerHTML = AVATAR_BOT_SVG;
+  } else if (av === 'google' && typeof photo === 'string' && photo) {
+    const img = document.createElement('img');
+    img.src = photo;
+    img.alt = '';
+    img.referrerPolicy = 'no-referrer';
+    d.appendChild(img);
+  } else {
+    d.innerHTML = AVATAR_ART[(typeof av === 'string' && AVATAR_ART[av]) ? av : 'av1'].svg;
+  }
   return d;
 }
 function renderProfileButton() {
   const slot = $('#home-avatar-slot');
   slot.innerHTML = '';
-  slot.appendChild(avatarEl(profile.name, profile.avatar, 44));
+  slot.appendChild(avatarEl(profile.name, profile.avatar, 44, profile.photo));
   // The player's name sits beside the avatar; placeholder until one is saved.
   $('#home-name').textContent = (profile.name || '').trim() || 'بازیکن توره';
 }
@@ -851,7 +874,7 @@ function connect(onOpen) {
   ws.onclose = () => {
     if (intentionalClose) return;
     $('#connbar').textContent = 'اتصال قطع شد — در حال اتصال دوباره…';
-    setTimeout(() => { if (session) connect(() => send({ type: 'reconnect', code: session.code, token: session.token, avatar: profile.avatar, country: profile.country })); }, 2500);
+    setTimeout(() => { if (session) connect(() => send({ type: 'reconnect', code: session.code, token: session.token, ...profileMsg() })); }, 2500);
   };
 }
 function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
@@ -923,7 +946,7 @@ $('#btn-continue').onclick = () => {
   if (!s || !s.code || !s.token) return updateContinue();
   if (ws) { try { ws.onclose = null; ws.close(); } catch (e) {} ws = null; }
   intentionalClose = false;
-  connect(() => send({ type: 'reconnect', code: s.code, token: s.token, avatar: profile.avatar, country: profile.country }));
+  connect(() => send({ type: 'reconnect', code: s.code, token: s.token, ...profileMsg() }));
 };
 // ---------- profile popup ----------
 // Tapping the top-right avatar opens the popup: pick an avatar, edit the
@@ -936,24 +959,29 @@ function sameAvatar(a, b) { return a === b; }
 function pfRenderPreview() {
   const box = $('#pf-preview');
   box.innerHTML = '';
-  box.appendChild(avatarEl('', pfAvatar, 88));
+  box.appendChild(avatarEl('', pfAvatar, 88, pfAvatar === 'google' ? profile.photo : undefined));
   const cap = document.createElement('span');
   cap.className = 'pf-pvname';
-  cap.textContent = AVATAR_ART[validAvatar(pfAvatar) ? pfAvatar : 'av1'].name;
+  cap.textContent = pfAvatar === 'google'
+    ? 'عکس گوگل'
+    : AVATAR_ART[(typeof pfAvatar === 'string' && AVATAR_ART[pfAvatar]) ? pfAvatar : 'av1'].name;
   box.appendChild(cap);
 }
 function pfRenderGrid() {
   const grid = $('#pf-grid');
   grid.innerHTML = '';
-  avatarChoices().forEach((id) => {
+  // The Google photo is offered as the FIRST tile whenever one exists.
+  const ids = avatarChoices();
+  if (profile.photo) ids.unshift('google');
+  ids.forEach((id) => {
     const cell = document.createElement('button');
     cell.type = 'button';
     const sel = sameAvatar(id, pfAvatar);
     cell.className = 'pf-cell' + (sel ? ' sel' : '');
-    cell.appendChild(avatarEl('', id, 0));
+    cell.appendChild(avatarEl('', id, 0, id === 'google' ? profile.photo : undefined));
     const nm = document.createElement('span');
     nm.className = 'pf-name';
-    nm.textContent = sel ? '✓ انتخاب شد' : AVATAR_ART[id].name;
+    nm.textContent = sel ? '✓ انتخاب شد' : (id === 'google' ? 'عکس گوگل' : AVATAR_ART[id].name);
     cell.appendChild(nm);
     cell.onclick = () => { pfAvatar = id; pfRenderGrid(); pfRenderPreview(); };
     grid.appendChild(cell);
@@ -982,18 +1010,47 @@ $('#ov-profile').addEventListener('click', (e) => { if (e.target === e.currentTa
 $('#btn-profile-save').onclick = () => {
   profile = {
     name: $('#pf-name').value.trim().slice(0, 20),
-    avatar: validAvatar(pfAvatar) ? pfAvatar : 'av1',
+    // 'google' needs its photo; without one it degrades to the default.
+    avatar: (validAvatar(pfAvatar) && (pfAvatar !== 'google' || profile.photo)) ? pfAvatar : 'av1',
     country: $('#pf-country').value || 'افغانستان',
+    photo: profile.photo || '',
   };
   saveProfile();
   closeProfile();
 };
+// Google identity → game profile: on hosts with sign-in (the Cloudflare
+// Worker), /auth/me returns the signed-in account. Adopt the account
+// name when the profile has none yet, and keep the account picture as
+// the profile photo: it becomes the avatar (the 'google' kind) unless
+// the player has deliberately picked one of the twelve portraits — a
+// hand-picked portrait is never overridden. On the plain Node hosts
+// /auth/me does not exist; the fetch simply fails and nothing changes.
+async function initSessionUser() {
+  let user = null;
+  try {
+    const r = await fetch('/auth/me', { credentials: 'same-origin' });
+    if (r.ok) user = await r.json();
+  } catch (e) { /* no auth on this host — nothing to adopt */ }
+  if (!user) return;
+  let changed = false;
+  const acctName = (typeof user.name === 'string' ? user.name : '').trim().slice(0, 20);
+  if (acctName && !profile.name) { profile.name = acctName; changed = true; }
+  const pic = (typeof user.picture === 'string' && user.picture.startsWith('https://'))
+    ? user.picture.slice(0, 300) : '';
+  if (pic && pic !== profile.photo) { profile.photo = pic; changed = true; }
+  if (profile.photo && (profile.avatar === 'av1' || profile.avatar === 'google')) {
+    if (profile.avatar !== 'google') { profile.avatar = 'google'; changed = true; }
+  }
+  if (changed) { saveProfile(); renderProfileButton(); }
+}
+
 // The landing's carpet and hero fan are plain CSS/<img> markup (see the
 // <style> block and #home-fan) — they paint with the page itself and never
 // wait for this script or for __ASSETS__. Only the dynamic bits wire here.
 (function dressHome() {
   renderProfileButton();
   updateContinue();
+  initSessionUser();
 })();
 
 function onMsg(msg) {
@@ -1035,7 +1092,7 @@ function onMsg(msg) {
 
 // resume a previous session on load
 if (session && session.code && session.token) {
-  connect(() => send({ type: 'reconnect', code: session.code, token: session.token, avatar: profile.avatar, country: profile.country }));
+  connect(() => send({ type: 'reconnect', code: session.code, token: session.token, ...profileMsg() }));
 }
 
 // ---------- hand fit ----------
@@ -1499,6 +1556,22 @@ function pileRowHTML(count) {
   return html;
 }
 
+// Seat-bar avatars are memoized per table position: render() rebuilds
+// the bars on every state push, and re-creating a Google photo <img>
+// each time would restart its load on every play. The element is only
+// rebuilt when the seat's avatar identity actually changes.
+const barAvatars = {};
+function barAvatar(pos, s, px) {
+  const key = s.kind + '|' + (s.avatar || '') + '|' + (s.photo || '');
+  if (!barAvatars[pos] || barAvatars[pos].key !== key) {
+    barAvatars[pos] = {
+      key,
+      el: avatarEl(s.name, s.kind === 'bot' ? { t: 'bot' } : s.avatar, px, s.photo),
+    };
+  }
+  return barAvatars[pos].el;
+}
+
 function render(st) {
   if (st.phase === 'lobby') { renderLobby(st); show('scr-lobby'); return; }
   show('scr-game');
@@ -1558,14 +1631,16 @@ function render(st) {
       el.innerHTML = (i !== mySeat ? '<img class="backmini" src="' + ASSET('cards/back.png') + '" alt="">' : '') +
         '<div class="pname">' + crown + (s.name || 'خالی') + '</div>' +
         '<div class="pmeta">' + faNum(s.cards) + '</div>';
+      el.prepend(barAvatar(pos, s, 26));
     } else {
-      // tidy three-group bar: [name + 👑] [team chip] [cards left with back icon]
+      // tidy three-group bar: [avatar + name + 👑] [team chip] [cards left with back icon]
       const kindMark = s.kind === 'human'
         ? '<span class="dot ' + (s.connected ? 'on' : '') + '"></span>' : '';
-      el.innerHTML = '<div class="pname">' + crown + (s.name || 'خالی') + (i === mySeat ? ' (تو)' : '') + '</div>' +
+      el.innerHTML = '<div class="pname"><span class="pnm">' + crown + (s.name || 'خالی') + (i === mySeat ? ' (تو)' : '') + '</span></div>' +
         '<span class="pteam">' + teamLabel(i % 2) + '</span>' +
         '<div class="pmeta">' + kindMark + (i !== mySeat ? '<img class="backmini" src="' + ASSET('cards/back.png') + '" alt="">' : '') +
         '<span><b>' + faNum(s.cards) + '</b> ورق</span></div>';
+      el.querySelector('.pname').prepend(barAvatar(pos, s, 24));
     }
   });
 
@@ -1759,7 +1834,7 @@ function renderLobby(st) {
       nm.textContent = '— خالی —';
       main.appendChild(nm);
     } else {
-      main.appendChild(avatarEl(s.name, s.kind === 'bot' ? { t: 'bot' } : s.avatar, 30));
+      main.appendChild(avatarEl(s.name, s.kind === 'bot' ? { t: 'bot' } : s.avatar, 30, s.photo));
       const nm = document.createElement('span');
       nm.className = 'sr-name';
       nm.textContent = s.name + (i === mySeat ? ' (تو)' : '');
