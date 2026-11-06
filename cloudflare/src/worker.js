@@ -40,7 +40,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261106-badges';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261106-chat';
 const CLIENT_MIN_BYTES = 3_000_000; // the real bundle is ~3.1 MB
 const CLIENT_CACHE_TTL = 86400; // seconds the edge keeps the client copy
 
