@@ -49,7 +49,7 @@ function newCode() {
 }
 
 function emptySeat() {
-  return { kind: 'empty', name: '', token: null, ws: null, connected: false, disconnectAt: null };
+  return { kind: 'empty', name: '', avatar: null, country: '', token: null, ws: null, connected: false, disconnectAt: null };
 }
 
 function createRoom() {
@@ -95,6 +95,7 @@ function stateFor(room, seatIdx) {
     target: G.BANK_LOSE_TARGET,
     seats: room.seats.map((s, i) => ({
       name: s.name, kind: s.kind, connected: s.connected,
+      avatar: s.avatar, country: s.country,
       cards: round ? round.hands[i].length : 0,
     })),
     hand: round ? round.hands[seatIdx].slice() : [],
@@ -252,10 +253,25 @@ function startMatch(room) {
 }
 
 // --------------------------------------------------------- seat lifecycle
-function attachPlayer(ws, room, seatIdx, name) {
+// Profile fields (avatar + country) ride along with create/join/reconnect.
+// The client owns the avatar catalogue (portrait ids 'av1'…'av12'); the
+// server only checks the id against that known set, so a seat can never
+// carry markup or an unbounded string. Anything else becomes null and
+// the client falls back to the default avatar (av1).
+const AVATAR_IDS = ['av1', 'av2', 'av3', 'av4', 'av5', 'av6', 'av7', 'av8', 'av9', 'av10', 'av11', 'av12'];
+function cleanAvatar(av) {
+  return (typeof av === 'string' && AVATAR_IDS.includes(av)) ? av : null;
+}
+function cleanCountry(c) {
+  return String(c || '').trim().slice(0, 40);
+}
+
+function attachPlayer(ws, room, seatIdx, name, prof) {
   const seat = room.seats[seatIdx];
   seat.kind = 'human';
   seat.name = name;
+  seat.avatar = cleanAvatar(prof && prof.avatar);
+  seat.country = cleanCountry(prof && prof.country);
   seat.token = crypto.randomBytes(8).toString('hex');
   seat.ws = ws;
   seat.connected = true;
@@ -292,6 +308,8 @@ setInterval(() => {
           room.seats[i] = emptySeat();
         } else {
           s.kind = 'bot'; // bot takes over the seat and its hand
+          s.avatar = null;
+          s.country = '';
           s.connected = true;
           changed = true;
           pumpTurn(room);
@@ -324,7 +342,7 @@ function handleMessage(ws, msg) {
   switch (msg.type) {
     case 'create': {
       const room = createRoom();
-      attachPlayer(ws, room, 0, cleanName(msg.name));
+      attachPlayer(ws, room, 0, cleanName(msg.name), msg);
       break;
     }
     case 'join': {
@@ -333,7 +351,7 @@ function handleMessage(ws, msg) {
       if (room.phase !== 'lobby') return sendError(ws, 'بازی این اتاق شروع شده است');
       const idx = room.seats.findIndex((s) => s.kind === 'empty');
       if (idx === -1) return sendError(ws, 'اتاق پر است');
-      attachPlayer(ws, room, idx, cleanName(msg.name));
+      attachPlayer(ws, room, idx, cleanName(msg.name), msg);
       break;
     }
     case 'reconnect': {
@@ -343,6 +361,10 @@ function handleMessage(ws, msg) {
       if (idx === -1) return sendError(ws, 'نشست منقضی شده است — اتاق تازه بساز');
       const seat = room.seats[idx];
       if (seat.ws && seat.ws !== ws) { try { seat.ws.close(); } catch (e) {} }
+      // A reconnect may carry the player's current profile (e.g. the seat
+      // was created before profiles existed) — refresh what it carries.
+      const av = cleanAvatar(msg.avatar); if (av) seat.avatar = av;
+      const co = cleanCountry(msg.country); if (co) seat.country = co;
       seat.ws = ws;
       seat.connected = true;
       seat.disconnectAt = null;
