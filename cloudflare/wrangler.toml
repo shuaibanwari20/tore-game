@@ -31,7 +31,7 @@ new_sqlite_classes = ["GameServer"]
 # (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FB_APP_ID, FB_APP_SECRET,
 # SESSION_SECRET) are NOT vars — they go in .dev.vars locally and in
 # `wrangler secret put` in production.
-AUTH_ENABLED = "0"
+AUTH_ENABLED = "1"
 # "1" adds the Facebook button to the sign-in gate. Anything else
 # (including unset) hides it: the Facebook app is still in Development
 # mode, so until it goes Live the gate offers Google only. Flip this
