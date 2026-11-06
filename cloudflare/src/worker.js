@@ -11,6 +11,7 @@
  *   GET  /auth/facebook           start Facebook OAuth
  *   GET  /auth/facebook/callback  Facebook OAuth callback
  *   GET  /auth/logout             clear the session cookie
+ *   GET  /privacy                 privacy policy page (for OAuth consent)
  *
  * The client bundle is the SAME self-contained page the Node build
  * serves, in its Cloudflare flavour (built by ../build-deploy.js +
@@ -43,6 +44,30 @@ function updatingPage(note) {
 <h1>توره</h1>
 <p>بازی در حال به‌روزرسانی است؛ یک دقیقهٔ دیگر دوباره تلاش کن.</p>
 <p style="opacity:.6;font-size:.85em">${note}</p>
+</body></html>`;
+}
+
+function privacyPage() {
+  return `<!doctype html>
+<html lang="fa" dir="rtl"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>حریم خصوصی — بازی توره | Privacy Policy — Tore</title>
+<body style="font-family:Tahoma,Arial,sans-serif;background:#1c1410;color:#f5ead6;line-height:1.9;padding:2rem 1.1rem;max-width:640px;margin:0 auto">
+<h1 style="color:#f2c14e;font-size:1.35rem">حریم خصوصی — بازی توره</h1>
+<p>بازی توره برای ورود از گوگل یا فیسبوک استفاده می‌کند و فقط نام، ایمیل و عکس پروفایل حساب شما را می‌گیرد.</p>
+<p>این اطلاعات فقط برای ساخت حساب بازی و نمایش نام و آواتار شما در بازی استفاده می‌شود؛ به هیچ‌کس فروخته یا برای تبلیغات استفاده نمی‌شود.</p>
+<p>اطلاعات بازی (اتاق‌ها و امتیازها) روی سرور بازی نگهداری می‌شود. با خروج از حساب (Logout)، نشست شما بسته می‌شود.</p>
+<p>برای حذف اطلاعات‌تان ایمیل بزنید: <a href="mailto:shuaibanwari20@gmail.com" style="color:#f2c14e">shuaibanwari20@gmail.com</a></p>
+<p style="opacity:.65;font-size:.85em">آخرین به‌روزرسانی: 2026-11-06</p>
+<hr style="border:none;border-top:1px solid #4a3826;margin:2rem 0">
+<div dir="ltr" lang="en" style="text-align:left">
+<h2 style="color:#f2c14e;font-size:1.2rem">Privacy Policy — Tore</h2>
+<p>Tore uses Google or Facebook sign-in and receives only your name, email address, and profile picture from your account.</p>
+<p>This information is used only to create your game account and to display your name and avatar in the game; it is never sold to anyone or used for advertising.</p>
+<p>Game data (rooms and scores) is stored on the game server. Signing out (Logout) ends your session.</p>
+<p>To have your information deleted, email: <a href="mailto:shuaibanwari20@gmail.com" style="color:#f2c14e">shuaibanwari20@gmail.com</a></p>
+<p style="opacity:.65;font-size:.85em">Last updated: 2026-11-06</p>
+</div>
 </body></html>`;
 }
 
@@ -119,6 +144,12 @@ export default {
     if (path === '/auth/facebook') return auth.startFacebook(request, env);
     if (path === '/auth/facebook/callback') return auth.handleFacebookCallback(request, env);
     if (path === '/auth/logout') return auth.logout();
+
+    if (path === '/privacy') {
+      return new Response(privacyPage(), {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
 
     if ((path === '/' || path === '/index.html') && request.method === 'GET') {
       return serveClient(env);
