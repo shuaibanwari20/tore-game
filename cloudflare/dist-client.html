@@ -444,10 +444,11 @@
           <span id="home-avatar-slot"></span>
           <span class="hm-pname" id="home-name">بازیکن توره</span>
         </button>
-        <button class="hm-gear" id="btn-rules-gear" aria-label="قانون‌های بازی">
+        <button class="hm-gear" id="btn-logout" aria-label="خروج از حساب">
           <svg viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="3.1"/>
-            <path d="M12 5.2v-2.4M12 21.2v-2.4M5.2 12H2.8M21.2 12h-2.4M7.2 7.2L5.5 5.5M18.5 18.5l-1.7-1.7M16.8 7.2l1.7-1.7M5.5 18.5l1.7-1.7"/>
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <path d="M16 17l5-5-5-5"/>
+            <path d="M21 12H9"/>
           </svg>
         </button>
       </div>
@@ -901,7 +902,13 @@ function closeRules() {
   $('#home-main').classList.remove('hidden');
 }
 $('#btn-rules').onclick = openRules;
-$('#btn-rules-gear').onclick = openRules;
+// Logout: clear the Worker session cookie, then reload (the auth gate comes
+// back on the Cloudflare host; on the old Node host /auth/logout 404s — the
+// reload still happens and failures are ignored).
+$('#btn-logout').onclick = () => {
+  const done = () => location.reload();
+  fetch('/auth/logout', { credentials: 'same-origin' }).then(done, done);
+};
 $('#btn-rules-back').onclick = closeRules;
 // Continue: visible ONLY while a saved reconnect token actually exists.
 function savedSession() {
