@@ -1789,11 +1789,17 @@ function renderLobby(st) {
  *  - Gate ON + valid session (/auth/me 200) → play; if the local profile
  *    has no name yet, prefill it from the account name.
  *  - Gate ON + no session (/auth/me 401) → cover the menu with the
- *    sign-in screen (same carpet + gold field style) whose two buttons
+ *    sign-in screen (same carpet + gold field style) whose buttons
  *    start the OAuth flows: /auth/google and /auth/facebook.
+ *
+ * The Facebook button is rendered ONLY when /auth/config reports
+ * fbLive (Worker env FB_LIVE === "1"): the Facebook app is still in
+ * Development mode, where anyone outside the app's roles/testers gets
+ * an error, so until the app goes Live the gate shows Google alone
+ * (the /auth/facebook route itself stays in place, just unlinked).
  */
 (function () {
-  function showGate() {
+  function showGate(fbLive) {
     if (document.getElementById('auth-gate')) return;
     var gate = document.createElement('div');
     gate.id = 'auth-gate';
@@ -1818,6 +1824,13 @@ function renderLobby(st) {
     var btn =
       'display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px 16px;' +
       'border-radius:14px;font-size:16px;font-weight:bold;text-decoration:none;box-sizing:border-box;';
+    // The spacer belongs to the Facebook button: with fbLive off the
+    // chunk is omitted entirely, so the single Google button sits
+    // directly under the subtitle with no empty gap.
+    var fbBtn = fbLive
+      ? '<div style="height:12px"></div>' +
+        '<a href="/auth/facebook" style="' + btn + 'background:#1877f2;color:#fff;box-shadow:0 4px 0 #0d4fae">' + fbF + 'ورود با فیسبوک</a>'
+      : '';
     gate.innerHTML =
       '<div style="width:min(88vw,340px);background:rgba(24,15,7,.92);border:2px solid #d4af37;border-radius:22px;' +
       'padding:28px 22px;text-align:center;color:#f5e7c6;box-shadow:0 18px 50px rgba(0,0,0,.55)">' +
@@ -1825,8 +1838,7 @@ function renderLobby(st) {
       '<div style="margin:6px 0 4px;font-size:15px">بازی ورق چهار نفره — دو تیم، دو به دو</div>' +
       '<div style="margin:0 0 20px;font-size:13px;opacity:.85">برای وارد شدن به بازی، اول با حساب خود وارد شو</div>' +
       '<a href="/auth/google" style="' + btn + 'background:#fff;color:#222;box-shadow:0 4px 0 #b9b9b9">' + googleG + 'ورود با گوگل</a>' +
-      '<div style="height:12px"></div>' +
-      '<a href="/auth/facebook" style="' + btn + 'background:#1877f2;color:#fff;box-shadow:0 4px 0 #0d4fae">' + fbF + 'ورود با فیسبوک</a>' +
+      fbBtn +
       '</div>';
     document.body.appendChild(gate);
   }
@@ -1850,7 +1862,7 @@ function renderLobby(st) {
               } catch (e) { /* profile prefill is best-effort */ }
             });
           }
-          showGate();
+          showGate(cfg.fbLive === true);
         });
       })
       .catch(function () { /* offline etc. — never block the open game */ });

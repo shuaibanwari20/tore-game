@@ -32,3 +32,9 @@ new_sqlite_classes = ["GameServer"]
 # SESSION_SECRET) are NOT vars — they go in .dev.vars locally and in
 # `wrangler secret put` in production.
 AUTH_ENABLED = "0"
+# "1" adds the Facebook button to the sign-in gate. Anything else
+# (including unset) hides it: the Facebook app is still in Development
+# mode, so until it goes Live the gate offers Google only. Flip this
+# to "1" together with the FB app's Live switch — the /auth/facebook
+# routes work either way.
+FB_LIVE = "0"
