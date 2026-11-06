@@ -12,6 +12,7 @@
  *   GET  /auth/facebook/callback  Facebook OAuth callback
  *   GET  /auth/logout             clear the session cookie
  *   GET  /privacy                 privacy policy page (for OAuth consent)
+ *   GET  /data-deletion           data deletion instructions page (for Facebook)
  *
  * The client bundle is the SAME self-contained page the Node build
  * serves, in its Cloudflare flavour (built by ../build-deploy.js +
@@ -66,6 +67,24 @@ function privacyPage() {
 <p>This information is used only to create your game account and to display your name and avatar in the game; it is never sold to anyone or used for advertising.</p>
 <p>Game data (rooms and scores) is stored on the game server. Signing out (Logout) ends your session.</p>
 <p>To have your information deleted, email: <a href="mailto:shuaibanwari20@gmail.com" style="color:#f2c14e">shuaibanwari20@gmail.com</a></p>
+<p style="opacity:.65;font-size:.85em">Last updated: 2026-11-06</p>
+</div>
+</body></html>`;
+}
+
+function dataDeletionPage() {
+  return `<!doctype html>
+<html lang="fa" dir="rtl"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>حذف اطلاعات — بازی توره | Data Deletion — Tore</title>
+<body style="font-family:Tahoma,Arial,sans-serif;background:#1c1410;color:#f5ead6;line-height:1.9;padding:2rem 1.1rem;max-width:640px;margin:0 auto">
+<h1 style="color:#f2c14e;font-size:1.35rem">حذف اطلاعات — بازی توره</h1>
+<p>اگر می‌خواهید اطلاعاتی که بازی توره از حساب گوگل یا فیسبوک شما گرفته (نام، ایمیل و عکس پروفایل) حذف شود، به این ایمیل پیام بفرستید: <a href="mailto:shuaibanwari20@gmail.com" style="color:#f2c14e">shuaibanwari20@gmail.com</a> — در عنوان بنویسید «حذف اطلاعات توره». اطلاعات شما حداکثر تا ۷ روز پس از درخواست، کامل حذف می‌شود. برای حذف فوری، در بازی دکمهٔ خروج (Logout) نشست شما را همان لحظه می‌بندد.</p>
+<p style="opacity:.65;font-size:.85em">آخرین به‌روزرسانی: 2026-11-06</p>
+<hr style="border:none;border-top:1px solid #4a3826;margin:2rem 0">
+<div dir="ltr" lang="en" style="text-align:left">
+<h2 style="color:#f2c14e;font-size:1.2rem">Data Deletion — Tore</h2>
+<p>To delete the data the Tore game received from your Google or Facebook account (name, email and profile picture), email <a href="mailto:shuaibanwari20@gmail.com" style="color:#f2c14e">shuaibanwari20@gmail.com</a> with the subject 'Tore data deletion'. Your data will be fully deleted within 7 days of your request. Signing out with the Logout button ends your session immediately.</p>
 <p style="opacity:.65;font-size:.85em">Last updated: 2026-11-06</p>
 </div>
 </body></html>`;
@@ -147,6 +166,12 @@ export default {
 
     if (path === '/privacy') {
       return new Response(privacyPage(), {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
+
+    if (path === '/data-deletion') {
+      return new Response(dataDeletionPage(), {
         headers: { 'Content-Type': 'text/html; charset=utf-8' },
       });
     }
