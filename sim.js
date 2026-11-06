@@ -951,56 +951,64 @@ async function serverChatRtcChecks() {
     e.send({ type: 'create', name: 'بیرونی' });
     await e.waitFor((m) => m.type === 'room', 'room E');
 
-    // 1) chat relay: text reaches the other members (and echoes to the
-    // sender — clients render from the relay only), with seat + name.
+    // 1) phrase relay: an allowlisted phrase reaches the other members
+    // (and echoes to the sender — clients render from the relay only),
+    // carrying seat + name + kind + value.
     const eMark0 = e.msgs.length;
-    a.send({ type: 'chat', text: 'سلام ټولو ته' });
+    a.send({ type: 'chat', kind: 'phrase', value: 'ښه حرکت' });
     const chatB = await b.waitFor((m) => m.type === 'chat', 'chat at B');
-    check(chatB.seat === roomA.seat && chatB.name === 'احمد' && chatB.text === 'سلام ټولو ته',
-      'server: chat relay reaches room members with seat/name/text');
+    check(chatB.seat === roomA.seat && chatB.name === 'احمد' && chatB.kind === 'phrase' && chatB.value === 'ښه حرکت',
+      'server: chat phrase relay reaches room members with seat/name/kind/value');
     const chatA = await a.waitFor((m) => m.type === 'chat', 'chat echo at A');
-    check(chatA.seat === roomA.seat && chatA.text === 'سلام ټولو ته',
+    check(chatA.seat === roomA.seat && chatA.kind === 'phrase' && chatA.value === 'ښه حرکت',
       'server: chat echoes to the sender (render-from-relay)');
     await sleep(300);
     check(e.countFrom(eMark0, (m) => m.type === 'chat') === 0,
       'server: chat never leaks into another room');
 
-    // 2) over-length chat is clipped to exactly 200 chars.
+    // 2) emoji and sticker relays arrive intact.
     await sleep(900);
-    a.send({ type: 'chat', text: 'x'.repeat(250) });
-    const chatLong = await b.waitFor((m) => m.type === 'chat' && m.text.length > 50, 'long chat at B');
-    check(chatLong.text.length === 200, 'server: chat over 200 chars clipped to 200');
+    a.send({ type: 'chat', kind: 'emoji', value: '😂' });
+    const chatEm = await b.waitFor((m) => m.type === 'chat' && m.kind === 'emoji', 'emoji chat at B');
+    check(chatEm.value === '😂', 'server: chat emoji relayed intact');
+    await sleep(900);
+    b.send({ type: 'chat', kind: 'sticker', value: 'st1' });
+    const chatSt = await a.waitFor((m) => m.type === 'chat' && m.kind === 'sticker', 'sticker chat at A');
+    check(chatSt.value === 'st1' && chatSt.seat === roomB.seat, 'server: chat sticker relayed intact');
 
-    // 3) control characters are stripped; whitespace-only is dropped.
+    // 3) anything NOT on the allowlists is dropped: an old-style free
+    // text frame, a made-up phrase, a bad sticker id, an unknown kind.
     await sleep(900);
     const aMark1 = a.msgs.length;
-    b.send({ type: 'chat', text: 'ab\u0007c\u0000d\n' });
-    const chatCtl = await a.waitFrom(aMark1, (m) => m.type === 'chat', 'control-char chat at A');
-    check(chatCtl.text === 'abcd', 'server: chat control characters stripped');
-    b.send({ type: 'chat', text: '   ' });
-    await sleep(400);
-    check(a.countFrom(aMark1, (m) => m.type === 'chat') === 1,
-      'server: empty chat dropped');
+    const bMark1 = b.msgs.length;
+    b.send({ type: 'chat', text: 'سلام ټولو ته' });
+    b.send({ type: 'chat', kind: 'phrase', value: 'متن آزاد دلخواه' });
+    b.send({ type: 'chat', kind: 'sticker', value: 'st99' });
+    b.send({ type: 'chat', kind: 'video', value: 'st1' });
+    await sleep(500);
+    check(a.countFrom(aMark1, (m) => m.type === 'chat') === 0 &&
+      b.countFrom(bMark1, (m) => m.type === 'chat') === 0,
+      'server: free text / non-allowlist chat dropped');
 
-    // 4) rate limit: a second chat within 800 ms is dropped; after the
-    // window the next one goes through.
+    // 4) rate limit: a second valid chat within 800 ms is dropped;
+    // after the window the next one goes through.
     await sleep(900);
     const bMark2 = b.msgs.length;
-    a.send({ type: 'chat', text: 'لومړی' });
-    await a.waitFrom(0, (m) => m.type === 'chat' && m.text === 'لومړی', 'rate-limit first at A');
-    a.send({ type: 'chat', text: 'دوهم' });
+    a.send({ type: 'chat', kind: 'phrase', value: 'سلام' });
+    await a.waitFrom(0, (m) => m.type === 'chat' && m.value === 'سلام', 'rate-limit first at A');
+    a.send({ type: 'chat', kind: 'phrase', value: 'مننه' });
     await sleep(500);
-    check(b.countFrom(bMark2, (m) => m.type === 'chat' && m.text === 'دوهم') === 0,
+    check(b.countFrom(bMark2, (m) => m.type === 'chat' && m.value === 'مننه') === 0,
       'server: chat faster than 1/800ms dropped');
     await sleep(900);
-    a.send({ type: 'chat', text: 'درېم' });
-    await b.waitFrom(bMark2, (m) => m.type === 'chat' && m.text === 'درېم', 'rate-limit third at B');
+    a.send({ type: 'chat', kind: 'phrase', value: 'بیا!' });
+    await b.waitFrom(bMark2, (m) => m.type === 'chat' && m.value === 'بیا!', 'rate-limit third at B');
     check(true, 'server: chat allowed again after the 800 ms window');
 
     // 5) a socket that never joined a room cannot chat into one.
     const d = await openClient();
     const bMark3 = b.msgs.length;
-    d.send({ type: 'chat', text: 'له بهره' });
+    d.send({ type: 'chat', kind: 'phrase', value: 'سلام' });
     await sleep(400);
     check(b.countFrom(bMark3, (m) => m.type === 'chat') === 0,
       'server: chat from a seat not in a room ignored');
@@ -1039,8 +1047,8 @@ async function serverChatRtcChecks() {
 
     // 8) the room still works after all the dropped traffic.
     await sleep(900);
-    a.send({ type: 'chat', text: 'وروستی' });
-    await b.waitFor((m) => m.type === 'chat' && m.text === 'وروستی', 'post-checks chat at B');
+    a.send({ type: 'chat', kind: 'phrase', value: 'ښه لوبه' });
+    await b.waitFor((m) => m.type === 'chat' && m.value === 'ښه لوبه', 'post-checks chat at B');
     check(true, 'server: room healthy after chat/rtc checks');
   } catch (e2) {
     check(false, 'server chat/rtc protocol checks', e2.message);
