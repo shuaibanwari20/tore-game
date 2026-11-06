@@ -286,8 +286,8 @@
       ⭐ <b>تکان:</b> خالی را شروع کنی که هیچ‌کس ندارد → فقط یک <b>ستارهٔ قرمز (★)</b> برای تیمت؛ تکان هیچ تاوانی به این دست اضافه نمی‌کند.<br>
       ⭐ <b>تکان معلق:</b> آن ستاره یعنی طلبِ <b>30 تاوان</b> از جمع‌شدهٔ تیمِ حریف — هر وقت جمع‌شدهٔ حریف به <b>30</b> برسد یا از آن بگذرد، 30 تاوان از بانک او کم و به بانک تیمِ تکان‌دار داده می‌شود؛ تا آن وقت فقط ستاره می‌ماند و هیچ پولی جابه‌جا نمی‌شود.<br>
       🙋 دست آخر: اگر پیش از بازی بگویی <b>«13 هست»</b>، تکان برایت حساب نمی‌شود.<br>
-      ⚠️ تیمی که در یک دست بیشتر از <b>21</b> تاوان بگیرد، برایش <b>30</b> تاوان نوشته می‌شود.<br>
-      🏦 تاوانِ یک دست اگر <b>10 یا بیشتر</b> باشد در بانکت <b>جمع می‌شود</b>؛ کمتر از 10 باشد، حساب نمی‌شود.
+      🏦 <b>جمع‌شدن در بانک (بندهای ده‌تایی):</b> تاوانِ نهایی هر دست این‌طور در بانکت جمع می‌شود: 0 تا 9 → <b>0</b> · 10 تا 15 → <b>10</b> · 16 تا 20 → <b>20</b> · 21 تا 30 → <b>30</b>.<br>
+      ⚖️ <b>مساوی 15-15:</b> تیمی که <b>ماتکه کالا</b> (Q♠) را گرفته، <b>20</b> جمع می‌کند و تیمِ دیگر <b>10</b>.
     </div>
   </section>
 
@@ -351,9 +351,9 @@
     <div id="ov-pend" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
     <div id="ov-exec" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
     <div class="row big"><span>تاوان نهایی</span><b id="ov-tw">—</b></div>
+    <div class="row"><span>به بانک اضافه شد</span><span><small>ما </small><b id="ov-add-us">0</b> · <small>حریف </small><b id="ov-add-them">0</b></span></div>
     <div id="ov-bump" style="font-size:13.5px; opacity:.9; padding:2px 2px 0"></div>
     <div class="row"><span>تاوان جمع‌شده (بانک)</span><span><small>ما </small><b id="ov-bk-us">0</b> · <small>حریف </small><b id="ov-bk-them">0</b></span></div>
-    <div id="ov-wipe" style="font-size:13.5px; opacity:.9; padding:2px 2px 0"></div>
     <div class="row"><span>ماتکه کالا (Q♠) را گرفت</span><b id="ov-qs">—</b></div>
     <div id="ov-tie" style="display:none; font-size:13.5px; opacity:.9; padding:4px 2px 0"></div>
     <div style="margin-top:10px; font-size:13.5px; opacity:.85">دست بعدی به‌زودی شروع می‌شود…</div>
@@ -1160,27 +1160,31 @@ function render(st) {
     }
     $('#ov-tw').textContent = 'تیمِ (' + teamNames(myTeam) + '): ' + faNum(r.tawan[myTeam]) +
       ' — تیمِ (' + teamNames(them) + '): ' + faNum(r.tawan[them]);
-    const bumpedTeams = [0, 1].filter((t) => r.bumped && r.bumped[t]);
-    $('#ov-bump').style.display = bumpedTeams.length ? '' : 'none';
-    if (bumpedTeams.length) {
-      $('#ov-bump').textContent = bumpedTeams.map((t) =>
-        '⚠️ تیمِ (' + teamNames(t) + '): بیشتر از 21 — 30 نوشته شد').join(' · ');
+    // The amounts added to the bank are the BANDED values (بندهای
+    // ده‌تایی): the raw final banks as 0 / 10 / 20 / 30. Show the
+    // additions, and spell out every conversion where banding changed
+    // the number (e.g. «11 → 10») — except the 15–15 ماتکه کالا boost,
+    // which the tie line below explains.
+    const bankedAdd = r.banked || [0, 0];
+    $('#ov-add-us').textContent = faNum(bankedAdd[myTeam]);
+    $('#ov-add-them').textContent = faNum(bankedAdd[them]);
+    const boostTeam = (r.qsTieBoost === 0 || r.qsTieBoost === 1) ? r.qsTieBoost : -1;
+    const bandedTeams = [0, 1].filter((t) => t !== boostTeam && bankedAdd[t] !== r.tawan[t]);
+    $('#ov-bump').style.display = bandedTeams.length ? '' : 'none';
+    if (bandedTeams.length) {
+      $('#ov-bump').textContent = bandedTeams.map((t) =>
+        '🏦 تیمِ (' + teamNames(t) + '): ' + faNum(r.tawan[t]) + ' → ' + faNum(bankedAdd[t])).join(' · ');
     }
     $('#ov-bk-us').textContent = faNum(r.bankedTawan ? r.bankedTawan[myTeam] : 0);
     $('#ov-bk-them').textContent = faNum(r.bankedTawan ? r.bankedTawan[them] : 0);
-    const wiped = [myTeam, them].filter((t) => r.tawan[t] < 10);
-    $('#ov-wipe').style.display = wiped.length ? '' : 'none';
-    if (wiped.length) {
-      $('#ov-wipe').textContent = wiped.map((t) =>
-        'تاوان ' + teamLabel(t) + ' (' + faNum(r.tawan[t]) + ') کمتر از 10 بود — حساب نشد').join(' · ');
-    }
     $('#ov-qs').textContent = teamLabel(r.qsTeam);
-    // A tied final tawan is just a tie now (no points, no Q♠ verdict):
-    // a plain note, and both teams bank their own equal tawan.
+    // A tied final can only be 15–15 (the card pool is 30): the team
+    // that captured ماتکه کالا (Q♠) banks 20, the other team banks 10.
     const tiedFinal = r.tawan[0] === r.tawan[1];
     $('#ov-tie').style.display = tiedFinal ? '' : 'none';
     if (tiedFinal) {
-      $('#ov-tie').textContent = '⚖️ مساوی — تاوانِ نهایی دو تیم برابر شد؛ هر تیم تاوان خودش را بانک می‌کند';
+      $('#ov-tie').textContent = '⚖️ مساوی 15-15 — ماتکه کالا (Q♠) را تیمِ (' + teamNames(r.qsTeam) +
+        ') گرفت: آن تیم 20 جمع می‌کند و تیمِ دیگر 10';
     }
   }
   $('#ov-match').classList.toggle('show', st.phase === 'matchEnd');
