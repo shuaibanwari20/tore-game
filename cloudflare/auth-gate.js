@@ -6,8 +6,16 @@
  *  - Gate ON + valid session (/auth/me 200) → play; if the local profile
  *    has no name yet, prefill it from the account name.
  *  - Gate ON + no session (/auth/me 401) → cover the menu with the
- *    sign-in screen (same carpet + gold field style) whose buttons
- *    start the OAuth flows: /auth/google and /auth/facebook.
+ *    sign-in screen (same carpet + gold field style).
+ *
+ * Google sign-in runs through Firebase Authentication in the browser:
+ * the pinned Firebase JS SDK is loaded as ES modules from gstatic,
+ * «ورود با گوگل» runs signInWithPopup (falling back to
+ * signInWithRedirect when the popup fails, e.g. mobile Safari), and
+ * the resulting ID token is POSTed to /auth/firebase, which verifies
+ * it server-side and sets the session cookie; the page then reloads.
+ * The hand-rolled Google OAuth routes stay on the Worker but the gate
+ * no longer links to them.
  *
  * The Facebook button is rendered ONLY when /auth/config reports
  * fbLive (Worker env FB_LIVE === "1"): the Facebook app is still in
@@ -16,6 +24,86 @@
  * (the /auth/facebook route itself stays in place, just unlinked).
  */
 (function () {
+  // Public Firebase web config — safe to embed (it identifies the
+  // Firebase project; it is not a secret).
+  var FIREBASE_CONFIG = {
+    apiKey: 'AIzaSyC-oAgspSv6Zb2R-FVs_KXtrrhg8rc1zFM',
+    authDomain: 'tore-game.firebaseapp.com',
+    projectId: 'tore-game',
+    appId: '1:162385253173:web:e51c95272435ccd12db27c',
+    messagingSenderId: '162385253173'
+  };
+  var FIREBASE_APP_URL = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+  var FIREBASE_AUTH_URL = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+  var ERR_TEXT = 'ورود ناموفق بود؛ دوباره تلاش کن';
+
+  var fbReady = null;
+  function firebaseAuth() {
+    if (!fbReady) {
+      fbReady = Promise.all([import(FIREBASE_APP_URL), import(FIREBASE_AUTH_URL)])
+        .then(function (mods) {
+          var app = mods[0].initializeApp(FIREBASE_CONFIG);
+          return { authMod: mods[1], auth: mods[1].getAuth(app) };
+        });
+    }
+    return fbReady;
+  }
+
+  function showGateError() {
+    var el = document.getElementById('auth-gate-err');
+    if (el) { el.textContent = ERR_TEXT; el.style.display = 'block'; }
+  }
+
+  // Firebase user → ID token → Worker session cookie → reload.
+  function exchangeWithServer(user) {
+    return user.getIdToken().then(function (idToken) {
+      return fetch('/auth/firebase', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: idToken })
+      });
+    }).then(function (r) {
+      if (r.ok) { location.reload(); return; }
+      throw new Error('auth/firebase status ' + r.status);
+    });
+  }
+
+  function googleSignIn(btn) {
+    var errEl = document.getElementById('auth-gate-err');
+    if (errEl) errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.style.opacity = '.6';
+    function reenable() { btn.disabled = false; btn.style.opacity = ''; }
+    firebaseAuth().then(function (fb) {
+      var provider = new fb.authMod.GoogleAuthProvider();
+      return fb.authMod.signInWithPopup(fb.auth, provider).then(
+        function (cred) { return { user: cred.user }; },
+        function () {
+          // Popup blocked/failed (mobile Safari …) — full-page flow;
+          // the result is picked up by handleRedirectResult on return.
+          return fb.authMod.signInWithRedirect(fb.auth, provider)
+            .then(function () { return null; });
+        }
+      );
+    }).then(function (res) {
+      if (res && res.user) return exchangeWithServer(res.user);
+    }).catch(function () {
+      reenable();
+      showGateError();
+    });
+  }
+
+  // After a redirect sign-in the page reloads back here with a pending
+  // result; exchange it for the session cookie right away.
+  function handleRedirectResult() {
+    firebaseAuth().then(function (fb) {
+      return fb.authMod.getRedirectResult(fb.auth);
+    }).then(function (cred) {
+      if (cred && cred.user) return exchangeWithServer(cred.user);
+    }).catch(function () { showGateError(); });
+  }
+
   function showGate(fbLive) {
     if (document.getElementById('auth-gate')) return;
     var gate = document.createElement('div');
@@ -54,10 +142,17 @@
       '<div style="font-size:44px;font-weight:900;color:#f2c14e;line-height:1.1">توره</div>' +
       '<div style="margin:6px 0 4px;font-size:15px">بازی ورق چهار نفره — دو تیم، دو به دو</div>' +
       '<div style="margin:0 0 20px;font-size:13px;opacity:.85">برای وارد شدن به بازی، اول با حساب خود وارد شو</div>' +
-      '<a href="/auth/google" style="' + btn + 'background:#fff;color:#222;box-shadow:0 4px 0 #b9b9b9">' + googleG + 'ورود با گوگل</a>' +
+      '<button type="button" id="auth-google-btn" style="' + btn +
+      'background:#fff;color:#222;box-shadow:0 4px 0 #b9b9b9;border:none;cursor:pointer;font-family:inherit">' +
+      googleG + 'ورود با گوگل</button>' +
       fbBtn +
+      '<div id="auth-gate-err" style="display:none;margin-top:14px;font-size:13px;color:#ff9d8a"></div>' +
       '</div>';
     document.body.appendChild(gate);
+    document.getElementById('auth-google-btn').addEventListener('click', function () {
+      googleSignIn(this);
+    });
+    handleRedirectResult();
   }
 
   function init() {

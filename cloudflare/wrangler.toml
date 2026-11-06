@@ -38,3 +38,7 @@ AUTH_ENABLED = "0"
 # to "1" together with the FB app's Live switch — the /auth/facebook
 # routes work either way.
 FB_LIVE = "0"
+# Firebase Authentication project the gate signs in against and whose
+# ID tokens /auth/firebase verifies (iss/aud). Public identifier, not
+# a secret; the matching public web config lives in auth-gate.js.
+FIREBASE_PROJECT_ID = "tore-game"
