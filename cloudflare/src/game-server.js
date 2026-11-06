@@ -72,17 +72,24 @@ function cleanName(name) {
   const n = String(name || '').trim().slice(0, 20);
   return n || 'بازیکن';
 }
-// Chat / voice relay — same rules as the Node server: chat text is
-// cleaned (control characters stripped, 200-char cap, one message per
-// 800 ms per seat) and fanned out to the whole room INCLUDING the
-// sender; RTC signaling goes to exactly one human seat in the same
-// room (~16 KB cap); the audio itself is peer-to-peer.
-const CHAT_MAX_CHARS = 200;
+// Chat / voice relay — same rules as the Node server: chat is
+// PRESET-ONLY (no free text): {type:'chat', kind, value} is relayed
+// only when value is an exact member of the allowlist for its kind;
+// anything else (including old-style {text} frames) is dropped. A
+// valid message fans out to the whole room INCLUDING the sender, one
+// per 800 ms per seat; RTC signaling goes to exactly one human seat
+// in the same room (~16 KB cap); the audio itself is peer-to-peer.
+const CHAT_PHRASES = ['سلام', 'ښه حرکت', 'ښه لوبه', 'هاهاها', 'مننه', 'بخښنه!', 'ژر شه!', 'افرین!', 'اوس نه!', 'وای خدای', 'ښه بخت', 'بیا!'];
+const CHAT_EMOJIS = ['😎', '😂', '😍', '😭', '😡', '👊', '😮', '👍', '❤️', '🔥'];
+const CHAT_STICKERS = ['st1', 'st2', 'st3', 'st4', 'st5', 'st6', 'st7', 'st8', 'st9'];
 const CHAT_MIN_INTERVAL_MS = 800;
 const RTC_MAX_BYTES = 16384;
-function cleanChatText(t) {
-  if (typeof t !== 'string') return '';
-  return t.replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim().slice(0, CHAT_MAX_CHARS);
+function cleanChat(kind, value) {
+  if (typeof value !== 'string') return null;
+  if (kind === 'phrase' && CHAT_PHRASES.includes(value)) return { kind, value };
+  if (kind === 'emoji' && CHAT_EMOJIS.includes(value)) return { kind, value };
+  if (kind === 'sticker' && CHAT_STICKERS.includes(value)) return { kind, value };
+  return null;
 }
 /** Seat display name: the player's own profile name wins; when it is
  *  empty and the player is signed in, default to the account name. */
@@ -681,12 +688,12 @@ export class GameServer {
         if (!room) return;
         const seat = room.seats[att.seat];
         if (!seat || seat.kind !== 'human') return;
-        const text = cleanChatText(msg.text);
-        if (!text) return;
+        const c = cleanChat(msg.kind, msg.value);
+        if (!c) return; // not on the preset allowlists — drop silently
         const now = Date.now();
         if (seat.lastChatAt && now - seat.lastChatAt < CHAT_MIN_INTERVAL_MS) return; // too fast — drop silently
         seat.lastChatAt = now;
-        this._broadcastEvent(room, { type: 'chat', seat: att.seat, name: seat.name, text, ts: now });
+        this._broadcastEvent(room, { type: 'chat', seat: att.seat, name: seat.name, kind: c.kind, value: c.value, ts: now });
         break;
       }
       case 'voice': {
