@@ -7,6 +7,12 @@
  *                                 answers the STANDALONE GATE PAGE with
  *                                 401 instead (src/gate-page.js) — the
  *                                 bundle is never sent signed-out.
+ *   GET  /stickers/stN.gif        the chat GIF stickers (N = 1..9),
+ *                                 fetched from this repo's cloudflare/
+ *                                 stickers/ folder and edge-cached, the
+ *                                 same pattern as the client bundle
+ *                                 (STICKERS_URL overrides the base URL
+ *                                 for local testing).
  *   GET  /ws                      WebSocket upgrade → GameServer DO
  *   GET  /auth/config             { enabled, fbLive } — gate state
  *   GET  /auth/me                 session user JSON, or 401
@@ -40,7 +46,9 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261106-chat';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261106-stickers';
+const STICKER_URL_BASE_DEFAULT =
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/stickers/';
 const CLIENT_MIN_BYTES = 3_000_000; // the real bundle is ~3.1 MB
 const CLIENT_CACHE_TTL = 86400; // seconds the edge keeps the client copy
 
@@ -135,11 +143,48 @@ async function serveClient(env) {
   });
 }
 
+async function serveSticker(env, name) {
+  const src = (env.STICKERS_URL || STICKER_URL_BASE_DEFAULT) + name;
+  const cacheKey = new Request(src, { method: 'GET' });
+  let cache = null;
+  try {
+    cache = caches.default;
+    const hit = await cache.match(cacheKey);
+    if (hit) return hit;
+  } catch { cache = null; }
+
+  try {
+    const res = await fetch(src, { headers: { 'User-Agent': 'tore-game-worker' } });
+    if (res.ok) {
+      const buf = await res.arrayBuffer();
+      if (buf.byteLength > 0) {
+        const gif = new Response(buf, {
+          headers: {
+            'Content-Type': 'image/gif',
+            'Cache-Control': 'public, max-age=' + CLIENT_CACHE_TTL,
+          },
+        });
+        if (cache) { try { await cache.put(cacheKey, gif.clone()); } catch { /* serve anyway */ } }
+        return gif;
+      }
+    }
+  } catch { /* fall through to 404 */ }
+  return new Response('not found', { status: 404 });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
     const authEnabled = env.AUTH_ENABLED === '1';
+
+    if (path.startsWith('/stickers/') && request.method === 'GET') {
+      // Chat GIF stickers: only the known set exists (st1…st9). They
+      // are public images — no session needed to load one.
+      const name = path.slice('/stickers/'.length);
+      if (/^st[1-9]\.gif$/.test(name)) return serveSticker(env, name);
+      return new Response('not found', { status: 404 });
+    }
 
     if (path === '/ws') {
       if (request.headers.get('Upgrade') !== 'websocket') {
