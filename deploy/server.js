@@ -24,12 +24,28 @@ const TRICK_PAUSE_MS = 1600;      // completed trick stays on the table before i
 const RECONNECT_GRACE_MS = 120000; // seat+hand kept for a reconnecting player
 
 const INDEX_HTML = fs.readFileSync(path.join(__dirname, 'index.html'));
+const STICKERS_DIR = path.join(__dirname, 'stickers');
 
 const httpServer = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
   if (url === '/' || url === '/index.html') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     return res.end(INDEX_HTML);
+  }
+  // The chat GIF stickers are the one asset served as files (never
+  // inlined into the bundle, so it stays light): /stickers/stN.gif
+  // from ./stickers. The name is pinned to the known set — no other
+  // path under this server exists.
+  if (url.startsWith('/stickers/')) {
+    const name = url.slice('/stickers/'.length);
+    if (/^st[1-9]\.gif$/.test(name)) {
+      const full = path.join(STICKERS_DIR, name);
+      if (fs.existsSync(full)) {
+        res.writeHead(200, { 'Content-Type': 'image/gif', 'Cache-Control': 'public, max-age=86400' });
+        return fs.createReadStream(full).pipe(res);
+      }
+    }
+    res.writeHead(404); return res.end('not found');
   }
   res.writeHead(404); return res.end('not found');
 });
@@ -349,22 +365,33 @@ setInterval(() => {
 }, 10000);
 
 // ------------------------------------------------- chat / voice relay
-// In-room text chat and WebRTC voice ride the same socket. The server
-// is a dumb, strict relay for both: chat text is cleaned (control
-// characters stripped, 200-char cap, one message per 800 ms per seat)
-// and fanned out to the whole room INCLUDING the sender — clients
-// render chat only from the relay. RTC signaling is forwarded to ONE
-// target seat in the same room (SDP/ICE JSON, ~16 KB cap); the audio
-// itself is peer-to-peer and never touches this server. Voice on/off
-// is broadcast so clients can show who has a live mic (and the flag
+// In-room chat and WebRTC voice ride the same socket. Chat is
+// PRESET-ONLY — there is no free text: the client sends
+// {type:'chat', kind, value} and value must be an exact member of the
+// allowlist for its kind (the same lists the client panel offers).
+// Anything else — including old-style {text} frames — is dropped
+// silently. A valid message is fanned out to the whole room INCLUDING
+// the sender; clients render it only from the relay, as a bubble over
+// the sender's badge. One message per 800 ms per seat. The sticker
+// GIFs themselves are static files (the stickers folder beside this
+// server, served by the HTTP layer above); only the sticker id
+// crosses the socket. RTC signaling is forwarded to ONE target seat
+// in the same room (SDP/ICE JSON, ~16 KB cap); the audio itself is
+// peer-to-peer and never touches this server. Voice on/off is
+// broadcast so clients can show who has a live mic (and the flag
 // also rides in every state push, for late joiners and reconnects).
-const CHAT_MAX_CHARS = 200;
+const CHAT_PHRASES = ['سلام', 'ښه حرکت', 'ښه لوبه', 'هاهاها', 'مننه', 'بخښنه!', 'ژر شه!', 'افرین!', 'اوس نه!', 'وای خدای', 'ښه بخت', 'بیا!'];
+const CHAT_EMOJIS = ['😎', '😂', '😍', '😭', '😡', '👊', '😮', '👍', '❤️', '🔥'];
+const CHAT_STICKERS = ['st1', 'st2', 'st3', 'st4', 'st5', 'st6', 'st7', 'st8', 'st9'];
 const CHAT_MIN_INTERVAL_MS = 800;
 const RTC_MAX_BYTES = 16384;
 
-function cleanChatText(t) {
-  if (typeof t !== 'string') return '';
-  return t.replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim().slice(0, CHAT_MAX_CHARS);
+function cleanChat(kind, value) {
+  if (typeof value !== 'string') return null;
+  if (kind === 'phrase' && CHAT_PHRASES.includes(value)) return { kind, value };
+  if (kind === 'emoji' && CHAT_EMOJIS.includes(value)) return { kind, value };
+  if (kind === 'sticker' && CHAT_STICKERS.includes(value)) return { kind, value };
+  return null;
 }
 
 // -------------------------------------------------------------- ws layer
@@ -464,12 +491,12 @@ function handleMessage(ws, msg) {
       if (!room) return;
       const seat = room.seats[ws._seat];
       if (!seat || seat.kind !== 'human') return;
-      const text = cleanChatText(msg.text);
-      if (!text) return;
+      const c = cleanChat(msg.kind, msg.value);
+      if (!c) return; // not on the preset allowlists — drop silently
       const now = Date.now();
       if (seat.lastChatAt && now - seat.lastChatAt < CHAT_MIN_INTERVAL_MS) return; // too fast — drop silently
       seat.lastChatAt = now;
-      broadcastEvent(room, { type: 'chat', seat: ws._seat, name: seat.name, text, ts: now });
+      broadcastEvent(room, { type: 'chat', seat: ws._seat, name: seat.name, kind: c.kind, value: c.value, ts: now });
       break;
     }
     case 'voice': {
