@@ -1,0 +1,20 @@
+{
+  "name": "tore-game-cloudflare",
+  "private": true,
+  "version": "0.1.0",
+  "description": "TORE (توره) — Cloudflare Workers + Durable Objects port (Phase 2: Workers Builds go-live prep)",
+  "scripts": {
+    "build": "echo \"tore-game: nothing to build - the client dist is pre-built and committed (dist-client.html); regenerate it with: npm run build:client\"",
+    "sync": "node scripts/sync-modules.mjs",
+    "build:client": "node scripts/build-client.mjs",
+    "dev": "wrangler dev",
+    "test:open": "node test/test-open.mjs",
+    "test:auth": "node test/test-auth.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.22.1"
+  }
+}
