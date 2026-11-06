@@ -49,7 +49,7 @@ function newCode() {
 }
 
 function emptySeat() {
-  return { kind: 'empty', name: '', avatar: null, country: '', photo: null, token: null, ws: null, connected: false, disconnectAt: null };
+  return { kind: 'empty', name: '', avatar: null, country: '', photo: null, token: null, ws: null, connected: false, disconnectAt: null, voiceOn: false, lastChatAt: 0 };
 }
 
 function createRoom() {
@@ -96,6 +96,7 @@ function stateFor(room, seatIdx) {
     seats: room.seats.map((s, i) => ({
       name: s.name, kind: s.kind, connected: s.connected,
       avatar: s.avatar, country: s.country, photo: s.photo,
+      voice: !!s.voiceOn,
       cards: round ? round.hands[i].length : 0,
     })),
     hand: round ? round.hands[seatIdx].slice() : [],
@@ -304,6 +305,12 @@ function onDisconnect(ws) {
   seat.ws = null;
   seat.connected = false;
   seat.disconnectAt = Date.now();
+  if (seat.voiceOn) {
+    // Voice is opt-in per connection: a gone mic is a silent mic, and
+    // the room hears about it so peers tear the connection down.
+    seat.voiceOn = false;
+    broadcastEvent(room, { type: 'voice', seat: ws._seat, on: false });
+  }
   broadcastState(room);
 }
 
@@ -322,6 +329,7 @@ setInterval(() => {
           s.avatar = null;
           s.country = '';
           s.photo = null;
+          s.voiceOn = false;
           s.connected = true;
           changed = true;
           pumpTurn(room);
@@ -339,6 +347,25 @@ setInterval(() => {
     }
   }
 }, 10000);
+
+// ------------------------------------------------- chat / voice relay
+// In-room text chat and WebRTC voice ride the same socket. The server
+// is a dumb, strict relay for both: chat text is cleaned (control
+// characters stripped, 200-char cap, one message per 800 ms per seat)
+// and fanned out to the whole room INCLUDING the sender — clients
+// render chat only from the relay. RTC signaling is forwarded to ONE
+// target seat in the same room (SDP/ICE JSON, ~16 KB cap); the audio
+// itself is peer-to-peer and never touches this server. Voice on/off
+// is broadcast so clients can show who has a live mic (and the flag
+// also rides in every state push, for late joiners and reconnects).
+const CHAT_MAX_CHARS = 200;
+const CHAT_MIN_INTERVAL_MS = 800;
+const RTC_MAX_BYTES = 16384;
+
+function cleanChatText(t) {
+  if (typeof t !== 'string') return '';
+  return t.replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim().slice(0, CHAT_MAX_CHARS);
+}
 
 // -------------------------------------------------------------- ws layer
 wss.on('connection', (ws) => {
@@ -430,6 +457,47 @@ function handleMessage(ws, msg) {
         sendError(ws, why);
         send(ws, stateFor(room, ws._seat));
       }
+      break;
+    }
+    case 'chat': {
+      const room = rooms.get(ws._roomCode);
+      if (!room) return;
+      const seat = room.seats[ws._seat];
+      if (!seat || seat.kind !== 'human') return;
+      const text = cleanChatText(msg.text);
+      if (!text) return;
+      const now = Date.now();
+      if (seat.lastChatAt && now - seat.lastChatAt < CHAT_MIN_INTERVAL_MS) return; // too fast — drop silently
+      seat.lastChatAt = now;
+      broadcastEvent(room, { type: 'chat', seat: ws._seat, name: seat.name, text, ts: now });
+      break;
+    }
+    case 'voice': {
+      const room = rooms.get(ws._roomCode);
+      if (!room) return;
+      const seat = room.seats[ws._seat];
+      if (!seat || seat.kind !== 'human') return;
+      const on = !!msg.on;
+      if (seat.voiceOn === on) return;
+      seat.voiceOn = on;
+      broadcastEvent(room, { type: 'voice', seat: ws._seat, on });
+      break;
+    }
+    case 'rtc': {
+      // WebRTC signaling: relay `data` (SDP offer/answer or an ICE
+      // candidate) to exactly one other human seat in the same room.
+      const room = rooms.get(ws._roomCode);
+      if (!room) return;
+      const seat = room.seats[ws._seat];
+      if (!seat || seat.kind !== 'human') return;
+      const to = msg.to;
+      if (!Number.isInteger(to) || to < 0 || to > 3 || to === ws._seat) return;
+      const target = room.seats[to];
+      if (!target || target.kind !== 'human' || !target.connected || !target.ws) return;
+      let raw;
+      try { raw = JSON.stringify(msg.data); } catch (e) { return; }
+      if (raw === undefined || raw.length > RTC_MAX_BYTES) return;
+      send(target.ws, { type: 'rtc', from: ws._seat, data: msg.data });
       break;
     }
   }
