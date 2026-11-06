@@ -8,9 +8,9 @@
  * object caps total concurrency) is documented in README-fa.md.
  *
  * Protocol parity: the WebSocket message shapes are IDENTICAL to the
- * Node server (types: create/join/reconnect/start/play/declare13 in;
- * room/state/error/takan/declared13 out) so the existing client works
- * unchanged apart from the /ws path.
+ * Node server (types: create/join/reconnect/start/play/declare13/
+ * chat/voice/rtc in; room/state/error/takan/declared13/chat/voice/rtc
+ * out) so the existing client works unchanged apart from the /ws path.
  *
  * Cloudflare adaptations vs the Node original:
  *  - Hibernatable WebSockets (state.acceptWebSocket); per-socket data
@@ -72,6 +72,18 @@ function cleanName(name) {
   const n = String(name || '').trim().slice(0, 20);
   return n || 'بازیکن';
 }
+// Chat / voice relay — same rules as the Node server: chat text is
+// cleaned (control characters stripped, 200-char cap, one message per
+// 800 ms per seat) and fanned out to the whole room INCLUDING the
+// sender; RTC signaling goes to exactly one human seat in the same
+// room (~16 KB cap); the audio itself is peer-to-peer.
+const CHAT_MAX_CHARS = 200;
+const CHAT_MIN_INTERVAL_MS = 800;
+const RTC_MAX_BYTES = 16384;
+function cleanChatText(t) {
+  if (typeof t !== 'string') return '';
+  return t.replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim().slice(0, CHAT_MAX_CHARS);
+}
 /** Seat display name: the player's own profile name wins; when it is
  *  empty and the player is signed in, default to the account name. */
 function displayName(msg, user) {
@@ -82,7 +94,7 @@ function displayName(msg, user) {
 }
 
 function emptySeat() {
-  return { kind: 'empty', name: '', avatar: null, country: '', photo: null, token: null, ws: null, connected: false, disconnectAt: null };
+  return { kind: 'empty', name: '', avatar: null, country: '', photo: null, token: null, ws: null, connected: false, disconnectAt: null, voiceOn: false, lastChatAt: 0 };
 }
 
 function send(ws, obj) {
@@ -196,7 +208,7 @@ export class GameServer {
         phase: room.phase,
         seats: room.seats.map((s) => ({
           kind: s.kind, name: s.name, avatar: s.avatar, country: s.country,
-          photo: s.photo,
+          photo: s.photo, voiceOn: !!s.voiceOn,
           token: s.token, connected: s.connected, disconnectAt: s.disconnectAt,
         })),
         trickHold: room.trickHold,
@@ -282,6 +294,7 @@ export class GameServer {
             s.avatar = null;
             s.country = '';
             s.photo = null;
+            s.voiceOn = false;
             s.connected = true;
             changed = true;
             this._pumpTurn(room);
@@ -358,6 +371,10 @@ export class GameServer {
     seat.ws = null;
     seat.connected = false;
     seat.disconnectAt = Date.now();
+    if (seat.voiceOn) {
+      seat.voiceOn = false;
+      this._broadcastEvent(room, { type: 'voice', seat: att.seat, on: false });
+    }
     this._broadcastState(room);
   }
 
@@ -404,6 +421,7 @@ export class GameServer {
       seats: room.seats.map((s, i) => ({
         name: s.name, kind: s.kind, connected: s.connected,
         avatar: s.avatar, country: s.country, photo: s.photo,
+        voice: !!s.voiceOn,
         cards: round ? round.hands[i].length : 0,
       })),
       hand: round ? round.hands[seatIdx].slice() : [],
@@ -656,6 +674,47 @@ export class GameServer {
           sendError(ws, why);
           send(ws, this._stateFor(room, att.seat));
         }
+        break;
+      }
+      case 'chat': {
+        const room = this.rooms.get(att.code);
+        if (!room) return;
+        const seat = room.seats[att.seat];
+        if (!seat || seat.kind !== 'human') return;
+        const text = cleanChatText(msg.text);
+        if (!text) return;
+        const now = Date.now();
+        if (seat.lastChatAt && now - seat.lastChatAt < CHAT_MIN_INTERVAL_MS) return; // too fast — drop silently
+        seat.lastChatAt = now;
+        this._broadcastEvent(room, { type: 'chat', seat: att.seat, name: seat.name, text, ts: now });
+        break;
+      }
+      case 'voice': {
+        const room = this.rooms.get(att.code);
+        if (!room) return;
+        const seat = room.seats[att.seat];
+        if (!seat || seat.kind !== 'human') return;
+        const on = !!msg.on;
+        if (seat.voiceOn === on) return;
+        seat.voiceOn = on;
+        this._broadcastEvent(room, { type: 'voice', seat: att.seat, on });
+        break;
+      }
+      case 'rtc': {
+        // WebRTC signaling: relay `data` to exactly one other human
+        // seat in the same room; the audio itself is peer-to-peer.
+        const room = this.rooms.get(att.code);
+        if (!room) return;
+        const seat = room.seats[att.seat];
+        if (!seat || seat.kind !== 'human') return;
+        const to = msg.to;
+        if (!Number.isInteger(to) || to < 0 || to > 3 || to === att.seat) return;
+        const target = room.seats[to];
+        if (!target || target.kind !== 'human' || !target.connected || !target.ws) return;
+        let raw;
+        try { raw = JSON.stringify(msg.data); } catch { return; }
+        if (raw === undefined || raw.length > RTC_MAX_BYTES) return;
+        send(target.ws, { type: 'rtc', from: att.seat, data: msg.data });
         break;
       }
     }
