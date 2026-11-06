@@ -60,30 +60,15 @@
     background-position: center, center;
   }
   /* ---------- compact header: slim turn bar + two-line score strip ---------- */
-  .ghead { display: flex; gap: 6px; align-items: stretch; margin-bottom: 6px; }
+  .ghead { display: flex; gap: 6px; align-items: center; min-height: 31px; margin-bottom: 6px; }
   .menubtn {
     width: auto; margin: 0; padding: 4px 9px; font-size: 12px; line-height: 1.25; font-weight: 700;
     background: linear-gradient(#7d2231, #4d1019); color: #ffe9c9;
     border: 1px solid #d9b380; border-radius: 9px; box-shadow: 0 2px 6px rgba(0,0,0,.4);
   }
-  .partnerbar {
-    flex: 1; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 7px;
-    background: linear-gradient(rgba(26,16,5,.93), rgba(26,16,5,.86));
-    border: 1px solid #d9b380; border-radius: 10px; padding: 2px 10px; min-height: 31px;
-    color: #f5e7c6; box-shadow: 0 2px 8px rgba(0,0,0,.35);
-  }
-  .partnerbar .pname { justify-self: start; min-width: 0; display: flex; align-items: center; gap: 6px; font-size: 14.5px; font-weight: 800; }
-  .partnerbar .pname .pnm { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .partnerbar .pteam {
-    justify-self: center; font-size: 10.5px; font-weight: 700; white-space: nowrap;
-    color: #ffd75e; background: rgba(0,0,0,.3);
-    border: 1px solid rgba(255,215,94,.45); border-radius: 999px; padding: 1px 8px;
-  }
-  .partnerbar .pmeta { justify-self: end; display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-  .partnerbar .pmeta b { color: #ffd75e; font-size: 13.5px; font-weight: 900; }
-  .partnerbar .backmini { width: 17px; }
-  .partnerbar.turn { box-shadow: 0 0 0 2px #ffd75e, 0 2px 10px rgba(0,0,0,.4); }
-  .partnerbar.turn .pname { color: #ffd75e; }
+  /* The partner seat is no longer a bar in this header row — it is a
+     floating badge inside the table (see .seatbadge below). This row
+     keeps only the «منوی اصلی» button, at the old bar's height. */
   .scorestrip {
     display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px;
     background: rgba(26,16,5,.85); border: 1px solid rgba(217,179,128,.65);
@@ -135,12 +120,15 @@
   .pilerow { position: absolute; z-index: 1; display: none; pointer-events: none; direction: ltr; }
   .pilerow.on { display: flex; }
   .pilerow img { width: 28px; height: auto; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.45); flex: 0 0 auto; }
-  .pilerow[data-pos="bottom"] { bottom: 0; left: 50%; transform: translateX(-50%); }
-  .pilerow[data-pos="top"] { top: 0; left: 50%; transform: translateX(-50%); }
+  /* Rows sit just inside the floating seat badges (the badges end
+     ~80px from the top/bottom edges and 68px from the sides), so a row
+     never touches a badge; played cards still paint over the rows. */
+  .pilerow[data-pos="bottom"] { bottom: 88px; left: 50%; transform: translateX(-50%); }
+  .pilerow[data-pos="top"] { top: 88px; left: 50%; transform: translateX(-50%); }
   .pilerow[data-pos="bottom"] img, .pilerow[data-pos="top"] img { margin-left: -15px; }
   .pilerow[data-pos="bottom"] img:first-child, .pilerow[data-pos="top"] img:first-child { margin-left: 0; }
-  .pilerow[data-pos="right"] { right: 40px; top: 50%; transform: translateY(-50%); flex-direction: column; }
-  .pilerow[data-pos="left"] { left: 40px; top: 50%; transform: translateY(-50%); flex-direction: column; }
+  .pilerow[data-pos="right"] { right: 72px; top: 50%; transform: translateY(-50%); flex-direction: column; }
+  .pilerow[data-pos="left"] { left: 72px; top: 50%; transform: translateY(-50%); flex-direction: column; }
   .pilerow[data-pos="right"] img, .pilerow[data-pos="left"] img { margin-top: -28px; }
   .pilerow[data-pos="right"] img:first-child, .pilerow[data-pos="left"] img:first-child { margin-top: 0; }
   /* collection flight: a collected trick's back is inserted with inline
@@ -157,31 +145,46 @@
 
   /* ---------- table (carpet shows through) ---------- */
   .table { position: relative; flex: 1 1 auto; min-height: 170px; margin: 2px 0 0; }
-  .table .seat[data-pos="bottom"] { display: none; }
-  .vbar {
-    position: absolute; top: 50%; transform: translateY(-50%);
-    width: 38px; height: 66%; z-index: 3;
-    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-    gap: 8px; padding: 12px 0;
-    background: linear-gradient(rgba(26,16,5,.93), rgba(26,16,5,.86));
-    border: 1px solid #d9b380; border-radius: 999px; color: #f5e7c6;
-    box-shadow: 0 2px 8px rgba(0,0,0,.35);
+  /* ---------- floating seat badges (approved design) ----------
+     No player bars: each seat is just a circular avatar (~52px, thin
+     gold ring) with the player's name in a small dark pill beneath it,
+     floating on the carpet. Partner centred at the top of the table,
+     side seats at the left/right edges, my own badge just above my
+     hand. The trick slots moved toward the centre (see .trick below)
+     so a played card never overlaps a badge. Whose turn it is shows
+     as the gold glow on the active seat's avatar ring (.turn). */
+  .seatbadge {
+    position: absolute; z-index: 8; pointer-events: none;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: #f5e7c6;
   }
-  .vbar[data-pos="right"] { right: 0; }
-  .vbar[data-pos="left"] { left: 0; }
-  .vbar .pname { writing-mode: vertical-rl; font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-height: 78%; }
-  .vbar[data-pos="left"] .pname { transform: rotate(180deg); }
-  .vbar .pmeta { font-size: 12px; font-weight: 800; color: #ffd75e; background: rgba(0,0,0,.35); border-radius: 999px; padding: 1px 7px; line-height: 1.5; }
-  .vbar.turn { box-shadow: 0 0 0 2px #ffd75e, 0 2px 10px rgba(0,0,0,.4); }
-  .vbar.turn .pname { color: #ffd75e; }
+  .seatbadge[data-pos="top"] { top: 4px; left: 50%; transform: translateX(-50%); }
+  .seatbadge[data-pos="bottom"] { bottom: 4px; left: 50%; transform: translateX(-50%); }
+  .seatbadge[data-pos="right"] { right: 0; top: 50%; transform: translateY(-50%); width: 68px; }
+  .seatbadge[data-pos="left"] { left: 0; top: 50%; transform: translateY(-50%); width: 68px; }
+  .seatbadge .pavatar {
+    border-radius: 50%; border: 2px solid #eec95f;
+    box-shadow: 0 2px 7px rgba(0,0,0,.5);
+  }
+  .seatbadge .badgename {
+    display: flex; align-items: center; gap: 4px; max-width: 120px;
+    font-size: 12.5px; font-weight: 700; line-height: 1.5; color: #f5e7c6;
+    background: rgba(26,16,5,.55); border-radius: 999px; padding: 1px 9px;
+  }
+  .seatbadge .badgename .bnm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .seatbadge[data-pos="left"] .badgename,
+  .seatbadge[data-pos="right"] .badgename { max-width: 68px; padding: 1px 6px; }
+  .seatbadge.turn .pavatar {
+    box-shadow: 0 0 0 2px #ffd75e, 0 0 16px 5px rgba(255,215,94,.75), 0 2px 7px rgba(0,0,0,.5);
+  }
 
   .trick { position: absolute; inset: 0; z-index: 6; } /* above the won-trick piles (z 1): played cards always cover them */
   .trick .slot { position: absolute; width: 76px; text-align: center; }
   .trick .slot .who { display: none; }
-  .trick .slot[data-pos="bottom"] { bottom: 3%; left: 50%; margin-left: -38px; }
-  .trick .slot[data-pos="top"]    { top: 3%; left: 50%; margin-left: -38px; }
-  .trick .slot[data-pos="right"]  { right: 50px; top: 50%; transform: translateY(-50%); }
-  .trick .slot[data-pos="left"]   { left: 50px; top: 50%; transform: translateY(-50%); }
+  .trick .slot[data-pos="bottom"] { bottom: 122px; left: 50%; margin-left: -38px; }
+  .trick .slot[data-pos="top"]    { top: 100px; left: 50%; margin-left: -38px; }
+  .trick .slot[data-pos="right"]  { right: 100px; top: 50%; transform: translateY(-50%); }
+  .trick .slot[data-pos="left"]   { left: 100px; top: 50%; transform: translateY(-50%); }
   .trick .slot[data-pos="bottom"] .pcard { transform: rotate(-5deg); }
   .trick .slot[data-pos="top"] .pcard { transform: rotate(4deg); }
   .trick .slot[data-pos="right"] .pcard { transform: rotate(7deg); }
@@ -203,11 +206,6 @@
   .pcard img.face {
     width: 100%; height: 100%; display: block; border-radius: 9px; pointer-events: none;
   }
-  .backmini {
-    width: 21px; height: auto; border-radius: 3px; vertical-align: middle;
-    box-shadow: 0 1px 4px rgba(0,0,0,.45); flex: 0 0 auto;
-  }
-  .vbar .backmini { width: 24px; }
   .trick .pcard { width: 76px; height: 106px; }
 
   /* ---------- card flight (throw animation) ---------- */
@@ -215,13 +213,22 @@
   @keyframes flyin { from { opacity: .2; } to { opacity: 1; } }
   .trick .pcard.flyin { animation: flyin .3s ease-out; }
 
-  /* ---------- my hand (arc fan) + turn pill ---------- */
-  .status {
-    text-align: center; font-size: 15.5px; font-weight: 700; color: #ffe9a8;
-    background: rgba(24,14,4,.92); border: 1px solid rgba(217,179,128,.65);
-    border-radius: 999px; padding: 9px 14px; margin-top: 10px; min-height: 20px;
-    box-shadow: 0 3px 10px rgba(0,0,0,.35);
+  /* ---------- my hand (arc fan) ---------- */
+
+  /* ---------- bottom action row (chat / mic) ----------
+     Sits where the old turn banner was. There is no text banner any
+     more: whose turn it is shows as the gold glow on the active seat's
+     avatar ring. The two round icon buttons are placeholders — chat
+     and voice are not built yet; a tap just says «به‌زودی». */
+  .actionrow { display: flex; justify-content: center; gap: 14px; margin-top: 10px; }
+  .iconbtn {
+    width: 42px; height: 42px; margin: 0; padding: 0; flex: 0 0 auto;
+    background: linear-gradient(rgba(26,16,5,.93), rgba(26,16,5,.86)); color: #ffe9c9;
+    border: 1px solid #d9b380; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,.4);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
   }
+  .iconbtn svg { width: 21px; height: 21px; stroke: #ffd75e; stroke-width: 1.9; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .iconbtn:active { transform: scale(.95); }
   .hand { display: flex; direction: ltr; justify-content: center; align-items: flex-start; padding: 30px 6px 12px; overflow: visible; --cw: 74px; --step: 26px; margin-top: -6px; margin-inline-start: -10px; margin-inline-end: -10px; }
   .hand .pcard { width: var(--cw); height: calc(var(--cw) * 1.4); margin-inline-start: calc(var(--step) - var(--cw)); cursor: pointer; transition: transform .12s; flex: 0 0 auto; transform: rotate(var(--rot, 0deg)); transform-origin: 50% 200%; border-radius: calc(var(--cw) * .12); touch-action: none; }
   .hand .pcard img.face { border-radius: calc(var(--cw) * .12); }
@@ -602,7 +609,6 @@
   <!-- ======== GAME ======== -->
   <section id="scr-game" class="hidden">
     <div class="ghead">
-      <div class="seat partnerbar" data-pos="top" id="seat-top"></div>
       <button id="btn-leave" class="menubtn">منوی اصلی</button>
     </div>
     <div class="scorestrip">
@@ -621,9 +627,10 @@
     </div>
 
     <div class="table" id="table">
-      <div class="seat vbar" data-pos="right" id="seat-right"></div>
-      <div class="seat vbar" data-pos="left"  id="seat-left"></div>
-      <div class="seat" data-pos="bottom" id="seat-bottom"></div>
+      <div class="seat seatbadge" data-pos="top" id="seat-top"></div>
+      <div class="seat seatbadge" data-pos="right" id="seat-right"></div>
+      <div class="seat seatbadge" data-pos="left"  id="seat-left"></div>
+      <div class="seat seatbadge" data-pos="bottom" id="seat-bottom"></div>
       <div class="pilerow" data-pos="top" id="pile-top"></div>
       <div class="pilerow" data-pos="right" id="pile-right"></div>
       <div class="pilerow" data-pos="left" id="pile-left"></div>
@@ -633,7 +640,14 @@
 
     <button id="btn-13" class="hidden">🙋 13 هست!</button>
     <div class="hand" id="hand"></div>
-    <div class="status" id="status"></div>
+    <div class="actionrow">
+      <button class="iconbtn" id="btn-chat" aria-label="پیام">
+        <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+      </button>
+      <button class="iconbtn" id="btn-mic" aria-label="میکروفون">
+        <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </button>
+    </div>
   </section>
 </div>
 
@@ -900,6 +914,10 @@ $('#btn-leave').onclick = () => {
   localStorage.removeItem('tore.session');
   location.reload();
 };
+// Bottom action row: chat and voice are not built yet — the buttons
+// are placeholders and a tap simply says «به‌زودی».
+$('#btn-chat').onclick = () => toast('به‌زودی');
+$('#btn-mic').onclick = () => toast('به‌زودی');
 
 // ---------- home: field-style menu wiring ----------
 // Quick play: create a room and, the moment the server confirms it (the
@@ -1556,18 +1574,24 @@ function pileRowHTML(count) {
   return html;
 }
 
-// Seat-bar avatars are memoized per table position: render() rebuilds
-// the bars on every state push, and re-creating a Google photo <img>
+// Seat-badge avatars are memoized per table position: render() rebuilds
+// the badges on every state push, and re-creating a Google photo <img>
 // each time would restart its load on every play. The element is only
 // rebuilt when the seat's avatar identity actually changes.
+// Bot seats carry no avatar of their own (the server leaves it null):
+// the badge shows one of the Afghan portraits instead, picked
+// deterministically by seat index so every viewer sees the same face.
+const BOT_BADGE_PORTRAITS = ['av4', 'av2', 'av7', 'av3'];
 const barAvatars = {};
-function barAvatar(pos, s, px) {
-  const key = s.kind + '|' + (s.avatar || '') + '|' + (s.photo || '');
+function barAvatar(pos, s, seatIdx) {
+  let av = s.avatar, photo = s.photo;
+  if (s.kind === 'bot') {
+    av = (typeof av === 'string' && AVATAR_ART[av]) ? av : BOT_BADGE_PORTRAITS[seatIdx % BOT_BADGE_PORTRAITS.length];
+    photo = undefined;
+  }
+  const key = s.kind + '|' + (av || '') + '|' + (photo || '');
   if (!barAvatars[pos] || barAvatars[pos].key !== key) {
-    barAvatars[pos] = {
-      key,
-      el: avatarEl(s.name, s.kind === 'bot' ? { t: 'bot' } : s.avatar, px, s.photo),
-    };
+    barAvatars[pos] = { key, el: avatarEl(s.name, av, 52, photo) };
   }
   return barAvatars[pos].el;
 }
@@ -1620,28 +1644,22 @@ function render(st) {
   // above). Runs before the pile rows and the trick are rebuilt, so a
   // launching flight can still measure the resting trick's live cards. ---
   syncCollections(st, trickComplete, finalWinSeat);
-  // seats: partner in the top bar, side players in vertical bars
+  // seats: floating badges on the carpet — a circular avatar with the
+  // player's name in a small pill beneath it. No bars, no team chips,
+  // no card counts. The active seat's avatar ring glows (.turn); the
+  // trick winner's 👑 rides next to the name in the pill, and a human
+  // seat's connection dot rides in the pill too.
   st.seats.forEach((s, i) => {
     const pos = relPos(i);
     const el = $('#seat-' + pos);
     const isTurn = st.turn === i && st.phase === 'playing';
     el.classList.toggle('turn', isTurn);
     const crown = (winSeat === i && st.phase === 'playing') ? '👑 ' : '';
-    if (pos === 'left' || pos === 'right') {
-      el.innerHTML = (i !== mySeat ? '<img class="backmini" src="' + ASSET('cards/back.png') + '" alt="">' : '') +
-        '<div class="pname">' + crown + (s.name || 'خالی') + '</div>' +
-        '<div class="pmeta">' + faNum(s.cards) + '</div>';
-      el.prepend(barAvatar(pos, s, 26));
-    } else {
-      // tidy three-group bar: [avatar + name + 👑] [team chip] [cards left with back icon]
-      const kindMark = s.kind === 'human'
-        ? '<span class="dot ' + (s.connected ? 'on' : '') + '"></span>' : '';
-      el.innerHTML = '<div class="pname"><span class="pnm">' + crown + (s.name || 'خالی') + (i === mySeat ? ' (تو)' : '') + '</span></div>' +
-        '<span class="pteam">' + teamLabel(i % 2) + '</span>' +
-        '<div class="pmeta">' + kindMark + (i !== mySeat ? '<img class="backmini" src="' + ASSET('cards/back.png') + '" alt="">' : '') +
-        '<span><b>' + faNum(s.cards) + '</b> ورق</span></div>';
-      el.querySelector('.pname').prepend(barAvatar(pos, s, 24));
-    }
+    const kindMark = s.kind === 'human'
+      ? '<span class="dot ' + (s.connected ? 'on' : '') + '"></span>' : '';
+    el.innerHTML = '<div class="badgename">' + kindMark + '<span class="bnm">' + crown +
+      (s.name || 'خالی') + (i === mySeat ? ' (تو)' : '') + '</span></div>';
+    el.prepend(barAvatar(pos, s, i));
   });
 
   // won-trick piles: plain rows of card backs on the carpet in front of
@@ -1679,16 +1697,9 @@ function render(st) {
   // still in flight), keep the optimistic card parked in my slot
   placePendingPlay();
 
-  // status line
-  const statusEl = $('#status');
-  if (st.phase === 'playing') {
-    if (st.declared13 && st.turn === mySeat) statusEl.textContent = '🙋 13 گفتی ✔ — حالا ورقت را بینداز';
-    else if (st.declared13) statusEl.textContent = '🙋 ' + (st.seats[st.turn] ? st.seats[st.turn].name : '') + ' 13 گفت!';
-    else statusEl.textContent = st.turn === mySeat ? '🎯 ' + (st.seats[mySeat] ? st.seats[mySeat].name : '') + '، نوبت توست!' :
-      'نوبت ' + (st.seats[st.turn] ? st.seats[st.turn].name : '') + ' است…';
-  } else if (st.phase === 'roundEnd') statusEl.textContent = 'دست تمام شد';
-  else if (st.phase === 'matchEnd') statusEl.textContent = 'مسابقه تمام شد';
-  else statusEl.textContent = '';
+  // (No turn banner any more: the active seat's avatar ring glows, a
+  // «13 هست» declaration arrives as a toast, and round/match ends have
+  // their own overlays.)
 
   // «13 هست!» button: only in the exact final-trick takan situation,
   // on my turn, before I play (and not after I already declared)
