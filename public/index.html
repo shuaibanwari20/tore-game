@@ -167,13 +167,39 @@
     box-shadow: 0 2px 7px rgba(0,0,0,.5);
   }
   .seatbadge .badgename {
-    display: flex; align-items: center; gap: 4px; max-width: 120px;
+    display: flex; align-items: center; gap: 4px; max-width: 170px;
     font-size: 12.5px; font-weight: 700; line-height: 1.5; color: #f5e7c6;
     background: rgba(26,16,5,.55); border-radius: 999px; padding: 1px 9px;
   }
-  .seatbadge .badgename .bnm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* The pill shows the FIRST name only (see badgeName()) and sizes to
+     its content; if a first name is still too long, plaintext bidi
+     makes any ellipsis cut the logical END of the name, never the
+     start (an RTL ellipsis used to eat the "Sh" of "Shuaib Anwari"). */
+  .seatbadge .badgename .bnm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; unicode-bidi: plaintext; }
   .seatbadge[data-pos="left"] .badgename,
-  .seatbadge[data-pos="right"] .badgename { max-width: 68px; padding: 1px 6px; }
+  .seatbadge[data-pos="right"] .badgename { max-width: 104px; padding: 1px 6px; }
+  /* live-mic marker: a small green mic dot riding the avatar ring */
+  .seatbadge .vmic {
+    position: absolute; top: -3px; left: 50%; margin-left: 12px; z-index: 3;
+    width: 19px; height: 19px; border-radius: 50%; background: #22c55e;
+    border: 1.5px solid #0d2b16; font-size: 11px; line-height: 16px; text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,.5); pointer-events: none;
+  }
+  /* floating speech bubble over a seat badge when a chat message from
+     that player arrives (~3 s, then it fades). Never blocks play. */
+  .chatbubble {
+    position: absolute; bottom: calc(100% + 3px); left: 50%; transform: translateX(-50%);
+    max-width: 180px; padding: 5px 11px; border-radius: 14px; z-index: 9;
+    background: #fff8e7; color: #3a2410; font-size: 13px; font-weight: 700; line-height: 1.4;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    box-shadow: 0 4px 14px rgba(0,0,0,.5); pointer-events: none;
+    animation: bubblein .18s ease-out;
+  }
+  .chatbubble.emoji { font-size: 30px; line-height: 1.2; padding: 3px 10px; }
+  @keyframes bubblein { from { opacity: 0; transform: translateX(-50%) translateY(4px) scale(.85); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
+  .seatbadge[data-pos="left"] .chatbubble { left: -4px; transform: none; animation: bubbleinL .18s ease-out; }
+  .seatbadge[data-pos="right"] .chatbubble { left: auto; right: -4px; transform: none; animation: bubbleinL .18s ease-out; }
+  @keyframes bubbleinL { from { opacity: 0; transform: translateY(4px) scale(.85); } to { opacity: 1; transform: translateY(0) scale(1); } }
   .seatbadge.turn .pavatar {
     box-shadow: 0 0 0 2px #ffd75e, 0 0 16px 5px rgba(255,215,94,.75), 0 2px 7px rgba(0,0,0,.5);
   }
@@ -218,10 +244,12 @@
   /* ---------- bottom action row (chat / mic) ----------
      Sits where the old turn banner was. There is no text banner any
      more: whose turn it is shows as the gold glow on the active seat's
-     avatar ring. The two round icon buttons are placeholders — chat
-     and voice are not built yet; a tap just says «به‌زودی». */
+     avatar ring. The chat button opens the in-room chat panel; the mic
+     button toggles live voice (WebRTC, opt-in) and fills gold while
+     your mic is live. */
   .actionrow { display: flex; justify-content: center; gap: 14px; margin-top: 10px; }
   .iconbtn {
+    position: relative;
     width: 42px; height: 42px; margin: 0; padding: 0; flex: 0 0 auto;
     background: linear-gradient(rgba(26,16,5,.93), rgba(26,16,5,.86)); color: #ffe9c9;
     border: 1px solid #d9b380; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,.4);
@@ -229,6 +257,64 @@
   }
   .iconbtn svg { width: 21px; height: 21px; stroke: #ffd75e; stroke-width: 1.9; fill: none; stroke-linecap: round; stroke-linejoin: round; }
   .iconbtn:active { transform: scale(.95); }
+  .iconbtn.on { background: linear-gradient(#ffd75e, #e0a92c); border-color: #fff0b3; box-shadow: 0 0 0 2px rgba(255,215,94,.45), 0 2px 8px rgba(0,0,0,.4); }
+  .iconbtn.on svg { stroke: #4a2c07; }
+  /* unread-chat dot on the chat button */
+  #chat-dot {
+    position: absolute; top: 1px; inset-inline-end: 1px; width: 10px; height: 10px;
+    border-radius: 50%; background: #e0342c; border: 1.5px solid #1a1005; display: none;
+  }
+  #chat-dot.on { display: block; }
+
+  /* ---------- in-room chat panel ----------
+     Slides up from the bottom over the table, in the game's dark/gold
+     language: message list, quick phrases, an emoji row, and the input.
+     Messages from other players carry their (first) name; a message
+     that is a single emoji renders large, here and in the list. */
+  #chatpanel {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 55;
+    max-width: 520px; margin: 0 auto; max-height: 64dvh;
+    display: flex; flex-direction: column;
+    background: linear-gradient(rgba(26,16,5,.985), rgba(26,16,5,.96));
+    border-top: 2px solid #d9b380; border-radius: 18px 18px 0 0;
+    box-shadow: 0 -8px 30px rgba(0,0,0,.55); color: #f5e7c6;
+    transform: translateY(105%); transition: transform .28s ease;
+  }
+  #chatpanel.open { transform: translateY(0); }
+  .chat-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 4px; }
+  .chat-title { font-size: 16px; font-weight: 800; color: #ffd75e; }
+  #btn-chat-close {
+    width: 32px; height: 32px; margin: 0; padding: 0; border-radius: 50%;
+    border: 1px solid #d9b380; background: rgba(255,255,255,.06); color: #ffe9c9;
+    font-size: 14px; font-family: inherit; cursor: pointer; line-height: 1;
+  }
+  #chat-list { flex: 1 1 auto; overflow-y: auto; padding: 8px 12px 4px; display: flex; flex-direction: column; gap: 7px; min-height: 84px; }
+  .cmsg { max-width: 82%; align-self: flex-start; background: rgba(255,255,255,.08); border: 1px solid rgba(217,179,128,.35); border-radius: 13px; padding: 5px 10px 6px; }
+  .cmsg.mine { align-self: flex-end; background: rgba(255,215,94,.14); border-color: rgba(255,215,94,.55); }
+  .cmsg .cname { font-size: 11px; font-weight: 700; color: #ffd75e; margin-bottom: 1px; }
+  .cmsg .ctext { font-size: 14.5px; line-height: 1.45; word-break: break-word; white-space: pre-wrap; }
+  .cmsg.emoji .ctext { font-size: 34px; line-height: 1.15; }
+  .chat-quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 8px 12px 2px; }
+  .qphrase {
+    margin: 0; padding: 7px 4px; font-size: 13.5px; font-weight: 700; font-family: inherit;
+    color: #ffe9c9; background: rgba(255,255,255,.07); border: 1px solid rgba(217,179,128,.45);
+    border-radius: 999px; cursor: pointer;
+  }
+  .qphrase:active { transform: scale(.96); background: rgba(255,215,94,.25); }
+  .chat-emojis { display: flex; justify-content: space-between; padding: 7px 12px 2px; }
+  .qemoji { margin: 0; padding: 2px; background: none; border: 0; font-size: 24px; line-height: 1.2; cursor: pointer; font-family: inherit; }
+  .qemoji:active { transform: scale(1.25); }
+  .chat-inputrow { display: flex; gap: 8px; padding: 9px 12px calc(10px + env(safe-area-inset-bottom)); }
+  #chat-input {
+    flex: 1 1 auto; min-width: 0; padding: 10px 13px; font-size: 16px; font-family: inherit;
+    color: #fff8e7; background: rgba(255,255,255,.08); border: 1px solid #d9b380;
+    border-radius: 999px; outline: none;
+  }
+  #btn-chat-send {
+    flex: 0 0 auto; margin: 0; padding: 10px 18px; font-size: 14.5px; font-weight: 800;
+    font-family: inherit; color: #3a2410; background: linear-gradient(#ffd75e, #e8ae2e);
+    border: 0; border-radius: 999px; cursor: pointer;
+  }
   .hand { display: flex; direction: ltr; justify-content: center; align-items: flex-start; padding: 30px 6px 12px; overflow: visible; --cw: 74px; --step: 26px; margin-top: -6px; margin-inline-start: -10px; margin-inline-end: -10px; }
   .hand .pcard { width: var(--cw); height: calc(var(--cw) * 1.4); margin-inline-start: calc(var(--step) - var(--cw)); cursor: pointer; transition: transform .12s; flex: 0 0 auto; transform: rotate(var(--rot, 0deg)); transform-origin: 50% 200%; border-radius: calc(var(--cw) * .12); touch-action: none; }
   .hand .pcard img.face { border-radius: calc(var(--cw) * .12); }
@@ -643,6 +729,7 @@
     <div class="actionrow">
       <button class="iconbtn" id="btn-chat" aria-label="پیام">
         <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        <span id="chat-dot"></span>
       </button>
       <button class="iconbtn" id="btn-mic" aria-label="میکروفون">
         <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -697,6 +784,21 @@
       <button id="btn-profile-save">ذخیره</button>
       <button id="btn-profile-close" class="ghost">بستن</button>
     </div>
+  </div>
+</div>
+
+<!-- ======== CHAT PANEL (slides up over the table) ======== -->
+<div id="chatpanel">
+  <div class="chat-head">
+    <span class="chat-title">گفت‌وگو</span>
+    <button id="btn-chat-close" aria-label="بستن">✕</button>
+  </div>
+  <div id="chat-list"></div>
+  <div class="chat-quick" id="chat-quick"></div>
+  <div class="chat-emojis" id="chat-emojis"></div>
+  <div class="chat-inputrow">
+    <input id="chat-input" type="text" maxlength="200" placeholder="پیامت را بنویس…" autocomplete="off">
+    <button id="btn-chat-send">بفرست</button>
   </div>
 </div>
 
@@ -883,6 +985,9 @@ function connect(onOpen) {
   ws.onmessage = (ev) => { try { onMsg(JSON.parse(ev.data)); } catch (e) {} };
   ws.onclose = () => {
     if (intentionalClose) return;
+    // Peer connections were negotiated over this socket's session:
+    // drop them; they re-form after the reconnect re-announces voice.
+    if (typeof peers !== 'undefined') Object.keys(peers).forEach((s) => closePeer(+s));
     $('#connbar').textContent = 'اتصال قطع شد — در حال اتصال دوباره…';
     setTimeout(() => { if (session) connect(() => send({ type: 'reconnect', code: session.code, token: session.token, ...profileMsg() })); }, 2500);
   };
@@ -910,10 +1015,268 @@ $('#btn-leave').onclick = () => {
   localStorage.removeItem('tore.session');
   location.reload();
 };
-// Bottom action row: chat and voice are not built yet — the buttons
-// are placeholders and a tap simply says «به‌زودی».
-$('#btn-chat').onclick = () => toast('به‌زودی');
-$('#btn-mic').onclick = () => toast('به‌زودی');
+// ---------- in-room text chat ----------
+// The server relays chat to the WHOLE room including the sender, and
+// the client renders messages ONLY from that relay (onMsg → addChatMsg)
+// so every screen shows the same list. Quick phrases send instantly
+// and close the panel; emojis send through the same channel.
+const CHAT_PHRASES = ['سلام', 'ښه حرکت', 'ښه لوبه', 'هاهاها', 'مننه', 'بخښنه!', 'ژر شه!', 'افرین!', 'اوس نه!', 'وای خدای', 'ښه بخت', 'بیا!'];
+const CHAT_EMOJIS = ['😎', '😂', '😍', '😭', '😡', '👊', '😮', '👍', '❤️', '🔥'];
+let chatOpen = false;
+const chatBubbles = {}; // table position -> { text, emoji, until }
+
+function firstNameOf(name) {
+  const full = String(name || '').trim();
+  if (!full) return '';
+  return full.split(/\s+/)[0];
+}
+function isSingleEmoji(text) {
+  const t = String(text || '').trim();
+  if (!t) return false;
+  return /^\p{Extended_Pictographic}\uFE0F?$/u.test(t);
+}
+function sendChatText(text) {
+  const t = String(text || '').trim();
+  if (!t) return;
+  if (!ws || ws.readyState !== 1) { toast('اتصال نیست'); return; }
+  send({ type: 'chat', text: t.slice(0, 200) });
+}
+function toggleChatPanel() {
+  chatOpen = !chatOpen;
+  $('#chatpanel').classList.toggle('open', chatOpen);
+  if (chatOpen) {
+    $('#chat-dot').classList.remove('on');
+    const list = $('#chat-list');
+    list.scrollTop = list.scrollHeight;
+  }
+}
+function closeChatPanel() {
+  if (!chatOpen) return;
+  chatOpen = false;
+  $('#chatpanel').classList.remove('open');
+}
+$('#btn-chat').onclick = toggleChatPanel;
+$('#btn-chat-close').onclick = closeChatPanel;
+$('#btn-chat-send').onclick = () => {
+  const inp = $('#chat-input');
+  sendChatText(inp.value);
+  inp.value = '';
+  try { inp.focus({ preventScroll: true }); } catch (e) {}
+};
+$('#chat-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); $('#btn-chat-send').click(); }
+});
+(function buildChatQuick() {
+  const q = $('#chat-quick');
+  CHAT_PHRASES.forEach((p) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'qphrase';
+    b.textContent = p;
+    b.onclick = () => { sendChatText(p); closeChatPanel(); };
+    q.appendChild(b);
+  });
+  const row = $('#chat-emojis');
+  CHAT_EMOJIS.forEach((em) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'qemoji';
+    b.textContent = em;
+    b.onclick = () => sendChatText(em);
+    row.appendChild(b);
+  });
+})();
+
+function addChatMsg(m) {
+  const list = $('#chat-list');
+  const mine = m.seat === mySeat;
+  const emoji = isSingleEmoji(m.text);
+  const rowEl = document.createElement('div');
+  rowEl.className = 'cmsg' + (mine ? ' mine' : '') + (emoji ? ' emoji' : '');
+  if (!mine) {
+    const nm = document.createElement('div');
+    nm.className = 'cname';
+    nm.textContent = firstNameOf(m.name) || 'بازیکن';
+    rowEl.appendChild(nm);
+  }
+  const tx = document.createElement('div');
+  tx.className = 'ctext';
+  tx.textContent = m.text;
+  rowEl.appendChild(tx);
+  list.appendChild(rowEl);
+  while (list.children.length > 60) list.removeChild(list.firstChild);
+  list.scrollTop = list.scrollHeight;
+  if (!chatOpen && !mine) $('#chat-dot').classList.add('on');
+  showChatBubble(m.seat, m.text, emoji);
+}
+
+// Floating speech bubble over the sender's seat badge for ~3 s (a
+// single emoji renders BIG). Bubbles are re-painted by render() while
+// alive, because every state push rebuilds the badge DOM.
+function showChatBubble(seat, text, emoji) {
+  if (mySeat === null || !state) return;
+  const pos = relPos(seat);
+  chatBubbles[pos] = { text, emoji, until: Date.now() + 3000 };
+  paintChatBubble(pos);
+  setTimeout(() => {
+    const badge = $('#seat-' + pos);
+    const el = badge && badge.querySelector('.chatbubble');
+    if (el) { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; }
+  }, 2700);
+  setTimeout(() => {
+    const b = chatBubbles[pos];
+    if (b && Date.now() >= b.until) { delete chatBubbles[pos]; paintChatBubble(pos); }
+  }, 3050);
+}
+function paintChatBubble(pos) {
+  const badge = $('#seat-' + pos);
+  if (!badge) return;
+  const old = badge.querySelector('.chatbubble');
+  if (old) old.remove();
+  const b = chatBubbles[pos];
+  if (!b || Date.now() >= b.until) return;
+  const d = document.createElement('div');
+  d.className = 'chatbubble' + (b.emoji ? ' emoji' : '');
+  d.textContent = b.text;
+  badge.appendChild(d);
+}
+
+// ---------- in-room voice (WebRTC, peer-to-peer, opt-in) ----------
+// Tapping the mic asks for the microphone and joins the room voice;
+// you only ever hear players who ALSO turned theirs on. Audio flows
+// directly between browsers — the game server relays only the
+// signaling ({type:'rtc'}) and the on/off flags ({type:'voice'}), and
+// records nothing. Full mesh (≤ 4 seats); when both ends have voice
+// on, the LOWER seat index is the one that sends the offer, so each
+// pair negotiates exactly once.
+const RTCPeerCtor = window.RTCPeerConnection || window.webkitRTCPeerConnection;
+let voiceOn = false;
+let localStream = null;
+const peers = {};      // seat -> { pc, audio }
+const voiceSeats = {}; // seat -> bool, mirrored from the server (state + broadcasts)
+
+$('#btn-mic').onclick = () => { toggleVoice(); };
+
+async function toggleVoice() {
+  if (voiceOn) { stopVoice(); return; }
+  if (!RTCPeerCtor || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    toast('مایک در دسترس نیست');
+    return;
+  }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    toast('مایک در دسترس نیست');
+    return;
+  }
+  localStream = stream;
+  voiceOn = true;
+  $('#btn-mic').classList.add('on');
+  if (mySeat !== null) voiceSeats[mySeat] = true;
+  send({ type: 'voice', on: true });
+  maybeConnectVoicePeers();
+  paintVoiceDots(state);
+}
+function stopVoice() {
+  voiceOn = false;
+  $('#btn-mic').classList.remove('on');
+  if (mySeat !== null) voiceSeats[mySeat] = false;
+  send({ type: 'voice', on: false });
+  if (localStream) { localStream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} }); localStream = null; }
+  Object.keys(peers).forEach((s) => closePeer(+s));
+  paintVoiceDots(state);
+}
+function maybeConnectVoicePeers() {
+  if (!voiceOn || mySeat === null) return;
+  for (let s = 0; s < 4; s++) {
+    if (s === mySeat) continue;
+    if (voiceSeats[s] && mySeat < s) ensurePeer(s, true);
+  }
+}
+function ensurePeer(seat, initiate) {
+  if (!voiceOn || seat === mySeat) return null;
+  if (peers[seat]) return peers[seat];
+  const pc = new RTCPeerCtor({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+  const entry = { pc, audio: null };
+  peers[seat] = entry;
+  if (localStream) {
+    localStream.getTracks().forEach((t) => { try { pc.addTrack(t, localStream); } catch (e) {} });
+  }
+  pc.onicecandidate = (e) => {
+    if (e.candidate) {
+      send({ type: 'rtc', to: seat, data: { kind: 'ice', candidate: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate } });
+    }
+  };
+  pc.ontrack = (e) => {
+    if (!entry.audio) {
+      entry.audio = document.createElement('audio');
+      entry.audio.autoplay = true;
+      entry.audio.setAttribute('playsinline', '');
+      document.body.appendChild(entry.audio);
+    }
+    try { entry.audio.srcObject = (e.streams && e.streams[0]) || new MediaStream([e.track]); } catch (err) {}
+    const p = entry.audio.play();
+    if (p && p.catch) p.catch(() => {});
+  };
+  pc.onconnectionstatechange = () => {
+    if (pc.connectionState === 'failed' || pc.connectionState === 'closed') closePeer(seat);
+  };
+  if (initiate) {
+    pc.createOffer()
+      .then((o) => pc.setLocalDescription(o))
+      .then(() => send({ type: 'rtc', to: seat, data: { kind: 'sdp', sdp: pc.localDescription } }))
+      .catch(() => {});
+  }
+  return entry;
+}
+function closePeer(seat) {
+  const entry = peers[seat];
+  if (!entry) return;
+  delete peers[seat];
+  try { entry.pc.close(); } catch (e) {}
+  if (entry.audio) {
+    try { entry.audio.srcObject = null; entry.audio.remove(); } catch (e) {}
+  }
+}
+async function onRtcSignal(from, data) {
+  if (!voiceOn || from === mySeat || !data || typeof data !== 'object') return;
+  const entry = ensurePeer(from, false);
+  if (!entry) return;
+  const pc = entry.pc;
+  try {
+    if (data.kind === 'sdp' && data.sdp) {
+      await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+      if (data.sdp.type === 'offer') {
+        const ans = await pc.createAnswer();
+        await pc.setLocalDescription(ans);
+        send({ type: 'rtc', to: from, data: { kind: 'sdp', sdp: pc.localDescription } });
+      }
+    } else if (data.kind === 'ice' && data.candidate) {
+      await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+    }
+  } catch (e) { /* signaling race or glare — drop it */ }
+}
+// The green mic dot on a badge mirrors voiceSeats[]; render() calls
+// this after every state push, and voice broadcasts call it directly.
+function paintVoiceDots(st) {
+  if (!st || !st.seats) return;
+  st.seats.forEach((s, i) => {
+    const badge = $('#seat-' + relPos(i));
+    if (!badge) return;
+    let dot = badge.querySelector('.vmic');
+    if (voiceSeats[i]) {
+      if (!dot) {
+        dot = document.createElement('span');
+        dot.className = 'vmic';
+        dot.textContent = '🎤';
+        badge.appendChild(dot);
+      }
+    } else if (dot) {
+      dot.remove();
+    }
+  });
+}
 
 // ---------- home: field-style menu wiring ----------
 // Quick play: create a room and, the moment the server confirms it (the
@@ -1074,13 +1437,36 @@ function onMsg(msg) {
     localStorage.setItem('tore.session', JSON.stringify(session));
     $('#connbar').textContent = '';
     updateContinue();
+    // A reconnect lands here too: if my mic was live, re-announce it so
+    // the room (and my peers) rebuild the voice mesh.
+    if (voiceOn) send({ type: 'voice', on: true });
     // Quick play: I just created this room and I am its host — start at
     // once so the empty seats fill with bots (one-tap bot game).
     if (quickPlay) { quickPlay = false; send({ type: 'start' }); }
   } else if (msg.type === 'state') {
     state = msg;
     if (mySeat === null) mySeat = msg.mySeat;
+    // Voice truth rides in every state: mirror it, drop peers whose
+    // seat is gone / a bot / disconnected / mic-off, and (re)form the
+    // pairs that should exist.
+    msg.seats.forEach((s, i) => { voiceSeats[i] = !!s.voice; });
+    Object.keys(peers).forEach((s) => {
+      const seat = msg.seats[+s];
+      if (!seat || seat.kind !== 'human' || !seat.connected || !voiceSeats[+s]) closePeer(+s);
+    });
+    if (voiceOn) maybeConnectVoicePeers();
     render(msg);
+  } else if (msg.type === 'chat') {
+    addChatMsg(msg);
+  } else if (msg.type === 'voice') {
+    voiceSeats[msg.seat] = !!msg.on;
+    if (msg.seat !== mySeat) {
+      if (msg.on) maybeConnectVoicePeers();
+      else closePeer(msg.seat);
+    }
+    paintVoiceDots(state);
+  } else if (msg.type === 'rtc') {
+    onRtcSignal(msg.from, msg.data);
   } else if (msg.type === 'takan') {
     const mine = msg.team === (mySeat % 2);
     const b = $('#takanbanner');
@@ -1579,6 +1965,16 @@ function pileRowHTML(count) {
 // deterministically by seat index so every viewer sees the same face.
 const BOT_BADGE_PORTRAITS = ['av4', 'av2', 'av7', 'av3'];
 const barAvatars = {};
+// The badge pill shows the player's FIRST name only — a full name in a
+// small RTL pill ellipsized its START ("…uaib Anwari"). Bot names
+// («ربات 1») are short and stay whole. The lobby, the top bar and the
+// profile keep the full name; only the table badges shorten it.
+function badgeName(s) {
+  const full = String(s.name || '').trim();
+  if (!full) return 'خالی';
+  if (s.kind === 'bot') return full;
+  return firstNameOf(full) || full;
+}
 function barAvatar(pos, s, seatIdx) {
   let av = s.avatar, photo = s.photo;
   if (s.kind === 'bot') {
@@ -1654,9 +2050,13 @@ function render(st) {
     const kindMark = s.kind === 'human'
       ? '<span class="dot ' + (s.connected ? 'on' : '') + '"></span>' : '';
     el.innerHTML = '<div class="badgename">' + kindMark + '<span class="bnm">' + crown +
-      (s.name || 'خالی') + (i === mySeat ? ' (تو)' : '') + '</span></div>';
+      badgeName(s) + (i === mySeat ? ' (تو)' : '') + '</span></div>';
     el.prepend(barAvatar(pos, s, i));
   });
+  // live-mic dots and any still-fresh chat bubbles ride on top of the
+  // rebuilt badges (the innerHTML rebuild above wiped them).
+  paintVoiceDots(st);
+  ['top', 'right', 'left', 'bottom'].forEach(paintChatBubble);
 
   // won-trick piles: plain rows of card backs on the carpet in front of
   // each player, rendered purely from pileShown by the state machine
