@@ -9,9 +9,6 @@
 const BANK_LOSE_TARGET = 210;  // a team whose BANKED tawan (جمع‌شده) reaches this LOSES the match — there are no match points
 const TAKAN_CLAIM_AMOUNT = 30; // تکان معلق: one takan claim moves exactly this much BANKED tawan
 const TAKAN_CLAIM_MIN_BANK = 30; // a pending claim executes only while the VICTIM's banked tawan (جمع‌شده) is at least this
-const TAWAN_BANK_MIN = 10;     // round tawan ≥ 10 banks into the match-long bank; ≤ 9 is wiped
-const TAWAN_BUMP_LIMIT = 21;   // a final round tawan ABOVE this (and below 30) is written as 30
-const TAWAN_BUMP_VALUE = 30;   // …the value written instead (finals already ≥ 30 stay as they are)
 const PLAYERS = 4;
 const CARDS_PER_PLAYER = 13;
 
@@ -95,23 +92,34 @@ function tawanOf(cards) {
  * round tawan (user's clarified model, 2026-11-06): it only creates a
  * PENDING claim on the other team's BANK, executed by Match (تکان
  * معلق — see Match.onRoundFinished). The two teams' card tawan always
- * sums to exactly 30 before the bump.
- *  BUMP: a final tawan above 21 (and below 30) is written as 30 —
- *  «هر بازیکن که بیشتر از 21 تاوان گرفت باید برایش 30 تاوان نوشته شوه».
- *  A final of exactly 30 stays as-is. The bump applies BEFORE the bank.
+ * sums to exactly 30, and the FINAL round tawan IS the card tawan —
+ * nothing rewrites it (the old >21→30 "bump" is gone; the tens-banding
+ * in bankAmount now happens at BANK time, in Match).
  * There are NO match points (removed at the user's explicit order,
  * 2026-11-05): a round only produces the final tawan, which banks in
- * Match (see TAWAN_BANK_MIN) toward BANK_LOSE_TARGET. A tied final —
- * incl. the classic 15–15 — is simply a tie: both teams bank their
- * own equal tawan; Q♠ decides nothing.
- * Returns { tawan (final, post-bump), bumped }.
+ * Match (see bankAmount) toward BANK_LOSE_TARGET.
+ * Returns { tawan (final) }.
  */
 function scoreRound(cardTawan) {
-  const tawan = cardTawan.slice();
-  const bumped = tawan.map((t) => t > TAWAN_BUMP_LIMIT && t < TAWAN_BUMP_VALUE);
-  if (bumped[0]) tawan[0] = TAWAN_BUMP_VALUE;
-  if (bumped[1]) tawan[1] = TAWAN_BUMP_VALUE;
-  return { tawan, bumped };
+  return { tawan: cardTawan.slice() };
+}
+
+/**
+ * Banking bands — «بندهای ده‌تایی» (user rule, confirmed 2026-11-06
+ * with his correction «از 16 تا 20 → 20؛ اگر 21 شد یعنی 30»): a round's
+ * FINAL tawan banks into جمع‌شده only in whole tens —
+ *   0–9 → 0 · 10–15 → 10 · 16–20 → 20 · 21–30 → 30 (21 counts as 30).
+ * A final can never exceed 30 (the card pool is 30 and a takan adds
+ * nothing), so the top band covers everything from 21 up.
+ * TIE 15–15 exactly: the team that captured ماتکه کالا (Q♠) banks 20
+ * instead of 10 and the other team banks 10 — applied in
+ * Match.onRoundFinished, which knows qsTeam.
+ */
+function bankAmount(finalTawan) {
+  if (finalTawan <= 9) return 0;
+  if (finalTawan <= 15) return 10;
+  if (finalTawan <= 20) return 20;
+  return 30;
 }
 
 /**
@@ -247,9 +255,8 @@ class Round {
       cardTawan,                                  // tawan from captured cards (sums to 30)
       takanCount: this.takanCount.slice(),        // تکان count per team this round (claims only — no round tawan)
       takanBy: [this.takanBy[0].slice(), this.takanBy[1].slice()], // seats that gave the takans
-      bumped: s.bumped,                           // >21 final written as 30, per team
-      tawan: s.tawan,                             // FINAL round tawan per team (post-bump)
-      qsTeam,                                     // team that captured Q♠ (summary info only — decides nothing)
+      tawan: s.tawan,                             // FINAL round tawan per team (= card tawan; nothing rewrites it)
+      qsTeam,                                     // team that captured Q♠ — on an exact 15–15 tie it earns the bank boost (see Match)
     };
     this.finished = true;
     this.emit({ type: 'roundFinished', ...this.result });
@@ -268,10 +275,10 @@ class Match {
   constructor(emit = () => {}, rng = Math.random) {
     this.emit = emit;
     this.rng = rng;
-    this.bankedTawan = [0, 0];   // match-long tawan bank: a round's final tawan banks only when ≥ TAWAN_BANK_MIN (≤ 9 is wiped)
+    this.bankedTawan = [0, 0];   // match-long tawan bank: each round's final tawan banks by the ten-bands (see bankAmount)
     this.pendingTakan = [0, 0];  // تکان معلق: pending claims per team — each claim takes TAKAN_CLAIM_AMOUNT from the OTHER team's bank once it reaches TAKAN_CLAIM_MIN_BANK
     this.roundNo = 0;
-    this.history = [];   // per-round: {roundNo, cardTawan, takanCount, takanBy, bumped, tawan, banked, claimsCreated, claimsExecuted, pendingTakan, bankedTawan, qsTeam}
+    this.history = [];   // per-round: {roundNo, cardTawan, takanCount, takanBy, tawan, banked, qsTieBoost, claimsCreated, claimsExecuted, pendingTakan, bankedTawan, qsTeam}
     this.finished = false;
     this.winner = null;   // the team that did NOT cross the target
     this.loser = null;    // the team whose banked tawan reached BANK_LOSE_TARGET
@@ -295,12 +302,14 @@ class Match {
 
   onRoundFinished(round) {
     const r = round.result;
-    // Tawan bank (user rule): the round's FINAL (post-bump) tawan is
-    // added to the team's match-long bank only when it reaches
-    // TAWAN_BANK_MIN; a final of ≤ 9 is wiped and forgotten. scoreRound
-    // has already applied the >21→30 bump to r.tawan, so a bumped 30
-    // banks as 30 and the ≤9 wipe is unaffected.
-    const banked = r.tawan.map((t) => (t >= TAWAN_BANK_MIN ? t : 0));
+    // Tawan bank (user rule «بندهای ده‌تایی», 2026-11-06): the round's
+    // FINAL tawan banks into the team's match-long bank in whole tens
+    // via bankAmount — 0–9 → 0, 10–15 → 10, 16–20 → 20, 21–30 → 30.
+    // TIE 15–15 exactly (the only possible tie — the card pool is 30):
+    // the team that captured ماتکه کالا (Q♠, r.qsTeam) banks 20 instead
+    // of 10; the other team banks the normal 10.
+    const qsTieBoost = (r.tawan[0] === 15 && r.tawan[1] === 15) ? r.qsTeam : -1;
+    const banked = r.tawan.map((t, i) => (i === qsTieBoost ? 20 : bankAmount(t)));
     this.bankedTawan[0] += banked[0];
     this.bankedTawan[1] += banked[1];
 
@@ -339,8 +348,8 @@ class Match {
       roundNo: this.roundNo, cardTawan: r.cardTawan.slice(),
       takanCount: r.takanCount.slice(),
       takanBy: r.takanBy ? r.takanBy.map((a) => a.slice()) : [[], []],
-      bumped: r.bumped ? r.bumped.slice() : [false, false],
       tawan: r.tawan.slice(), banked: banked.slice(),
+      qsTieBoost,                                     // team that got the 15–15 Q♠ bank boost, or -1
       claimsCreated, claimsExecuted,
       pendingTakan: this.pendingTakan.slice(),
       bankedTawan: this.bankedTawan.slice(), qsTeam: r.qsTeam,
@@ -375,9 +384,9 @@ function seededRng(seed) {
 }
 
 module.exports = {
-  BANK_LOSE_TARGET, TAKAN_CLAIM_AMOUNT, TAKAN_CLAIM_MIN_BANK, TAWAN_BANK_MIN, TAWAN_BUMP_LIMIT, TAWAN_BUMP_VALUE, PLAYERS, CARDS_PER_PLAYER,
+  BANK_LOSE_TARGET, TAKAN_CLAIM_AMOUNT, TAKAN_CLAIM_MIN_BANK, PLAYERS, CARDS_PER_PLAYER,
   SUITS, SUIT_NAMES, RANK_NAMES, TOTAL_TAWAN,
   suitOf, rankOf, teamOf, partnerOf, cardName, cardPoints,
   makeDeck, shuffle, deal, legalPlays, trickWinnerSeat, tawanOf,
-  scoreRound, decideMatchLoser, Round, Match, seededRng,
+  scoreRound, bankAmount, decideMatchLoser, Round, Match, seededRng,
 };
