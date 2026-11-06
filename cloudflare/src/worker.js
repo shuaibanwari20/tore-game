@@ -4,7 +4,7 @@
  * Routes:
  *   GET  /                        the game client (see below)
  *   GET  /ws                      WebSocket upgrade → GameServer DO
- *   GET  /auth/config             { enabled } — is the sign-in gate on?
+ *   GET  /auth/config             { enabled, fbLive } — gate state
  *   GET  /auth/me                 session user JSON, or 401
  *   GET  /auth/google             start Google OAuth (PKCE)
  *   GET  /auth/google/callback    Google OAuth callback
@@ -151,7 +151,13 @@ export default {
     }
 
     if (path === '/auth/config') {
-      return Response.json({ enabled: authEnabled });
+      // fbLive tells the client gate whether to offer the Facebook
+      // button at all: the FB app stays in Development mode (only app
+      // roles/testers could sign in) until it passes review, so the
+      // button is hidden unless FB_LIVE is exactly "1". The /auth/
+      // facebook routes below stay live either way; Google sign-in
+      // never depends on the FB_* secrets.
+      return Response.json({ enabled: authEnabled, fbLive: env.FB_LIVE === '1' });
     }
     if (path === '/auth/me') {
       const user = await auth.readSession(request, env);
