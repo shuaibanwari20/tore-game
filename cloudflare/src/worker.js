@@ -2,7 +2,11 @@
  * worker.js — Tore on Cloudflare: HTTP entry point.
  *
  * Routes:
- *   GET  /                        the game client (see below)
+ *   GET  /                        the game client (see below). With
+ *                                 AUTH_ENABLED=1 and no valid session it
+ *                                 answers the STANDALONE GATE PAGE with
+ *                                 401 instead (src/gate-page.js) — the
+ *                                 bundle is never sent signed-out.
  *   GET  /ws                      WebSocket upgrade → GameServer DO
  *   GET  /auth/config             { enabled, fbLive } — gate state
  *   GET  /auth/me                 session user JSON, or 401
@@ -30,12 +34,13 @@
 
 import * as auth from './auth.js';
 import { GameServer } from './game-server.js';
+import { gatePage } from './gate-page.js';
 
 export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261106-firebase';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261106-gate';
 const CLIENT_MIN_BYTES = 3_000_000; // the real bundle is ~3.1 MB
 const CLIENT_CACHE_TTL = 86400; // seconds the edge keeps the client copy
 
@@ -191,6 +196,23 @@ export default {
     }
 
     if ((path === '/' || path === '/index.html') && request.method === 'GET') {
+      // Gate FIRST: with auth on, a request without a valid session
+      // gets the standalone sign-in page (401) — the game bundle is
+      // never sent to an unauthenticated browser, so the main menu
+      // can never flash behind a late gate. Authenticated requests
+      // fall through to the bundle as always.
+      if (authEnabled) {
+        const user = await auth.readSession(request, env);
+        if (!user) {
+          return new Response(gatePage(), {
+            status: 401,
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'no-store',
+            },
+          });
+        }
+      }
       return serveClient(env);
     }
 
