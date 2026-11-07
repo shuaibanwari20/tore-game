@@ -8,9 +8,10 @@
  * object caps total concurrency) is documented in README-fa.md.
  *
  * Protocol parity: the WebSocket message shapes are IDENTICAL to the
- * Node server (types: create/join/reconnect/start/play/declare13/
- * chat/voice/rtc in; room/state/error/takan/declared13/chat/voice/rtc
- * out) so the existing client works unchanged apart from the /ws path.
+ * Node server (types: create/join/reconnect/start/leave/play/
+ * declare13/chat/voice/rtc in; room/state/error/takan/declared13/
+ * chat/voice/rtc/roomClosed out) so the existing client works
+ * unchanged apart from the /ws path.
  *
  * Cloudflare adaptations vs the Node original:
  *  - Hibernatable WebSockets (state.acceptWebSocket); per-socket data
@@ -79,9 +80,10 @@ function cleanName(name) {
 // valid message fans out to the whole room INCLUDING the sender, one
 // per 800 ms per seat; RTC signaling goes to exactly one human seat
 // in the same room (~16 KB cap); the audio itself is peer-to-peer.
-const CHAT_PHRASES = ['سلام', 'ښه حرکت', 'ښه لوبه', 'هاهاها', 'مننه', 'بخښنه!', 'ژر شه!', 'افرین!', 'اوس نه!', 'وای خدای', 'ښه بخت', 'بیا!'];
+const CHAT_PHRASES = ['سلام', 'ښه حرکت', 'ښه لوبه', 'هاهاها', 'مننه', 'بخښنه!', 'ژر شه!', 'افرین!', 'اوس نه!', 'وای خدای', 'ښه بخت', 'بیا!',
+  'ښه کار!', 'واه واه!', 'ستا وار دی', 'صبر وکړه', 'زه چمتو یم', 'یو ځل بیا!', 'نه منم!', 'مه وېرېږه', 'قوي اوسه!', 'ډېر ښه!', 'خدای دې مل شه', 'وروسته ګورو'];
 const CHAT_EMOJIS = ['😎', '😂', '😍', '😭', '😡', '👊', '😮', '👍', '❤️', '🔥'];
-const CHAT_STICKERS = ['st1', 'st2', 'st3', 'st4', 'st5', 'st6', 'st7', 'st8', 'st9'];
+const CHAT_STICKERS = ['st1', 'st2', 'st3', 'st4', 'st5', 'st6', 'st7', 'st8', 'st9', 'st10', 'st11', 'st12', 'st13', 'st14', 'st15', 'st16'];
 const CHAT_MIN_INTERVAL_MS = 800;
 const RTC_MAX_BYTES = 16384;
 function cleanChat(kind, value) {
@@ -299,28 +301,28 @@ export class GameServer {
     }
   }
 
-  /** Expire disconnected seats after the grace window; drop dead lobby rooms. */
+  /** Expire disconnected seats after the grace window — IN-MATCH ONLY.
+   *  A WAITING room never expires (owner order 2026-11-07): its code
+   *  stays joinable until the match starts or the host cancels it, and
+   *  a lobby seat stays reserved through a disconnect of any length,
+   *  so the host (or a guest) can always reconnect back into it. */
   _sweep() {
     const now = Date.now();
     for (const room of [...this.rooms.values()]) {
+      if (room.phase === 'lobby') continue;
       let changed = false;
       room.seats.forEach((s, i) => {
         if (s.kind === 'human' && !s.connected && s.disconnectAt &&
             now - s.disconnectAt > RECONNECT_GRACE_MS) {
-          if (room.phase === 'lobby') {
-            room.seats[i] = emptySeat();
-          } else {
-            s.kind = 'bot'; // bot takes over the seat and its hand
-            s.avatar = null;
-            s.country = '';
-            s.photo = null;
-            s.voiceMic = false;
-            s.voiceSpeaker = false;
-            s.connected = true;
-            changed = true;
-            this._pumpTurn(room);
-          }
+          s.kind = 'bot'; // bot takes over the seat and its hand
+          s.avatar = null;
+          s.country = '';
+          s.photo = null;
+          s.voiceMic = false;
+          s.voiceSpeaker = false;
+          s.connected = true;
           changed = true;
+          this._pumpTurn(room);
         }
       });
       if (changed) this._broadcastState(room);
@@ -666,6 +668,33 @@ export class GameServer {
         if (!room || room.phase !== 'lobby') return;
         if (att.seat !== this._hostSeat(room)) return sendError(ws, 'فقط میزبان می‌تواند بازی را شروع کند', 'hostOnly');
         this._startMatch(room);
+        break;
+      }
+      case 'leave': {
+        // Leaving the WAITING room (the match has not started): a
+        // guest's seat is freed at once; the HOST leaving cancels the
+        // room for everyone — the remaining players get a coded
+        // roomClosed notice and their clients return to the main menu.
+        const room = this.rooms.get(att.code);
+        if (!room || room.phase !== 'lobby') return;
+        const seat = room.seats[att.seat];
+        if (!seat || seat.kind !== 'human') return;
+        if (att.seat === this._hostSeat(room)) {
+          room.seats.forEach((s, i) => {
+            if (i !== att.seat && s.kind === 'human' && s.connected && s.ws) {
+              send(s.ws, { type: 'roomClosed', code: 'roomCancelled' });
+            }
+          });
+          this._cancelTimers(room.code);
+          this.rooms.delete(room.code);
+        } else {
+          room.seats[att.seat] = emptySeat();
+          this._broadcastState(room);
+        }
+        att.code = null;
+        att.seat = -1;
+        att.token = null;
+        this._saveAttachment(ws, att);
         break;
       }
       case 'declare13': {
