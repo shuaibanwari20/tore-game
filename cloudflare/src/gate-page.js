@@ -24,11 +24,11 @@ export function gatePage() {
 }
 
 const GATE_HTML = `<!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="ps" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>توره — ورود</title>
+<title>توره — ننوتل</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { min-height: 100%; }
@@ -76,20 +76,32 @@ const GATE_HTML = `<!DOCTYPE html>
   }
   .gerr { min-height: 20px; margin-top: 14px; font-size: 13.5px; color: #ff9d8a; }
   .gnote { margin-top: 10px; font-size: 12.5px; color: #b9a06a; }
+  .glangs { margin-top: 18px; display: flex; gap: 8px; justify-content: center; }
+  .glang {
+    padding: 7px 16px; border-radius: 999px; cursor: pointer; font-family: inherit;
+    font-size: 14px; font-weight: 700; color: #e8d5a8;
+    background: rgba(255,255,255,.06); border: 1.5px solid rgba(212,175,55,.4);
+  }
+  .glang.sel { border-color: #d4af37; background: rgba(212,175,55,.18); color: #ffd75e; }
 </style>
 </head>
 <body>
   <div class="gate-card">
     <h1>توره</h1>
-    <div class="gsub">برای بازی وارد شوید</div>
+    <div class="gsub" id="gate-sub">د لوبې لپاره ننوځئ</div>
     <div class="gbtns" id="gate-btns">
       <button type="button" class="gbtn google" id="btn-google">
         <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.3 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.3 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>
-        <span id="btn-google-label">ورود با گوگل</span>
+        <span id="btn-google-label">په ګوګل ننوځه</span>
       </button>
     </div>
     <div class="gerr" id="gate-err"></div>
-    <div class="gnote">ورود یعنی پذیرش قانون‌های بازی</div>
+    <div class="gnote" id="gate-note">ننوتل یعنې د لوبې قوانین منل</div>
+    <div class="glangs" id="gate-langs">
+      <button type="button" class="glang" data-lang="ps">پښتو</button>
+      <button type="button" class="glang" data-lang="fa">دری</button>
+      <button type="button" class="glang" data-lang="en">English</button>
+    </div>
   </div>
 <script>
 (function () {
@@ -102,18 +114,59 @@ const GATE_HTML = `<!DOCTYPE html>
     projectId: 'tore-game',
     appId: '1:162385253173:web:e51c95272435ccd12db27c'
   };
+  // Language: the same store as the game itself (localStorage
+  // 'tore.lang'), default Pashto. The switcher under the card lets a
+  // player pick a language BEFORE signing in, and the choice carries
+  // into the game. Only the texts change — the sign-in flow below is
+  // untouched.
+  var GATE_STR = {
+    ps: { title: 'توره — ننوتل', sub: 'د لوبې لپاره ننوځئ', google: 'په ګوګل ننوځه', busy: 'ننوتل روان دي…', fb: 'په فېسبوک ننوځه', note: 'ننوتل یعنې د لوبې قوانین منل', errFail: 'ننوتل ناکام شول — بیا هڅه وکړئ', errConn: 'په ننوتلو کې ستونزه — انټرنېټ وګورئ' },
+    fa: { title: 'توره — ورود', sub: 'برای بازی وارد شوید', google: 'ورود با گوگل', busy: 'در حال ورود…', fb: 'ورود با فیسبوک', note: 'ورود یعنی پذیرش قانون‌های بازی', errFail: 'ورود ناموفق بود — دوباره تلاش کنید', errConn: 'خطا در ورود — اتصال اینترنت را بررسی کنید' },
+    en: { title: 'Tore — Sign in', sub: 'Sign in to play', google: 'Sign in with Google', busy: 'Signing in…', fb: 'Sign in with Facebook', note: 'Signing in means accepting the game rules', errFail: 'Sign-in failed — please try again', errConn: 'Sign-in error — check your internet connection' }
+  };
+  var glang = 'ps';
+  try {
+    var savedLang = localStorage.getItem('tore.lang');
+    if (savedLang && GATE_STR[savedLang]) glang = savedLang;
+  } catch (e) { /* private mode — Pashto default stands */ }
+  function GL() { return GATE_STR[glang]; }
+  function applyGateLang() {
+    var d = GL();
+    document.documentElement.lang = glang;
+    document.documentElement.dir = glang === 'en' ? 'ltr' : 'rtl';
+    document.title = d.title;
+    document.getElementById('gate-sub').textContent = d.sub;
+    document.getElementById('btn-google-label').textContent = d.google;
+    document.getElementById('gate-note').textContent = d.note;
+    var fbLbl = document.getElementById('gate-fb-label');
+    if (fbLbl) fbLbl.textContent = d.fb;
+    var bs = document.querySelectorAll('.glang');
+    for (var i = 0; i < bs.length; i++) {
+      bs[i].classList.toggle('sel', bs[i].getAttribute('data-lang') === glang);
+    }
+  }
+  var langBtns = document.querySelectorAll('.glang');
+  for (var j = 0; j < langBtns.length; j++) {
+    langBtns[j].onclick = function () {
+      glang = this.getAttribute('data-lang');
+      try { localStorage.setItem('tore.lang', glang); } catch (e) { /* ignore */ }
+      applyGateLang();
+    };
+  }
+  applyGateLang();
+
   var errBox = document.getElementById('gate-err');
   var gBtn = document.getElementById('btn-google');
   var gLabel = document.getElementById('btn-google-label');
   function gateFail(msg) {
     errBox.textContent = msg;
     gBtn.disabled = false;
-    gLabel.textContent = 'ورود با گوگل';
+    gLabel.textContent = GL().google;
   }
   function busy() {
     errBox.textContent = '';
     gBtn.disabled = true;
-    gLabel.textContent = 'در حال ورود…';
+    gLabel.textContent = GL().busy;
   }
   // The Facebook button appears only while the server says FB login is
   // live (/auth/config fbLive) — same rule as the in-game gate.
@@ -126,7 +179,8 @@ const GATE_HTML = `<!DOCTYPE html>
     ic.className = 'fic';
     ic.textContent = 'f';
     var tx = document.createElement('span');
-    tx.textContent = 'ورود با فیسبوک';
+    tx.id = 'gate-fb-label';
+    tx.textContent = GL().fb;
     b.appendChild(ic);
     b.appendChild(tx);
     b.onclick = function () { location.href = '/auth/facebook'; };
@@ -158,9 +212,9 @@ const GATE_HTML = `<!DOCTYPE html>
       });
     }).then(function (r) {
       if (r && r.ok) { location.reload(); return; }
-      gateFail('ورود ناموفق بود — دوباره تلاش کنید');
+      gateFail(GL().errFail);
     }).catch(function () {
-      gateFail('خطا در ورود — اتصال اینترنت را بررسی کنید');
+      gateFail(GL().errConn);
     });
   }
   gBtn.onclick = function () {
@@ -179,7 +233,7 @@ const GATE_HTML = `<!DOCTYPE html>
         throw e;
       });
     }).catch(function () {
-      gateFail('ورود ناموفق بود — دوباره تلاش کنید');
+      gateFail(GL().errFail);
     });
   };
   // Returning from the redirect flow: pick up the result once.
