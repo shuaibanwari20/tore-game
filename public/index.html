@@ -1727,10 +1727,24 @@ const voiceSeats = {}; // seat -> bool, mirrored from the server (state + broadc
 // STUN alone cannot cross the symmetric / carrier-grade NAT that
 // mobile networks use — without a TURN relay the pair often has no
 // usable candidate pair at all and voice silently never connects.
-// The Open Relay Project endpoints below are metered.ca's published
-// public-demo TURN service (open credentials, printed in the
-// project's own docs), used as a best-effort relay fallback.
-const ICE_SERVERS = [
+//
+// Relay order, strongest first:
+//  1. The game's OWN TURN relay account — Metered (preferred; its
+//     free tier needs no card), or Cloudflare TURN as a fallback
+//     provider. The Worker serves short-lived credentials at
+//     GET /turn-credentials, NORMALIZED to { iceServers: [...] }
+//     (an array, always) whichever provider answered, so no
+//     provider key ever ships in this page; refreshIceServers()
+//     loads them on mic-on and puts them FIRST in the list below.
+//  2. Google STUN.
+//  3. The Open Relay Project endpoints — metered.ca's published
+//     public-demo TURN service (open credentials, printed in the
+//     project's own docs) — kept as a last-resort fallback. It is
+//     shared and weak: on real phones it routinely failed to carry
+//     the call, which is why the game's own relay exists.
+// Hosts without the route (the Node servers) answer 404/503 — the
+// client then runs on entries 2+3 exactly as before, silently.
+const FALLBACK_ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   {
     urls: [
@@ -1742,6 +1756,48 @@ const ICE_SERVERS = [
     credential: 'openrelayproject',
   },
 ];
+// The iceServers every new peer is built with: the fallback list
+// until a /turn-credentials fetch succeeds, then
+// [the relay account's iceServers…, …fallback].
+let iceServersNow = FALLBACK_ICE_SERVERS;
+// Fetch cache: a successful answer is reused for 12 h (the minted
+// credentials live 24 h); a failed/unconfigured answer is NOT
+// cached, so the next mic-on retries — per the route contract.
+let iceFetchedAt = 0; // ms epoch of last successful fetch; 0 = never
+let iceFetchInFlight = null;
+const ICE_CACHE_MS = 12 * 3600 * 1000;
+async function refreshIceServers() {
+  if (iceFetchedAt && Date.now() - iceFetchedAt < ICE_CACHE_MS) return;
+  if (!iceFetchInFlight) {
+    iceFetchInFlight = (async () => {
+      try {
+        // Bounded wait: a hung route must never stall the mic.
+        const ctl = ('AbortController' in window) ? new AbortController() : null;
+        const timer = ctl ? setTimeout(() => { try { ctl.abort(); } catch (e) {} }, 4000) : null;
+        let res = null;
+        try {
+          res = await fetch('/turn-credentials', {
+            credentials: 'same-origin',
+            signal: ctl ? ctl.signal : undefined,
+          });
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
+        if (!res || !res.ok) return; // 401/404/503 → not configured here
+        const data = await res.json();
+        // Route contract: iceServers is ALWAYS an array — the
+        // Worker normalizes both providers (Metered answers an
+        // array natively; Cloudflare's single object is wrapped).
+        const relayList = (data && Array.isArray(data.iceServers)) ? data.iceServers : [];
+        if (!relayList.length) return;
+        iceServersNow = relayList.concat(FALLBACK_ICE_SERVERS);
+        iceFetchedAt = Date.now();
+      } catch (e) { /* offline / route missing — fallback stays */ }
+    })();
+  }
+  try { await iceFetchInFlight; } catch (e) { /* never throws by design */ }
+  iceFetchInFlight = null;
+}
 // User feedback for the voice link: the 'connected' toast shows once
 // per mic-on session; a 'could not connect' toast shows at most once
 // per seat until that pair actually connects.
@@ -1756,6 +1812,12 @@ async function toggleVoice() {
     toast(T('micUnavailable'));
     return;
   }
+  // Start the TURN-credentials fetch in parallel with the mic
+  // request, and wait for it before any peer is built or our voice
+  // is announced — so every peer in this session is born with the
+  // best relay list we could get (refreshIceServers never throws
+  // and is time-bounded, so this cannot stall the mic).
+  const iceReady = refreshIceServers();
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1763,6 +1825,7 @@ async function toggleVoice() {
     toast(T('micUnavailable'));
     return;
   }
+  await iceReady;
   localStream = stream;
   voiceOn = true;
   voiceLinkToastShown = false;
@@ -1793,7 +1856,7 @@ function maybeConnectVoicePeers() {
 function ensurePeer(seat, initiate) {
   if (!voiceOn || seat === mySeat) return null;
   if (peers[seat]) return peers[seat];
-  const pc = new RTCPeerCtor({ iceServers: ICE_SERVERS });
+  const pc = new RTCPeerCtor({ iceServers: iceServersNow });
   const entry = {
     pc,
     audio: null,
