@@ -29,6 +29,21 @@ const GATE_HTML = `<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>توره — ننوتل</title>
+<script>
+  // Resolve the language FIRST — this tiny script sits before the
+  // <style> block, whose inlined carpet makes it the slowest part of
+  // the head to stream in. The card below stays hidden until the main
+  // script applies these strings, so a player who stored Dari/English
+  // never sees the static Pashto defaults flash (the same no-flash
+  // rule as the game page's splash veil).
+  window.__glang = 'ps';
+  try {
+    var __sl = localStorage.getItem('tore.lang');
+    if (__sl === 'ps' || __sl === 'fa' || __sl === 'en') window.__glang = __sl;
+  } catch (e) { /* private mode — Pashto default stands */ }
+  document.documentElement.lang = window.__glang;
+  document.documentElement.dir = window.__glang === 'en' ? 'ltr' : 'rtl';
+</script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { min-height: 100%; }
@@ -50,7 +65,13 @@ const GATE_HTML = `<!DOCTYPE html>
     border-radius: 22px; padding: 30px 24px 20px;
     text-align: center;
     box-shadow: 0 18px 50px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 225, 150, .18);
+    /* Hidden until the main script applies the resolved language
+       (body.lang-ready); the animation is the no-JS failsafe that
+       still reveals the card (in the Pashto defaults) after 3 s. */
+    visibility: hidden; animation: gateShow .01s linear 3s forwards;
   }
+  body.lang-ready .gate-card { visibility: visible; animation: none; }
+  @keyframes gateShow { to { visibility: visible; } }
   .gate-card h1 {
     font-size: 54px; line-height: 1.15; color: #d4af37;
     text-shadow: 0 2px 0 #7a5c14, 0 6px 22px rgba(0, 0, 0, .6);
@@ -124,7 +145,7 @@ const GATE_HTML = `<!DOCTYPE html>
     fa: { title: 'توره — ورود', sub: 'برای بازی وارد شوید', google: 'ورود با گوگل', busy: 'در حال ورود…', fb: 'ورود با فیسبوک', note: 'ورود یعنی پذیرش قانون‌های بازی', errFail: 'ورود ناموفق بود — دوباره تلاش کنید', errConn: 'خطا در ورود — اتصال اینترنت را بررسی کنید' },
     en: { title: 'Tore — Sign in', sub: 'Sign in to play', google: 'Sign in with Google', busy: 'Signing in…', fb: 'Sign in with Facebook', note: 'Signing in means accepting the game rules', errFail: 'Sign-in failed — please try again', errConn: 'Sign-in error — check your internet connection' }
   };
-  var glang = 'ps';
+  var glang = (window.__glang && GATE_STR[window.__glang]) ? window.__glang : 'ps';
   try {
     var savedLang = localStorage.getItem('tore.lang');
     if (savedLang && GATE_STR[savedLang]) glang = savedLang;
@@ -134,6 +155,7 @@ const GATE_HTML = `<!DOCTYPE html>
     var d = GL();
     document.documentElement.lang = glang;
     document.documentElement.dir = glang === 'en' ? 'ltr' : 'rtl';
+    document.body.classList.add('lang-ready');
     document.title = d.title;
     document.getElementById('gate-sub').textContent = d.sub;
     document.getElementById('btn-google-label').textContent = d.google;
