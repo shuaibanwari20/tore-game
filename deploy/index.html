@@ -59,7 +59,10 @@
     background-size: cover, cover;
     background-position: center, center;
   }
-  /* ---------- compact header: slim turn bar + two-line score strip ---------- */
+  /* ---------- compact header: two-line score strip on TOP, the slim
+     menu-button row BELOW it (owner order 2026-11-07 — the strip moved
+     up, «منوی اصلی» moved down; the two rows keep their own margins, so
+     the total header height is unchanged) ---------- */
   .ghead { display: flex; gap: 6px; align-items: center; min-height: 31px; margin-bottom: 6px; }
   .menubtn {
     width: auto; margin: 0; padding: 4px 9px; font-size: 12px; line-height: 1.25; font-weight: 700;
@@ -269,8 +272,9 @@
 
   /* ---------- in-room chat panel ----------
      Slides up from the bottom over the table, in the game's dark/gold
-     language. PRESET-ONLY: the 12 quick phrases, the 9 GIF stickers
-     and the 10-emoji row — no free text, no message history, no input.
+     language. PRESET-ONLY: the quick phrases (24, in a swipe pager),
+     the GIF stickers (16, in their own swipe pager) and the 10-emoji
+     row — no free text, no message history, no input.
      A tap sends at once; the message shows as a bubble over the
      sender's badge and is gone. The panel hugs its content. */
   #chatpanel {
@@ -301,6 +305,21 @@
     border: 1px solid #d9b380; background: rgba(255,255,255,.06); color: #ffe9c9;
     font-size: 14px; font-family: inherit; cursor: pointer; line-height: 1;
   }
+  /* Phrases and stickers are INDEPENDENT horizontal swipe pagers
+     (owner order 2026-11-07): each pager scrolls sideways with
+     scroll-snap, one full grid page per stop, with dot indicators
+     under it. Swiping one never moves the other. The pagers live
+     inside .chat-scroll, whose vertical scroll still works: a
+     horizontal drag snaps the pager, a vertical drag scrolls the
+     panel (touch-action: pan-x pan-y lets the browser split the two
+     axes by gesture direction). */
+  .pager { overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; }
+  .pager::-webkit-scrollbar { display: none; }
+  .pager-track { display: flex; }
+  .pager-track > .page { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
+  .pager-dots { display: flex; justify-content: center; gap: 6px; padding: 5px 0 0; }
+  .pager-dots .pdot { width: 7px; height: 7px; border-radius: 50%; background: rgba(245,231,198,.28); transition: background .15s; }
+  .pager-dots .pdot.on { background: #ffd75e; }
   .chat-quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 8px 12px 2px; }
   .qphrase {
     margin: 0; padding: 7px 4px; font-size: 13.5px; font-weight: 700; font-family: inherit;
@@ -433,6 +452,15 @@
 
   /* ---------- lobby ---------- */
   .roomcode { text-align: center; font-size: 40px; font-weight: 900; letter-spacing: 10px; color: #ffd75e; margin: 4px 0; }
+  /* the code sits beside a one-tap copy button (clipboard, with a
+     legacy fallback — see copyRoomCode()) */
+  .codereel { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .copybtn {
+    width: auto; margin: 0; padding: 7px 12px; font-size: 13.5px; font-weight: 700; font-family: inherit;
+    background: rgba(255,215,94,.14); color: #ffd75e; border: 1px solid #ffd75e;
+    border-radius: 999px; cursor: pointer; white-space: nowrap;
+  }
+  .copybtn:active { transform: scale(.96); }
   .seatrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 4px; border-bottom: 1px dashed rgba(255,255,255,.2); font-size: 15px; }
   .seatrow:last-child { border-bottom: 0; }
   .sr-main { display: flex; align-items: center; gap: 9px; min-width: 0; }
@@ -751,18 +779,19 @@
   <section id="scr-lobby" class="hidden">
     <div class="cardbox">
       <div id="lobby-hint" style="text-align:center; font-size:14px; opacity:.85">د کوټې کوډ — ملګرو ته یې ووایه</div>
-      <div class="roomcode" id="lobby-code">····</div>
+      <div class="codereel">
+        <div class="roomcode" id="lobby-code">····</div>
+        <button id="btn-copycode" class="copybtn" type="button">📋 <span id="copycode-lbl">کوډ کاپي کړه</span></button>
+      </div>
       <div id="lobby-seats"></div>
       <button id="btn-start">لوبه پیل کړه</button>
+      <button id="btn-leavelobby" class="ghost">له کوټې ووځه</button>
       <div id="lobby-note" style="text-align:center; font-size:13px; opacity:.85; margin-top:8px"></div>
     </div>
   </section>
 
   <!-- ======== GAME ======== -->
   <section id="scr-game" class="hidden">
-    <div class="ghead">
-      <button id="btn-leave" class="menubtn">اصلي مینو</button>
-    </div>
     <div class="scorestrip">
       <div class="ss-team">
         <div class="ss-line1"><span class="ss-tname" id="ss-name-us">زموږ ټیم</span><span class="tkstars" id="tk-us"></span><span>·</span><span class="ss-banklbl">جمع شوی</span><span class="ss-banknum" id="sc-us">0</span></div>
@@ -776,6 +805,9 @@
         <div class="ss-line1"><span class="ss-tname" id="ss-name-them">د سیال ټیم</span><span class="tkstars" id="tk-them"></span><span>·</span><span class="ss-banklbl">جمع شوی</span><span class="ss-banknum" id="sc-them">0</span></div>
         <div class="ss-round"><span class="ss-roundlbl">د دې لاس تاوان: </span><span class="twnum" id="tw-them">0</span></div>
       </div>
+    </div>
+    <div class="ghead">
+      <button id="btn-leave" class="menubtn">اصلي مینو</button>
     </div>
 
     <div class="table" id="table">
@@ -886,9 +918,11 @@
     <button id="btn-chat-close" aria-label="بندول">✕</button>
   </div>
   <div class="chat-scroll">
-    <div class="chat-quick" id="chat-quick"></div>
+    <div class="pager" id="phrase-pager"><div class="pager-track" id="chat-quick"></div></div>
+    <div class="pager-dots" id="phrase-dots"></div>
     <div class="stk-label">سټیکرونه</div>
-    <div class="chat-stickers" id="chat-stickers"></div>
+    <div class="pager" id="sticker-pager"><div class="pager-track" id="chat-stickers"></div></div>
+    <div class="pager-dots" id="sticker-dots"></div>
   </div>
   <div class="chat-emojis" id="chat-emojis"></div>
 </div>
@@ -951,6 +985,10 @@ const STR = {
     startGame: 'لوبه پیل کړه',
     lobbyNoteHost: 'کله چې چمتو یې پیل یې کړه — تش ځایونه په روباتونو ډکېږي.',
     lobbyNoteGuest: 'د کوربه په تمه چې لوبه پیل کړي…',
+    leaveRoom: 'له کوټې ووځه',
+    roomCancelled: 'کوربه کوټه لغوه کړه',
+    copyCode: 'کوډ کاپي کړه',
+    copied: 'کوډ کاپي شو!',
     teamA: 'الف ټیم',
     teamB: 'ب ټیم',
     teamUs: 'زموږ ټیم',
@@ -1055,6 +1093,10 @@ const STR = {
     startGame: 'شروع بازی',
     lobbyNoteHost: 'هر وقت آماده بودی شروع کن — جای‌های خالی با ربات پر می‌شود.',
     lobbyNoteGuest: 'منتظر میزبان برای شروع بازی…',
+    leaveRoom: 'ترک اتاق',
+    roomCancelled: 'میزبان اتاق را لغو کرد',
+    copyCode: 'کپی کد',
+    copied: 'کد کپی شد!',
     teamA: 'تیم الف',
     teamB: 'تیم ب',
     teamUs: 'تیم ما',
@@ -1159,6 +1201,10 @@ const STR = {
     startGame: 'Start Game',
     lobbyNoteHost: 'Start whenever you are ready — empty seats fill with bots.',
     lobbyNoteGuest: 'Waiting for the host to start the game…',
+    leaveRoom: 'Leave room',
+    roomCancelled: 'The host cancelled the room',
+    copyCode: 'Copy code',
+    copied: 'Code copied!',
     teamA: 'Team A',
     teamB: 'Team B',
     teamUs: 'Our Team',
@@ -1295,6 +1341,8 @@ function applyI18n() {
   if (rulesBody) rulesBody.innerHTML = T('rulesHtml');
   set('#lobby-hint', 'lobbyHint');
   set('#btn-start', 'startGame');
+  set('#btn-leavelobby', 'leaveRoom');
+  set('#copycode-lbl', 'copyCode');
   set('#btn-leave', 'mainMenu');
   set('#ss-name-us', 'teamUs');
   set('#ss-name-them', 'teamThem');
@@ -1653,6 +1701,54 @@ $('#btn-join').onclick = () => {
   connect(() => send({ type: 'join', code, ...profilePayload() }));
 };
 $('#btn-start').onclick = () => send({ type: 'start' });
+// Leaving the waiting room is a SERVER act, not just a local exit:
+// a guest's seat is freed for the next player, and the HOST leaving
+// cancels the room for everyone (the others get {type:'roomClosed'}
+// and land back on the menu). The saved reconnect token is dropped
+// either way, so «ادامهٔ بازی» can never resurrect a room I left.
+// The short delay lets the leave frame flush before the reload
+// tears the socket down.
+$('#btn-leavelobby').onclick = () => {
+  send({ type: 'leave' });
+  intentionalClose = true;
+  localStorage.removeItem('tore.session');
+  session = null;
+  setTimeout(() => location.reload(), 200);
+};
+// Copy the room code: the async Clipboard API where it exists, else
+// the legacy textarea + execCommand path (older / in-app browsers).
+function fallbackCopyText(t) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return !!ok;
+  } catch (e) { return false; }
+}
+function copyRoomCode() {
+  const code = (state && state.code) ||
+    ($('#lobby-code').textContent || '').replace(/\s+/g, '');
+  if (!code || code.includes('·')) return;
+  const done = (ok) => {
+    if (!ok) return;
+    const lbl = $('#copycode-lbl');
+    lbl.textContent = T('copied');
+    setTimeout(() => { lbl.textContent = T('copyCode'); }, 1600);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(code).then(() => done(true), () => done(fallbackCopyText(code)));
+  } else {
+    done(fallbackCopyText(code));
+  }
+}
+$('#btn-copycode').onclick = copyRoomCode;
 $('#btn-13').onclick = () => {
   send({ type: 'declare13' });
   $('#btn-13').classList.add('hidden'); // until the confirming state arrives
@@ -1668,17 +1764,19 @@ $('#btn-leave').onclick = () => {
   location.reload();
 };
 // ---------- in-room chat (preset-only) ----------
-// There is NO free text in Tore chat: the panel offers the 12 preset
-// phrases, the 10 emojis and the 9 GIF stickers, and a tap sends
+// There is NO free text in Tore chat: the panel offers the preset
+// phrases (24 — two swipe pages of 12), the 10 emojis and the GIF
+// stickers (16 — two swipe pages of 8), and a tap sends
 // {type:'chat', kind, value}. The server validates kind+value against
 // the same allowlists (anything else, including old-style {text}
 // frames, is dropped) and relays it to the WHOLE room including the
 // sender; the client renders ONLY the relayed message — as a speech
 // bubble over the sender's badge (3 s, or 4 s for a GIF sticker).
 // Nothing is kept: no history, no list, no input.
-const CHAT_PHRASES = ['سلام', 'ښه حرکت', 'ښه لوبه', 'هاهاها', 'مننه', 'بخښنه!', 'ژر شه!', 'افرین!', 'اوس نه!', 'وای خدای', 'ښه بخت', 'بیا!'];
+const CHAT_PHRASES = ['سلام', 'ښه حرکت', 'ښه لوبه', 'هاهاها', 'مننه', 'بخښنه!', 'ژر شه!', 'افرین!', 'اوس نه!', 'وای خدای', 'ښه بخت', 'بیا!',
+  'ښه کار!', 'واه واه!', 'ستا وار دی', 'صبر وکړه', 'زه چمتو یم', 'یو ځل بیا!', 'نه منم!', 'مه وېرېږه', 'قوي اوسه!', 'ډېر ښه!', 'خدای دې مل شه', 'وروسته ګورو'];
 const CHAT_EMOJIS = ['😎', '😂', '😍', '😭', '😡', '👊', '😮', '👍', '❤️', '🔥'];
-const CHAT_STICKERS = ['st1', 'st2', 'st3', 'st4', 'st5', 'st6', 'st7', 'st8', 'st9'];
+const CHAT_STICKERS = ['st1', 'st2', 'st3', 'st4', 'st5', 'st6', 'st7', 'st8', 'st9', 'st10', 'st11', 'st12', 'st13', 'st14', 'st15', 'st16'];
 let chatOpen = false;
 const chatBubbles = {}; // table position -> { kind, value, until }
 
@@ -1707,18 +1805,43 @@ function closeChatPanel() {
 }
 $('#btn-chat').onclick = toggleChatPanel;
 $('#btn-chat-close').onclick = closeChatPanel;
+// Fill one swipe pager: items are chunked into full-width grid pages
+// inside the pager's track, and the dot row under it tracks the scroll
+// position. The two pagers (phrases / stickers) are wired separately —
+// swiping one never moves the other.
+function fillPager(pagerSel, trackSel, dotsSel, items, perPage, pageClass, makeBtn) {
+  const track = $(trackSel);
+  const dotsBox = $(dotsSel);
+  const pageCount = Math.max(1, Math.ceil(items.length / perPage));
+  for (let p = 0; p < pageCount; p++) {
+    const page = document.createElement('div');
+    page.className = pageClass + ' page';
+    items.slice(p * perPage, (p + 1) * perPage).forEach((it) => page.appendChild(makeBtn(it)));
+    track.appendChild(page);
+    const d = document.createElement('span');
+    d.className = 'pdot' + (p === 0 ? ' on' : '');
+    dotsBox.appendChild(d);
+  }
+  const pager = $(pagerSel);
+  const dots = dotsBox.children;
+  pager.addEventListener('scroll', () => {
+    // |scrollLeft| grows with the swipe in every modern engine (in an
+    // RTL page it runs negative) — the page index is the rounded ratio.
+    const idx = Math.min(pageCount - 1,
+      Math.round(Math.abs(pager.scrollLeft) / Math.max(1, pager.clientWidth)));
+    for (let i = 0; i < dots.length; i++) dots[i].classList.toggle('on', i === idx);
+  }, { passive: true });
+}
 (function buildChatQuick() {
-  const q = $('#chat-quick');
-  CHAT_PHRASES.forEach((p) => {
+  fillPager('#phrase-pager', '#chat-quick', '#phrase-dots', CHAT_PHRASES, 12, 'chat-quick', (p) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'qphrase';
     b.textContent = p;
     b.onclick = () => { sendChat('phrase', p); closeChatPanel(); };
-    q.appendChild(b);
+    return b;
   });
-  const sg = $('#chat-stickers');
-  CHAT_STICKERS.forEach((id) => {
+  fillPager('#sticker-pager', '#chat-stickers', '#sticker-dots', CHAT_STICKERS, 8, 'chat-stickers', (id) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'qsticker';
@@ -1728,7 +1851,7 @@ $('#btn-chat-close').onclick = closeChatPanel;
     img.loading = 'lazy';
     b.appendChild(img);
     b.onclick = () => { sendChat('sticker', id); closeChatPanel(); };
-    sg.appendChild(b);
+    return b;
   });
   const row = $('#chat-emojis');
   CHAT_EMOJIS.forEach((em) => {
@@ -1808,6 +1931,7 @@ const RTCPeerCtor = window.RTCPeerConnection || window.webkitRTCPeerConnection;
 let micOn = false;     // my microphone transmits (default off)
 let speakerOn = true;  // I listen to the table (default on)
 let localStream = null;
+let micGen = 0;        // bumped on every mic toggle: a mic-on still acquiring the microphone when an off (or a newer on) lands supersedes itself
 const peers = {};      // seat -> { pc, audio, stream, sig, iceQueue, makingOffer, ignoreOffer, polite, initiator, linked, timers… }
 // Self-healing budget per seat: how many automatic re-formations
 // a pair has already had, and whether the budget is spent. Reset
@@ -1815,6 +1939,13 @@ const peers = {};      // seat -> { pc, audio, stream, sig, iceQueue, makingOffe
 // and on any manual voice action (resetVoiceFeedback) — a manual
 // toggle is the user doing the ritual, so automation starts over.
 const voiceHeal = {}; // seat -> { attempts, exhausted }
+// Signaling generations: every peer a client builds for a seat
+// carries a per-seat generation number (1, 2, 3, …), stamped on
+// every rtc signal that peer sends. The receiver remembers the
+// generation of the session its peer is talking to (entry.remoteGen)
+// and drops signals from OLDER generations — see the gate in
+// processRtcSignal for why a stale signal is poisonous.
+const peerGen = {}; // seat -> generation of my current peer for that seat
 const HEAL_MAX_ATTEMPTS = 5;
 const HEAL_BACKOFF_MS = [1000, 3000, 8000]; // later attempts reuse the last step
 const voiceSeats = {}; // seat -> { mic, speaker }, mirrored from the server (state + broadcasts)
@@ -2044,6 +2175,7 @@ async function toggleVoice() {
   // never throws and is time-bounded, so this cannot stall the
   // mic) — every peer in this session is born with the best
   // relay list we could get.
+  const gen = ++micGen; // this attempt's ticket — stopMic / a newer toggle invalidates it
   const gumPromise = navigator.mediaDevices.getUserMedia({ audio: true });
   const iceReady = refreshIceServers();
   let stream;
@@ -2054,6 +2186,50 @@ async function toggleVoice() {
     return;
   }
   await iceReady;
+  // A rapid off→on (or off landing while the mic was still being
+  // acquired) supersedes this attempt: the stream it just opened
+  // is stopped again and NOTHING is announced — the newer toggle
+  // owns the mic state. (Without this, a slow getUserMedia from
+  // the first tap could resolve after the second and resurrect a
+  // mic the player had just turned off, or clobber the fresh
+  // stream of the re-on with a dead one.)
+  if (gen !== micGen) {
+    stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} });
+    return;
+  }
+  const track = stream.getAudioTracks()[0];
+  if (!track || track.readyState === 'ended') {
+    // A stream with no live track announces a mic that can never
+    // send anything — every pair would negotiate around silence.
+    stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} });
+    toast(T('micUnavailable'));
+    return;
+  }
+  if (track.muted) {
+    // Android Chrome can hand back a track that starts MUTED —
+    // the OS microphone session is still settling, typically
+    // right after the previous stream was stopped (the off→on
+    // cycle). Announcing now would build the whole mesh on a
+    // silent sender: pairs connect, the toast fires, and nobody
+    // hears anything. Wait for the track to unmute first —
+    // BOUNDED (~1.2 s), so a track that never unmutes delays the
+    // mic briefly instead of stalling it forever.
+    await new Promise((resolve) => {
+      let done = false;
+      const fin = () => {
+        if (done) return;
+        done = true;
+        try { track.removeEventListener('unmute', fin); } catch (e) {}
+        resolve();
+      };
+      try { track.addEventListener('unmute', fin); } catch (e) {}
+      setTimeout(fin, 1200);
+    });
+    if (gen !== micGen) { // superseded while waiting for the unmute
+      stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} });
+      return;
+    }
+  }
   localStream = stream;
   micOn = true;
   // A pair formed while this client momentarily had no stream
@@ -2070,6 +2246,7 @@ async function toggleVoice() {
   paintVoiceDots(state);
 }
 function stopMic() {
+  micGen++; // supersede any mic-on still acquiring the microphone
   micOn = false;
   $('#btn-mic').classList.remove('on');
   mirrorMyVoice();
@@ -2165,6 +2342,8 @@ function ensurePeer(seat) {
   const pc = new RTCPeerCtor({ iceServers: iceServersNow });
   const entry = {
     pc,
+    gen: (peerGen[seat] = (peerGen[seat] || 0) + 1), // this peer's signaling generation, stamped on every signal it sends
+    remoteGen: null,     // generation of the remote peer's current session (adopted from its first signal)
     audio: null,
     stream: null,        // latest remote stream from ontrack (parked while speaker is off)
     sig,                 // direction signature this pair was built for
@@ -2224,7 +2403,7 @@ function ensurePeer(seat) {
   }
   pc.onicecandidate = (e) => {
     if (e.candidate) {
-      send({ type: 'rtc', to: seat, data: { kind: 'ice', candidate: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate } });
+      send({ type: 'rtc', to: seat, data: { kind: 'ice', candidate: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate, gen: entry.gen } });
     }
   };
   // Either side may need to (re)negotiate — a listener-only pair is
@@ -2402,7 +2581,7 @@ async function makeOffer(seat, entry) {
       if (peers[seat] !== entry || pc.signalingState === 'closed') { entry.makingOffer = false; return; }
       await sdpOp(pc.setLocalDescription(offer));
       entry.wantNegotiate = false;
-      send({ type: 'rtc', to: seat, data: { kind: 'sdp', sdp: pc.localDescription } });
+      send({ type: 'rtc', to: seat, data: { kind: 'sdp', sdp: pc.localDescription, gen: entry.gen } });
       entry.lastProgressAt = Date.now(); // our offer is out — the answer gets its own window
     } catch (e) { /* onsignalingstatechange / pair healing retries */ }
     entry.makingOffer = false;
@@ -2596,6 +2775,12 @@ function closePeer(seat, why) {
     (window.__peerCloses = window.__peerCloses || []).push({ t: Date.now(), seat, why: why || 'other' });
   } catch (e) {}
   delete peers[seat];
+  // The mesh is fully down: the voice session is OVER, so the
+  // «connected» toast re-arms. It used to latch after the first
+  // session forever — after a mic off→on the pair could reconnect
+  // perfectly and the player was never told, indistinguishable
+  // from the link still being broken.
+  if (!Object.keys(peers).length) voiceLinkToastShown = false;
   clearPeerTimers(entry);
   try { entry.pc.close(); } catch (e) {}
   if (entry.audio) {
@@ -2624,6 +2809,29 @@ async function processRtcSignal(from, data, retried) {
   const entry = peers[from] || (await sdpOp(ensurePeerGated(from), 6000).catch(() => null));
   if (!entry) return;
   entry.signalAt = Date.now(); // the polite side's healer defers to fresh signals
+  // Generation gate. Signals from a session the sender has
+  // ALREADY REPLACED (a lower gen than this peer adopted) are
+  // poisonous and are dropped: the classic case is the mic
+  // off→on cycle — session 1's last answer, still in flight on a
+  // slow route when the pair was torn down, lands on the
+  // session-2 peer and is applied as ITS remote description,
+  // saddling the fresh pair with the dead session's ICE
+  // credentials; both ends then sit in 'checking' with a
+  // perfectly healthy signaling state and no audio, until the
+  // long healing leashes eventually re-form the pair (the
+  // reported "off→on and the sound never comes back"). A NEWER
+  // gen is adopted in place: the sender re-formed its peer
+  // (heal / toggle / upgrade) and this signal is applied to my
+  // surviving peer as a normal renegotiation — its answer
+  // carries my peer's (unchanged) credentials, so both ends
+  // converge on the new session with no extra re-formation.
+  // Signals without a gen (older clients) are accepted as before.
+  const sigGen = (typeof data.gen === 'number') ? data.gen : null;
+  if (sigGen !== null) {
+    if (entry.remoteGen == null) entry.remoteGen = sigGen;
+    else if (sigGen < entry.remoteGen) return; // stale session — drop
+    else entry.remoteGen = sigGen;
+  }
   const pc = entry.pc;
   try {
     if (data.kind === 'sdp' && data.sdp) {
@@ -2645,7 +2853,7 @@ async function processRtcSignal(from, data, retried) {
       if (desc.type === 'offer') {
         const ans = await sdpOp(pc.createAnswer());
         await sdpOp(pc.setLocalDescription(ans));
-        send({ type: 'rtc', to: from, data: { kind: 'sdp', sdp: pc.localDescription } });
+        send({ type: 'rtc', to: from, data: { kind: 'sdp', sdp: pc.localDescription, gen: entry.gen } });
       }
     } else if (data.kind === 'ice' && data.candidate) {
       if (!pc.remoteDescription) {
@@ -2961,6 +3169,15 @@ function onMsg(msg) {
   } else if (msg.type === 'declared13') {
     const nm = state && state.seats[msg.seat] ? (dispName(state.seats[msg.seat]) || T('playerName')) : T('playerName');
     toast(T('declaredToast', nm));
+  } else if (msg.type === 'roomClosed') {
+    // The host cancelled the waiting room: drop the saved session so
+    // «ادامهٔ بازی» cannot resurrect it, say why, and go to the menu.
+    localStorage.removeItem('tore.session');
+    session = null;
+    updateContinue();
+    closeChatPanel();
+    toast(T('roomCancelled'));
+    show('scr-home');
   } else if (msg.type === 'error') {
     quickPlay = false;
     toast(serverMsgText(msg));
