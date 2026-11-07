@@ -908,6 +908,8 @@ const STR = {
     disconnected: 'اړیکه پرې شوه — بیا نښلول کېږي…',
     noConn: 'اړیکه نشته',
     micUnavailable: 'مایکروفون نشته',
+    voiceConnected: 'غږ وصل شو',
+    voiceFailed: 'غږ وصل نشو — بیا هڅه وکړه',
     codeLenToast: 'د کوټې کوډ 4 توري دی',
     errServerError: 'د سرور تېروتنه',
     errRoomNotFound: 'کوټه ونه موندل شوه — کوډ وګوره',
@@ -1008,6 +1010,8 @@ const STR = {
     disconnected: 'اتصال قطع شد — در حال اتصال دوباره…',
     noConn: 'اتصال نیست',
     micUnavailable: 'مایک در دسترس نیست',
+    voiceConnected: 'صدا وصل شد',
+    voiceFailed: 'صدا وصل نشد — دوباره تلاش کن',
     codeLenToast: 'کد اتاق 4 حرفی است',
     errServerError: 'خطای سرور',
     errRoomNotFound: 'اتاق پیدا نشد — کد را بررسی کن',
@@ -1108,6 +1112,8 @@ const STR = {
     disconnected: 'Connection lost — reconnecting…',
     noConn: 'Not connected',
     micUnavailable: 'Microphone unavailable',
+    voiceConnected: 'Voice connected',
+    voiceFailed: 'Voice could not connect — try again',
     codeLenToast: 'The room code is 4 letters',
     errServerError: 'Server error',
     errRoomNotFound: 'Room not found — check the code',
@@ -1720,8 +1726,31 @@ function paintChatBubble(pos) {
 const RTCPeerCtor = window.RTCPeerConnection || window.webkitRTCPeerConnection;
 let voiceOn = false;
 let localStream = null;
-const peers = {};      // seat -> { pc, audio }
+const peers = {};      // seat -> { pc, audio, iceQueue, makingOffer, ignoreOffer, polite, initiator, linked, watchdog }
 const voiceSeats = {}; // seat -> bool, mirrored from the server (state + broadcasts)
+// STUN alone cannot cross the symmetric / carrier-grade NAT that
+// mobile networks use — without a TURN relay the pair often has no
+// usable candidate pair at all and voice silently never connects.
+// The Open Relay Project endpoints below are metered.ca's published
+// public-demo TURN service (open credentials, printed in the
+// project's own docs), used as a best-effort relay fallback.
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  {
+    urls: [
+      'turn:openrelay.metered.ca:80',
+      'turn:openrelay.metered.ca:443',
+      'turns:openrelay.metered.ca:443',
+    ],
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+];
+// User feedback for the voice link: the 'connected' toast shows once
+// per mic-on session; a 'could not connect' toast shows at most once
+// per seat until that pair actually connects.
+let voiceLinkToastShown = false;
+const voiceFailToastSeats = {}; // seat -> true
 
 $('#btn-mic').onclick = () => { toggleVoice(); };
 
@@ -1740,10 +1769,13 @@ async function toggleVoice() {
   }
   localStream = stream;
   voiceOn = true;
+  voiceLinkToastShown = false;
+  Object.keys(voiceFailToastSeats).forEach((s) => { delete voiceFailToastSeats[s]; });
   $('#btn-mic').classList.add('on');
   if (mySeat !== null) voiceSeats[mySeat] = true;
   send({ type: 'voice', on: true });
   maybeConnectVoicePeers();
+  retryPeerAudio(); // this tap is a user gesture — unblock any stalled playback
   paintVoiceDots(state);
 }
 function stopVoice() {
@@ -1765,8 +1797,23 @@ function maybeConnectVoicePeers() {
 function ensurePeer(seat, initiate) {
   if (!voiceOn || seat === mySeat) return null;
   if (peers[seat]) return peers[seat];
-  const pc = new RTCPeerCtor({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-  const entry = { pc, audio: null };
+  const pc = new RTCPeerCtor({ iceServers: ICE_SERVERS });
+  const entry = {
+    pc,
+    audio: null,
+    iceQueue: [],        // remote candidates that beat their SDP — flushed once it lands
+    makingOffer: false,
+    ignoreOffer: false,
+    // Perfect negotiation, made deterministic by the seat rule: the
+    // LOWER seat is the initiator and impolite (its offer wins a
+    // collision); the HIGHER seat is polite (it rolls its own offer
+    // back and answers). Same rule for every pair, so simultaneous
+    // toggles and re-negotiations resolve instead of deadlocking.
+    initiator: mySeat !== null && mySeat < seat,
+    polite: mySeat !== null && mySeat > seat,
+    linked: false,
+    watchdog: null,
+  };
   peers[seat] = entry;
   if (localStream) {
     localStream.getTracks().forEach((t) => { try { pc.addTrack(t, localStream); } catch (e) {} });
@@ -1776,6 +1823,7 @@ function ensurePeer(seat, initiate) {
       send({ type: 'rtc', to: seat, data: { kind: 'ice', candidate: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate } });
     }
   };
+  pc.onnegotiationneeded = () => { if (entry.initiator) makeOffer(seat, entry); };
   pc.ontrack = (e) => {
     if (!entry.audio) {
       entry.audio = document.createElement('audio');
@@ -1784,24 +1832,89 @@ function ensurePeer(seat, initiate) {
       document.body.appendChild(entry.audio);
     }
     try { entry.audio.srcObject = (e.streams && e.streams[0]) || new MediaStream([e.track]); } catch (err) {}
-    const p = entry.audio.play();
-    if (p && p.catch) p.catch(() => {});
+    attemptPlay(entry);
   };
-  pc.onconnectionstatechange = () => {
-    if (pc.connectionState === 'failed' || pc.connectionState === 'closed') closePeer(seat);
-  };
-  if (initiate) {
-    pc.createOffer()
-      .then((o) => pc.setLocalDescription(o))
-      .then(() => send({ type: 'rtc', to: seat, data: { kind: 'sdp', sdp: pc.localDescription } }))
-      .catch(() => {});
-  }
+  // Feedback + cleanup key on iceConnectionState: connectionState is
+  // not implemented on older iOS Safari, so a failed pair there never
+  // fired the old handler at all.
+  pc.oniceconnectionstatechange = () => notePeerState(seat, entry);
+  pc.onconnectionstatechange = () => notePeerState(seat, entry);
+  // If both ends have voice on but the pair still is not linked after
+  // ~8 s, tell the user once (noteVoiceFailed de-dupes per seat).
+  entry.watchdog = setTimeout(() => {
+    entry.watchdog = null;
+    if (peers[seat] === entry && voiceOn && voiceSeats[seat] && !entry.linked) noteVoiceFailed(seat);
+  }, 8000);
+  if (initiate) makeOffer(seat, entry);
   return entry;
+}
+async function makeOffer(seat, entry) {
+  const pc = entry.pc;
+  if (entry.makingOffer || pc.signalingState !== 'stable') return;
+  entry.makingOffer = true;
+  try {
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    send({ type: 'rtc', to: seat, data: { kind: 'sdp', sdp: pc.localDescription } });
+  } catch (e) { /* a later negotiationneeded / state push retries */ }
+  entry.makingOffer = false;
+}
+function attemptPlay(entry) {
+  if (!entry.audio) return;
+  try {
+    const p = entry.audio.play();
+    // iOS Safari rejects play() outside a user gesture (ontrack is
+    // not one): the rejection is swallowed here and retried on the
+    // next tap anywhere — see the pointerdown listener below.
+    if (p && p.catch) p.catch(() => {});
+  } catch (e) {}
+}
+function retryPeerAudio() {
+  Object.keys(peers).forEach((s) => {
+    const entry = peers[s];
+    if (entry && entry.audio && entry.audio.paused) attemptPlay(entry);
+  });
+}
+document.addEventListener('pointerdown', retryPeerAudio);
+function noteVoiceFailed(seat) {
+  if (!voiceOn || voiceFailToastSeats[seat]) return;
+  voiceFailToastSeats[seat] = true;
+  toast(T('voiceFailed'));
+}
+function notePeerState(seat, entry) {
+  if (peers[seat] !== entry) return; // stale event from a closed peer
+  const pc = entry.pc;
+  const ice = pc.iceConnectionState;
+  const cs = pc.connectionState;
+  if (ice === 'connected' || ice === 'completed' || cs === 'connected') {
+    entry.linked = true;
+    if (entry.watchdog) { clearTimeout(entry.watchdog); entry.watchdog = null; }
+    delete voiceFailToastSeats[seat]; // a later failure is a new state change
+    if (!voiceLinkToastShown) { voiceLinkToastShown = true; toast(T('voiceConnected')); }
+    attemptPlay(entry);
+    return;
+  }
+  if (ice === 'failed' || cs === 'failed') {
+    noteVoiceFailed(seat);
+    closePeer(seat);
+    // Nudge re-formation: if both ends still have voice on, the lower
+    // seat re-offers shortly (state pushes retrigger this too).
+    setTimeout(() => { if (voiceOn && voiceSeats[seat]) maybeConnectVoicePeers(); }, 1200);
+    return;
+  }
+  if (cs === 'closed') closePeer(seat);
+}
+async function flushIceQueue(entry) {
+  const queued = entry.iceQueue.splice(0, entry.iceQueue.length);
+  for (const c of queued) {
+    try { await entry.pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {}
+  }
 }
 function closePeer(seat) {
   const entry = peers[seat];
   if (!entry) return;
   delete peers[seat];
+  if (entry.watchdog) { clearTimeout(entry.watchdog); entry.watchdog = null; }
   try { entry.pc.close(); } catch (e) {}
   if (entry.audio) {
     try { entry.audio.srcObject = null; entry.audio.remove(); } catch (e) {}
@@ -1814,16 +1927,37 @@ async function onRtcSignal(from, data) {
   const pc = entry.pc;
   try {
     if (data.kind === 'sdp' && data.sdp) {
-      await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-      if (data.sdp.type === 'offer') {
+      const desc = new RTCSessionDescription(data.sdp);
+      // Perfect negotiation: an offer that collides with our own
+      // in-flight offer is IGNORED by the impolite (lower) seat and
+      // accepted by the polite (higher) seat after rolling its own
+      // offer back — a crossed re-negotiation can no longer deadlock.
+      const offerCollision = desc.type === 'offer' && (entry.makingOffer || pc.signalingState !== 'stable');
+      entry.ignoreOffer = offerCollision && !entry.polite;
+      if (entry.ignoreOffer) return;
+      if (offerCollision) {
+        try { await pc.setLocalDescription({ type: 'rollback' }); } catch (e) {}
+      }
+      await pc.setRemoteDescription(desc);
+      entry.ignoreOffer = false;
+      await flushIceQueue(entry);
+      if (desc.type === 'offer') {
         const ans = await pc.createAnswer();
         await pc.setLocalDescription(ans);
         send({ type: 'rtc', to: from, data: { kind: 'sdp', sdp: pc.localDescription } });
       }
     } else if (data.kind === 'ice' && data.candidate) {
-      await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+      if (!pc.remoteDescription) {
+        // The SDP is still in flight: hold the candidate instead of
+        // dropping it (addIceCandidate would throw without a remote
+        // description, and on real NAT paths these early candidates
+        // are often the only ones that can connect the pair).
+        entry.iceQueue.push(data.candidate);
+      } else if (!entry.ignoreOffer) {
+        try { await pc.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch (e) {}
+      }
     }
-  } catch (e) { /* signaling race or glare — drop it */ }
+  } catch (e) { /* a stale or duplicated signal must never break the room */ }
 }
 // The green mic dot on a badge mirrors voiceSeats[]; render() calls
 // this after every state push, and voice broadcasts call it directly.
