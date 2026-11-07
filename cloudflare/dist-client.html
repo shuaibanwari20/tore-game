@@ -1639,7 +1639,7 @@ function connect(onOpen) {
     if (intentionalClose) return;
     // Peer connections were negotiated over this socket's session:
     // drop them; they re-form after the reconnect re-announces voice.
-    if (typeof peers !== 'undefined') Object.keys(peers).forEach((s) => closePeer(+s));
+    if (typeof peers !== 'undefined') Object.keys(peers).forEach((s) => closePeer(+s, 'teardown'));
     $('#connbar').textContent = T('disconnected');
     setTimeout(() => { if (session) connect(() => send({ type: 'reconnect', code: session.code, token: session.token, ...profileMsg() })); }, 2500);
   };
@@ -1897,6 +1897,31 @@ let iceFetchedAt = 0; // ms epoch of last successful fetch; 0 = never
 let iceAttemptAt = 0; // ms epoch of last fetch attempt
 let iceFetchInFlight = null;
 const ICE_CACHE_MS = 12 * 3600 * 1000;
+// The identity of an ICE config is its CONTENT, never the time it
+// was fetched: a stable key over the sorted URL+username pairs.
+// A background refresh that returns the identical list produces
+// the identical key — so "the config changed" is false and no
+// pair is re-formed because of it. (The previous identity was
+// the fetch TIMESTAMP: any successful refresh made every older
+// pair "outdated" by definition, including a pair that was
+// connected and carrying audio — one of the ways a live pair got
+// torn down mid-call.)
+function iceCfgKey(list) {
+  try {
+    const parts = [];
+    (list || []).forEach((s) => {
+      const urls = s && s.urls;
+      const u = Array.isArray(urls) ? urls.join(',') : String(urls || '');
+      parts.push(u + '|' + (s && s.username ? s.username : ''));
+    });
+    parts.sort();
+    const str = parts.join(';');
+    let h = 0;
+    for (let i = 0; i < str.length; i++) { h = ((h << 5) - h + str.charCodeAt(i)) | 0; }
+    return 'k' + (h >>> 0).toString(36) + ':' + str.length;
+  } catch (e) { return 'k?'; }
+}
+let iceServersKey = iceCfgKey(iceServersNow);
 async function refreshIceServers() {
   if (iceFetchedAt && Date.now() - iceFetchedAt < ICE_CACHE_MS) return;
   if (!iceFetchInFlight) {
@@ -1928,6 +1953,7 @@ async function refreshIceServers() {
         if (!iceListHasTurn(relayList)) return;
         iceServersNow = relayList.concat(FALLBACK_ICE_SERVERS);
         iceFetchedAt = Date.now();
+        iceServersKey = iceCfgKey(iceServersNow);
         // The real relay config just landed: any pair that was
         // born earlier on the fallback list (its fetch had failed,
         // or a signal beat the fetch) is stuck with that list —
@@ -2034,7 +2060,7 @@ async function toggleVoice() {
   // (built on a placeholder transceiver — see ensurePeer) is
   // re-formed now, so its first real negotiation carries the
   // track instead of the silent placeholder.
-  Object.keys(peers).forEach((s) => { if (peers[s] && peers[s].needsTrack) closePeer(s); });
+  Object.keys(peers).forEach((s) => { if (peers[s] && peers[s].needsTrack) closePeer(s, 'track'); });
   resetVoiceFeedback();
   $('#btn-mic').classList.add('on');
   mirrorMyVoice();
@@ -2092,25 +2118,41 @@ function syncVoicePairs() {
   for (let s = 0; s < 4; s++) {
     if (s === mySeat) continue;
     const sig = pairSig(s);
-    if (!sig) { closePeer(s); delete voiceHeal[s]; continue; }
+    if (!sig) { closePeer(s, 'unwanted'); delete voiceHeal[s]; continue; }
     const e = peers[s];
     if (e) {
-      // A pair is OUTDATED when the credentials landed (or were
-      // refreshed) after it was born: its iceServers are frozen
-      // at construction time, so only a re-form moves it onto
-      // the current relay config.
-      const outdated = iceFetchedAt > 0 && e.iceAt !== iceFetchedAt;
-      if (e.sig === sig && !outdated) {
-        // Born on the fallback config and the real credentials
-        // still have not landed: keep retrying the fetch in the
-        // background — when one succeeds this pair re-forms on
-        // the real relay with no user action at all. (The pair's
-        // own upgrade clock in ensurePeer retries on a timer
-        // too, for the quiet moments when no sync runs at all.)
-        if (!iceFetchedAt) maybeRetryIceFetch();
-        continue;
+      if (e.sig === sig) {
+        // NEVER tear down a working pair: while a pair is
+        // connected it is untouchable — no upgrade, config check
+        // or heal may re-form it. If it later dies, the heal path
+        // re-forms it on the then-current config.
+        if (e.linked) continue;
+        // A pair is OUTDATED only when the config CONTENT
+        // actually changed after it was born (its content key
+        // differs from the current key) AND it was born on the
+        // bare fallback list: a refresh returning identical
+        // content has the identical key and re-forms nothing.
+        // The upgrade applies only once negotiation has settled
+        // — re-forming mid-negotiation restarts the very
+        // handshake the upgrade is meant to save; while the pair
+        // is still negotiating, the fallback upgrade clock (and
+        // the next sync) keeps the upgrade pending until it can
+        // apply cleanly.
+        const outdated = e.usedFallback && iceFetchedAt > 0 &&
+          e.cfgKey !== iceServersKey && e.pc.signalingState === 'stable';
+        if (!outdated) {
+          // Born on the fallback config and the real credentials
+          // still have not landed: keep retrying the fetch in the
+          // background — when one succeeds this pair re-forms on
+          // the real relay with no user action at all. (The pair's
+          // own upgrade clock in ensurePeer retries on a timer
+          // too, for the quiet moments when no sync runs at all.)
+          if (!iceFetchedAt) maybeRetryIceFetch();
+          continue;
+        }
+        closePeer(s, 'upgrade'); // re-formed below, on the current config
       }
-      closePeer(s); // re-formed below, on the current config
+      closePeer(s, 'sig'); // direction signature changed — re-formed below
     }
     ensurePeerGated(s);
   }
@@ -2127,7 +2169,7 @@ function ensurePeer(seat) {
     stream: null,        // latest remote stream from ontrack (parked while speaker is off)
     sig,                 // direction signature this pair was built for
     usedFallback: !iceFetchedAt, // born before the relay credentials landed — re-formed when they do
-    iceAt: iceFetchedAt, // credentials generation this pair was born on (0 = fallback list)
+    cfgKey: iceServersKey, // content key of the ICE config this pair was born on (see iceCfgKey)
     iceQueue: [],        // remote candidates that beat their SDP — flushed once it lands
     makingOffer: false,
     ignoreOffer: false,
@@ -2138,13 +2180,22 @@ function ensurePeer(seat) {
     // toggles and re-negotiations resolve instead of deadlocking.
     initiator: mySeat < seat,
     polite: mySeat > seat,
+    // linked = "ICE is connected/completed RIGHT NOW" (not "was
+    // once"): set when ICE connects, cleared the moment ICE
+    // leaves that state. While linked, nothing may re-form the
+    // pair; once unlinked, healing is allowed again — the pair
+    // that connected and later dies must be healable, and the
+    // pair that IS carrying audio must be untouchable.
     linked: false,
     bornAt: Date.now(),
     signalAt: 0,         // last rtc signal received from this seat
+    lastProgressAt: Date.now(), // last negotiation progress (see the watchdog below)
+    checkingSince: 0,    // when ICE entered 'checking' with a remote description (watchdog's long leash)
+    healWhy: '',         // why the pending heal was scheduled (diagnostics)
+    healCounted: false,  // this entry's death already counted against the heal budget
     needsTrack: false,   // built for sending before the mic stream existed
     wantNegotiate: false, // a negotiationneeded is still owed
-    stallTimer: null,
-    probeTimer: null,    // no-remote-description watchdog (both seats)
+    watchTimer: null,    // negotiation-phase progress watchdog
     upgradeTimer: null,  // fallback-born pairs: clock-driven credentials retry
     upgradeLeft: 0,
     healDeferred: false, // the polite stand-down may be used at most once per pair
@@ -2192,50 +2243,81 @@ function ensurePeer(seat) {
   };
   pc.ontrack = (e) => {
     entry.stream = (e.streams && e.streams[0]) || entry.stream || new MediaStream([e.track]);
+    entry.lastProgressAt = Date.now();
     attachPeerAudio(entry);
+    maybeLinkToast(entry); // the toast fires when the link is up AND the track is in
   };
   // Feedback + cleanup key on iceConnectionState: connectionState is
   // not implemented on older iOS Safari, so a failed pair there never
   // fired the old handler at all.
   pc.oniceconnectionstatechange = () => notePeerState(seat, entry);
   pc.onconnectionstatechange = () => notePeerState(seat, entry);
-  // Stall detection (self-healing): a pair that has not linked
-  // within its window — still negotiating, no remote description
-  // yet, or ICE stuck in new/checking/disconnected — is re-formed
-  // automatically by scheduleHeal: the client performs the old
-  // manual off→on ritual itself instead of showing a failure
-  // toast and leaving the pair dead. (A pair that was merely slow
-  // loses little: the re-formed pair renegotiates in well under a
-  // second on a live path, with fresh candidates.) The impolite
-  // (lower) seat checks first; the polite seat waits a little
-  // longer so the two ends do not duel (see scheduleHeal).
-  entry.stallTimer = setTimeout(() => {
-    entry.stallTimer = null;
+  // Negotiation-progress watchdog (self-healing, phase-scoped):
+  // it guards ONLY the negotiation phase — no remote description
+  // applied yet, or ICE still 'new' (no remote candidates
+  // flowing). Any progress (remote description applied, remote
+  // candidate applied, our answer sent, ontrack, ICE reaching
+  // 'checking') moves entry.lastProgressAt; ≥9 s with NO
+  // progress at all means the handshake itself is dead (the
+  // offer never landed, the other end never formed) and the pair
+  // is healed. Once negotiation has produced a checking pair,
+  // the tight leash no longer applies: ICE consent on a slow
+  // carrier path is invisible to the client and can legitimately
+  // take far longer than 9 s, so from there the pair is governed
+  // by ICE failed / disconnected-beyond-grace — plus one long
+  // leash: a pair continuously checking for 30 s has had no
+  // consent response in 30 s and is dead whatever the local
+  // stack claims, so the watchdog heals it then (and only
+  // then). The 30 s clock is continuous-checking time, immune
+  // to candidate trickle from a re-forming partner.
+  //
+  // This replaces two older mechanisms that between them churned
+  // live pairs to death (control run on the previous build: 6
+  // peer constructions for one pair in 60 s — every heal killed
+  // a pair that was stable and legitimately still checking, or
+  // still awaiting its answer; the re-formed pair re-entered the
+  // same gauntlet until the heal budget exhausted itself, which
+  // on real 4G stretched to minutes of silence after the
+  // «connected» toast, and mic off→on reset the budget and
+  // restarted the whole cycle):
+  //  - a stall timer (6 s/8 s from BIRTH) that killed pairs whose
+  //    negotiation was complete and whose ICE was still checking;
+  //  - a 2.5 s no-progress probe that killed re-formed pairs
+  //    whose answers were still in flight on a slow route.
+  const watchTick = () => {
+    entry.watchTimer = null;
     if (peers[seat] !== entry || !pairWanted(seat) || entry.linked) return;
     const ice = pc.iceConnectionState;
-    if (pc.signalingState !== 'stable' || !pc.remoteDescription ||
-        ice === 'new' || ice === 'checking' || ice === 'disconnected') {
-      scheduleHeal(seat, entry);
+    // Track CONTINUOUS checking time separately from negotiation
+    // progress: remote candidates from a partner that keeps
+    // re-forming its own side trickle in and bump lastProgressAt
+    // forever, but they say nothing about THIS pair's consent —
+    // its checking clock must not reset for them.
+    if (ice === 'checking' && pc.remoteDescription) {
+      if (!entry.checkingSince) entry.checkingSince = Date.now();
+    } else if (ice !== 'checking') {
+      entry.checkingSince = 0;
     }
-  }, entry.initiator ? 6000 : 8000);
-  // No-progress probe (BOTH seats, seat order does not matter):
-  // a pair that still has no remote description ~2.5 s after
-  // formation is not negotiating at all — the offer never landed
-  // or the other end never formed — so re-form it right away
-  // (urgent heal) instead of waiting for the stall window.
-  // Without this, a HIGHER-seat (polite) talker's first mic
-  // activation recovered only through the long polite stall +
-  // heal delays, and looked dead until the other player tapped
-  // their own mic — their tap changed the pair signature and
-  // forced exactly the re-form this probe performs by itself.
-  entry.probeTimer = setTimeout(() => {
-    entry.probeTimer = null;
-    if (peers[seat] !== entry || !pairWanted(seat) || entry.linked) return;
-    if (!pc.remoteDescription) scheduleHeal(seat, entry, true);
-  }, 2500);
+    // Negotiation phase: a tight leash (9 s of zero progress).
+    const negotiating = !pc.remoteDescription || ice === 'new';
+    // Checking phase: a long leash only. A healthy pair leaves
+    // 'checking' by connecting, disconnecting or failing — all
+    // governed elsewhere — so a pair STILL continuously checking
+    // 30 s in has had no consent response in 30 s and is on a
+    // dead path whatever the stack claims; healing it then
+    // cannot reproduce the old bug (a pair that connects is
+    // 'linked' and exempt long before this matters).
+    const checkingStuck = !!entry.checkingSince && Date.now() - entry.checkingSince >= 30000;
+    if ((negotiating && Date.now() - entry.lastProgressAt >= 9000) || checkingStuck) {
+      scheduleHeal(seat, entry, false, 'no-progress');
+      return;
+    }
+    entry.watchTimer = setTimeout(watchTick, 2500);
+  };
+  entry.watchTimer = setTimeout(watchTick, 2500);
   // Fallback-upgrade clock: while this pair lives on the
   // fallback ICE list (its credentials fetch failed or lost the
-  // ~4 s abort race), retry the fetch every ~10 s — on a TIMER,
+  // ~4 s abort race), retry the fetch every ~15 s — on a TIMER,
   // not only when syncVoicePairs happens to run. In a quiet
   // lobby nothing calls syncVoicePairs, and before this clock
   // existed the pair sat on the dead list for as long as the
@@ -2245,16 +2327,31 @@ function ensurePeer(seat) {
   // in-flight fetch is still deduplicated inside). When a
   // retry lands the real relay config, refreshIceServers
   // re-syncs and this pair re-forms on it — no user action and
-  // no remote state change required.
+  // no remote state change required. The clock may only ever
+  // re-form a pair that is NOT connected and NOT mid-negotiation
+  // (syncVoicePairs enforces both), and it stops for good once
+  // the pair holds the fetched config or connects.
   if (entry.usedFallback) {
     entry.upgradeLeft = 6;
     const upgradeTick = () => {
       entry.upgradeTimer = null;
-      if (peers[seat] !== entry || iceFetchedAt || !pairWanted(seat)) return;
-      refreshIceServers();
-      if (--entry.upgradeLeft > 0) entry.upgradeTimer = setTimeout(upgradeTick, 10000);
+      if (peers[seat] !== entry || !pairWanted(seat) || entry.linked) return;
+      if (!iceFetchedAt) {
+        refreshIceServers();
+      } else if (pc.signalingState === 'stable') {
+        // The real config landed but this pair was mid-negotiation
+        // when syncVoicePairs last ran, so the content-keyed
+        // upgrade was deferred: apply it now (sync re-forms this
+        // pair on the current config — or leaves it, if its
+        // content key already matches). Either way this clock's
+        // work is done: a re-formed pair is born on the real
+        // config and never starts a clock of its own.
+        syncVoicePairs();
+        return;
+      }
+      if (--entry.upgradeLeft > 0) entry.upgradeTimer = setTimeout(upgradeTick, 15000);
     };
-    entry.upgradeTimer = setTimeout(upgradeTick, 10000);
+    entry.upgradeTimer = setTimeout(upgradeTick, 15000);
   }
   return entry;
 }
@@ -2306,6 +2403,7 @@ async function makeOffer(seat, entry) {
       await sdpOp(pc.setLocalDescription(offer));
       entry.wantNegotiate = false;
       send({ type: 'rtc', to: seat, data: { kind: 'sdp', sdp: pc.localDescription } });
+      entry.lastProgressAt = Date.now(); // our offer is out — the answer gets its own window
     } catch (e) { /* onsignalingstatechange / pair healing retries */ }
     entry.makingOffer = false;
   });
@@ -2327,13 +2425,25 @@ function retryPeerAudio() {
   });
 }
 document.addEventListener('pointerdown', retryPeerAudio);
+// The «غږ وصل شو» toast must mean AUDIO-READY, not merely
+// "signaling looked fine once": it fires when a pair is ICE-
+// connected AND — for a pair whose signature says I should be
+// hearing the other side ('R') — their remote track has actually
+// arrived (ontrack). A pure-sending pair (no 'R') has no incoming
+// track to wait for, so connected alone is its audio-ready.
+function maybeLinkToast(entry) {
+  if (voiceLinkToastShown || !entry.linked) return;
+  if (entry.sig.includes('R') && !entry.stream) return;
+  voiceLinkToastShown = true;
+  toast(T('voiceConnected'));
+}
 function noteVoiceFailed(seat) {
   if (!pairWanted(seat) || voiceFailToastSeats[seat]) return;
   voiceFailToastSeats[seat] = true;
   toast(T('voiceFailed'));
 }
 function clearPeerTimers(entry) {
-  ['stallTimer', 'discTimer', 'healTimer', 'probeTimer', 'upgradeTimer'].forEach((k) => {
+  ['watchTimer', 'discTimer', 'healTimer', 'upgradeTimer'].forEach((k) => {
     if (entry[k]) { clearTimeout(entry[k]); entry[k] = null; }
   });
 }
@@ -2355,15 +2465,20 @@ function clearPeerTimers(entry) {
 // could help) starved indefinitely, and the pair only came
 // alive when a signature change (the other player tapping
 // their mic) forced a re-form on both ends at once.
-// `urgent` (the no-progress probe) skips the grace delay and
-// the stand-down entirely: no negotiation progress at all
-// means there is nothing in flight worth deferring to.
+// Heals are scheduled ONLY for a genuinely dead or stuck pair:
+// ICE failed, ICE disconnected beyond its grace, or a pair still
+// in the negotiation phase with no progress for ≥9 s (the
+// progress watchdog in ensurePeer). `why` records which of those
+// fired and is carried into the close log. A pair that is
+// connected, or whose ICE is merely still checking on a slow
+// path, is never healed — that restraint is the whole fix.
 // The re-form itself goes through ensurePeerGated, which
 // awaits a fresh credentials fetch whenever this pair was
 // fallback-born — healing never re-forms on a stale config
 // when a fetch could upgrade it.
-function scheduleHeal(seat, entry, urgent) {
+function scheduleHeal(seat, entry, urgent, why) {
   if (!pairWanted(seat) || entry.linked || entry.healTimer) return;
+  if (why) entry.healWhy = why;
   const h = voiceHeal[seat] || (voiceHeal[seat] = { attempts: 0, exhausted: false });
   if (h.exhausted) return;
   if (h.attempts >= HEAL_MAX_ATTEMPTS) {
@@ -2371,7 +2486,17 @@ function scheduleHeal(seat, entry, urgent) {
     noteVoiceFailed(seat);
     return;
   }
-  const backoff = HEAL_BACKOFF_MS[Math.min(h.attempts, HEAL_BACKOFF_MS.length - 1)];
+  // Count the attempt NOW, at schedule time — not when the
+  // timer fires. If the pair is closed by another path first
+  // (the other side's re-formation forcing a signal-rebuild on
+  // this side, a signature change), the pending heal timer dies
+  // with the entry, and counting at fire time let two wedged
+  // peers re-form each other forever without either budget ever
+  // nearing exhaustion (measured: 7 births, attempts still < 5,
+  // no failure toast after 180 s). healCounted makes one death
+  // count exactly once, however many triggers report it.
+  if (!entry.healCounted) { entry.healCounted = true; h.attempts++; }
+  const backoff = HEAL_BACKOFF_MS[Math.min(Math.max(h.attempts - 1, 0), HEAL_BACKOFF_MS.length - 1)];
   const delay = backoff + (entry.polite && !urgent ? 2000 : 0);
   entry.healTimer = setTimeout(() => {
     entry.healTimer = null;
@@ -2386,12 +2511,11 @@ function scheduleHeal(seat, entry, urgent) {
       entry.healDeferred = true;
       entry.healTimer = setTimeout(() => {
         entry.healTimer = null;
-        if (peers[seat] === entry && pairWanted(seat) && !entry.linked) scheduleHeal(seat, entry, urgent);
+        if (peers[seat] === entry && pairWanted(seat) && !entry.linked) scheduleHeal(seat, entry, urgent, why);
       }, 3000);
       return;
     }
-    h.attempts++;
-    closePeer(seat);
+    closePeer(seat, 'heal:' + (entry.healWhy || 'ice')); // the attempt was already counted at schedule time
     syncVoicePairs(); // re-forms the pair if it is still wanted
   }, delay);
 }
@@ -2400,19 +2524,24 @@ function notePeerState(seat, entry) {
   const pc = entry.pc;
   const ice = pc.iceConnectionState;
   const cs = pc.connectionState;
+  if (ice === 'checking') entry.lastProgressAt = Date.now(); // negotiation produced a checking pair
   if (ice === 'connected' || ice === 'completed' || cs === 'connected') {
     entry.linked = true;
     clearPeerTimers(entry);
     delete voiceHeal[seat]; // healing budget resets on a live link
     delete voiceFailToastSeats[seat]; // a later failure is a new state change
-    if (!voiceLinkToastShown) { voiceLinkToastShown = true; toast(T('voiceConnected')); }
+    maybeLinkToast(entry);
     attemptPlay(entry);
     return;
   }
+  // ICE is NOT connected right now: the pair is touchable again.
+  // (linked used to latch forever once true, which also meant a
+  // pair that connected and later died could never heal.)
+  entry.linked = false;
   if (ice === 'failed' || cs === 'failed') {
     // No toast yet — the pair heals itself first; the failure
     // toast is reserved for exhausted retries.
-    scheduleHeal(seat, entry);
+    scheduleHeal(seat, entry, false, 'ice-failed');
     return;
   }
   if (ice === 'disconnected') {
@@ -2425,12 +2554,12 @@ function notePeerState(seat, entry) {
         entry.discTimer = null;
         if (peers[seat] !== entry || entry.linked) return;
         const i2 = pc.iceConnectionState;
-        if (i2 === 'disconnected' || i2 === 'checking' || i2 === 'new') scheduleHeal(seat, entry);
+        if (i2 === 'disconnected' || i2 === 'checking' || i2 === 'new') scheduleHeal(seat, entry, false, 'ice-disconnected');
       }, 5000);
     }
     return;
   }
-  if (cs === 'closed') closePeer(seat);
+  if (cs === 'closed') closePeer(seat, 'peer-closed');
 }
 // An SDP/ICE operation on a peer connection that a heal or a
 // signature change closes CONCURRENTLY can leave its promise
@@ -2453,10 +2582,19 @@ async function flushIceQueue(entry) {
   for (const c of queued) {
     try { await sdpOp(entry.pc.addIceCandidate(new RTCIceCandidate(c)), 1500); } catch (e) {}
   }
+  if (queued.length) entry.lastProgressAt = Date.now(); // remote candidates applied = progress
 }
-function closePeer(seat) {
+function closePeer(seat, why) {
   const entry = peers[seat];
   if (!entry) return;
+  // Diagnostic: every re-formation leaves a trace with its reason
+  // ('heal:ice-failed' | 'heal:ice-disconnected' | 'heal:no-progress'
+  // | 'upgrade' | 'sig' | 'track' | 'signal-rebuild' | 'unwanted' |
+  // 'peer-closed' | 'seat-gone' | 'teardown'), so a churn loop is
+  // visible in one glance instead of being inferred from births.
+  try {
+    (window.__peerCloses = window.__peerCloses || []).push({ t: Date.now(), seat, why: why || 'other' });
+  } catch (e) {}
   delete peers[seat];
   clearPeerTimers(entry);
   try { entry.pc.close(); } catch (e) {}
@@ -2501,6 +2639,7 @@ async function processRtcSignal(from, data, retried) {
         try { await sdpOp(pc.setLocalDescription({ type: 'rollback' }), 1500); } catch (e) {}
       }
       await sdpOp(pc.setRemoteDescription(desc));
+      entry.lastProgressAt = Date.now(); // negotiation progress (watchdog)
       entry.ignoreOffer = false;
       await flushIceQueue(entry);
       if (desc.type === 'offer') {
@@ -2516,7 +2655,10 @@ async function processRtcSignal(from, data, retried) {
         // are often the only ones that can connect the pair).
         entry.iceQueue.push(data.candidate);
       } else if (!entry.ignoreOffer) {
-        try { await sdpOp(pc.addIceCandidate(new RTCIceCandidate(data.candidate)), 1500); } catch (e) {}
+        try {
+          await sdpOp(pc.addIceCandidate(new RTCIceCandidate(data.candidate)), 1500);
+          entry.lastProgressAt = Date.now(); // remote candidate applied = progress
+        } catch (e) {}
       }
     }
   } catch (e) {
@@ -2537,8 +2679,22 @@ async function processRtcSignal(from, data, retried) {
       // state is unknown even if it currently reads 'stable' (a
       // timed-out heal offer dropped here would leave the other
       // side's fresh pair unanswered until the next heal cycle).
-      if (cur && (cur.pc.signalingState !== 'stable' || (e && e.message === 'rtc-op-timeout'))) {
-        closePeer(from);
+      // ALSO rebuild on an m-line order mismatch ("The order of
+      // m-lines in subsequent offer doesn't match…"): a session
+      // whose first negotiation crossed offers can end up with TWO
+      // audio m-lines (each side's own transceiver kept as a
+      // separate m-line instead of merging into one bidirectional
+      // line). Such a session works — until ONE side re-forms
+      // (heal, config upgrade) and its fresh peer offers the clean
+      // single m-line: the surviving two-m-line peer then rejects
+      // EVERY such offer with this exact error, permanently — the
+      // re-formed side re-offers forever and is never answered
+      // (measured in the upgrade-room repro: offers at +7 s, +20 s,
+      // +35 s all silently dropped). Rebuilding this side fresh
+      // converges both ends on a clean one-m-line session at once.
+      if (cur && (cur.pc.signalingState !== 'stable' || (e && e.message === 'rtc-op-timeout') ||
+          (e && /m-lines/.test(e.message)))) {
+        closePeer(from, 'signal-rebuild');
         const fresh = await sdpOp(ensurePeerGated(from), 6000).catch(() => null);
         if (fresh) { await processRtcSignal(from, data, true); return; }
       }
@@ -2777,7 +2933,7 @@ function onMsg(msg) {
     msg.seats.forEach((s, i) => { voiceSeats[i] = normVoice(s.voice); });
     Object.keys(peers).forEach((s) => {
       const seat = msg.seats[+s];
-      if (!seat || seat.kind !== 'human' || !seat.connected) closePeer(+s);
+      if (!seat || seat.kind !== 'human' || !seat.connected) closePeer(+s, 'seat-gone');
     });
     syncVoicePairs();
     render(msg);
