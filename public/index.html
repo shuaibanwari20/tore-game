@@ -551,6 +551,31 @@
     z-index: 60; transition: transform .25s; max-width: 92vw; text-align: center;
   }
   #toast.show { transform: translateX(-50%) translateY(0); }
+  /* ---------- voice diagnostics overlay (long-press the mic) ----------
+     A small dark LTR monospace card, toggled by a ~600 ms press on
+     the mic button. Pointer events land only on the card itself, so
+     the game underneath is never blocked; the × dismisses it. It
+     exists so a voice failure on a real phone can be SCREENSHOT and
+     read, instead of guessed at: pair states, the selected ICE
+     candidate pair, byte counters and the last voice events. */
+  #vdiag {
+    position: fixed; top: 10px; left: 10px; z-index: 90; width: min(330px, calc(100vw - 20px));
+    direction: ltr; text-align: left; font-family: ui-monospace, Menlo, Consolas, monospace;
+    background: rgba(12, 10, 8, .94); color: #d8e6c3; border: 1px solid #d9b380; border-radius: 10px;
+    font-size: 10.5px; line-height: 1.5; padding: 8px 10px; box-shadow: 0 6px 24px rgba(0,0,0,.55);
+    max-height: 72dvh; overflow-y: auto;
+  }
+  #vdiag .vd-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  #vdiag .vd-title { color: #ffd75e; font-weight: 700; font-size: 11.5px; }
+  #vdiag-close {
+    width: auto; margin: 0; padding: 0 7px; font-size: 14px; line-height: 1.4;
+    background: transparent; color: #ffd75e; border: 1px solid #d9b380; border-radius: 6px;
+  }
+  #vdiag .vd-seat { color: #fff; font-weight: 700; margin-top: 5px; }
+  #vdiag .vd-sub { color: #a9bd8f; padding-left: 8px; white-space: pre-wrap; word-break: break-all; }
+  #vdiag .vd-log { margin-top: 7px; border-top: 1px solid rgba(217,179,128,.4); padding-top: 5px; color: #b9c9a4; }
+  #vdiag .vd-log div { white-space: pre-wrap; word-break: break-all; }
+  #btn-mic { -webkit-touch-callout: none; }
   #connbar { text-align: center; font-size: 12.5px; color: #ffd75e; min-height: 18px; }
   .hidden { display: none !important; }
 
@@ -929,6 +954,12 @@
 
 <div id="toast"></div>
 
+<!-- ======== VOICE DIAGNOSTICS (long-press the mic button) ======== -->
+<div id="vdiag" class="hidden">
+  <div class="vd-head"><span class="vd-title" id="vdiag-title">Voice diagnostics</span><button id="vdiag-close" aria-label="close">×</button></div>
+  <div id="vdiag-body"></div>
+</div>
+
 <script>
 'use strict';
 // ---------- helpers ----------
@@ -1010,6 +1041,7 @@ const STR = {
     disconnected: 'اړیکه پرې شوه — بیا نښلول کېږي…',
     noConn: 'اړیکه نشته',
     micUnavailable: 'مایکروفون نشته',
+    voiceDiag: 'د غږ تشخیص',
     voiceConnected: 'غږ وصل شو',
     voiceFailed: 'غږ وصل نشو — بیا هڅه وکړه',
     codeLenToast: 'د کوټې کوډ 4 توري دی',
@@ -1118,6 +1150,7 @@ const STR = {
     disconnected: 'اتصال قطع شد — در حال اتصال دوباره…',
     noConn: 'اتصال نیست',
     micUnavailable: 'مایک در دسترس نیست',
+    voiceDiag: 'تشخیص صدا',
     voiceConnected: 'صدا وصل شد',
     voiceFailed: 'صدا وصل نشد — دوباره تلاش کن',
     codeLenToast: 'کد اتاق 4 حرفی است',
@@ -1226,6 +1259,7 @@ const STR = {
     disconnected: 'Connection lost — reconnecting…',
     noConn: 'Not connected',
     micUnavailable: 'Microphone unavailable',
+    voiceDiag: 'Voice diagnostics',
     voiceConnected: 'Voice connected',
     voiceFailed: 'Voice could not connect — try again',
     codeLenToast: 'The room code is 4 letters',
@@ -1923,6 +1957,19 @@ function paintChatBubble(pos) {
 // signature is 'S' (I send) / 'R' (I receive). On collision the
 // LOWER seat is impolite and the HIGHER seat polite (perfect
 // negotiation), so crossed offers resolve instead of deadlocking.
+//
+// SHAPE INVARIANCE (voice4): every pair is built with ONE audio
+// transceiver whose direction is ALWAYS 'sendrecv', plus the
+// initiator's 'ping' datachannel — the SDP shape is IDENTICAL in
+// one-way and two-way modes. A mic toggle is therefore reduced to
+// sender.replaceTrack(track | null): NO renegotiation, NO pair
+// re-formation, NO signature-driven close. (Earlier builds shaped
+// the pair by its birth signature — sendonly/recvonly transceivers
+// — so the one-way shape differed from the two-way shape, and on
+// Android a one-way pair silently never carried the talker until
+// the listener's own mic tap re-formed it two-way. The working
+// shape is now the only shape.) The signature survives only as
+// bookkeeping: pair wanted-ness, toast/stats expectations.
 const RTCPeerCtor = window.RTCPeerConnection || window.webkitRTCPeerConnection;
 let micOn = false;     // my microphone transmits (default off)
 let speakerOn = true;  // I listen to the table (default on)
@@ -1942,6 +1989,27 @@ const voiceHeal = {}; // seat -> { attempts, exhausted }
 // and drops signals from OLDER generations — see the gate in
 // processRtcSignal for why a stale signal is poisonous.
 const peerGen = {}; // seat -> generation of my current peer for that seat
+// Stats-driven single rebuild (voice4): a pair whose link is UP
+// (datachannel open / ICE connected) but whose audio byte counters
+// do not move is rebuilt ONCE on a relay-only transport policy.
+// relayForcedSeats marks the seat's profile across the rebuild;
+// statsRebuiltOnce makes the rebuild strictly once per pair-life.
+// Both clear when the pair stops being wanted (a new pair-life).
+const relayForcedSeats = {}; // seat -> true: build pairs relay-only
+const statsRebuiltOnce = {}; // seat -> true: the stats rebuild already fired
+let STATS_CHECK_DELAY_MS = 12000; // link-up → baseline stats sample
+let STATS_SAMPLE_GAP_MS = 5000;   // baseline → comparison sample
+// Voice event log for the diagnostics overlay: the last voice
+// events with seconds-since-join timestamps, so a failure on a
+// real phone arrives as a readable screenshot instead of a guess.
+const voiceEvents = []; // { t, msg }
+let voiceT0 = 0;        // when this client joined its room (log epoch)
+function voiceEvent(msg, seat) {
+  try {
+    voiceEvents.push({ t: Date.now(), msg: (seat !== undefined && seat !== null ? 'seat ' + seat + ': ' : '') + msg });
+    if (voiceEvents.length > 40) voiceEvents.splice(0, voiceEvents.length - 40);
+  } catch (e) {}
+}
 const HEAL_MAX_ATTEMPTS = 5;
 const HEAL_BACKOFF_MS = [1000, 3000, 8000]; // later attempts reuse the last step
 const voiceSeats = {}; // seat -> { mic, speaker }, mirrored from the server (state + broadcasts)
@@ -2121,8 +2189,28 @@ function resetVoiceFeedback() {
   Object.keys(voiceHeal).forEach((s) => { delete voiceHeal[s]; });
 }
 
-$('#btn-mic').onclick = () => { toggleVoice(); };
+// Mic button: a tap toggles the mic; a LONG press (~600 ms) opens
+// the voice diagnostics overlay instead — and that press must NOT
+// also toggle the mic when the finger lifts (the click still
+// fires), so the fired long-press suppresses exactly one click.
+let micLpTimer = null, micLpFired = false;
+{
+  const micBtn = $('#btn-mic');
+  micBtn.addEventListener('pointerdown', () => {
+    micLpFired = false;
+    if (micLpTimer) clearTimeout(micLpTimer);
+    micLpTimer = setTimeout(() => { micLpFired = true; openVoiceDiag(); }, 600);
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) =>
+    micBtn.addEventListener(ev, () => { if (micLpTimer) { clearTimeout(micLpTimer); micLpTimer = null; } }));
+  micBtn.addEventListener('contextmenu', (e) => { e.preventDefault(); });
+}
+$('#btn-mic').onclick = () => {
+  if (micLpFired) { micLpFired = false; return; } // the long-press already acted
+  toggleVoice();
+};
 $('#btn-speaker').onclick = () => { toggleSpeaker(); };
+$('#vdiag-close').onclick = () => { closeVoiceDiag(); };
 
 function paintSpeakerBtn() {
   const b = $('#btn-speaker');
@@ -2150,7 +2238,13 @@ function toggleSpeaker() {
   }
   resetVoiceFeedback();
   syncVoicePairs();
-  if (speakerOn) retryPeerAudio(); // this tap is a user gesture — unblock stalled playback
+  if (speakerOn) {
+    // Streams that arrived while the speaker was off were parked
+    // on their entries with no element — attach them now (ontrack
+    // will not fire again for an already-negotiated pair).
+    Object.keys(peers).forEach((s) => { if (peers[s] && peers[s].stream) attachPeerAudio(peers[s]); });
+    retryPeerAudio(); // this tap is a user gesture — unblock stalled playback
+  }
   paintVoiceDots(state);
 }
 
@@ -2228,11 +2322,14 @@ async function toggleVoice() {
   }
   localStream = stream;
   micOn = true;
-  // A pair formed while this client momentarily had no stream
-  // (built on a placeholder transceiver — see ensurePeer) is
-  // re-formed now, so its first real negotiation carries the
-  // track instead of the silent placeholder.
-  Object.keys(peers).forEach((s) => { if (peers[s] && peers[s].needsTrack) closePeer(s, 'track'); });
+  // Pairs that already exist (formed while I was listening) take
+  // the track by replaceTrack ALONE: the transceiver was born
+  // sendrecv, so sending starts with no renegotiation and no
+  // re-formation. Pairs that do not exist yet are formed by
+  // syncVoicePairs below — with the stream already in hand, so
+  // their first offer carries the track.
+  Object.keys(peers).forEach((s) => { if (peers[s]) setSenderTrack(peers[s]); });
+  voiceEvent('mic on');
   resetVoiceFeedback();
   $('#btn-mic').classList.add('on');
   mirrorMyVoice();
@@ -2247,6 +2344,11 @@ function stopMic() {
   $('#btn-mic').classList.remove('on');
   mirrorMyVoice();
   announceVoice();
+  // Detach the track from every living pair's sender FIRST:
+  // replaceTrack(null) is the whole mic-off for pairs that stay
+  // wanted (I keep listening) — no renegotiation, no re-form.
+  Object.keys(peers).forEach((s) => { if (peers[s]) setSenderTrack(peers[s]); });
+  voiceEvent('mic off');
   if (localStream) { localStream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} }); localStream = null; }
   // Pairs that existed only so I could talk close; pairs I listen
   // on survive untouched (pair sync re-forms the rest as needed).
@@ -2282,50 +2384,149 @@ function ensurePeerGated(seat) {
   p.then(clear, clear);
   return p;
 }
+// The pair's ONE audio transceiver, born from its first
+// description (see the note in ensurePeer): if a remote offer
+// has already been applied, the browser grew a transceiver for
+// its audio m-line — adopt THAT one (flipping it to sendrecv
+// before the answer is created, so the answer carries sendrecv
+// too); otherwise create it locally so this side's first offer
+// carries it.
+//
+// The wedge this design replaced (measured across the voice4
+// churn repros, down to raw SDP sections): when the polite
+// side rolled its own first offer back to accept the remote
+// one, the rollback un-assigned its fresh transceiver's mid;
+// the applied offer grew a second transceiver beside it, and
+// the midless orphan leaked into the next descriptions as a
+// phantom THIRD m-line ([audio, application, audio]) — a
+// session that then rejected every clean two-m-line offer
+// from a re-formed peer with the m-line-order error. Two rules
+// together make that impossible: the transceiver is born from
+// the first description (this function + adoptSessionTransceiver),
+// and a pair's first offer is only ever made by ONE side (the
+// first-offer rule in makeOffer), so the glare that orphaned
+// transceivers can no longer happen. Nothing is ever stop()ed:
+// a stopped-but-never-negotiated transceiver makes Chrome
+// fire negotiationneeded forever (a renegotiation loop,
+// measured at ~100 offers a minute in the same repros).
+function ensureTransceiver(entry) {
+  if (!entry) return;
+  const pc = entry.pc;
+  try {
+    const list = (pc.getTransceivers ? pc.getTransceivers() : []).filter(
+      (t) => t && t.receiver && t.receiver.track && t.receiver.track.kind === 'audio' && !t.stopped);
+    if (!entry.sender) {
+      const tc = list.find((t) => t.mid != null) || list[0] || null;
+      if (tc) {
+        try { if (tc.direction !== 'sendrecv') tc.direction = 'sendrecv'; } catch (e) {}
+        entry.sender = tc.sender;
+      } else {
+        const nt = pc.addTransceiver('audio', { direction: 'sendrecv' });
+        entry.sender = nt.sender;
+        setSenderTrack(entry);
+        return; // freshly created for a first offer: nothing to sweep
+      }
+      setSenderTrack(entry);
+    }
+  } catch (e) {}
+}
+// Post-offer adoption: after a remote OFFER is applied, the
+// pair's audio transceiver is BY DEFINITION the one whose mid
+// is the offer's audio mid — move entry.sender onto it (the mic
+// track re-attaches there via setSenderTrack). Under the
+// first-offer rule (see makeOffer) this is normally a no-op —
+// the answering side created no local transceiver, so the
+// negotiated one is the only one — but after a heal-crossed
+// renegotiation it guarantees the sender can never be left
+// sitting on a transceiver the session did not negotiate.
+// (The midless orphan this once had to clean up is now
+// prevented at the source; nothing is ever stop()ed here — a
+// stopped-but-never-negotiated transceiver makes Chrome fire
+// negotiationneeded forever, a renegotiation loop measured in
+// the voice4 repro at ~100 offers a minute.)
+function adoptSessionTransceiver(entry, remoteSdp) {
+  if (!entry || !remoteSdp) return;
+  try {
+    const m = /^m=audio[\s\S]*?^a=mid:(\S+)/m.exec(remoteSdp);
+    if (!m) return;
+    const list = (entry.pc.getTransceivers ? entry.pc.getTransceivers() : []).filter(
+      (t) => t && t.receiver && t.receiver.track && t.receiver.track.kind === 'audio' && !t.stopped);
+    const tc = list.find((t) => t.mid === m[1]);
+    if (!tc) return;
+    if (entry.sender !== tc.sender) {
+      try { if (tc.direction !== 'sendrecv') tc.direction = 'sendrecv'; } catch (e) {}
+      entry.sender = tc.sender;
+      setSenderTrack(entry);
+    }
+  } catch (e) {}
+}
+// Attach/detach the mic track on a pair's one sendrecv sender.
+// This is ALL a mic toggle does to a living pair: replaceTrack
+// needs no renegotiation (the m-line was born sendrecv), fires no
+// signaling, and leaves the pair — its ICE, its DTLS, its remote
+// description — exactly as it was. Track in hand → send; no track
+// (mic off) → the sender goes silent in place.
+function setSenderTrack(entry) {
+  if (!entry || !entry.sender) return;
+  const track = (micOn && localStream) ? (localStream.getAudioTracks()[0] || null) : null;
+  if (entry.sender.track === track) return;
+  try {
+    const p = entry.sender.replaceTrack(track);
+    if (p && p.catch) p.catch(() => {});
+  } catch (e) {}
+}
 // Reconcile the mesh with the current flags: for every other seat,
-// the wanted direction signature decides — no pair, a re-formed pair
-// (signature changed, or born on the fallback list before the relay
-// credentials arrived), or the pair that already matches.
+// the pairing rule decides EXISTENCE only — no pair, or the pair
+// that already lives. A change in the direction signature no
+// longer re-forms anything (the pair's shape is invariant; a mic
+// toggle is a replaceTrack, see setSenderTrack). The one re-form
+// left here is the config upgrade: a pair born on the bare
+// fallback list before the relay credentials landed, settled and
+// not connected, re-forms on the real config when its CONTENT
+// actually arrives.
 function syncVoicePairs() {
   if (mySeat === null) return;
   for (let s = 0; s < 4; s++) {
     if (s === mySeat) continue;
     const sig = pairSig(s);
-    if (!sig) { closePeer(s, 'unwanted'); delete voiceHeal[s]; continue; }
+    if (!sig) {
+      closePeer(s, 'unwanted');
+      delete voiceHeal[s];
+      delete relayForcedSeats[s]; // a future pair is a new pair-life:
+      delete statsRebuiltOnce[s]; // fresh profile, fresh stats budget
+      continue;
+    }
     const e = peers[s];
     if (e) {
-      if (e.sig === sig) {
-        // NEVER tear down a working pair: while a pair is
-        // connected it is untouchable — no upgrade, config check
-        // or heal may re-form it. If it later dies, the heal path
-        // re-forms it on the then-current config.
-        if (e.linked) continue;
-        // A pair is OUTDATED only when the config CONTENT
-        // actually changed after it was born (its content key
-        // differs from the current key) AND it was born on the
-        // bare fallback list: a refresh returning identical
-        // content has the identical key and re-forms nothing.
-        // The upgrade applies only once negotiation has settled
-        // — re-forming mid-negotiation restarts the very
-        // handshake the upgrade is meant to save; while the pair
-        // is still negotiating, the fallback upgrade clock (and
-        // the next sync) keeps the upgrade pending until it can
-        // apply cleanly.
-        const outdated = e.usedFallback && iceFetchedAt > 0 &&
-          e.cfgKey !== iceServersKey && e.pc.signalingState === 'stable';
-        if (!outdated) {
-          // Born on the fallback config and the real credentials
-          // still have not landed: keep retrying the fetch in the
-          // background — when one succeeds this pair re-forms on
-          // the real relay with no user action at all. (The pair's
-          // own upgrade clock in ensurePeer retries on a timer
-          // too, for the quiet moments when no sync runs at all.)
-          if (!iceFetchedAt) maybeRetryIceFetch();
-          continue;
-        }
-        closePeer(s, 'upgrade'); // re-formed below, on the current config
+      e.sig = sig; // bookkeeping only (toast/stats expectations) — never a trigger
+      // NEVER tear down a working pair: while a pair is connected
+      // it is untouchable — no upgrade, config check or heal may
+      // re-form it. If it later dies, the heal path re-forms it
+      // on the then-current config.
+      if (e.linked) continue;
+      // A pair is OUTDATED only when the config CONTENT actually
+      // changed after it was born (its content key differs from
+      // the current key) AND it was born on the bare fallback
+      // list: a refresh returning identical content has the
+      // identical key and re-forms nothing. The upgrade applies
+      // only once negotiation has settled — re-forming
+      // mid-negotiation restarts the very handshake the upgrade
+      // is meant to save; while the pair is still negotiating,
+      // the fallback upgrade clock (and the next sync) keeps the
+      // upgrade pending until it can apply cleanly.
+      const outdated = e.usedFallback && iceFetchedAt > 0 &&
+        e.cfgKey !== iceServersKey && e.pc.signalingState === 'stable';
+      if (!outdated) {
+        // Born on the fallback config and the real credentials
+        // still have not landed: keep retrying the fetch in the
+        // background — when one succeeds this pair re-forms on
+        // the real relay with no user action at all. (The pair's
+        // own upgrade clock in ensurePeer retries on a timer
+        // too, for the quiet moments when no sync runs at all.)
+        if (!iceFetchedAt) maybeRetryIceFetch();
+        continue;
       }
-      closePeer(s, 'sig'); // direction signature changed — re-formed below
+      closePeer(s, 'upgrade'); // re-formed below, on the current config
     }
     ensurePeerGated(s);
   }
@@ -2335,14 +2536,35 @@ function ensurePeer(seat) {
   if (peers[seat]) return peers[seat];
   const sig = pairSig(seat);
   if (!sig) return null;
-  const pc = new RTCPeerCtor({ iceServers: iceServersNow });
+  // Pair profile: normally the current ICE config as-is; after a
+  // stats rebuild the seat is relay-forced — the fresh pair is
+  // built with iceTransportPolicy 'relay' so every candidate it
+  // gathers is a relay candidate (the last-resort shape for a
+  // link that linked but never carried audio bytes).
+  const relayForced = !!relayForcedSeats[seat];
+  const pcConfig = { iceServers: iceServersNow };
+  if (relayForced) pcConfig.iceTransportPolicy = 'relay';
+  const pc = new RTCPeerCtor(pcConfig);
   const entry = {
     pc,
+    seat,
+    relayForced,         // this pair was built on the relay-only profile
     gen: (peerGen[seat] = (peerGen[seat] || 0) + 1), // this peer's signaling generation, stamped on every signal it sends
     remoteGen: null,     // generation of the remote peer's current session (adopted from its first signal)
     audio: null,
     stream: null,        // latest remote stream from ontrack (parked while speaker is off)
-    sig,                 // direction signature this pair was built for
+    sender: null,        // the one sendrecv transceiver's sender (mic track attach point)
+    dc: null,            // MY created 'ping' datachannel (heartbeats go out on it)
+    dcIn: null,          // the REMOTE side's 'ping' channel (its heartbeats arrive here)
+    dcOpen: false,
+    lastPingAt: 0,       // last heartbeat received on the datachannel
+    linkUpAt: 0,         // when the link first came up (dc open / ICE connected) — stats clock epoch
+    statsTimer: null,    // stats-check schedule (baseline / comparison)
+    statsBase: null,     // baseline stats sample for the byte comparison
+    statsDone: false,    // the stats check ran its course for this pair
+    pingTimer: null,     // datachannel heartbeat schedule (initiator side)
+    lastIce: '',         // last ICE state seen (diagnostics event log)
+    sig,                 // direction signature this pair was built for (bookkeeping)
     usedFallback: !iceFetchedAt, // born before the relay credentials landed — re-formed when they do
     cfgKey: iceServersKey, // content key of the ICE config this pair was born on (see iceCfgKey)
     iceQueue: [],        // remote candidates that beat their SDP — flushed once it lands
@@ -2363,12 +2585,12 @@ function ensurePeer(seat) {
     // pair that IS carrying audio must be untouchable.
     linked: false,
     bornAt: Date.now(),
+    deferTimer: null,    // impolite first-offer defer re-drive (see makeOffer)
     signalAt: 0,         // last rtc signal received from this seat
     lastProgressAt: Date.now(), // last negotiation progress (see the watchdog below)
     checkingSince: 0,    // when ICE entered 'checking' with a remote description (watchdog's long leash)
     healWhy: '',         // why the pending heal was scheduled (diagnostics)
     healCounted: false,  // this entry's death already counted against the heal budget
-    needsTrack: false,   // built for sending before the mic stream existed
     wantNegotiate: false, // a negotiationneeded is still owed
     watchTimer: null,    // negotiation-phase progress watchdog
     upgradeTimer: null,  // fallback-born pairs: clock-driven credentials retry
@@ -2378,25 +2600,48 @@ function ensurePeer(seat) {
     healTimer: null,
   };
   peers[seat] = entry;
-  if (sig.includes('S') && localStream) {
-    localStream.getTracks().forEach((t) => { try { pc.addTrack(t, localStream); } catch (e) {} });
-  } else if (sig.includes('S')) {
-    // I should be sending, but the mic stream is not in hand yet
-    // (the pair formed in the same breath as the mic tap): park a
-    // sendonly transceiver so the pair still negotiates an audio
-    // m-section, and flag it — toggleVoice re-forms the pair the
-    // moment the stream lands, so the first real offer carries
-    // the track. (This branch used to fall through entirely: a
-    // peer with NO transceiver at all, whose offers had no audio
-    // m-section and whose track was never added later.)
-    entry.needsTrack = true;
-    try { pc.addTransceiver('audio', { direction: 'sendonly' }); } catch (e) {}
-  } else {
-    // Pure listener: no track to send, but the pair still needs an
-    // audio m-section to receive on — a recvonly transceiver gives
-    // negotiation something to offer/answer with.
-    try { pc.addTransceiver('audio', { direction: 'recvonly' }); } catch (e) {}
-  }
+  // THE pair shape — the same for every pair, in every mode: ONE
+  // audio transceiver, ALWAYS sendrecv, plus the 'ping'
+  // application m-line. No sendonly/recvonly variants exist: a
+  // pair's SDP in one-way mode has exactly the same shape as in
+  // two-way mode, and the mic is only ever a track on the
+  // transceiver's sender (see setSenderTrack).
+  //
+  // The transceiver is deliberately NOT created here. A
+  // transceiver created before the first negotiation carries no
+  // mid until a LOCAL description assigns one; when the remote
+  // offer lands first, the browser does NOT adopt that midless
+  // transceiver for the offer's audio m-line — it grows its own,
+  // and the orphan then appears as a SECOND audio m-line in the
+  // next local offer (measured in the voice4 churn repro: the
+  // session permanently became [audio, application, audio], and
+  // every later fresh [audio, application] offer was rejected
+  // with "the order of m-lines in subsequent offer doesn't
+  // match", forcing a signal-rebuild on every heal). Instead the
+  // transceiver is born from the pair's FIRST description —
+  // adopted from the remote offer when one is applied first
+  // (ensureTransceiver, called from processRtcSignal), or
+  // created locally when this side offers first (called from
+  // makeOffer). One transceiver, one audio m-line, forever.
+  // The 'ping' datachannel: created on every pair BEFORE the
+  // first offer — by BOTH sides, deliberately. The initiator's
+  // channel is the one the offer/answer model needs; the other
+  // side creating its own too costs nothing (a single SCTP
+  // m-line serves every channel) and makes the pair's SDP shape
+  // converge PERMANENTLY: a pair re-formed after a heal offers
+  // [audio, application] from either side, so the surviving peer
+  // can always apply it as a plain renegotiation. When only the
+  // initiator created one, a healed non-initiator's fresh
+  // [audio]-only offer hit the survivor's two-m-line session and
+  // forced a 'signal-rebuild' close — connection churn (voice4
+  // analyzer catch). Creating it here, before any negotiation,
+  // puts the application m-line in the first offer — in one-way
+  // and two-way alike. The channel is also the
+  // pair's true link-up signal (open = DTLS established, which
+  // no ICE state callback can say earlier) and carries a 5 s
+  // heartbeat while the pair lives.
+  try { wireDataChannel(seat, entry, pc.createDataChannel('ping'), true); } catch (e) {}
+  pc.ondatachannel = (e) => { wireDataChannel(seat, entry, e.channel, false); };
   pc.onicecandidate = (e) => {
     if (e.candidate) {
       send({ type: 'rtc', to: seat, data: { kind: 'ice', candidate: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate, gen: entry.gen } });
@@ -2528,7 +2773,153 @@ function ensurePeer(seat) {
     };
     entry.upgradeTimer = setTimeout(upgradeTick, 15000);
   }
+  voiceEvent('pair formed gen ' + entry.gen + (relayForced ? ' (relay profile)' : ''), seat);
+  // A RE-formed pair nudges its peer at once: under the
+  // first-offer rule the impolite side of a fresh pair waits
+  // for the polite side's offer, and a surviving polite peer
+  // has no reason to offer on its own — the nudge is that
+  // reason. If the pair that died was shape-poisoned, the
+  // nudge is 'reform' (re-form as well, if your side is
+  // poisoned too) instead of 'reoffer'. (First pairs don't
+  // need a nudge: both sides form from the same announce and
+  // the polite side offers unprompted.)
+  if (entry.gen > 1) {
+    const kind = poisonedSession[seat] ? 'reform' : 'reoffer';
+    delete poisonedSession[seat];
+    try { send({ type: 'rtc', to: seat, data: { kind, gen: entry.gen } }); } catch (e) {}
+  }
   return entry;
+}
+// The 'ping' datachannel's wiring: BOTH sides create a channel
+// (see ensurePeer), so each peer holds its OWN created channel
+// (entry.dc — the one it heartbeats on) and the REMOTE side's
+// channel arriving via ondatachannel (entry.dcIn — the one the
+// peer's heartbeats arrive on). Open is the pair's TRUE link-up:
+// the SCTP association only opens once DTLS is established
+// end-to-end. Each side heartbeats 'p' every 5 s on its own
+// channel while the pair lives; the receiving side only records
+// the time (no echo — one-way proof is enough for diagnostics).
+function wireDataChannel(seat, entry, dc, created) {
+  if (!dc) return;
+  if (created) entry.dc = dc; else entry.dcIn = dc;
+  dc.onopen = () => {
+    if (peers[seat] !== entry) return;
+    entry.dcOpen = true;
+    voiceEvent('datachannel open', seat);
+    noteLinkUp(seat, entry);
+    if (entry.linked) maybeLinkToast(entry); // link is up AND the channel is open — the toast may fire
+    if (created) startPing(seat, entry);
+  };
+  dc.onclose = () => { if (created) entry.dcOpen = false; };
+  dc.onmessage = () => { entry.lastPingAt = Date.now(); };
+}
+function startPing(seat, entry) {
+  if (entry.pingTimer) return;
+  const tick = () => {
+    entry.pingTimer = null;
+    if (peers[seat] !== entry) return;
+    try { if (entry.dc && entry.dc.readyState === 'open') entry.dc.send('p'); } catch (e) {}
+    entry.pingTimer = setTimeout(tick, 5000);
+  };
+  entry.pingTimer = setTimeout(tick, 5000);
+}
+// Link-up bookkeeping shared by the ICE handler and the
+// datachannel: the first link-up starts the stats clock (the
+// byte-movement check below); every link-up resets the healing
+// budget — a pair that is carrying (or is about to carry) audio
+// has proven itself, so its past deaths stop counting.
+function noteLinkUp(seat, entry) {
+  if (!entry.linkUpAt) {
+    entry.linkUpAt = Date.now();
+    armStatsCheck(seat, entry);
+  }
+}
+function markLinked(seat, entry) {
+  entry.linked = true;
+  noteLinkUp(seat, entry);
+  clearPeerTimers(entry);
+  delete voiceHeal[seat]; // healing budget resets on a live link
+  delete voiceFailToastSeats[seat]; // a later failure is a new state change
+  maybeLinkToast(entry);
+  attemptPlay(entry);
+}
+// One getStats sample of a pair, reduced to what the stats check
+// and the diagnostics need: whether a candidate pair is SELECTED
+// (nominated — the arming condition), the selected pair's
+// endpoint types, and the audio byte counters. Byte counters
+// prefer the RTP reports (audio only); the candidate-pair totals
+// are the fallback when a stack reports no RTP split.
+async function readPairStats(pc) {
+  const out = { nominated: false, inBytes: 0, outBytes: 0, sel: null };
+  try {
+    const report = await pc.getStats();
+    const byId = {};
+    let transportSel = null, selPair = null, rtpIn = null, rtpOut = null;
+    report.forEach((s) => {
+      if (!s || !s.type) return;
+      if (s.id) byId[s.id] = s;
+      if (s.type === 'transport' && s.selectedCandidatePairId) transportSel = s.selectedCandidatePairId;
+      if (s.type === 'candidate-pair' && s.state === 'succeeded' && (s.nominated || !selPair)) selPair = selPair || s;
+      if (s.type === 'candidate-pair' && transportSel && s.id === transportSel) selPair = s;
+      if (s.type === 'inbound-rtp' && (s.kind === 'audio' || s.mediaType === 'audio')) rtpIn = s;
+      if (s.type === 'outbound-rtp' && (s.kind === 'audio' || s.mediaType === 'audio')) rtpOut = s;
+    });
+    if (selPair) {
+      out.nominated = true;
+      const lc = byId[selPair.localCandidateId] || {};
+      const rc = byId[selPair.remoteCandidateId] || {};
+      out.sel = (lc.candidateType || '?') + '/' + (lc.protocol || '?') + ' <-> ' +
+        (rc.candidateType || '?') + '/' + (rc.protocol || '?');
+      out.inBytes = selPair.bytesReceived || 0;
+      out.outBytes = selPair.bytesSent || 0;
+    }
+    if (rtpIn) out.inBytes = rtpIn.bytesReceived || 0;
+    if (rtpOut) out.outBytes = rtpOut.bytesSent || 0;
+  } catch (e) { /* stats unavailable — the check simply never arms */ }
+  return out;
+}
+// Stats-driven single rebuild. A pair can pass every signaling
+// and ICE check and still carry no audio (a candidate pair that
+// nominally "works" for checks but blackholes the media — the
+// failure class three fix rounds could not see from this side of
+// the sandbox). So: STATS_CHECK_DELAY_MS after link-up, sample
+// the counters; if the sample shows a NOMINATED candidate pair
+// (the arming condition — without one there is nothing to judge,
+// and in the sandbox no pair ever nominates, so the check simply
+// never arms there), take a baseline and sample again after
+// STATS_SAMPLE_GAP_MS. If the pair is expected to RECEIVE (the
+// other side's mic is on) and inbound audio bytes did not
+// increase, or expected to SEND (my mic is on) and outbound
+// bytes did not increase, the pair is rebuilt ONCE on a fresh
+// connection with a relay-only transport policy. After that the
+// existing healing rules own any further failure — the rebuild
+// never loops.
+function armStatsCheck(seat, entry) {
+  if (entry.statsTimer || entry.statsDone || entry.relayForced) return;
+  entry.statsTimer = setTimeout(() => { statsSample(seat, entry, 0); }, STATS_CHECK_DELAY_MS);
+}
+async function statsSample(seat, entry, phase) {
+  entry.statsTimer = null;
+  if (peers[seat] !== entry || entry.relayForced || !pairWanted(seat)) return;
+  const snap = await readPairStats(entry.pc);
+  if (peers[seat] !== entry) return;
+  if (!snap.nominated) { entry.statsDone = true; return; } // never armed — nothing to judge
+  if (phase === 0) {
+    entry.statsBase = snap;
+    entry.statsTimer = setTimeout(() => { statsSample(seat, entry, 1); }, STATS_SAMPLE_GAP_MS);
+    return;
+  }
+  entry.statsDone = true;
+  const sig = pairSig(seat);
+  const recvStalled = sig.includes('R') && snap.inBytes <= entry.statsBase.inBytes;
+  const sendStalled = sig.includes('S') && snap.outBytes <= entry.statsBase.outBytes;
+  if ((recvStalled || sendStalled) && !statsRebuiltOnce[seat]) {
+    statsRebuiltOnce[seat] = true;
+    relayForcedSeats[seat] = true;
+    voiceEvent('stats rebuild: link up but audio bytes frozen (' + snap.sel + ')', seat);
+    closePeer(seat, 'stats-rebuild');
+    syncVoicePairs(); // re-forms the pair at once, on the relay-only profile
+  }
 }
 // Attach the remote stream to a playback element — only while my
 // speaker is on. With the speaker off the stream stays parked on
@@ -2572,7 +2963,43 @@ async function makeOffer(seat, entry) {
   return enqueueSignal(seat, async () => {
     if (peers[seat] !== entry || pc.signalingState === 'closed') { entry.makingOffer = false; return; }
     if (pc.signalingState !== 'stable') { entry.makingOffer = false; return; } // wantNegotiate stays owed; state change re-drives
+    // FIRST-OFFER RULE: the impolite (lower) seat never makes a
+    // pair's first offer — the polite seat always does. Crossed
+    // FIRST offers are the one remaining source of the phantom
+    // m-line: the polite side rolls its offer back, the rollback
+    // un-assigns its fresh transceiver's mid, the accepted offer
+    // grows a second transceiver beside it, and that orphan
+    // leaks into later descriptions (measured three ways in the
+    // voice4 churn repros). With exactly one first offer there
+    // is no glare, no rollback, no orphan — the impolite side's
+    // transceiver is born from the polite side's offer, the
+    // polite side's from its own offer, and renegotiations after
+    // that are glare-safe (established transceivers keep their
+    // mids across a rollback). The window is SHORT (~0.9 s): it
+    // only has to cover the polite side forming its pair from
+    // the same announce and offering, which is also what keeps
+    // the impolite side's offer prompt when IT is the talker
+    // (its offer must be able to beat a slow credentials fetch
+    // on the other side — the regression-A geometry). A re-drive
+    // timer offers anyway when the window lapses (the polite
+    // side's pair may not exist — the stall watchdog is the
+    // deeper backstop), a re-formed pair nudges its peer with a
+    // 'reoffer' signal so a surviving polite side re-offers at
+    // once, and if a crossed offer ever does slip through, the
+    // reform nudge (see closePeer) cleans the shape up
+    // deterministically.
+    if (!entry.polite && !pc.remoteDescription && (Date.now() - entry.bornAt) < 900) {
+      entry.makingOffer = false;
+      if (!entry.deferTimer) {
+        entry.deferTimer = setTimeout(() => {
+          entry.deferTimer = null;
+          if (peers[seat] === entry && entry.wantNegotiate) makeOffer(seat, entry);
+        }, 950);
+      }
+      return;
+    }
     try {
+      ensureTransceiver(entry); // offering first: the transceiver is born locally (see ensurePeer)
       const offer = await sdpOp(pc.createOffer());
       if (peers[seat] !== entry || pc.signalingState === 'closed') { entry.makingOffer = false; return; }
       await sdpOp(pc.setLocalDescription(offer));
@@ -2608,17 +3035,22 @@ document.addEventListener('pointerdown', retryPeerAudio);
 // track to wait for, so connected alone is its audio-ready.
 function maybeLinkToast(entry) {
   if (voiceLinkToastShown || !entry.linked) return;
-  if (entry.sig.includes('R') && !entry.stream) return;
+  // Expectation is read LIVE from the pairing rule, not from the
+  // pair's birth signature: if I should be hearing this seat
+  // right now, the toast waits for their track to be in.
+  if (pairSig(entry.seat).includes('R') && !entry.stream) return;
   voiceLinkToastShown = true;
+  voiceEvent('toast: connected');
   toast(T('voiceConnected'));
 }
 function noteVoiceFailed(seat) {
   if (!pairWanted(seat) || voiceFailToastSeats[seat]) return;
   voiceFailToastSeats[seat] = true;
+  voiceEvent('toast: failed', seat);
   toast(T('voiceFailed'));
 }
 function clearPeerTimers(entry) {
-  ['watchTimer', 'discTimer', 'healTimer', 'upgradeTimer'].forEach((k) => {
+  ['watchTimer', 'discTimer', 'healTimer', 'upgradeTimer', 'deferTimer'].forEach((k) => {
     if (entry[k]) { clearTimeout(entry[k]); entry[k] = null; }
   });
 }
@@ -2699,14 +3131,13 @@ function notePeerState(seat, entry) {
   const pc = entry.pc;
   const ice = pc.iceConnectionState;
   const cs = pc.connectionState;
+  if (ice !== entry.lastIce) { // diagnostics: one log line per ICE transition
+    entry.lastIce = ice;
+    voiceEvent('ice ' + ice, seat);
+  }
   if (ice === 'checking') entry.lastProgressAt = Date.now(); // negotiation produced a checking pair
   if (ice === 'connected' || ice === 'completed' || cs === 'connected') {
-    entry.linked = true;
-    clearPeerTimers(entry);
-    delete voiceHeal[seat]; // healing budget resets on a live link
-    delete voiceFailToastSeats[seat]; // a later failure is a new state change
-    maybeLinkToast(entry);
-    attemptPlay(entry);
+    markLinked(seat, entry);
     return;
   }
   // ICE is NOT connected right now: the pair is touchable again.
@@ -2759,18 +3190,53 @@ async function flushIceQueue(entry) {
   }
   if (queued.length) entry.lastProgressAt = Date.now(); // remote candidates applied = progress
 }
+// How many live audio transceivers a pair's connection holds.
+// A healthy pair has exactly ONE; a pair whose negotiations
+// crossed (glare) can carry a second, orphaned one — the
+// session still works, but its SDP shape is poisoned (see
+// ensureTransceiver) and a clean re-formed peer's offers will
+// be rejected by it. The count is the objective evidence the
+// re-formation decisions below are based on.
+function audioTcCount(entry) {
+  try {
+    return (entry.pc.getTransceivers ? entry.pc.getTransceivers() : []).filter(
+      (t) => t && t.receiver && t.receiver.track && t.receiver.track.kind === 'audio' && !t.stopped).length;
+  } catch (e) { return 0; }
+}
+// seat -> true when the pair that just died for that seat was
+// shape-poisoned; consumed by the re-formation nudge in
+// ensurePeer (the fresh pair asks its peer to re-form too).
+const poisonedSession = {};
 function closePeer(seat, why) {
   const entry = peers[seat];
   if (!entry) return;
   // Diagnostic: every re-formation leaves a trace with its reason
   // ('heal:ice-failed' | 'heal:ice-disconnected' | 'heal:no-progress'
-  // | 'upgrade' | 'sig' | 'track' | 'signal-rebuild' | 'unwanted' |
-  // 'peer-closed' | 'seat-gone' | 'teardown'), so a churn loop is
-  // visible in one glance instead of being inferred from births.
+  // | 'upgrade' | 'signal-rebuild' | 'stats-rebuild' | 'shape-rebuild'
+  // | 'unwanted' | 'peer-closed' | 'seat-gone' | 'teardown'), so a
+  // churn loop is visible in one glance instead of inferred from
+  // births. The record carries the dying pair's audio-transceiver
+  // count (tcs) — the shape-poison evidence.
+  const tcs = audioTcCount(entry);
   try {
-    (window.__peerCloses = window.__peerCloses || []).push({ t: Date.now(), seat, why: why || 'other' });
+    (window.__peerCloses = window.__peerCloses || []).push({ t: Date.now(), seat, why: why || 'other', tcs });
   } catch (e) {}
+  // A re-formation away from a POISONED session: remember it, so
+  // the fresh pair's nudge (ensurePeer) asks the surviving peer
+  // to re-form as well — otherwise the survivor's poisoned
+  // session rejects the fresh pair's clean offers and the pair
+  // pays a second, uglier re-formation (signal-rebuild) anyway.
+  if (tcs > 1 && why && (why.indexOf('heal') === 0 || why === 'stats-rebuild' || why === 'upgrade')) {
+    poisonedSession[seat] = true;
+  }
+  voiceEvent('pair closed: ' + (why || 'other'), seat);
   delete peers[seat];
+  // The stats schedule and the heartbeat die with the pair (the
+  // legacy four timers are cleared by clearPeerTimers below).
+  if (entry.pingTimer) { clearTimeout(entry.pingTimer); entry.pingTimer = null; }
+  if (entry.statsTimer) { clearTimeout(entry.statsTimer); entry.statsTimer = null; }
+  try { if (entry.dc) entry.dc.close(); } catch (e) {}
+  try { if (entry.dcIn) entry.dcIn.close(); } catch (e) {}
   // The mesh is fully down: the voice session is OVER, so the
   // «connected» toast re-arms. It used to latch after the first
   // session forever — after a mic off→on the pair could reconnect
@@ -2804,6 +3270,25 @@ async function processRtcSignal(from, data, retried) {
   // fetch), which is exactly the pair that never connects.
   const entry = peers[from] || (await sdpOp(ensurePeerGated(from), 6000).catch(() => null));
   if (!entry) return;
+  // A re-formation nudge from the other side: drive an offer
+  // now (the polite side offers; the impolite side's makeOffer
+  // applies its own first-offer defer if this pair is fresh).
+  // Not generation-gated — it carries no session state. A
+  // 'reform' nudge means the sender's session was shape-
+  // poisoned: if MY pair for it is poisoned too (the objective
+  // transceiver count), re-form it as well so both ends restart
+  // on the clean shape; a clean or fresh pair just re-offers —
+  // the nudge downgrades, so it can never cascade.
+  if (data.kind === 'reoffer' || data.kind === 'reform') {
+    if (data.kind === 'reform' && peers[from] && audioTcCount(peers[from]) > 1) {
+      closePeer(from, 'shape-rebuild');
+      syncVoicePairs();
+      return;
+    }
+    entry.wantNegotiate = true;
+    makeOffer(from, entry);
+    return;
+  }
   entry.signalAt = Date.now(); // the polite side's healer defers to fresh signals
   // Generation gate. Signals from a session the sender has
   // ALREADY REPLACED (a lower gen than this peer adopted) are
@@ -2825,7 +3310,10 @@ async function processRtcSignal(from, data, retried) {
   const sigGen = (typeof data.gen === 'number') ? data.gen : null;
   if (sigGen !== null) {
     if (entry.remoteGen == null) entry.remoteGen = sigGen;
-    else if (sigGen < entry.remoteGen) return; // stale session — drop
+    else if (sigGen < entry.remoteGen) {
+      voiceEvent('stale signal dropped (gen ' + sigGen + ' < ' + entry.remoteGen + ')', from);
+      return; // stale session — drop
+    }
     else entry.remoteGen = sigGen;
   }
   const pc = entry.pc;
@@ -2845,10 +3333,22 @@ async function processRtcSignal(from, data, retried) {
       await sdpOp(pc.setRemoteDescription(desc));
       entry.lastProgressAt = Date.now(); // negotiation progress (watchdog)
       entry.ignoreOffer = false;
+      // The transceiver is born from this first description:
+      // for an offer, adopt the transceiver the description
+      // itself negotiated (by mid) and retire any midless local
+      // orphan before the answer can pick it up as a phantom
+      // m-line; for an answer, the generic adoption suffices.
+      if (desc.type === 'offer') adoptSessionTransceiver(entry, desc.sdp);
+      else ensureTransceiver(entry);
       await flushIceQueue(entry);
       if (desc.type === 'offer') {
         const ans = await sdpOp(pc.createAnswer());
         await sdpOp(pc.setLocalDescription(ans));
+        // The session now contains everything this side had
+        // pending (its datachannel bound, its transceiver
+        // adopted) — the owed-negotiation latch clears; a real
+        // later change re-fires onnegotiationneeded on its own.
+        entry.wantNegotiate = false;
         send({ type: 'rtc', to: from, data: { kind: 'sdp', sdp: pc.localDescription, gen: entry.gen } });
       }
     } else if (data.kind === 'ice' && data.candidate) {
@@ -2898,6 +3398,7 @@ async function processRtcSignal(from, data, retried) {
       // converges both ends on a clean one-m-line session at once.
       if (cur && (cur.pc.signalingState !== 'stable' || (e && e.message === 'rtc-op-timeout') ||
           (e && /m-lines/.test(e.message)))) {
+        voiceEvent('signal failed: ' + String((e && e.message) || e).slice(0, 90), from);
         closePeer(from, 'signal-rebuild');
         const fresh = await sdpOp(ensurePeerGated(from), 6000).catch(() => null);
         if (fresh) { await processRtcSignal(from, data, true); return; }
@@ -2925,6 +3426,74 @@ function paintVoiceDots(st) {
       dot.remove();
     }
   });
+}
+
+// ---------- voice diagnostics overlay ----------
+// Opened by a long-press on the mic button (see the wiring
+// above); refreshed ~1/s while open. Per remote human seat it
+// shows the pair's existence and live states, the SELECTED
+// candidate pair (endpoint types + protocols) and audio byte
+// counters from getStats, the pair's profile (normal / relay)
+// and heal attempts — then the last ~12 voice events with
+// seconds-since-join timestamps. Everything the owner needs to
+// screenshot when voice misbehaves on a real phone.
+let diagTimer = null;
+function openVoiceDiag() {
+  const el = $('#vdiag');
+  if (!el) return;
+  el.classList.remove('hidden');
+  renderVoiceDiag();
+  if (diagTimer) clearInterval(diagTimer);
+  diagTimer = setInterval(renderVoiceDiag, 1000);
+}
+function closeVoiceDiag() {
+  const el = $('#vdiag');
+  if (el) el.classList.add('hidden');
+  if (diagTimer) { clearInterval(diagTimer); diagTimer = null; }
+}
+async function renderVoiceDiag() {
+  const body = $('#vdiag-body');
+  if (!body || $('#vdiag').classList.contains('hidden')) return;
+  const title = $('#vdiag-title');
+  if (title) title.textContent = T('voiceDiag');
+  // Refresh the stats snapshots first (async), then render from
+  // them — the card never blocks on a slow getStats.
+  const seatList = [];
+  for (let s = 0; s < 4; s++) {
+    if (s === mySeat) continue;
+    const st = state && state.seats ? state.seats[s] : null;
+    if (peers[s] || (st && st.kind === 'human')) seatList.push(s);
+  }
+  await Promise.all(seatList.map(async (s) => {
+    const e = peers[s];
+    if (e) { try { e.diagStats = await readPairStats(e.pc); } catch (err) {} }
+  }));
+  if ($('#vdiag').classList.contains('hidden')) return;
+  const lines = [];
+  lines.push('<div>me: seat ' + mySeat + ' · mic ' + (micOn ? 'ON' : 'off') + ' · speaker ' + (speakerOn ? 'ON' : 'off') +
+    ' · ice ' + (iceFetchedAt ? 'relay' : 'fallback') + '</div>');
+  seatList.forEach((s) => {
+    const e = peers[s];
+    if (!e) {
+      lines.push('<div class="vd-seat">seat ' + s + ': NO PAIR (their mic ' + (vflags(s).mic ? 'ON' : 'off') + ')</div>');
+      return;
+    }
+    const h = voiceHeal[s];
+    const ds = e.diagStats || {};
+    lines.push('<div class="vd-seat">seat ' + s + ': pair · gen ' + e.gen + ' · ' + (e.relayForced ? 'RELAY profile' : 'normal') +
+      ' · heals ' + (h ? h.attempts : 0) + (e.linked ? ' · LINKED' : '') + '</div>');
+    lines.push('<div class="vd-sub">sig ' + e.pc.signalingState + ' · ice ' + e.pc.iceConnectionState +
+      ' · conn ' + e.pc.connectionState + ' · dc ' + (e.dc ? e.dc.readyState : 'none') +
+      (e.lastPingAt ? ' · ping ' + Math.max(0, Math.round((Date.now() - e.lastPingAt) / 1000)) + 's ago' : '') + '</div>');
+    lines.push('<div class="vd-sub">path ' + (ds.sel || '—') + '</div>');
+    lines.push('<div class="vd-sub">audio in ' + (ds.inBytes || 0) + ' B · out ' + (ds.outBytes || 0) + ' B' +
+      ' · send ' + (e.sender && e.sender.track ? 'track' : 'silent') +
+      ' · recv ' + (e.stream ? 'track' : 'none') + '</div>');
+  });
+  const t0 = voiceT0 || Date.now();
+  const log = voiceEvents.slice(-12).map((ev) =>
+    '<div>+' + Math.max(0, Math.round((ev.t - t0) / 1000)) + 's ' + ev.msg + '</div>').join('');
+  body.innerHTML = lines.join('') + '<div class="vd-log">' + (log || '<div>no events yet</div>') + '</div>';
 }
 
 // ---------- home: field-style menu wiring ----------
@@ -3116,6 +3685,7 @@ function serverMsgText(msg) {
 function onMsg(msg) {
   if (msg.type === 'room') {
     mySeat = msg.seat;
+    if (!voiceT0) voiceT0 = Date.now(); // diagnostics log epoch: seconds since join
     session = { code: msg.code, token: msg.token, name: myName() };
     localStorage.setItem('tore.session', JSON.stringify(session));
     $('#connbar').textContent = '';
