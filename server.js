@@ -50,7 +50,7 @@ function newCode() {
 }
 
 function emptySeat() {
-  return { kind: 'empty', name: '', avatar: null, country: '', photo: null, token: null, ws: null, connected: false, disconnectAt: null, voiceOn: false, lastChatAt: 0 };
+  return { kind: 'empty', name: '', avatar: null, country: '', photo: null, token: null, ws: null, connected: false, disconnectAt: null, voiceMic: false, voiceSpeaker: true, lastChatAt: 0 };
 }
 
 function createRoom() {
@@ -101,7 +101,7 @@ function stateFor(room, seatIdx) {
     seats: room.seats.map((s, i) => ({
       name: s.name, kind: s.kind, connected: s.connected,
       avatar: s.avatar, country: s.country, photo: s.photo,
-      voice: !!s.voiceOn,
+      voice: { mic: !!s.voiceMic, speaker: s.voiceSpeaker !== false },
       cards: round ? round.hands[i].length : 0,
     })),
     hand: round ? round.hands[seatIdx].slice() : [],
@@ -249,6 +249,8 @@ function startMatch(room) {
       s.name = 'ربات ' + (botDigits[botNo] || String(botNo + 1));
       botNo++;
       s.connected = true;
+      s.voiceMic = false; // bots never talk and never listen
+      s.voiceSpeaker = false;
     }
   });
   room.match = new G.Match(room.emit);
@@ -310,11 +312,11 @@ function onDisconnect(ws) {
   seat.ws = null;
   seat.connected = false;
   seat.disconnectAt = Date.now();
-  if (seat.voiceOn) {
+  if (seat.voiceMic) {
     // Voice is opt-in per connection: a gone mic is a silent mic, and
     // the room hears about it so peers tear the connection down.
-    seat.voiceOn = false;
-    broadcastEvent(room, { type: 'voice', seat: ws._seat, on: false });
+    seat.voiceMic = false;
+    broadcastEvent(room, { type: 'voice', seat: ws._seat, mic: false, speaker: seat.voiceSpeaker !== false, on: false });
   }
   broadcastState(room);
 }
@@ -334,7 +336,8 @@ setInterval(() => {
           s.avatar = null;
           s.country = '';
           s.photo = null;
-          s.voiceOn = false;
+          s.voiceMic = false;
+          s.voiceSpeaker = false;
           s.connected = true;
           changed = true;
           pumpTurn(room);
@@ -497,10 +500,15 @@ function handleMessage(ws, msg) {
       if (!room) return;
       const seat = room.seats[ws._seat];
       if (!seat || seat.kind !== 'human') return;
-      const on = !!msg.on;
-      if (seat.voiceOn === on) return;
-      seat.voiceOn = on;
-      broadcastEvent(room, { type: 'voice', seat: ws._seat, on });
+      // Mic and speaker are independent flags; they ride together
+      // in one message. A legacy client sends only `on` (= mic) —
+      // its speaker flag is then left as-is.
+      const mic = msg.mic !== undefined ? !!msg.mic : !!msg.on;
+      const speaker = msg.speaker !== undefined ? !!msg.speaker : seat.voiceSpeaker !== false;
+      if (seat.voiceMic === mic && (seat.voiceSpeaker !== false) === speaker) return;
+      seat.voiceMic = mic;
+      seat.voiceSpeaker = speaker;
+      broadcastEvent(room, { type: 'voice', seat: ws._seat, mic, speaker, on: mic });
       break;
     }
     case 'rtc': {
