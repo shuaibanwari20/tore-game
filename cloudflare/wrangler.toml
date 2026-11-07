@@ -29,8 +29,9 @@ new_sqlite_classes = ["GameServer"]
 # "1" turns the Gmail/Facebook sign-in gate ON (see README-fa.md).
 # Leave "0" for open play / local testing. Provider secrets
 # (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FB_APP_ID, FB_APP_SECRET,
-# SESSION_SECRET) are NOT vars — they go in .dev.vars locally and in
-# `wrangler secret put` in production.
+# SESSION_SECRET, TURN_API_TOKEN, METERED_API_KEY,
+# EXPRESSTURN_CREDENTIAL) are NOT vars — they go in .dev.vars
+# locally and in `wrangler secret put` in production.
 AUTH_ENABLED = "1"
 # "1" adds the Facebook button to the sign-in gate. Anything else
 # (including unset) hides it: the Facebook app is still in Development
@@ -42,3 +43,53 @@ FB_LIVE = "0"
 # ID tokens /auth/firebase verifies (iss/aud). Public identifier, not
 # a secret; the matching public web config lives in auth-gate.js.
 FIREBASE_PROJECT_ID = "tore-game"
+# ExpressTURN for game voice — the PREFERRED provider: its free
+# plan is 1,000 GB/month, needs no card, and issues LONG-TERM
+# (static) TURN credentials, so the Worker never fetches anything
+# upstream — while BOTH vars below are set (and the
+# EXPRESSTURN_CREDENTIAL *secret* is set via `wrangler secret put`
+# or the dashboard's Secrets — never put the credential here),
+# /turn-credentials answers with the single iceServers entry built
+# from these values. EXPRESSTURN_URLS is a comma-separated list of
+# TURN URLs; leave it "" to use the Worker's built-in default list
+# around relay1.expressturn.com (3478 udp/tcp, 80 udp/tcp, 443 tls).
+#
+# ⚠️ DEPLOY TRAP: Workers Builds deploys overwrite dashboard-edited
+# vars with THIS file's values. The real username/URLs must be
+# pasted here BEFORE the deploy that activates ExpressTURN, or the
+# deploy will blank them back to "" and voice falls through to the
+# Metered/Cloudflare providers below.
+EXPRESSTURN_USERNAME = "000000002109406972"
+EXPRESSTURN_URLS = "turn:free.expressturn.com:3478,turn:free.expressturn.com:3478?transport=tcp,turn:free.expressturn.com:80,turn:free.expressturn.com:80?transport=tcp,turns:free.expressturn.com:443"
+# Metered TURN (relay host global.relay.metered.ca) for game voice —
+# fallback provider (its free trial is only 500 MB/month, which is
+# why ExpressTURN above wins whenever both are configured). Metered
+# assigns NO per-app subdomain; instead the dashboard gives each
+# workspace ONE credentials-endpoint URL. The value below is that
+# full URL for this game, WITHOUT the API key — the Worker appends
+# ?apiKey=… (or &apiKey=…) itself at request time, using the
+# METERED_API_KEY *secret* (set via `wrangler secret put` or the
+# dashboard's Secrets — never put the key here). The URL itself is
+# NOT a secret (Metered routes by apiKey alone; any subdomain of
+# metered.live reaches the same endpoint), so it is committed here
+# on purpose: deploys overwrite dashboard-edited vars with THIS
+# file's values, so the URL must live in the file to survive them.
+# While the secret is unset the Worker tries the Cloudflare TURN
+# below, and with neither configured the route answers 503 and the
+# client falls back to its built-in STUN + public-demo TURN config.
+METERED_CREDENTIALS_URL = "https://tore.metered.live/api/v1/turn/credentials"
+# Cloudflare TURN (turn.cloudflare.com) for game voice — FALLBACK
+# provider (subscribing to Cloudflare Realtime needs a card, so
+# Metered above wins whenever both are configured): the key ID of
+# the TURN key created in the dashboard (Calls → TURN). The Worker
+# mints short-lived voice credentials from it at GET /turn-credentials
+# using the TURN_API_TOKEN *secret* (set via `wrangler secret put` or
+# the dashboard's Secrets — never put the token here). While this is
+# empty (or the token unset) the route answers 503 and the client
+# falls back to its built-in STUN + public-demo TURN config.
+#
+# ⚠️ DEPLOY TRAP: Workers Builds deploys overwrite dashboard-edited
+# vars with THIS file's values. Once the real key ID is set in the
+# dashboard, paste it here too BEFORE the next deploy, or the deploy
+# will blank it back to "" and voice drops to the weak fallback.
+TURN_KEY_ID = ""
