@@ -35,7 +35,22 @@
   };
   var FIREBASE_APP_URL = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
   var FIREBASE_AUTH_URL = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-  var ERR_TEXT = 'ورود ناموفق بود؛ دوباره تلاش کن';
+  // Language follows the game's store (localStorage 'tore.lang',
+  // default Pashto) — this fallback gate speaks the player's language
+  // too. (The standalone gate page in src/gate-page.js is the primary
+  // sign-in surface and has the full switcher.)
+  var GATE_STR = {
+    ps: { sub: 'څلور کسيزه ورق لوبه — دوه ټیمه، دوه پر دوه', prompt: 'لوبې ته د ننوتلو لپاره لومړی په خپل حساب ننوځه', google: 'په ګوګل ننوځه', fb: 'په فېسبوک ننوځه', err: 'ننوتل ناکام شول؛ بیا هڅه وکړه' },
+    fa: { sub: 'بازی ورق چهار نفره — دو تیم، دو به دو', prompt: 'برای وارد شدن به بازی، اول با حساب خود وارد شو', google: 'ورود با گوگل', fb: 'ورود با فیسبوک', err: 'ورود ناموفق بود؛ دوباره تلاش کن' },
+    en: { sub: 'Four-player card game — two teams, two vs two', prompt: 'Sign in with your account to enter the game', google: 'Sign in with Google', fb: 'Sign in with Facebook', err: 'Sign-in failed; please try again' }
+  };
+  var glang = 'ps';
+  try {
+    var savedLang = localStorage.getItem('tore.lang');
+    if (savedLang && GATE_STR[savedLang]) glang = savedLang;
+  } catch (e) { /* private mode — Pashto default stands */ }
+  var GS = GATE_STR[glang];
+  var ERR_TEXT = GS.err;
 
   var fbReady = null;
   function firebaseAuth() {
@@ -108,7 +123,7 @@
     if (document.getElementById('auth-gate')) return;
     var gate = document.createElement('div');
     gate.id = 'auth-gate';
-    gate.setAttribute('dir', 'rtl');
+    gate.setAttribute('dir', glang === 'en' ? 'ltr' : 'rtl');
     var bg = '';
     var home = document.getElementById('scr-home');
     if (home) {
@@ -134,17 +149,17 @@
     // directly under the subtitle with no empty gap.
     var fbBtn = fbLive
       ? '<div style="height:12px"></div>' +
-        '<a href="/auth/facebook" style="' + btn + 'background:#1877f2;color:#fff;box-shadow:0 4px 0 #0d4fae">' + fbF + 'ورود با فیسبوک</a>'
+        '<a href="/auth/facebook" style="' + btn + 'background:#1877f2;color:#fff;box-shadow:0 4px 0 #0d4fae">' + fbF + GS.fb + '</a>'
       : '';
     gate.innerHTML =
       '<div style="width:min(88vw,340px);background:rgba(24,15,7,.92);border:2px solid #d4af37;border-radius:22px;' +
       'padding:28px 22px;text-align:center;color:#f5e7c6;box-shadow:0 18px 50px rgba(0,0,0,.55)">' +
       '<div style="font-size:44px;font-weight:900;color:#f2c14e;line-height:1.1">توره</div>' +
-      '<div style="margin:6px 0 4px;font-size:15px">بازی ورق چهار نفره — دو تیم، دو به دو</div>' +
-      '<div style="margin:0 0 20px;font-size:13px;opacity:.85">برای وارد شدن به بازی، اول با حساب خود وارد شو</div>' +
+      '<div style="margin:6px 0 4px;font-size:15px">' + GS.sub + '</div>' +
+      '<div style="margin:0 0 20px;font-size:13px;opacity:.85">' + GS.prompt + '</div>' +
       '<button type="button" id="auth-google-btn" style="' + btn +
       'background:#fff;color:#222;box-shadow:0 4px 0 #b9b9b9;border:none;cursor:pointer;font-family:inherit">' +
-      googleG + 'ورود با گوگل</button>' +
+      googleG + GS.google + '</button>' +
       fbBtn +
       '<div id="auth-gate-err" style="display:none;margin-top:14px;font-size:13px;color:#ff9d8a"></div>' +
       '</div>';
