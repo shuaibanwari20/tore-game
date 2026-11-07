@@ -93,8 +93,12 @@ function send(ws, obj) {
   if (ws && ws.readyState === ws.OPEN) ws.send(JSON.stringify(obj));
 }
 
-function sendError(ws, msg) {
-  send(ws, { type: 'error', message: msg });
+// Every error carries a stable machine `code` next to the Dari
+// `message`: the client translates by code into the player's chosen
+// language and falls back to the raw Dari text when a code is unknown.
+// `extra` merges payload fields (e.g. { suit } for mustFollowSuit).
+function sendError(ws, msg, code, extra) {
+  send(ws, Object.assign({ type: 'error', message: msg, code }, extra || {}));
 }
 
 // ------------------------------------------------------------- state push
@@ -399,7 +403,7 @@ wss.on('connection', (ws) => {
   ws.on('message', (raw) => {
     let msg;
     try { msg = JSON.parse(raw); } catch (e) { return; }
-    try { handleMessage(ws, msg); } catch (e) { sendError(ws, 'خطای سرور'); }
+    try { handleMessage(ws, msg); } catch (e) { sendError(ws, 'خطای سرور', 'serverError'); }
   });
   ws.on('close', () => onDisconnect(ws));
 });
@@ -413,18 +417,18 @@ function handleMessage(ws, msg) {
     }
     case 'join': {
       const room = rooms.get(String(msg.code || '').toUpperCase().trim());
-      if (!room) return sendError(ws, 'اتاق پیدا نشد — کد را بررسی کن');
-      if (room.phase !== 'lobby') return sendError(ws, 'بازی این اتاق شروع شده است');
+      if (!room) return sendError(ws, 'اتاق پیدا نشد — کد را بررسی کن', 'roomNotFound');
+      if (room.phase !== 'lobby') return sendError(ws, 'بازی این اتاق شروع شده است', 'gameStarted');
       const idx = room.seats.findIndex((s) => s.kind === 'empty');
-      if (idx === -1) return sendError(ws, 'اتاق پر است');
+      if (idx === -1) return sendError(ws, 'اتاق پر است', 'roomFull');
       attachPlayer(ws, room, idx, cleanName(msg.name), msg);
       break;
     }
     case 'reconnect': {
       const room = rooms.get(String(msg.code || '').toUpperCase().trim());
-      if (!room) return sendError(ws, 'نشست منقضی شده است — اتاق تازه بساز');
+      if (!room) return sendError(ws, 'نشست منقضی شده است — اتاق تازه بساز', 'sessionExpired');
       const idx = room.seats.findIndex((s) => s.kind === 'human' && s.token === msg.token);
-      if (idx === -1) return sendError(ws, 'نشست منقضی شده است — اتاق تازه بساز');
+      if (idx === -1) return sendError(ws, 'نشست منقضی شده است — اتاق تازه بساز', 'sessionExpired');
       const seat = room.seats[idx];
       if (seat.ws && seat.ws !== ws) { try { seat.ws.close(); } catch (e) {} }
       // A reconnect may carry the player's current profile (e.g. the seat
@@ -451,7 +455,7 @@ function handleMessage(ws, msg) {
     case 'start': {
       const room = rooms.get(ws._roomCode);
       if (!room || room.phase !== 'lobby') return;
-      if (ws._seat !== hostSeat(room)) return sendError(ws, 'فقط میزبان می‌تواند بازی را شروع کند');
+      if (ws._seat !== hostSeat(room)) return sendError(ws, 'فقط میزبان می‌تواند بازی را شروع کند', 'hostOnly');
       startMatch(room);
       break;
     }
@@ -465,7 +469,7 @@ function handleMessage(ws, msg) {
         round.declare13(ws._seat); // emits declared13 → clients toast it
         broadcastState(room);
       } catch (e) {
-        sendError(ws, 'الآن نمی‌توانی «13» بگویی');
+        sendError(ws, 'الآن نمی‌توانی «13» بگویی', 'cannotDeclare13');
         send(ws, stateFor(room, ws._seat));
       }
       break;
@@ -475,13 +479,17 @@ function handleMessage(ws, msg) {
       if (!room || room.phase !== 'playing') return;
       if (room.trickHold) { send(ws, stateFor(room, ws._seat)); return; } // trick on display — resync silently, no error
       if (!doPlay(room, ws._seat, String(msg.card || ''))) {
-        // Illegal move: explain in Dari and resync the client.
+        // Illegal move: explain (Dari text + machine code) and resync.
         const round = room.match.round;
-        let why = 'این ورق را نمی‌توانی بازی کنی';
-        if (round && round.turn !== ws._seat) why = 'نوبت تو نیست';
-        else if (round && !round.hands[ws._seat].includes(msg.card)) why = 'این ورق در دستت نیست';
-        else if (round) why = 'باید از رنگِ ورقِ اول (' + G.SUIT_NAMES[round.ledSuit()] + ') بیایی';
-        sendError(ws, why);
+        let why = 'این ورق را نمی‌توانی بازی کنی', whyCode = 'cannotPlay', whyExtra = null;
+        if (round && round.turn !== ws._seat) { why = 'نوبت تو نیست'; whyCode = 'notYourTurn'; }
+        else if (round && !round.hands[ws._seat].includes(msg.card)) { why = 'این ورق در دستت نیست'; whyCode = 'cardNotInHand'; }
+        else if (round) {
+          const suit = round.ledSuit();
+          why = 'باید از رنگِ ورقِ اول (' + G.SUIT_NAMES[suit] + ') بیایی';
+          whyCode = 'mustFollowSuit'; whyExtra = { suit };
+        }
+        sendError(ws, why, whyCode, whyExtra);
         send(ws, stateFor(room, ws._seat));
       }
       break;
