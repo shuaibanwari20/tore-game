@@ -7,7 +7,7 @@
  *                                 answers the STANDALONE GATE PAGE with
  *                                 401 instead (src/gate-page.js) — the
  *                                 bundle is never sent signed-out.
- *   GET  /stickers/stN.gif        the chat GIF stickers (N = 1..9),
+ *   GET  /stickers/stN.gif        the chat GIF stickers (N = 1..16),
  *                                 fetched from this repo's cloudflare/
  *                                 stickers/ folder and edge-cached, the
  *                                 same pattern as the client bundle
@@ -50,7 +50,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261107-fast';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261107-rooms';
 const STICKER_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/stickers/';
 const CLIENT_MIN_BYTES = 3_000_000; // the real bundle is ~3.1 MB
@@ -336,10 +336,10 @@ export default {
     const authEnabled = env.AUTH_ENABLED === '1';
 
     if (path.startsWith('/stickers/') && request.method === 'GET') {
-      // Chat GIF stickers: only the known set exists (st1…st9). They
+      // Chat GIF stickers: only the known set exists (st1…st16). They
       // are public images — no session needed to load one.
       const name = path.slice('/stickers/'.length);
-      if (/^st[1-9]\.gif$/.test(name)) return serveSticker(env, name);
+      if (/^st([1-9]|1[0-6])\.gif$/.test(name)) return serveSticker(env, name);
       return new Response('not found', { status: 404 });
     }
 
