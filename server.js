@@ -453,23 +453,43 @@ function handleMessage(ws, msg) {
       // seat is freed at once; the HOST leaving cancels the room for
       // everyone — the remaining players get a coded roomClosed notice
       // and their clients return to the main menu.
+      // Leaving MID-MATCH (playing / roundEnd / matchEnd): the seat is
+      // handed to a bot at once — the same conversion the disconnect
+      // grace expiry performs (kind bot, profile cleared, voice off,
+      // bot name) — and the match plays on for the others.
       const room = rooms.get(ws._roomCode);
-      if (!room || room.phase !== 'lobby') return;
+      if (!room) return;
       const seat = room.seats[ws._seat];
       if (!seat || seat.kind !== 'human') return;
-      if (ws._seat === hostSeat(room)) {
-        room.seats.forEach((s, i) => {
-          if (i !== ws._seat && s.kind === 'human' && s.connected && s.ws) {
-            send(s.ws, { type: 'roomClosed', code: 'roomCancelled' });
-          }
-        });
-        clearTimeout(room.turnTimer);
-        clearTimeout(room.roundTimer);
-        clearTimeout(room.trickTimer);
-        rooms.delete(room.code);
+      if (room.phase === 'lobby') {
+        if (ws._seat === hostSeat(room)) {
+          room.seats.forEach((s, i) => {
+            if (i !== ws._seat && s.kind === 'human' && s.connected && s.ws) {
+              send(s.ws, { type: 'roomClosed', code: 'roomCancelled' });
+            }
+          });
+          clearTimeout(room.turnTimer);
+          clearTimeout(room.roundTimer);
+          clearTimeout(room.trickTimer);
+          rooms.delete(room.code);
+        } else {
+          room.seats[ws._seat] = emptySeat();
+          broadcastState(room);
+        }
       } else {
-        room.seats[ws._seat] = emptySeat();
+        const botNo = room.seats.filter((s) => s.kind === 'bot').length;
+        seat.kind = 'bot'; // bot takes over the seat and its hand
+        seat.name = 'ربات ' + (botNo + 1);
+        seat.avatar = null;
+        seat.country = '';
+        seat.photo = null;
+        seat.voiceMic = false;
+        seat.voiceSpeaker = false;
+        seat.ws = null;
+        seat.connected = true;
+        seat.disconnectAt = null;
         broadcastState(room);
+        pumpTurn(room);
       }
       ws._roomCode = undefined;
       ws._seat = undefined;
