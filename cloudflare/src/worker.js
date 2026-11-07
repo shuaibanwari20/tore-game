@@ -14,6 +14,10 @@
  *                                 (STICKERS_URL overrides the base URL
  *                                 for local testing).
  *   GET  /ws                      WebSocket upgrade → GameServer DO
+ *   GET  /turn-credentials        TURN credentials for game voice
+ *                                 (session required, same check as
+ *                                 /ws; credentials never ship in the
+ *                                 client — see serveTurnCredentials)
  *   GET  /auth/config             { enabled, fbLive } — gate state
  *   GET  /auth/me                 session user JSON, or 401
  *   GET  /auth/google             start Google OAuth (PKCE)
@@ -46,7 +50,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261107-voicefix';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261107-eturn';
 const STICKER_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/stickers/';
 const CLIENT_MIN_BYTES = 3_000_000; // the real bundle is ~3.1 MB
@@ -172,6 +176,159 @@ async function serveSticker(env, name) {
   return new Response('not found', { status: 404 });
 }
 
+/**
+ * Short-lived TURN credentials for game voice, from the game's OWN
+ * relay account — a dedicated relay is far stronger than the public
+ * demo relay the client also carries as a last resort. The client
+ * fetches this before opening voice peers and puts the returned
+ * iceServers first in its RTCPeerConnection config.
+ *
+ * Three providers, first configured wins:
+ *  - ExpressTURN (preferred): EXPRESSTURN_USERNAME (var) +
+ *    EXPRESSTURN_CREDENTIAL (secret), plus optional
+ *    EXPRESSTURN_URLS (var — comma-separated TURN URLs; a built-in
+ *    default list around relay1.expressturn.com is used when the
+ *    var is unset/empty). ExpressTURN issues LONG-TERM (static)
+ *    credentials on a 1,000 GB/month free plan with no card, so
+ *    there is NOTHING to fetch upstream: the Worker assembles the
+ *    single iceServers entry itself. (Metered's free trial turned
+ *    out to be only 500 MB/month — too small — which is why
+ *    ExpressTURN wins whenever it is configured.)
+ *  - Metered: METERED_CREDENTIALS_URL (var — the workspace's full
+ *    credentials-endpoint URL from the Metered dashboard, WITHOUT
+ *    the key) + METERED_API_KEY (secret). Metered assigns no
+ *    per-app subdomain: the relay host is global.relay.metered.ca
+ *    and each workspace gets one credentials URL. The Worker
+ *    appends the key (?apiKey= or &apiKey=) and Metered answers a
+ *    plain GET with a JSON ARRAY of ice-server entries.
+ *  - Cloudflare: TURN_KEY_ID (var) + TURN_API_TOKEN (secret). The
+ *    Worker mints credentials with a POST and gets back ONE
+ *    iceServers object.
+ * The response is NORMALIZED either way to {"iceServers": [...]} —
+ * an array, always — so the client consumes exactly one shape.
+ * Provider keys are used solely for this server-side call; neither
+ * they nor the minted credentials are ever logged.
+ */
+async function serveTurnCredentials(env) {
+  if (env.EXPRESSTURN_USERNAME && env.EXPRESSTURN_CREDENTIAL) {
+    return expressTurnCredentials(env);
+  }
+  if (env.METERED_CREDENTIALS_URL && env.METERED_API_KEY) {
+    return meteredTurnCredentials(env);
+  }
+  if (env.TURN_KEY_ID && env.TURN_API_TOKEN) {
+    return cloudflareTurnCredentials(env);
+  }
+  // TURN not set up on this deployment yet — the client falls back
+  // to its built-in STUN + demo-TURN config, so voice still works
+  // the way it did before this route existed.
+  return Response.json({ error: 'turn_not_configured' }, { status: 503 });
+}
+
+// ExpressTURN's relay URLs when EXPRESSTURN_URLS is unset/empty:
+// the relay host over UDP + TCP on the standard port, the port-80
+// pair, and TLS on 443 (the last is what gets through strict
+// carrier NATs/firewalls that only let web traffic out).
+const EXPRESSTURN_DEFAULT_URLS = [
+  'turn:relay1.expressturn.com:3478',
+  'turn:relay1.expressturn.com:3478?transport=tcp',
+  'turn:relay1.expressturn.com:80',
+  'turn:relay1.expressturn.com:80?transport=tcp',
+  'turns:relay1.expressturn.com:443',
+];
+
+function expressTurnCredentials(env) {
+  // Static (long-term) credentials — no upstream call at all. The
+  // credential comes from the secret and is never logged.
+  const urls = String(env.EXPRESSTURN_URLS || '')
+    .split(',')
+    .map((u) => u.trim())
+    .filter(Boolean);
+  return Response.json(
+    {
+      iceServers: [
+        {
+          urls: urls.length ? urls : EXPRESSTURN_DEFAULT_URLS,
+          username: env.EXPRESSTURN_USERNAME,
+          credential: env.EXPRESSTURN_CREDENTIAL,
+        },
+      ],
+    },
+    { headers: { 'Cache-Control': 'no-store' } },
+  );
+}
+
+async function meteredTurnCredentials(env) {
+  // The dashboard URL carries no key; append ours with the right
+  // separator for a URL that may already have a query string.
+  const base = String(env.METERED_CREDENTIALS_URL);
+  const url = base + (base.includes('?') ? '&' : '?') +
+    'apiKey=' + encodeURIComponent(env.METERED_API_KEY);
+  let res;
+  try {
+    res = await fetch(url);
+  } catch (e) {
+    return Response.json({ error: 'turn_upstream_failed' }, { status: 502 });
+  }
+  if (!res.ok) {
+    return Response.json({ error: 'turn_upstream_failed' }, { status: 502 });
+  }
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    return Response.json({ error: 'turn_upstream_failed' }, { status: 502 });
+  }
+  if (!Array.isArray(data) || !data.length) {
+    return Response.json({ error: 'turn_upstream_failed' }, { status: 502 });
+  }
+  // Metered's answer already IS the normalized array form.
+  return Response.json(
+    { iceServers: data },
+    { headers: { 'Cache-Control': 'no-store' } },
+  );
+}
+
+async function cloudflareTurnCredentials(env) {
+  const keyId = env.TURN_KEY_ID;
+  const token = env.TURN_API_TOKEN;
+  let res;
+  try {
+    res = await fetch(
+      'https://rtc.live.cloudflare.com/v1/turn/keys/' +
+        encodeURIComponent(keyId) + '/credentials/generate',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ttl: 86400 }),
+      },
+    );
+  } catch (e) {
+    return Response.json({ error: 'turn_upstream_failed' }, { status: 502 });
+  }
+  if (!res.ok) {
+    return Response.json({ error: 'turn_upstream_failed' }, { status: 502 });
+  }
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    return Response.json({ error: 'turn_upstream_failed' }, { status: 502 });
+  }
+  if (!data || !data.iceServers) {
+    return Response.json({ error: 'turn_upstream_failed' }, { status: 502 });
+  }
+  // Wrap Cloudflare's single iceServers object in the normalized
+  // array form the route always answers with.
+  return Response.json(
+    { iceServers: [data.iceServers] },
+    { headers: { 'Cache-Control': 'no-store' } },
+  );
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -200,6 +357,19 @@ export default {
       if (user) headers.set('x-tore-user', JSON.stringify(user));
       else headers.delete('x-tore-user');
       return stub.fetch(new Request(request, { headers }));
+    }
+
+    if (path === '/turn-credentials') {
+      if (request.method !== 'GET') {
+        return new Response('method not allowed', { status: 405 });
+      }
+      // Same session check as /ws: with the gate on, no cookie = no
+      // credentials (TURN quota is the game's, not the public's).
+      const user = await auth.readSession(request, env);
+      if (authEnabled && !user) {
+        return new Response('unauthorized — sign in first', { status: 401 });
+      }
+      return serveTurnCredentials(env);
     }
 
     if (path === '/auth/config') {
