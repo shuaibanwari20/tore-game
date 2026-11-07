@@ -470,6 +470,22 @@
     .pf-btns button { padding: 10px; }
   }
 
+  /* ---------- settings popup ----------
+     Same panel language as the profile popup: a 3-language selector
+     (the current language carries the gold ring) and the logout
+     button, which moved here from the home top bar. */
+  .st-langs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .st-lang { width: auto; margin: 0; padding: 11px 4px; background: rgba(255,255,255,.06);
+    border: 2px solid rgba(217,179,128,.25); border-radius: 12px; cursor: pointer; font-family: inherit;
+    font-size: 16px; font-weight: 700; color: #f5e7c6; }
+  .st-lang.sel { border-color: #ffd75e; background: rgba(255,215,94,.16); box-shadow: 0 0 0 1px #ffd75e; color: #ffd75e; }
+  .st-logout { margin-top: 16px; display: flex; align-items: center; justify-content: center; gap: 9px;
+    background: linear-gradient(#7d2231, #4d1019); color: #ffe9c9; border: 1px solid #d9b380; }
+  .st-logout svg { width: 20px; height: 20px; stroke: #ffe9c9; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  /* English reads LTR on the standalone blocks (home, panels): the
+     menu chevrons must point the other way. */
+  [dir="ltr"] .hm-act .chev { transform: scaleX(-1); }
+
   /* ---------- overlays / toast ---------- */
   .overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,.72); display: none;
@@ -529,11 +545,10 @@
           <span id="home-avatar-slot"></span>
           <span class="hm-pname" id="home-name">بازیکن توره</span>
         </button>
-        <button class="hm-gear" id="btn-logout" aria-label="خروج از حساب">
+        <button class="hm-gear" id="btn-settings" aria-label="تنظیمات">
           <svg viewBox="0 0 24 24">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <path d="M16 17l5-5-5-5"/>
-            <path d="M21 12H9"/>
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
         </button>
       </div>
@@ -603,7 +618,7 @@
             <polyline points="2.5 4.5 2.5 10 8 10"/>
             <path d="M4.6 15.5a8.5 8.5 0 1 0 2-9.9L2.5 10"/>
           </svg>
-          ادامهٔ بازی
+          <span id="continue-txt">ادامهٔ بازی</span>
         </button>
         <button class="hm-chip" id="btn-rules">
           <svg viewBox="0 0 24 24">
@@ -611,16 +626,16 @@
             <polyline points="14 3 14 8.5 19.5 8.5"/>
             <path d="M8.5 13h7M8.5 16.8h7"/>
           </svg>
-          قانون‌های بازی
+          <span id="rules-txt">قانون‌های بازی</span>
         </button>
       </div>
 
-      <div class="hm-foot">بازی ورق چهار نفره<span class="fdot">•</span>دو تیم، دو به دو</div>
+      <div class="hm-foot"><span id="foot-a">بازی ورق چهار نفره</span><span class="fdot">•</span><span id="foot-b">دو تیم، دو به دو</span></div>
     </div>
 
     <div id="home-rules" class="hidden">
       <button class="hm-back" id="btn-rules-back">→ برگشت به منو</button>
-      <div class="cardbox legend">
+      <div class="cardbox legend" id="rules-body">
       📜 <b>قانون بازی (از تاوان فرار کن؛ کمتر بهتر است):</b><br>
       هر ورق <span class="red">♥</span> <b>لال</b> = 1 تاوان (جمعاً 13)<br>
       <b>غلام پشه</b> (J♣) = 5 تاوان · <b>ماتکه کالا</b> (Q♠) = 9 تاوان · <b>ده خشت</b> (10♦) = 3 تاوان<br>
@@ -674,7 +689,7 @@
   <!-- ======== LOBBY ======== -->
   <section id="scr-lobby" class="hidden">
     <div class="cardbox">
-      <div style="text-align:center; font-size:14px; opacity:.85">کد اتاق — به دوست‌هایت بگو</div>
+      <div id="lobby-hint" style="text-align:center; font-size:14px; opacity:.85">کد اتاق — به دوست‌هایت بگو</div>
       <div class="roomcode" id="lobby-code">····</div>
       <div id="lobby-seats"></div>
       <button id="btn-start">شروع بازی</button>
@@ -689,16 +704,16 @@
     </div>
     <div class="scorestrip">
       <div class="ss-team">
-        <div class="ss-line1"><span class="ss-tname">تیم ما</span><span class="tkstars" id="tk-us"></span><span>·</span><span class="ss-banklbl">جمع‌شده</span><span class="ss-banknum" id="sc-us">0</span></div>
-        <div class="ss-round">تاوان این دست: <span class="twnum" id="tw-us">0</span></div>
+        <div class="ss-line1"><span class="ss-tname" id="ss-name-us">تیم ما</span><span class="tkstars" id="tk-us"></span><span>·</span><span class="ss-banklbl">جمع‌شده</span><span class="ss-banknum" id="sc-us">0</span></div>
+        <div class="ss-round"><span class="ss-roundlbl">تاوان این دست: </span><span class="twnum" id="tw-us">0</span></div>
       </div>
       <div class="ss-mid">
-        <div class="ss-roundno">دست <span id="round-no">1</span></div>
-        <div class="ss-rule">رسیدن به 210 = باخت</div>
+        <div class="ss-roundno"><span id="round-lbl">دست </span><span id="round-no">1</span></div>
+        <div class="ss-rule" id="ss-rule">رسیدن به 210 = باخت</div>
       </div>
       <div class="ss-team">
-        <div class="ss-line1"><span class="ss-tname">تیم حریف</span><span class="tkstars" id="tk-them"></span><span>·</span><span class="ss-banklbl">جمع‌شده</span><span class="ss-banknum" id="sc-them">0</span></div>
-        <div class="ss-round">تاوان این دست: <span class="twnum" id="tw-them">0</span></div>
+        <div class="ss-line1"><span class="ss-tname" id="ss-name-them">تیم حریف</span><span class="tkstars" id="tk-them"></span><span>·</span><span class="ss-banklbl">جمع‌شده</span><span class="ss-banknum" id="sc-them">0</span></div>
+        <div class="ss-round"><span class="ss-roundlbl">تاوان این دست: </span><span class="twnum" id="tw-them">0</span></div>
       </div>
     </div>
 
@@ -733,18 +748,18 @@
 <div class="overlay" id="ov-round">
   <div class="panel">
     <h2 id="ov-round-title">پایان دست</h2>
-    <div class="row"><span>تاوان ورق‌ها</span><span><small>ما </small><b id="ov-card-us">0</b> · <small>حریف </small><b id="ov-card-them">0</b></span></div>
-    <div class="row" id="ov-tk-row"><span>تکان ⭐</span><span><small>ما </small><b id="ov-tk-us">—</b> · <small>حریف </small><b id="ov-tk-them">—</b></span></div>
+    <div class="row"><span id="ovr-card-lbl">تاوان ورق‌ها</span><span><small class="sm-us">ما </small><b id="ov-card-us">0</b> · <small class="sm-them">حریف </small><b id="ov-card-them">0</b></span></div>
+    <div class="row" id="ov-tk-row"><span id="ovr-tk-lbl">تکان ⭐</span><span><small class="sm-us">ما </small><b id="ov-tk-us">—</b> · <small class="sm-them">حریف </small><b id="ov-tk-them">—</b></span></div>
     <div id="ov-cancel" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
     <div id="ov-pend" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
     <div id="ov-exec" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
-    <div class="row big"><span>تاوان نهایی</span><b id="ov-tw">—</b></div>
-    <div class="row"><span>به بانک اضافه شد</span><span><small>ما </small><b id="ov-add-us">0</b> · <small>حریف </small><b id="ov-add-them">0</b></span></div>
+    <div class="row big"><span id="ovr-final-lbl">تاوان نهایی</span><b id="ov-tw">—</b></div>
+    <div class="row"><span id="ovr-add-lbl">به بانک اضافه شد</span><span><small class="sm-us">ما </small><b id="ov-add-us">0</b> · <small class="sm-them">حریف </small><b id="ov-add-them">0</b></span></div>
     <div id="ov-bump" style="font-size:13.5px; opacity:.9; padding:2px 2px 0"></div>
-    <div class="row"><span>تاوان جمع‌شده (بانک)</span><span><small>ما </small><b id="ov-bk-us">0</b> · <small>حریف </small><b id="ov-bk-them">0</b></span></div>
-    <div class="row"><span>ماتکه کالا (Q♠) را گرفت</span><b id="ov-qs">—</b></div>
+    <div class="row"><span id="ovr-bank-lbl">تاوان جمع‌شده (بانک)</span><span><small class="sm-us">ما </small><b id="ov-bk-us">0</b> · <small class="sm-them">حریف </small><b id="ov-bk-them">0</b></span></div>
+    <div class="row"><span id="ovr-qs-lbl">ماتکه کالا (Q♠) را گرفت</span><b id="ov-qs">—</b></div>
     <div id="ov-tie" style="display:none; font-size:13.5px; opacity:.9; padding:4px 2px 0"></div>
-    <div style="margin-top:10px; font-size:13.5px; opacity:.85">دست بعدی به‌زودی شروع می‌شود…</div>
+    <div id="ovr-next" style="margin-top:10px; font-size:13.5px; opacity:.85">دست بعدی به‌زودی شروع می‌شود…</div>
   </div>
 </div>
 
@@ -752,7 +767,7 @@
 <div class="overlay" id="ov-match">
   <div class="panel">
     <h2 id="ov-match-title">🏆 پایان مسابقه</h2>
-    <div class="row big"><span>تاوان جمع‌شدهٔ نهایی</span><b><small>ما </small><span id="ov-f-us">0</span> — <small>حریف </small><span id="ov-f-them">0</span></b></div>
+    <div class="row big"><span id="ovm-final-lbl">تاوان جمع‌شدهٔ نهایی</span><b><small class="sm-us">ما </small><span id="ov-f-us">0</span> — <small class="sm-them">حریف </small><span id="ov-f-them">0</span></b></div>
     <div id="ov-f-why" style="font-size:14px; font-weight:700; padding:4px 2px 0"></div>
     <button id="btn-newgame">بازی جدید</button>
   </div>
@@ -761,17 +776,41 @@
 <!-- ======== PROFILE POPUP ======== -->
 <div class="overlay" id="ov-profile">
   <div class="panel pf-panel">
-    <h2>پروفایل من</h2>
+    <h2 id="pf-title">پروفایل من</h2>
     <div class="pf-preview" id="pf-preview"></div>
-    <span class="pf-label">آواتار</span>
+    <span class="pf-label" id="pf-avatar-lbl">آواتار</span>
     <div class="pf-grid" id="pf-grid"></div>
-    <label class="pf-label" for="pf-name">نام</label>
+    <label class="pf-label" id="pf-name-lbl" for="pf-name">نام</label>
     <input id="pf-name" type="text" maxlength="20" placeholder="نامت — مثلاً احمد" autocomplete="name">
-    <label class="pf-label" for="pf-country">کشور</label>
+    <label class="pf-label" id="pf-country-lbl" for="pf-country">کشور</label>
     <select id="pf-country"></select>
     <div class="pf-btns">
       <button id="btn-profile-save">ذخیره</button>
       <button id="btn-profile-close" class="ghost">بستن</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== SETTINGS POPUP ======== -->
+<div class="overlay" id="ov-settings">
+  <div class="panel pf-panel">
+    <h2 id="st-title">تنظیمات</h2>
+    <span class="pf-label" id="st-lang-lbl">زبان</span>
+    <div class="st-langs" id="st-langs">
+      <button type="button" class="st-lang" data-lang="ps">پښتو</button>
+      <button type="button" class="st-lang" data-lang="fa">دری</button>
+      <button type="button" class="st-lang" data-lang="en">English</button>
+    </div>
+    <button id="btn-logout" class="st-logout" aria-label="خروج از حساب">
+      <svg viewBox="0 0 24 24">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <path d="M16 17l5-5-5-5"/>
+        <path d="M21 12H9"/>
+      </svg>
+      <span id="st-logout-lbl">خروج از حساب</span>
+    </button>
+    <div class="pf-btns">
+      <button id="btn-settings-close" class="ghost">بستن</button>
     </div>
   </div>
 </div>
@@ -797,7 +836,440 @@ const $ = (s) => document.querySelector(s);
 // Numbers are displayed in English/Latin digits (user order, 2026-11-06):
 // faNum is now a pass-through so every existing render site stays unchanged.
 const faNum = (n) => String(n);
-const SUIT_NAME = { H: 'لال', D: 'خشت', C: 'پشه', S: 'قره' };
+
+// ---------- i18n: Pashto (default) · Dari · English ----------
+// Every user-visible string in the client lives in STR, keyed by
+// language; T(key, ...args) resolves the current language's entry
+// (entries may be functions for composed sentences). The language is
+// stored in localStorage 'tore.lang' ('ps' | 'fa' | 'en'); a player
+// who has never chosen sees PASHTO. Digits stay Latin in every
+// language (faNum above). The 12 chat preset phrases are player
+// content, NOT UI chrome — they never pass through here.
+const LANG_CODES = ['ps', 'fa', 'en'];
+let LANG = (() => {
+  try {
+    const l = localStorage.getItem('tore.lang');
+    return LANG_CODES.includes(l) ? l : 'ps';
+  } catch (e) { return 'ps'; }
+})();
+const STR = {
+  ps: {
+    docTitle: 'توره — د قندهار ورق لوبه',
+    gameTitle: 'توره',
+    profileTitle: 'زما پروفایل',
+    playerPlaceholder: 'د تورې لوبغاړی',
+    playerName: 'لوبغاړی',
+    settingsTitle: 'امادګي',
+    languageLbl: 'ژبه',
+    logout: 'له حسابه وتل',
+    closeBtn: 'بندول',
+    menuQuick: 'له روباتونو سره لوبه',
+    menuQuickSub: 'سمدستي پیل — تمرین او تفریح',
+    menuCreate: 'کوټه جوړه کړه',
+    menuCreateSub: 'کوټه جوړه کړه او کوډ ملګرو ته ولېږه',
+    menuJoin: 'د کوډ سره ورګډ شه',
+    menuJoinSub: 'د ملګري د کوټې 4 توري کوډ دننه کړه',
+    roomCodeLabel: 'د کوټې کوډ',
+    joinRoom: 'کوټې ته ننوځه',
+    continueGame: 'لوبې ته دوام ورکړه',
+    rulesBtn: 'د لوبې قوانین',
+    homeFootA: 'څلور کسيزه ورق لوبه',
+    homeFootB: 'دوه ټیمه، دوه پر دوه',
+    rulesBack: '→ مینو ته وګرځه',
+    rulesHtml: '📜 <b>د لوبې قوانین (له تاوانه وتښته؛ څومره کم، هومره ښه):</b><br>هر ورق <span class="red">♥</span> <b>لال</b> = 1 تاوان (ټول 13)<br><b>غلام پشه</b> (J♣) = 5 تاوان · <b>ماتکه کالا</b> (Q♠) = 9 تاوان · <b>لس خښت</b> (10♦) = 3 تاوان<br>هر لاس 30 تاوان لري او په دې لوبه کې <b>امتیاز نشته</b> — یوازې تاوان دی.<br>هغه ټیم چې <b>جمع شوی</b> تاوان (بانک) یې <b>210</b> ته ورسېږي، لوبه <b>بایلي</b> او بل ټیم ګټونکی دی.<br>⭐ <b>تکان:</b> که هغه خال پیل کړې چې بل هېڅوک یې نه لري → یوازې یو <b>سور ستوری (★)</b> ستا ټیم ته؛ تکان دې لاس ته هېڅ تاوان نه ورزیاتوي.<br>⭐ <b>ځنډېدلی تکان:</b> هغه ستوری یعنې د سیال ټیم له جمع شوي څخه د <b>30 تاوان</b> غوښتنه — کله چې د سیال جمع شوی <b>30</b> ته ورسېږي یا ترې تېر شي، 30 تاوان د هغه له بانکه کمېږي او د تکان لرونکي ټیم بانک ته ورځي؛ تر هغه وخته یوازې ستوری پاتې کېږي او هېڅ پیسې نه بدلېږي. که دواړه ټیمونه په یوه لاس کې تکان ورکړي، <b>تکانونه جوړه جوړه یو له بله خلاصېږي</b> او له منځه ځي — یوازې د یوه ټیم زیات تکان ستوری کېږي.<br>🙋 وروستی لاس: که له لوبې مخکې ووایې <b>«13 یم»</b>، تکان درته نه حسابېږي.<br>🏦 <b>په بانک کې جمع کول (لسي بندونه):</b> د هر لاس وروستی تاوان په بانک کې داسې جمع کېږي: 0 تر 9 → <b>0</b> · 10 تر 15 → <b>10</b> · 16 تر 20 → <b>20</b> · 21 تر 30 → <b>30</b>.<br>⚖️ <b>برابر 15-15:</b> هغه ټیم چې <b>ماتکه کالا</b> (Q♠) یې نیولې، <b>20</b> جمع کوي او بل ټیم <b>10</b>.',
+    lobbyHint: 'د کوټې کوډ — ملګرو ته یې ووایه',
+    startGame: 'لوبه پیل کړه',
+    lobbyNoteHost: 'کله چې چمتو یې پیل یې کړه — تش ځایونه په روباتونو ډکېږي.',
+    lobbyNoteGuest: 'د کوربه په تمه چې لوبه پیل کړي…',
+    teamA: 'الف ټیم',
+    teamB: 'ب ټیم',
+    teamUs: 'زموږ ټیم',
+    teamThem: 'د سیال ټیم',
+    seatEmpty: '— تش —',
+    emptyBadge: 'تش',
+    hostTag: 'کوربه',
+    youSuffix: ' (ته)',
+    nameJoin: ' او ',
+    mainMenu: 'اصلي مینو',
+    bankedLbl: 'جمع شوی',
+    roundTawanLbl: 'د دې لاس تاوان: ',
+    roundLbl: 'لاس ',
+    loseRule: '210 ته رسېدل = بایلل',
+    declare13: '🙋 13 یم!',
+    declaredToast: (name) => '🙋 ' + name + ': 13 یم!',
+    chatTitle: 'ګپ شپ',
+    chatAria: 'پیغام',
+    micAria: 'مایکروفون',
+    stickersLbl: 'سټیکرونه',
+    disconnected: 'اړیکه پرې شوه — بیا نښلول کېږي…',
+    noConn: 'اړیکه نشته',
+    micUnavailable: 'مایکروفون نشته',
+    codeLenToast: 'د کوټې کوډ 4 توري دی',
+    errServerError: 'د سرور تېروتنه',
+    errRoomNotFound: 'کوټه ونه موندل شوه — کوډ وګوره',
+    errGameStarted: 'د دې کوټې لوبه پیل شوې ده',
+    errRoomFull: 'کوټه ډکه ده',
+    errSessionExpired: 'ناسته پای ته رسېدلې ده — نوې کوټه جوړه کړه',
+    errHostOnly: 'یوازې کوربه لوبه پیل کولای شي',
+    errCannotDeclare13: 'اوس «13» نه شې ویلای',
+    errCannotPlay: 'دا ورق نه شې لوبولای',
+    errNotYourTurn: 'ستا وار نه دی',
+    errCardNotInHand: 'دا ورق ستا په لاس کې نشته',
+    errMustFollowSuit: (suit) => 'باید د لومړي ورق له رنګه (' + suit + ') راشې',
+    errSignInFirst: 'لومړی په ګوګل یا فیسبوک ننوځه',
+    botName: (n) => 'روبات ' + n,
+    takanBannerUs: '⭐ تکان! زموږ ټیم',
+    takanBannerThem: '⭐ تکان! د سیال ټیم',
+    roundEndTitle: (n) => 'د ' + n + ' لاس پای',
+    rowCardTawan: 'د ورقو تاوان',
+    rowTakan: 'تکان ⭐',
+    usSmall: 'موږ ',
+    themSmall: 'سیال ',
+    rowFinalTawan: 'وروستی تاوان',
+    rowBankAdd: 'بانک ته ورزیات شو',
+    rowBankTotal: 'جمع شوی تاوان (بانک)',
+    rowQs: 'ماتکه کالا (Q♠) ونیوله',
+    nextRoundSoon: 'بل لاس ژر پیلېږي…',
+    cancelLine: (a, ca, b, cb, p) => '🤝 تکانونه یو له بله خلاص شول: د (' + a + ') ټیم ' + ca + ' تکان او د (' + b + ') ټیم ' + cb + ' تکان — ' + p + ' جوړې له منځه لاړې، بې حسابه',
+    pendLine: (names) => 'د (' + names + ') ټیم تکان د راتلونکو لاسونو لپاره پاتې شو ⭐',
+    execLine: (amount, victim, takan) => amount + ' تاوان د (' + victim + ') له جمع شوي څخه کم شو او (' + takan + ') ټیم ته ورکړل شو',
+    finalLine: (a, na, b, nb) => 'د (' + a + ') ټیم: ' + na + ' — د (' + b + ') ټیم: ' + nb,
+    bumpLine: (names, from, to) => '🏦 د (' + names + ') ټیم: ' + from + ' → ' + to,
+    tieLine: (names) => '⚖️ برابر 15-15 — ماتکه کالا (Q♠) د (' + names + ') ټیم ونیوله: هغه ټیم 20 جمع کوي او بل ټیم 10',
+    matchEndTitle: '🏆 د لوبې پای',
+    matchWinTitle: '🏆 ستاسو ټیم وګټله!',
+    matchLoseTitle: 'د سیال ټیم وګټله',
+    finalBankedLbl: 'وروستی جمع شوی تاوان',
+    matchWhy: (names, bank) => 'د (' + names + ') ټیم جمع شوی 210 ته ورسېد (' + bank + ') — هماغه ټیم وبایلله',
+    newGame: 'نوې لوبه',
+    avatarLbl: 'انځور',
+    nameLbl: 'نوم',
+    namePlaceholder: 'نوم دې — لکه احمد',
+    countryLbl: 'هېواد',
+    saveBtn: 'ساتل',
+    googlePhoto: 'د ګوګل عکس',
+    selectedTag: '✓ وټاکل شو',
+    suits: { H: 'لال', D: 'خښت', C: 'پشه', S: 'قره' },
+    ranks: { A: 'آس', K: 'پاچا', Q: 'ماتکه', J: 'غلام', T: 'لس', '9': 'نهه', '8': 'اته', '7': 'اووه', '6': 'شپږ', '5': 'پنځه', '4': 'څلور', '3': 'درې', '2': 'دوه' },
+    avatars: { av1: 'اصلي', av2: 'حاجي صاحب', av3: 'لنګۍ والا', av4: 'پکول والا', av5: 'کاکا', av6: 'عصري ځوان', av7: 'سپین ږیری', av8: 'دودیزه مېرمن', av9: 'ځوانه انجلۍ', av10: 'بورقه والا', av11: 'تنکی ځوان', av12: 'ملا صاحب' },
+  },
+  fa: {
+    docTitle: 'توره — بازی ورق قندهاری',
+    gameTitle: 'توره',
+    profileTitle: 'پروفایل من',
+    playerPlaceholder: 'بازیکن توره',
+    playerName: 'بازیکن',
+    settingsTitle: 'تنظیمات',
+    languageLbl: 'زبان',
+    logout: 'خروج از حساب',
+    closeBtn: 'بستن',
+    menuQuick: 'بازی با ربات‌ها',
+    menuQuickSub: 'شروع فوری — تمرین و سرگرمی',
+    menuCreate: 'ساختن اتاق',
+    menuCreateSub: 'اتاق بساز و کد را به دوست‌ها بفرست',
+    menuJoin: 'پیوستن با کد اتاق',
+    menuJoinSub: 'کد 4 حرفی اتاق دوستت را وارد کن',
+    roomCodeLabel: 'کد اتاق',
+    joinRoom: 'ورود به اتاق',
+    continueGame: 'ادامهٔ بازی',
+    rulesBtn: 'قانون‌های بازی',
+    homeFootA: 'بازی ورق چهار نفره',
+    homeFootB: 'دو تیم، دو به دو',
+    rulesBack: '→ برگشت به منو',
+    rulesHtml: '📜 <b>قانون بازی (از تاوان فرار کن؛ کمتر بهتر است):</b><br>هر ورق <span class="red">♥</span> <b>لال</b> = 1 تاوان (جمعاً 13)<br><b>غلام پشه</b> (J♣) = 5 تاوان · <b>ماتکه کالا</b> (Q♠) = 9 تاوان · <b>ده خشت</b> (10♦) = 3 تاوان<br>هر دست 30 تاوان دارد و در این بازی <b>امتیاز نیست</b> — فقط تاوان است.<br>تیمی که تاوانِ <b>جمع‌شده‌اش</b> (بانک) به <b>210</b> برسد، مسابقه را <b>می‌بازد</b> و تیمِ دیگر برنده است.<br>⭐ <b>تکان:</b> خالی را شروع کنی که هیچ‌کس ندارد → فقط یک <b>ستارهٔ قرمز (★)</b> برای تیمت؛ تکان هیچ تاوانی به این دست اضافه نمی‌کند.<br>⭐ <b>تکان معلق:</b> آن ستاره یعنی طلبِ <b>30 تاوان</b> از جمع‌شدهٔ تیمِ حریف — هر وقت جمع‌شدهٔ حریف به <b>30</b> برسد یا از آن بگذرد، 30 تاوان از بانک او کم و به بانک تیمِ تکان‌دار داده می‌شود؛ تا آن وقت فقط ستاره می‌ماند و هیچ پولی جابه‌جا نمی‌شود. اگر هر دو تیم در یک دست تکان بدهند، <b>تکان‌ها جفت‌جفت با هم ادا می‌شوند</b> و حذف می‌شوند — فقط تکانِ اضافهٔ یک تیم ستاره می‌شود.<br>🙋 دست آخر: اگر پیش از بازی بگویی <b>«13 هست»</b>، تکان برایت حساب نمی‌شود.<br>🏦 <b>جمع‌شدن در بانک (بندهای ده‌تایی):</b> تاوانِ نهایی هر دست این‌طور در بانکت جمع می‌شود: 0 تا 9 → <b>0</b> · 10 تا 15 → <b>10</b> · 16 تا 20 → <b>20</b> · 21 تا 30 → <b>30</b>.<br>⚖️ <b>مساوی 15-15:</b> تیمی که <b>ماتکه کالا</b> (Q♠) را گرفته، <b>20</b> جمع می‌کند و تیمِ دیگر <b>10</b>.',
+    lobbyHint: 'کد اتاق — به دوست‌هایت بگو',
+    startGame: 'شروع بازی',
+    lobbyNoteHost: 'هر وقت آماده بودی شروع کن — جای‌های خالی با ربات پر می‌شود.',
+    lobbyNoteGuest: 'منتظر میزبان برای شروع بازی…',
+    teamA: 'تیم الف',
+    teamB: 'تیم ب',
+    teamUs: 'تیم ما',
+    teamThem: 'تیم حریف',
+    seatEmpty: '— خالی —',
+    emptyBadge: 'خالی',
+    hostTag: 'میزبان',
+    youSuffix: ' (تو)',
+    nameJoin: ' و ',
+    mainMenu: 'منوی اصلی',
+    bankedLbl: 'جمع‌شده',
+    roundTawanLbl: 'تاوان این دست: ',
+    roundLbl: 'دست ',
+    loseRule: 'رسیدن به 210 = باخت',
+    declare13: '🙋 13 هست!',
+    declaredToast: (name) => '🙋 ' + name + ': 13 هست!',
+    chatTitle: 'گفت‌وگو',
+    chatAria: 'پیام',
+    micAria: 'میکروفون',
+    stickersLbl: 'استیکرها',
+    disconnected: 'اتصال قطع شد — در حال اتصال دوباره…',
+    noConn: 'اتصال نیست',
+    micUnavailable: 'مایک در دسترس نیست',
+    codeLenToast: 'کد اتاق 4 حرفی است',
+    errServerError: 'خطای سرور',
+    errRoomNotFound: 'اتاق پیدا نشد — کد را بررسی کن',
+    errGameStarted: 'بازی این اتاق شروع شده است',
+    errRoomFull: 'اتاق پر است',
+    errSessionExpired: 'نشست منقضی شده است — اتاق تازه بساز',
+    errHostOnly: 'فقط میزبان می‌تواند بازی را شروع کند',
+    errCannotDeclare13: 'الآن نمی‌توانی «13» بگویی',
+    errCannotPlay: 'این ورق را نمی‌توانی بازی کنی',
+    errNotYourTurn: 'نوبت تو نیست',
+    errCardNotInHand: 'این ورق در دستت نیست',
+    errMustFollowSuit: (suit) => 'باید از رنگِ ورقِ اول (' + suit + ') بیایی',
+    errSignInFirst: 'اول با گوگل یا فیسبوک وارد شو',
+    botName: (n) => 'ربات ' + n,
+    takanBannerUs: '⭐ تکان! تیم ما',
+    takanBannerThem: '⭐ تکان! تیم حریف',
+    roundEndTitle: (n) => 'پایان دست ' + n,
+    rowCardTawan: 'تاوان ورق‌ها',
+    rowTakan: 'تکان ⭐',
+    usSmall: 'ما ',
+    themSmall: 'حریف ',
+    rowFinalTawan: 'تاوان نهایی',
+    rowBankAdd: 'به بانک اضافه شد',
+    rowBankTotal: 'تاوان جمع‌شده (بانک)',
+    rowQs: 'ماتکه کالا (Q♠) را گرفت',
+    nextRoundSoon: 'دست بعدی به‌زودی شروع می‌شود…',
+    cancelLine: (a, ca, b, cb, p) => '🤝 تکان‌ها با هم ادا شدند: تیمِ (' + a + ') ' + ca + ' تکان و تیمِ (' + b + ') ' + cb + ' تکان — ' + p + ' جفت حذف شد، بدون حساب',
+    pendLine: (names) => 'تکانِ تیمِ (' + names + ') ماند برای دست‌های بعد ⭐',
+    execLine: (amount, victim, takan) => amount + ' تاوان از جمع‌شدهٔ تیمِ (' + victim + ') کم شد و به تیمِ (' + takan + ') داده شد',
+    finalLine: (a, na, b, nb) => 'تیمِ (' + a + '): ' + na + ' — تیمِ (' + b + '): ' + nb,
+    bumpLine: (names, from, to) => '🏦 تیمِ (' + names + '): ' + from + ' → ' + to,
+    tieLine: (names) => '⚖️ مساوی 15-15 — ماتکه کالا (Q♠) را تیمِ (' + names + ') گرفت: آن تیم 20 جمع می‌کند و تیمِ دیگر 10',
+    matchEndTitle: '🏆 پایان مسابقه',
+    matchWinTitle: '🏆 تیم شما برنده شد!',
+    matchLoseTitle: 'تیم حریف برنده شد',
+    finalBankedLbl: 'تاوان جمع‌شدهٔ نهایی',
+    matchWhy: (names, bank) => 'جمع‌شدهٔ تیمِ (' + names + ') به 210 رسید (' + bank + ') — همان تیم باخت',
+    newGame: 'بازی جدید',
+    avatarLbl: 'آواتار',
+    nameLbl: 'نام',
+    namePlaceholder: 'نامت — مثلاً احمد',
+    countryLbl: 'کشور',
+    saveBtn: 'ذخیره',
+    googlePhoto: 'عکس گوگل',
+    selectedTag: '✓ انتخاب شد',
+    suits: { H: 'لال', D: 'خشت', C: 'پشه', S: 'قره' },
+    ranks: { A: 'آس', K: 'شاه', Q: 'ماتکه', J: 'غلام', T: 'ده', '9': 'نه', '8': 'هشت', '7': 'هفت', '6': 'شش', '5': 'پنج', '4': 'چهار', '3': 'سه', '2': 'دو' },
+    avatars: { av1: 'پیش‌فرض', av2: 'حاجی صاحب', av3: 'لنگی‌والا', av4: 'پکول‌والا', av5: 'کاکه', av6: 'جوان مدرن', av7: 'ریش‌سفید', av8: 'بانوی سنتی', av9: 'دختر جوان', av10: 'برقعه‌پوش', av11: 'نوجوان', av12: 'ملا صاحب' },
+  },
+  en: {
+    docTitle: 'Tore — Kandahari Card Game',
+    gameTitle: 'Tore',
+    profileTitle: 'My Profile',
+    playerPlaceholder: 'Tore Player',
+    playerName: 'Player',
+    settingsTitle: 'Settings',
+    languageLbl: 'Language',
+    logout: 'Log out',
+    closeBtn: 'Close',
+    menuQuick: 'Play with Bots',
+    menuQuickSub: 'Instant start — practice & fun',
+    menuCreate: 'Create a Room',
+    menuCreateSub: 'Make a room and send the code to friends',
+    menuJoin: 'Join with Room Code',
+    menuJoinSub: "Enter your friend's 4-letter room code",
+    roomCodeLabel: 'Room code',
+    joinRoom: 'Enter Room',
+    continueGame: 'Continue Game',
+    rulesBtn: 'Game Rules',
+    homeFootA: 'Four-player card game',
+    homeFootB: 'Two teams, two vs two',
+    rulesBack: '← Back to menu',
+    rulesHtml: '📜 <b>Game rules (run from tawan; less is better):</b><br>Every <span class="red">♥</span> <b>heart</b> = 1 tawan (13 in total)<br><b>Jack of Clubs</b> (J♣) = 5 tawan · <b>Queen of Spades</b> (Q♠) = 9 tawan · <b>10 of Diamonds</b> (10♦) = 3 tawan<br>Each hand holds 30 tawan and there are <b>no points</b> in this game — only tawan.<br>The team whose <b>banked</b> tawan reaches <b>210</b> <b>loses</b> the match and the other team wins.<br>⭐ <b>Takan:</b> lead a suit nobody else holds → just one <b>red star (★)</b> for your team; a takan adds no tawan to the hand.<br>⭐ <b>Pending takan:</b> that star is a claim of <b>30 tawan</b> from the rival team\u2019s bank — whenever the rivals\u2019 bank reaches <b>30</b> or more, 30 tawan moves from their bank to the takan team\u2019s bank; until then only the star stays and nothing moves. If both teams takan in one hand, <b>the takans cancel each other in pairs</b> and vanish — only one team\u2019s extra takan becomes a star.<br>🙋 Last trick: if you say <b>\u201c13!\u201d</b> before playing, the takan does not count against you.<br>🏦 <b>Banking (bands of ten):</b> a hand\u2019s final tawan banks like this: 0 to 9 → <b>0</b> · 10 to 15 → <b>10</b> · 16 to 20 → <b>20</b> · 21 to 30 → <b>30</b>.<br>⚖️ <b>15-15 tie:</b> the team that took the <b>Queen of Spades</b> (Q♠) banks <b>20</b> and the other team <b>10</b>.',
+    lobbyHint: 'Room code — tell your friends',
+    startGame: 'Start Game',
+    lobbyNoteHost: 'Start whenever you are ready — empty seats fill with bots.',
+    lobbyNoteGuest: 'Waiting for the host to start the game…',
+    teamA: 'Team A',
+    teamB: 'Team B',
+    teamUs: 'Our Team',
+    teamThem: 'Rival Team',
+    seatEmpty: '— Empty —',
+    emptyBadge: 'Empty',
+    hostTag: 'Host',
+    youSuffix: ' (You)',
+    nameJoin: ' & ',
+    mainMenu: 'Main Menu',
+    bankedLbl: 'Banked',
+    roundTawanLbl: 'Hand tawan: ',
+    roundLbl: 'Hand ',
+    loseRule: 'Reaching 210 = losing',
+    declare13: '🙋 I call 13!',
+    declaredToast: (name) => '🙋 ' + name + ': calls 13!',
+    chatTitle: 'Chat',
+    chatAria: 'Message',
+    micAria: 'Microphone',
+    stickersLbl: 'Stickers',
+    disconnected: 'Connection lost — reconnecting…',
+    noConn: 'Not connected',
+    micUnavailable: 'Microphone unavailable',
+    codeLenToast: 'The room code is 4 letters',
+    errServerError: 'Server error',
+    errRoomNotFound: 'Room not found — check the code',
+    errGameStarted: 'This room’s game has already started',
+    errRoomFull: 'The room is full',
+    errSessionExpired: 'Session expired — create a new room',
+    errHostOnly: 'Only the host can start the game',
+    errCannotDeclare13: 'You cannot call 13 right now',
+    errCannotPlay: 'You cannot play this card',
+    errNotYourTurn: 'It is not your turn',
+    errCardNotInHand: 'That card is not in your hand',
+    errMustFollowSuit: (suit) => 'You must follow the led suit (' + suit + ')',
+    errSignInFirst: 'Sign in with Google or Facebook first',
+    botName: (n) => 'Bot ' + n,
+    takanBannerUs: '⭐ Takan! Our team',
+    takanBannerThem: '⭐ Takan! Rival team',
+    roundEndTitle: (n) => 'End of hand ' + n,
+    rowCardTawan: 'Card tawan',
+    rowTakan: 'Takan ⭐',
+    usSmall: 'Us ',
+    themSmall: 'Them ',
+    rowFinalTawan: 'Final tawan',
+    rowBankAdd: 'Added to bank',
+    rowBankTotal: 'Banked tawan (bank)',
+    rowQs: 'Took the Queen of Spades (Q♠)',
+    nextRoundSoon: 'The next hand starts soon…',
+    cancelLine: (a, ca, b, cb, p) => '🤝 Takans cancelled out: team (' + a + ') ' + ca + ' and team (' + b + ') ' + cb + ' — ' + p + ' pair(s) removed, no charge',
+    pendLine: (names) => 'Team (' + names + ')’s takan stays for later hands ⭐',
+    execLine: (amount, victim, takan) => amount + ' tawan moved from team (' + victim + ')’s bank to team (' + takan + ')',
+    finalLine: (a, na, b, nb) => 'Team (' + a + '): ' + na + ' — Team (' + b + '): ' + nb,
+    bumpLine: (names, from, to) => '🏦 Team (' + names + '): ' + from + ' → ' + to,
+    tieLine: (names) => '⚖️ Tie 15-15 — team (' + names + ') took the Queen of Spades (Q♠): that team banks 20 and the other 10',
+    matchEndTitle: '🏆 Match Over',
+    matchWinTitle: '🏆 Your team won!',
+    matchLoseTitle: 'The rival team won',
+    finalBankedLbl: 'Final banked tawan',
+    matchWhy: (names, bank) => 'Team (' + names + ')’s bank reached 210 (' + bank + ') — that team loses',
+    newGame: 'New Game',
+    avatarLbl: 'Avatar',
+    nameLbl: 'Name',
+    namePlaceholder: 'Your name — e.g. Ahmad',
+    countryLbl: 'Country',
+    saveBtn: 'Save',
+    googlePhoto: 'Google photo',
+    selectedTag: '✓ Selected',
+    suits: { H: 'Hearts', D: 'Diamonds', C: 'Clubs', S: 'Spades' },
+    ranks: { A: 'Ace', K: 'King', Q: 'Queen', J: 'Jack', T: 'Ten', '9': 'Nine', '8': 'Eight', '7': 'Seven', '6': 'Six', '5': 'Five', '4': 'Four', '3': 'Three', '2': 'Two' },
+    avatars: { av1: 'Default', av2: 'Haji Sahib', av3: 'Turban Man', av4: 'Pakol Man', av5: 'Kaka', av6: 'Modern Youth', av7: 'White Beard', av8: 'Traditional Lady', av9: 'Young Girl', av10: 'Burqa Lady', av11: 'Teenager', av12: 'Mullah Sahib' },
+  },
+};
+function T(key, ...args) {
+  const dict = STR[LANG] || STR.ps;
+  const v = (key in dict) ? dict[key] : STR.fa[key];
+  return typeof v === 'function' ? v(...args) : v;
+}
+function avatarName(id) {
+  const m = STR[LANG] && STR[LANG].avatars;
+  return (m && m[id]) || (AVATAR_ART[id] && AVATAR_ART[id].name) || '';
+}
+// Seat display name: bot seats are named by the server in Dari
+// («ربات 1») — the name is protocol data, so it is localized HERE,
+// by pattern, without touching the protocol.
+function dispName(s) {
+  if (!s) return '';
+  if (s.kind === 'bot') {
+    const m = /^ربات\s*([0-9]+)$/.exec(String(s.name || '').trim());
+    if (m) return T('botName', m[1]);
+  }
+  return String(s.name || '');
+}
+// Re-string every static (markup) text for the current language and
+// set direction: Pashto/Dari stay RTL everywhere; English reads LTR
+// on the standalone blocks (home, lobby, popups, chat panel) while
+// the game screen keeps its RTL geometry (seat positions unchanged).
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.title = T('docTitle');
+  const ltr = LANG === 'en';
+  ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-profile', 'ov-settings']
+    .forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.setAttribute('dir', ltr ? 'ltr' : 'rtl');
+    });
+  const set = (sel, key) => { const el = $(sel); if (el) el.textContent = T(key); };
+  const setAll = (sel, key) => { document.querySelectorAll(sel).forEach((el) => { el.textContent = T(key); }); };
+  const aria = (sel, key) => { const el = $(sel); if (el) el.setAttribute('aria-label', T(key)); };
+  set('.sp-title', 'gameTitle');
+  set('.hm-title', 'gameTitle');
+  aria('#btn-profile', 'profileTitle');
+  aria('#btn-settings', 'settingsTitle');
+  set('#btn-quick b', 'menuQuick');
+  set('#btn-quick small', 'menuQuickSub');
+  set('#btn-create b', 'menuCreate');
+  set('#btn-create small', 'menuCreateSub');
+  set('#btn-join-toggle b', 'menuJoin');
+  set('#btn-join-toggle small', 'menuJoinSub');
+  set('.hm-join label', 'roomCodeLabel');
+  const codeInp = $('#inp-code');
+  if (codeInp) codeInp.placeholder = T('roomCodeLabel');
+  set('#btn-join', 'joinRoom');
+  set('#continue-txt', 'continueGame');
+  set('#rules-txt', 'rulesBtn');
+  set('#foot-a', 'homeFootA');
+  set('#foot-b', 'homeFootB');
+  set('#btn-rules-back', 'rulesBack');
+  const rulesBody = $('#rules-body');
+  if (rulesBody) rulesBody.innerHTML = T('rulesHtml');
+  set('#lobby-hint', 'lobbyHint');
+  set('#btn-start', 'startGame');
+  set('#btn-leave', 'mainMenu');
+  set('#ss-name-us', 'teamUs');
+  set('#ss-name-them', 'teamThem');
+  setAll('.ss-banklbl', 'bankedLbl');
+  setAll('.ss-roundlbl', 'roundTawanLbl');
+  set('#round-lbl', 'roundLbl');
+  set('#ss-rule', 'loseRule');
+  set('#btn-13', 'declare13');
+  aria('#btn-chat', 'chatAria');
+  aria('#btn-mic', 'micAria');
+  set('#ovr-card-lbl', 'rowCardTawan');
+  set('#ovr-tk-lbl', 'rowTakan');
+  set('#ovr-final-lbl', 'rowFinalTawan');
+  set('#ovr-add-lbl', 'rowBankAdd');
+  set('#ovr-bank-lbl', 'rowBankTotal');
+  set('#ovr-qs-lbl', 'rowQs');
+  set('#ovr-next', 'nextRoundSoon');
+  setAll('.sm-us', 'usSmall');
+  setAll('.sm-them', 'themSmall');
+  set('#ovm-final-lbl', 'finalBankedLbl');
+  set('#btn-newgame', 'newGame');
+  set('#pf-title', 'profileTitle');
+  set('#pf-avatar-lbl', 'avatarLbl');
+  set('#pf-name-lbl', 'nameLbl');
+  set('#pf-country-lbl', 'countryLbl');
+  const nameInp = $('#pf-name');
+  if (nameInp) nameInp.placeholder = T('namePlaceholder');
+  set('#btn-profile-save', 'saveBtn');
+  set('#btn-profile-close', 'closeBtn');
+  set('#st-title', 'settingsTitle');
+  set('#st-lang-lbl', 'languageLbl');
+  set('#st-logout-lbl', 'logout');
+  aria('#btn-logout', 'logout');
+  set('#btn-settings-close', 'closeBtn');
+  set('.chat-title', 'chatTitle');
+  aria('#btn-chat-close', 'closeBtn');
+  set('.stk-label', 'stickersLbl');
+  markLangRows();
+}
+function markLangRows() {
+  document.querySelectorAll('.st-lang').forEach((b) => {
+    b.classList.toggle('sel', b.dataset.lang === LANG);
+  });
+}
+// Switch language: persist, re-string the static UI at once, and
+// re-render whatever dynamic screen is live (lobby / table / profile
+// popup) so the whole game follows immediately — no reload.
+function setLang(code) {
+  if (!STR[code] || code === LANG) { if (STR[code]) markLangRows(); return; }
+  LANG = code;
+  try { localStorage.setItem('tore.lang', code); } catch (e) { /* private mode */ }
+  applyI18n();
+  renderProfileButton();
+  refreshCountryOptions();
+  if (state) render(state);
+  if ($('#ov-profile').classList.contains('show')) { pfRenderGrid(); pfRenderPreview(); }
+}
 const RANK_VAL = { '2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,T:10,J:11,Q:12,K:13,A:14 };
 const suitOf = (c) => c[c.length - 1];
 function cardPoints(c) {
@@ -808,8 +1280,7 @@ function cardPoints(c) {
   return 0;
 }
 function cardTitle(c) {
-  const r = { A: 'آس', K: 'شاه', Q: 'ماتکه', J: 'غلام', T: 'ده', '9':'نه','8':'هشت','7':'هفت','6':'شش','5':'پنج','4':'چهار','3':'سه','2':'دو' }[c.slice(0, -1)];
-  return r + ' ' + SUIT_NAME[suitOf(c)];
+  return STR[LANG].ranks[c.slice(0, -1)] + ' ' + STR[LANG].suits[suitOf(c)];
 }
 // ---------- asset resolver ----------
 // Every JS-loaded image goes through ASSET(). (The landing's carpet and
@@ -896,6 +1367,118 @@ const COUNTRIES = [
   'استرالیا', 'نیوزیلند',
   'مصر', 'مراکش', 'الجزایر', 'تونس', 'لیبی', 'سودان', 'اتیوپی', 'کنیا', 'نیجریه', 'آفریقای جنوبی',
 ];
+// Display names per language, keyed by the CANONICAL (Dari) value
+// above. The canonical value is what profile.country stores, what the
+// seat messages carry and what the servers validate — only the
+// RENDERING changes with the player's language: fa shows the canonical
+// name itself, ps/en look it up here. An unknown value (e.g. sent by
+// another client) renders as-is.
+const COUNTRY_NAMES = {
+  'افغانستان': { ps: 'افغانستان', en: 'Afghanistan' },
+  'ایران': { ps: 'ایران', en: 'Iran' },
+  'پاکستان': { ps: 'پاکستان', en: 'Pakistan' },
+  'تاجیکستان': { ps: 'تاجکستان', en: 'Tajikistan' },
+  'ازبکستان': { ps: 'ازبکستان', en: 'Uzbekistan' },
+  'ترکمنستان': { ps: 'ترکمنستان', en: 'Turkmenistan' },
+  'ترکیه': { ps: 'ترکیه', en: 'Turkey' },
+  'امارات متحده عربی': { ps: 'متحده عربي امارات', en: 'United Arab Emirates' },
+  'قطر': { ps: 'قطر', en: 'Qatar' },
+  'عربستان سعودی': { ps: 'سعودي عربستان', en: 'Saudi Arabia' },
+  'کویت': { ps: 'کویت', en: 'Kuwait' },
+  'عمان': { ps: 'عمان', en: 'Oman' },
+  'بحرین': { ps: 'بحرین', en: 'Bahrain' },
+  'عراق': { ps: 'عراق', en: 'Iraq' },
+  'یمن': { ps: 'یمن', en: 'Yemen' },
+  'اردن': { ps: 'اردن', en: 'Jordan' },
+  'لبنان': { ps: 'لبنان', en: 'Lebanon' },
+  'سوریه': { ps: 'سوریه', en: 'Syria' },
+  'فلسطین': { ps: 'فلسطین', en: 'Palestine' },
+  'هند': { ps: 'هند', en: 'India' },
+  'بنگلادش': { ps: 'بنګله دېش', en: 'Bangladesh' },
+  'نپال': { ps: 'نیپال', en: 'Nepal' },
+  'سریلانکا': { ps: 'سریلانکا', en: 'Sri Lanka' },
+  'مالدیو': { ps: 'مالدیف', en: 'Maldives' },
+  'چین': { ps: 'چین', en: 'China' },
+  'ژاپن': { ps: 'جاپان', en: 'Japan' },
+  'کره جنوبی': { ps: 'سویلي کوریا', en: 'South Korea' },
+  'مالزیا': { ps: 'مالیزیا', en: 'Malaysia' },
+  'اندونزیا': { ps: 'اندونیزیا', en: 'Indonesia' },
+  'تایلند': { ps: 'تایلنډ', en: 'Thailand' },
+  'ویتنام': { ps: 'ویتنام', en: 'Vietnam' },
+  'فیلیپین': { ps: 'فیلیپین', en: 'Philippines' },
+  'سنگاپور': { ps: 'سنګاپور', en: 'Singapore' },
+  'روسیه': { ps: 'روسیه', en: 'Russia' },
+  'اوکراین': { ps: 'اوکراین', en: 'Ukraine' },
+  'قزاقستان': { ps: 'قزاقستان', en: 'Kazakhstan' },
+  'قرقیزستان': { ps: 'قرغزستان', en: 'Kyrgyzstan' },
+  'آذربایجان': { ps: 'اذربایجان', en: 'Azerbaijan' },
+  'گرجستان': { ps: 'ګرجستان', en: 'Georgia' },
+  'ارمنستان': { ps: 'ارمنستان', en: 'Armenia' },
+  'بلاروس': { ps: 'بیلاروس', en: 'Belarus' },
+  'مولداوی': { ps: 'مالدووا', en: 'Moldova' },
+  'بریتانیا': { ps: 'بریتانیا', en: 'United Kingdom' },
+  'آلمان': { ps: 'المان', en: 'Germany' },
+  'فرانسه': { ps: 'فرانسه', en: 'France' },
+  'ایتالیا': { ps: 'ایټالیا', en: 'Italy' },
+  'اسپانیا': { ps: 'هسپانیه', en: 'Spain' },
+  'پرتغال': { ps: 'پرتګال', en: 'Portugal' },
+  'هلند': { ps: 'هالنډ', en: 'Netherlands' },
+  'بلژیک': { ps: 'بلجیم', en: 'Belgium' },
+  'سوئیس': { ps: 'سویس', en: 'Switzerland' },
+  'اتریش': { ps: 'اتریش', en: 'Austria' },
+  'سوئد': { ps: 'سویډن', en: 'Sweden' },
+  'نروژ': { ps: 'ناروې', en: 'Norway' },
+  'دانمارک': { ps: 'ډنمارک', en: 'Denmark' },
+  'فنلاند': { ps: 'فنلنډ', en: 'Finland' },
+  'ایرلند': { ps: 'ایرلنډ', en: 'Ireland' },
+  'لهستان': { ps: 'پولنډ', en: 'Poland' },
+  'چک': { ps: 'چک', en: 'Czechia' },
+  'یونان': { ps: 'یونان', en: 'Greece' },
+  'رومانی': { ps: 'رومانیا', en: 'Romania' },
+  'مجارستان': { ps: 'هنګري', en: 'Hungary' },
+  'آمریکا': { ps: 'امریکا', en: 'United States' },
+  'کانادا': { ps: 'کاناډا', en: 'Canada' },
+  'مکزیک': { ps: 'مکسیکو', en: 'Mexico' },
+  'برزیل': { ps: 'برازیل', en: 'Brazil' },
+  'آرژانتین': { ps: 'ارجنټاین', en: 'Argentina' },
+  'شیلی': { ps: 'چیلي', en: 'Chile' },
+  'کلمبیا': { ps: 'کولمبیا', en: 'Colombia' },
+  'پرو': { ps: 'پیرو', en: 'Peru' },
+  'استرالیا': { ps: 'اسټرالیا', en: 'Australia' },
+  'نیوزیلند': { ps: 'نیوزیلنډ', en: 'New Zealand' },
+  'مصر': { ps: 'مصر', en: 'Egypt' },
+  'مراکش': { ps: 'مراکش', en: 'Morocco' },
+  'الجزایر': { ps: 'الجزایر', en: 'Algeria' },
+  'تونس': { ps: 'تونس', en: 'Tunisia' },
+  'لیبی': { ps: 'لیبیا', en: 'Libya' },
+  'سودان': { ps: 'سوډان', en: 'Sudan' },
+  'اتیوپی': { ps: 'ایتوپیا', en: 'Ethiopia' },
+  'کنیا': { ps: 'کینیا', en: 'Kenya' },
+  'نیجریه': { ps: 'نایجیریا', en: 'Nigeria' },
+  'آفریقای جنوبی': { ps: 'سویلي افریقا', en: 'South Africa' },
+};
+function dispCountry(c) {
+  if (!c) return '';
+  if (LANG === 'fa') return c;
+  const m = COUNTRY_NAMES[c];
+  return (m && m[LANG]) || c;
+}
+// (Re)build the profile country <select>: option VALUES stay the
+// canonical names (that is what gets stored and sent); only the
+// visible labels follow the current language.
+function refreshCountryOptions() {
+  const sel = $('#pf-country');
+  if (!sel) return;
+  const cur = sel.value || (profile && profile.country) || 'افغانستان';
+  sel.innerHTML = '';
+  COUNTRIES.forEach((c) => {
+    const o = document.createElement('option');
+    o.value = c;
+    o.textContent = dispCountry(c);
+    sel.appendChild(o);
+  });
+  sel.value = COUNTRIES.includes(cur) ? cur : 'افغانستان';
+}
 function validAvatar(av) {
   // 'google' is a thirteenth kind: the player's Google profile photo
   // (rendered from the photo URL, not from AVATAR_ART).
@@ -921,7 +1504,7 @@ function saveProfile() {
   renderProfileButton();
 }
 function myName() {
-  return (profile.name || '').trim() || session?.name || 'بازیکن';
+  return (profile.name || '').trim() || session?.name || T('playerName');
 }
 // The {avatar, country} pair every seat message carries; the Google
 // photo rides along ONLY while the 'google' avatar is in use.
@@ -962,7 +1545,7 @@ function renderProfileButton() {
   slot.innerHTML = '';
   slot.appendChild(avatarEl(profile.name, profile.avatar, 44, profile.photo));
   // The player's name sits beside the avatar; placeholder until one is saved.
-  $('#home-name').textContent = (profile.name || '').trim() || 'بازیکن توره';
+  $('#home-name').textContent = (profile.name || '').trim() || T('playerPlaceholder');
 }
 function connect(onOpen) {
   const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
@@ -974,7 +1557,7 @@ function connect(onOpen) {
     // Peer connections were negotiated over this socket's session:
     // drop them; they re-form after the reconnect re-announces voice.
     if (typeof peers !== 'undefined') Object.keys(peers).forEach((s) => closePeer(+s));
-    $('#connbar').textContent = 'اتصال قطع شد — در حال اتصال دوباره…';
+    $('#connbar').textContent = T('disconnected');
     setTimeout(() => { if (session) connect(() => send({ type: 'reconnect', code: session.code, token: session.token, ...profileMsg() })); }, 2500);
   };
 }
@@ -983,7 +1566,7 @@ function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj))
 $('#btn-create').onclick = () => connect(() => send({ type: 'create', ...profilePayload() }));
 $('#btn-join').onclick = () => {
   const code = $('#inp-code').value.trim().toUpperCase();
-  if (code.length !== 4) return toast('کد اتاق 4 حرفی است');
+  if (code.length !== 4) return toast(T('codeLenToast'));
   connect(() => send({ type: 'join', code, ...profilePayload() }));
 };
 $('#btn-start').onclick = () => send({ type: 'start' });
@@ -1008,8 +1591,8 @@ $('#btn-leave').onclick = () => {
 // the same allowlists (anything else, including old-style {text}
 // frames, is dropped) and relays it to the WHOLE room including the
 // sender; the client renders ONLY the relayed message — as a speech
-// bubble over the sender's badge for ~3 s. Nothing is kept: no
-// history, no list, no input.
+// bubble over the sender's badge (3 s, or 4 s for a GIF sticker).
+// Nothing is kept: no history, no list, no input.
 const CHAT_PHRASES = ['سلام', 'ښه حرکت', 'ښه لوبه', 'هاهاها', 'مننه', 'بخښنه!', 'ژر شه!', 'افرین!', 'اوس نه!', 'وای خدای', 'ښه بخت', 'بیا!'];
 const CHAT_EMOJIS = ['😎', '😂', '😍', '😭', '😡', '👊', '😮', '👍', '❤️', '🔥'];
 const CHAT_STICKERS = ['st1', 'st2', 'st3', 'st4', 'st5', 'st6', 'st7', 'st8', 'st9'];
@@ -1027,7 +1610,7 @@ function firstNameOf(name) {
 // sticker reference in the client.
 function stickerURL(id) { return '/stickers/' + id + '.gif'; }
 function sendChat(kind, value) {
-  if (!ws || ws.readyState !== 1) { toast('اتصال نیست'); return; }
+  if (!ws || ws.readyState !== 1) { toast(T('noConn')); return; }
   send({ type: 'chat', kind, value });
 }
 function toggleChatPanel() {
@@ -1070,32 +1653,36 @@ $('#btn-chat-close').onclick = closeChatPanel;
     b.type = 'button';
     b.className = 'qemoji';
     b.textContent = em;
-    b.onclick = () => sendChat('emoji', em);
+    b.onclick = () => { sendChat('emoji', em); closeChatPanel(); };
     row.appendChild(b);
   });
 })();
 
 // A relayed chat message renders ONLY as a floating speech bubble over
-// the sender's seat badge for ~3 s: a phrase as text, an emoji BIG,
-// a sticker as the GIF itself. Bubbles are re-painted by render()
-// while alive, because every state push rebuilds the badge DOM.
+// the sender's seat badge: a phrase as text and an emoji BIG for 3 s,
+// a sticker as the GIF itself for 4 s. Bubbles are re-painted by
+// render() while alive, because every state push rebuilds the badge DOM.
 function onChatMsg(m) {
   showChatBubble(m.seat, m.kind, m.value);
 }
 function showChatBubble(seat, kind, value) {
   if (mySeat === null || !state) return;
   const pos = relPos(seat);
-  chatBubbles[pos] = { kind, value, until: Date.now() + 3000 };
+  // Bubble lifetime depends on the kind: a phrase or an emoji shows
+  // for 3 s; a GIF sticker shows for 4 s so its ~2 s animation gets
+  // to loop twice before it fades.
+  const life = kind === 'sticker' ? 4000 : 3000;
+  chatBubbles[pos] = { kind, value, until: Date.now() + life };
   paintChatBubble(pos);
   setTimeout(() => {
     const badge = $('#seat-' + pos);
     const el = badge && badge.querySelector('.chatbubble');
     if (el) { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; }
-  }, 2700);
+  }, life - 300);
   setTimeout(() => {
     const b = chatBubbles[pos];
     if (b && Date.now() >= b.until) { delete chatBubbles[pos]; paintChatBubble(pos); }
-  }, 3050);
+  }, life + 50);
 }
 function paintChatBubble(pos) {
   const badge = $('#seat-' + pos);
@@ -1137,14 +1724,14 @@ $('#btn-mic').onclick = () => { toggleVoice(); };
 async function toggleVoice() {
   if (voiceOn) { stopVoice(); return; }
   if (!RTCPeerCtor || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    toast('مایک در دسترس نیست');
+    toast(T('micUnavailable'));
     return;
   }
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (e) {
-    toast('مایک در دسترس نیست');
+    toast(T('micUnavailable'));
     return;
   }
   localStream = stream;
@@ -1279,6 +1866,17 @@ function closeRules() {
   $('#home-main').classList.remove('hidden');
 }
 $('#btn-rules').onclick = openRules;
+// Settings: the gear in the home top bar opens the settings popup —
+// language selector (پښتو / دری / English) plus the logout button,
+// which moved here from the top bar.
+function openSettings() { markLangRows(); $('#ov-settings').classList.add('show'); }
+function closeSettings() { $('#ov-settings').classList.remove('show'); }
+$('#btn-settings').onclick = openSettings;
+$('#btn-settings-close').onclick = closeSettings;
+$('#ov-settings').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeSettings(); });
+document.querySelectorAll('.st-lang').forEach((b) => {
+  b.onclick = () => setLang(b.dataset.lang);
+});
 // Logout: clear the Worker session cookie, then reload (the auth gate comes
 // back on the Cloudflare host; on the old Node host /auth/logout 404s — the
 // reload still happens and failures are ignored).
@@ -1317,8 +1915,8 @@ function pfRenderPreview() {
   const cap = document.createElement('span');
   cap.className = 'pf-pvname';
   cap.textContent = pfAvatar === 'google'
-    ? 'عکس گوگل'
-    : AVATAR_ART[(typeof pfAvatar === 'string' && AVATAR_ART[pfAvatar]) ? pfAvatar : 'av1'].name;
+    ? T('googlePhoto')
+    : avatarName((typeof pfAvatar === 'string' && AVATAR_ART[pfAvatar]) ? pfAvatar : 'av1');
   box.appendChild(cap);
 }
 function pfRenderGrid() {
@@ -1335,7 +1933,7 @@ function pfRenderGrid() {
     cell.appendChild(avatarEl('', id, 0, id === 'google' ? profile.photo : undefined));
     const nm = document.createElement('span');
     nm.className = 'pf-name';
-    nm.textContent = sel ? '✓ انتخاب شد' : (id === 'google' ? 'عکس گوگل' : AVATAR_ART[id].name);
+    nm.textContent = sel ? T('selectedTag') : (id === 'google' ? T('googlePhoto') : avatarName(id));
     cell.appendChild(nm);
     cell.onclick = () => { pfAvatar = id; pfRenderGrid(); pfRenderPreview(); };
     grid.appendChild(cell);
@@ -1345,13 +1943,7 @@ function openProfile() {
   pfAvatar = profile.avatar;
   $('#pf-name').value = profile.name || '';
   const sel = $('#pf-country');
-  if (!sel.options.length) {
-    COUNTRIES.forEach((c) => {
-      const o = document.createElement('option');
-      o.value = c; o.textContent = c;
-      sel.appendChild(o);
-    });
-  }
+  refreshCountryOptions();
   sel.value = COUNTRIES.includes(profile.country) ? profile.country : 'افغانستان';
   pfRenderGrid();
   pfRenderPreview();
@@ -1402,10 +1994,29 @@ async function initSessionUser() {
 // <style> block and #home-fan) — they paint with the page itself and never
 // wait for this script or for __ASSETS__. Only the dynamic bits wire here.
 (function dressHome() {
+  applyI18n();
   renderProfileButton();
   updateContinue();
   initSessionUser();
 })();
+
+// Server error → display text. Servers tag every error with a stable
+// machine `code` beside the Dari `message`; render by code in the
+// player's language when the code is known, and fall back to the raw
+// server text otherwise (old servers / unknown codes).
+function serverMsgText(msg) {
+  if (msg && typeof msg.code === 'string' && msg.code) {
+    const key = 'err' + msg.code.charAt(0).toUpperCase() + msg.code.slice(1);
+    if (key in STR.fa) {
+      if (msg.code === 'mustFollowSuit') {
+        const suits = (STR[LANG] && STR[LANG].suits) || {};
+        return T(key, suits[msg.suit] || String(msg.suit || ''));
+      }
+      return T(key);
+    }
+  }
+  return String((msg && msg.message) || '');
+}
 
 function onMsg(msg) {
   if (msg.type === 'room') {
@@ -1447,17 +2058,19 @@ function onMsg(msg) {
   } else if (msg.type === 'takan') {
     const mine = msg.team === (mySeat % 2);
     const b = $('#takanbanner');
-    b.textContent = '⭐ تکان! ' + (mine ? 'تیم ما' : 'تیم حریف');
+    b.textContent = mine ? T('takanBannerUs') : T('takanBannerThem');
     b.classList.remove('show');
     void b.offsetWidth; // restart the pop animation
     b.classList.add('show');
   } else if (msg.type === 'declared13') {
-    const nm = state && state.seats[msg.seat] ? state.seats[msg.seat].name : 'بازیکن';
-    toast('🙋 ' + nm + ': 13 هست!');
+    const nm = state && state.seats[msg.seat] ? (dispName(state.seats[msg.seat]) || T('playerName')) : T('playerName');
+    toast(T('declaredToast', nm));
   } else if (msg.type === 'error') {
     quickPlay = false;
-    toast(msg.message);
-    if (msg.message.includes('نشست')) {
+    toast(serverMsgText(msg));
+    // Session expiry: detected by the machine code; the old «نشست»
+    // substring check stays as a fallback for un-coded servers.
+    if (msg.code === 'sessionExpired' || (msg.message && msg.message.includes('نشست'))) {
       localStorage.removeItem('tore.session');
       session = null;
       updateContinue();
@@ -1922,7 +2535,7 @@ function relPos(seat) { // position relative to me: 0 bottom, 1 right, 2 top, 3 
 }
 function teamLabel(team) {
   const myTeam = mySeat % 2;
-  return team === myTeam ? 'تیم ما' : 'تیم حریف';
+  return team === myTeam ? T('teamUs') : T('teamThem');
 }
 // Face-down won-trick pile for a seat: one loose card BACK per won trick,
 // laid in a row on the carpet in front of the player (see .pilerow CSS).
@@ -1947,8 +2560,8 @@ const barAvatars = {};
 // («ربات 1») are short and stay whole. The lobby, the top bar and the
 // profile keep the full name; only the table badges shorten it.
 function badgeName(s) {
-  const full = String(s.name || '').trim();
-  if (!full) return 'خالی';
+  const full = String(dispName(s) || '').trim();
+  if (!full) return T('emptyBadge');
   if (s.kind === 'bot') return full;
   return firstNameOf(full) || full;
 }
@@ -2027,7 +2640,7 @@ function render(st) {
     const kindMark = s.kind === 'human'
       ? '<span class="dot ' + (s.connected ? 'on' : '') + '"></span>' : '';
     el.innerHTML = '<div class="badgename">' + kindMark + '<span class="bnm">' + crown +
-      badgeName(s) + (i === mySeat ? ' (تو)' : '') + '</span></div>';
+      badgeName(s) + (i === mySeat ? T('youSuffix') : '') + '</span></div>';
     el.prepend(barAvatar(pos, s, i));
   });
   // live-mic dots and any still-fresh chat bubbles ride on top of the
@@ -2108,11 +2721,11 @@ function render(st) {
   const r = st.roundResult;
   $('#ov-round').classList.toggle('show', st.phase === 'roundEnd' && !!r);
   if (r && st.phase === 'roundEnd') {
-    $('#ov-round-title').textContent = 'پایان دست ' + faNum(r.roundNo);
+    $('#ov-round-title').textContent = T('roundEndTitle', faNum(r.roundNo));
     // Name the teams by their PLAYERS in every summary line that carries a
     // per-team value, so no number can ever be read against the wrong team
     // (bare "X · Y" pairs in an RTL panel caused exactly that misreading).
-    const teamNames = (t) => [t, t + 2].map((s) => st.seats[s] ? st.seats[s].name : 'بازیکن').join(' و ');
+    const teamNames = (t) => [t, t + 2].map((s) => (st.seats[s] && dispName(st.seats[s])) || T('playerName')).join(T('nameJoin'));
     $('#ov-card-us').textContent = faNum(r.cardTawan[myTeam]);
     $('#ov-card-them').textContent = faNum(r.cardTawan[them]);
     const tkTxt = (t) => r.takanCount[t] ? '★'.repeat(r.takanCount[t]) : '—'; // stars only — a takan is a claim, not round tawan
@@ -2127,9 +2740,8 @@ function render(st) {
       : Math.min(r.takanCount[0], r.takanCount[1]);
     $('#ov-cancel').style.display = cancelled > 0 ? '' : 'none';
     if (cancelled > 0) {
-      $('#ov-cancel').textContent = '🤝 تکان‌ها با هم ادا شدند: تیمِ (' + teamNames(0) + ') ' +
-        faNum(r.takanCount[0]) + ' تکان و تیمِ (' + teamNames(1) + ') ' + faNum(r.takanCount[1]) +
-        ' تکان — ' + faNum(cancelled) + ' جفت حذف شد، بدون حساب';
+      $('#ov-cancel').textContent = T('cancelLine', teamNames(0), faNum(r.takanCount[0]),
+        teamNames(1), faNum(r.takanCount[1]), faNum(cancelled));
     }
     // Pending takan (تکان معلق): a claim created this round that did NOT
     // execute stays pending — its line says so and the ★ stays on the
@@ -2141,18 +2753,16 @@ function render(st) {
     const pendTeams = [0, 1].filter((t) => created[t] > executed[t]);
     $('#ov-pend').style.display = pendTeams.length ? '' : 'none';
     if (pendTeams.length) {
-      $('#ov-pend').textContent = pendTeams.map((t) =>
-        'تکانِ تیمِ (' + teamNames(t) + ') ماند برای دست‌های بعد ⭐').join(' · ');
+      $('#ov-pend').textContent = pendTeams.map((t) => T('pendLine', teamNames(t))).join(' · ');
     }
     const execTeams = [0, 1].filter((t) => executed[t] > 0);
     $('#ov-exec').style.display = execTeams.length ? '' : 'none';
     if (execTeams.length) {
       $('#ov-exec').textContent = execTeams.map((t) =>
-        faNum(30 * executed[t]) + ' تاوان از جمع‌شدهٔ تیمِ (' + teamNames(1 - t) + ') کم شد و به تیمِ (' +
-        teamNames(t) + ') داده شد').join(' · ');
+        T('execLine', faNum(30 * executed[t]), teamNames(1 - t), teamNames(t))).join(' · ');
     }
-    $('#ov-tw').textContent = 'تیمِ (' + teamNames(myTeam) + '): ' + faNum(r.tawan[myTeam]) +
-      ' — تیمِ (' + teamNames(them) + '): ' + faNum(r.tawan[them]);
+    $('#ov-tw').textContent = T('finalLine', teamNames(myTeam), faNum(r.tawan[myTeam]),
+      teamNames(them), faNum(r.tawan[them]));
     // The amounts added to the bank are the BANDED values (بندهای
     // ده‌تایی): the raw final banks as 0 / 10 / 20 / 30. Show the
     // additions, and spell out every conversion where banding changed
@@ -2166,7 +2776,7 @@ function render(st) {
     $('#ov-bump').style.display = bandedTeams.length ? '' : 'none';
     if (bandedTeams.length) {
       $('#ov-bump').textContent = bandedTeams.map((t) =>
-        '🏦 تیمِ (' + teamNames(t) + '): ' + faNum(r.tawan[t]) + ' → ' + faNum(bankedAdd[t])).join(' · ');
+        T('bumpLine', teamNames(t), faNum(r.tawan[t]), faNum(bankedAdd[t]))).join(' · ');
     }
     $('#ov-bk-us').textContent = faNum(r.bankedTawan ? r.bankedTawan[myTeam] : 0);
     $('#ov-bk-them').textContent = faNum(r.bankedTawan ? r.bankedTawan[them] : 0);
@@ -2176,21 +2786,20 @@ function render(st) {
     const tiedFinal = r.tawan[0] === r.tawan[1];
     $('#ov-tie').style.display = tiedFinal ? '' : 'none';
     if (tiedFinal) {
-      $('#ov-tie').textContent = '⚖️ مساوی 15-15 — ماتکه کالا (Q♠) را تیمِ (' + teamNames(r.qsTeam) +
-        ') گرفت: آن تیم 20 جمع می‌کند و تیمِ دیگر 10';
+      $('#ov-tie').textContent = T('tieLine', teamNames(r.qsTeam));
     }
   }
   $('#ov-match').classList.toggle('show', st.phase === 'matchEnd');
   if (st.phase === 'matchEnd') {
-    $('#ov-match-title').textContent = st.matchWinner === myTeam ? '🏆 تیم شما برنده شد!' : 'تیم حریف برنده شد';
+    $('#ov-match-title').textContent = st.matchWinner === myTeam ? T('matchWinTitle') : T('matchLoseTitle');
     $('#ov-f-us').textContent = faNum(st.bankedTawan ? st.bankedTawan[myTeam] : 0);
     $('#ov-f-them').textContent = faNum(st.bankedTawan ? st.bankedTawan[them] : 0);
     // Say plainly who lost and why: the team whose banked tawan reached 210.
     if (st.matchLoser != null) {
       const loserNames = [st.matchLoser, st.matchLoser + 2]
-        .map((s) => st.seats[s] ? st.seats[s].name : 'بازیکن').join(' و ');
-      $('#ov-f-why').textContent = 'جمع‌شدهٔ تیمِ (' + loserNames + ') به 210 رسید (' +
-        faNum(st.bankedTawan ? st.bankedTawan[st.matchLoser] : 0) + ') — همان تیم باخت';
+        .map((s) => (st.seats[s] && dispName(st.seats[s])) || T('playerName')).join(T('nameJoin'));
+      $('#ov-f-why').textContent = T('matchWhy', loserNames,
+        faNum(st.bankedTawan ? st.bankedTawan[st.matchLoser] : 0));
     } else {
       $('#ov-f-why').textContent = '';
     }
@@ -2204,7 +2813,7 @@ function renderLobby(st) {
   st.seats.forEach((s, i) => {
     const row = document.createElement('div');
     row.className = 'seatrow';
-    const team = i % 2 === 0 ? 'تیم الف' : 'تیم ب';
+    const team = i % 2 === 0 ? T('teamA') : T('teamB');
     const main = document.createElement('span');
     main.className = 'sr-main';
     if (s.kind === 'empty') {
@@ -2215,28 +2824,26 @@ function renderLobby(st) {
       main.appendChild(ph);
       const nm = document.createElement('span');
       nm.className = 'sr-name';
-      nm.textContent = '— خالی —';
+      nm.textContent = T('seatEmpty');
       main.appendChild(nm);
     } else {
       main.appendChild(avatarEl(s.name, s.kind === 'bot' ? { t: 'bot' } : s.avatar, 30, s.photo));
       const nm = document.createElement('span');
       nm.className = 'sr-name';
-      nm.textContent = s.name + (i === mySeat ? ' (تو)' : '');
+      nm.textContent = dispName(s) + (i === mySeat ? T('youSuffix') : '');
       main.appendChild(nm);
     }
     const meta = document.createElement('span');
     meta.className = 'teamtag';
-    meta.textContent = (s.kind !== 'empty' && s.country ? s.country + ' · ' : '') +
-      team + (i === st.hostSeat ? ' · میزبان' : '');
+    meta.textContent = (s.kind !== 'empty' && s.country ? dispCountry(s.country) + ' · ' : '') +
+      team + (i === st.hostSeat ? ' · ' + T('hostTag') : '');
     row.appendChild(main);
     row.appendChild(meta);
     box.appendChild(row);
   });
   const isHost = mySeat === st.hostSeat;
   $('#btn-start').disabled = !isHost;
-  $('#lobby-note').textContent = isHost
-    ? 'هر وقت آماده بودی شروع کن — جای‌های خالی با ربات پر می‌شود.'
-    : 'منتظر میزبان برای شروع بازی…';
+  $('#lobby-note').textContent = isHost ? T('lobbyNoteHost') : T('lobbyNoteGuest');
 }
 </script>
 </body>
