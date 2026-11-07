@@ -110,8 +110,12 @@ function send(ws, obj) {
     if (ws.readyState === 1) ws.send(JSON.stringify(obj));
   } catch { /* socket already gone */ }
 }
-function sendError(ws, msg) {
-  send(ws, { type: 'error', message: msg });
+// Every error carries a stable machine `code` next to the Dari
+// `message`: the client translates by code into the player's chosen
+// language and falls back to the raw Dari text when a code is unknown.
+// `extra` merges payload fields (e.g. { suit } for mustFollowSuit).
+function sendError(ws, msg, code, extra) {
+  send(ws, Object.assign({ type: 'error', message: msg, code }, extra || {}));
 }
 
 // ---------------------------------------------------------- snapshots
@@ -354,7 +358,7 @@ export class GameServer {
     catch { return; }
     const att = this._attachment(ws) || { code: null, seat: -1, token: null, user: null };
     try { this._handleMessage(ws, att, msg); }
-    catch { sendError(ws, 'خطای سرور'); }
+    catch { sendError(ws, 'خطای سرور', 'serverError'); }
     await this._persist();
   }
 
@@ -599,7 +603,7 @@ export class GameServer {
     // Worker verified from the session cookie (carried in the attachment).
     const needsAuth = msg.type === 'create' || msg.type === 'join' || msg.type === 'reconnect';
     if (this.authEnabled && needsAuth && !att.user) {
-      return sendError(ws, 'اول با گوگل یا فیسبوک وارد شو');
+      return sendError(ws, 'اول با گوگل یا فیسبوک وارد شو', 'signInFirst');
     }
     switch (msg.type) {
       case 'create': {
@@ -609,18 +613,18 @@ export class GameServer {
       }
       case 'join': {
         const room = this.rooms.get(String(msg.code || '').toUpperCase().trim());
-        if (!room) return sendError(ws, 'اتاق پیدا نشد — کد را بررسی کن');
-        if (room.phase !== 'lobby') return sendError(ws, 'بازی این اتاق شروع شده است');
+        if (!room) return sendError(ws, 'اتاق پیدا نشد — کد را بررسی کن', 'roomNotFound');
+        if (room.phase !== 'lobby') return sendError(ws, 'بازی این اتاق شروع شده است', 'gameStarted');
         const idx = room.seats.findIndex((s) => s.kind === 'empty');
-        if (idx === -1) return sendError(ws, 'اتاق پر است');
+        if (idx === -1) return sendError(ws, 'اتاق پر است', 'roomFull');
         this._attachPlayer(ws, att, room, idx, displayName(msg, att.user), msg);
         break;
       }
       case 'reconnect': {
         const room = this.rooms.get(String(msg.code || '').toUpperCase().trim());
-        if (!room) return sendError(ws, 'نشست منقضی شده است — اتاق تازه بساز');
+        if (!room) return sendError(ws, 'نشست منقضی شده است — اتاق تازه بساز', 'sessionExpired');
         const idx = room.seats.findIndex((s) => s.kind === 'human' && s.token === msg.token);
-        if (idx === -1) return sendError(ws, 'نشست منقضی شده است — اتاق تازه بساز');
+        if (idx === -1) return sendError(ws, 'نشست منقضی شده است — اتاق تازه بساز', 'sessionExpired');
         const seat = room.seats[idx];
         if (seat.ws && seat.ws !== ws) { try { seat.ws.close(1012, 'replaced'); } catch { /* ignore */ } }
         // A reconnect may carry the player's current profile — refresh it.
@@ -648,7 +652,7 @@ export class GameServer {
       case 'start': {
         const room = this.rooms.get(att.code);
         if (!room || room.phase !== 'lobby') return;
-        if (att.seat !== this._hostSeat(room)) return sendError(ws, 'فقط میزبان می‌تواند بازی را شروع کند');
+        if (att.seat !== this._hostSeat(room)) return sendError(ws, 'فقط میزبان می‌تواند بازی را شروع کند', 'hostOnly');
         this._startMatch(room);
         break;
       }
@@ -662,7 +666,7 @@ export class GameServer {
           round.declare13(att.seat); // emits declared13 → clients toast it
           this._broadcastState(room);
         } catch {
-          sendError(ws, 'الآن نمی‌توانی «13» بگویی');
+          sendError(ws, 'الآن نمی‌توانی «13» بگویی', 'cannotDeclare13');
           send(ws, this._stateFor(room, att.seat));
         }
         break;
@@ -672,13 +676,17 @@ export class GameServer {
         if (!room || room.phase !== 'playing') return;
         if (room.trickHold) { send(ws, this._stateFor(room, att.seat)); return; } // trick on display — resync silently, no error
         if (!this._doPlay(room, att.seat, String(msg.card || ''))) {
-          // Illegal move: explain in Dari and resync the client.
+          // Illegal move: explain (Dari text + machine code) and resync.
           const round = room.match.round;
-          let why = 'این ورق را نمی‌توانی بازی کنی';
-          if (round && round.turn !== att.seat) why = 'نوبت تو نیست';
-          else if (round && !round.hands[att.seat].includes(msg.card)) why = 'این ورق در دستت نیست';
-          else if (round) why = 'باید از رنگِ ورقِ اول (' + G.SUIT_NAMES[round.ledSuit()] + ') بیایی';
-          sendError(ws, why);
+          let why = 'این ورق را نمی‌توانی بازی کنی', whyCode = 'cannotPlay', whyExtra = null;
+          if (round && round.turn !== att.seat) { why = 'نوبت تو نیست'; whyCode = 'notYourTurn'; }
+          else if (round && !round.hands[att.seat].includes(msg.card)) { why = 'این ورق در دستت نیست'; whyCode = 'cardNotInHand'; }
+          else if (round) {
+            const suit = round.ledSuit();
+            why = 'باید از رنگِ ورقِ اول (' + G.SUIT_NAMES[suit] + ') بیایی';
+            whyCode = 'mustFollowSuit'; whyExtra = { suit };
+          }
+          sendError(ws, why, whyCode, whyExtra);
           send(ws, this._stateFor(room, att.seat));
         }
         break;
