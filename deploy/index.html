@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="ps" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>توره — بازی ورق قندهاری</title>
+<title>توره — د قندهار ورق لوبه</title>
 <!--
   Asset credits:
   - Carpet background (carpet.jpg): photograph of an antique Oushak carpet,
@@ -275,15 +275,26 @@
      sender's badge and is gone. The panel hugs its content. */
   #chatpanel {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 55;
-    max-width: 520px; margin: 0 auto; max-height: 64dvh;
-    display: flex; flex-direction: column;
+    max-width: 520px; margin: 0 auto; max-height: 64vh; max-height: 64dvh;
+    display: flex; flex-direction: column; overflow: hidden;
     background: linear-gradient(rgba(26,16,5,.985), rgba(26,16,5,.96));
     border-top: 2px solid #d9b380; border-radius: 18px 18px 0 0;
     box-shadow: 0 -8px 30px rgba(0,0,0,.55); color: #f5e7c6;
     transform: translateY(105%); transition: transform .28s ease;
   }
   #chatpanel.open { transform: translateY(0); }
-  .chat-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 4px; }
+  /* The middle of the panel (phrases + stickers) scrolls INSIDE the
+     panel when the whole content is taller than the capped panel —
+     on short Android viewports the full content is ~530px against a
+     64dvh cap of ~410px, and without an internal scroll region the
+     overflow simply spilled past the screen's bottom edge (emoji row
+     unreachable). Head and the emoji row stay pinned, always visible. */
+  .chat-scroll {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto;
+    overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  }
+  .chat-head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 4px; }
+  .chat-emojis { flex: 0 0 auto; }
   .chat-title { font-size: 16px; font-weight: 800; color: #ffd75e; }
   #btn-chat-close {
     width: 32px; height: 32px; margin: 0; padding: 0; border-radius: 50%;
@@ -305,7 +316,7 @@
     margin: 0; padding: 4px; cursor: pointer; font-family: inherit;
     background: rgba(255,255,255,.07); border: 1px solid rgba(217,179,128,.45); border-radius: 14px;
   }
-  .qsticker img { width: 100%; height: 52px; object-fit: cover; display: block; border-radius: 9px; pointer-events: none; }
+  .qsticker img { width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; display: block; border-radius: 9px; pointer-events: none; }
   .qsticker:active { transform: scale(.94); background: rgba(255,215,94,.25); }
   .chat-emojis { display: flex; justify-content: space-between; padding: 7px 12px calc(10px + env(safe-area-inset-bottom)); }
   .qemoji { margin: 0; padding: 2px; background: none; border: 0; font-size: 24px; line-height: 1.2; cursor: pointer; font-family: inherit; }
@@ -518,14 +529,20 @@
   /* ---------- splash veil: the landing's first paint ----------
      Pure CSS in <head>, so the veil is IN the very first paint — the
      player never sees the half-built menu while the page/assets stream
-     in. JS lifts it once the carpet + hero cards are decoded (hard cap),
-     and the CSS animation lifts it even if every script fails. */
+     in. JS lifts it once the carpet + hero cards are decoded AND the
+     main script has applied the player's language (the markup under
+     the veil must never be revealed in the wrong language — on a slow
+     connection the main script sits behind the inlined asset block
+     and can arrive seconds after the images). Hard caps keep it from
+     ever lingering, and the CSS animation lifts it even if every
+     script fails (set later than the JS cap so it never undercuts
+     the language gate on slow loads). */
   #splash {
     position: fixed; inset: 0; z-index: 90;
     background: radial-gradient(ellipse at 50% 42%, #4a2f16 0%, #2a1a09 62%, #1c0f04 100%);
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
     transition: opacity .35s ease;
-    animation: splashAuto .45s ease 3.5s forwards;
+    animation: splashAuto .45s ease 6.5s forwards;
   }
   #splash.bye { opacity: 0; pointer-events: none; }
   #splash .sp-title { font-size: 56px; font-weight: 900; line-height: 1.1; color: #ffd75e; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
@@ -546,11 +563,11 @@
   <section id="scr-home">
     <div id="home-main">
       <div class="hm-panel hm-topbar">
-        <button class="hm-profilebtn" id="btn-profile" aria-label="پروفایل من">
+        <button class="hm-profilebtn" id="btn-profile" aria-label="زما پروفایل">
           <span id="home-avatar-slot"></span>
-          <span class="hm-pname" id="home-name">بازیکن توره</span>
+          <span class="hm-pname" id="home-name">د تورې لوبغاړی</span>
         </button>
-        <button class="hm-gear" id="btn-settings" aria-label="تنظیمات">
+        <button class="hm-gear" id="btn-settings" aria-label="امادګي">
           <svg viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -582,7 +599,7 @@
               <path d="M5 11H2.8M21.2 11H19"/>
             </svg>
           </span>
-          <span class="txt"><b>بازی با ربات‌ها</b><small>شروع فوری — تمرین و سرگرمی</small></span>
+          <span class="txt"><b>له روباتونو سره لوبه</b><small>سمدستي پیل — تمرین او تفریح</small></span>
           <svg class="chev" viewBox="0 0 24 24"><polyline points="14.5 5.5 8 12 14.5 18.5"/></svg>
         </button>
 
@@ -594,7 +611,7 @@
               <path d="M12 11v6M9 14h6"/>
             </svg>
           </span>
-          <span class="txt"><b>ساختن اتاق</b><small>اتاق بساز و کد را به دوست‌ها بفرست</small></span>
+          <span class="txt"><b>کوټه جوړه کړه</b><small>کوټه جوړه کړه او کوډ ملګرو ته ولېږه</small></span>
           <svg class="chev" viewBox="0 0 24 24"><polyline points="14.5 5.5 8 12 14.5 18.5"/></svg>
         </button>
 
@@ -606,15 +623,15 @@
               <path d="M15.4 8.1l3.4 3.4M17.8 5.7l2.3 2.3"/>
             </svg>
           </span>
-          <span class="txt"><b>پیوستن با کد اتاق</b><small>کد 4 حرفی اتاق دوستت را وارد کن</small></span>
+          <span class="txt"><b>د کوډ سره ورګډ شه</b><small>د ملګري د کوټې 4 توري کوډ دننه کړه</small></span>
           <svg class="chev" viewBox="0 0 24 24"><polyline points="14.5 5.5 8 12 14.5 18.5"/></svg>
         </button>
       </div>
 
       <div class="hm-panel hm-join hidden" id="join-panel">
-        <label for="inp-code">کد اتاق</label>
-        <input id="inp-code" class="code" type="text" maxlength="4" placeholder="کد اتاق">
-        <button id="btn-join" class="ghost">ورود به اتاق</button>
+        <label for="inp-code">د کوټې کوډ</label>
+        <input id="inp-code" class="code" type="text" maxlength="4" placeholder="د کوټې کوډ">
+        <button id="btn-join" class="ghost">کوټې ته ننوځه</button>
       </div>
 
       <div class="hm-slim">
@@ -623,7 +640,7 @@
             <polyline points="2.5 4.5 2.5 10 8 10"/>
             <path d="M4.6 15.5a8.5 8.5 0 1 0 2-9.9L2.5 10"/>
           </svg>
-          <span id="continue-txt">ادامهٔ بازی</span>
+          <span id="continue-txt">لوبې ته دوام ورکړه</span>
         </button>
         <button class="hm-chip" id="btn-rules">
           <svg viewBox="0 0 24 24">
@@ -631,38 +648,75 @@
             <polyline points="14 3 14 8.5 19.5 8.5"/>
             <path d="M8.5 13h7M8.5 16.8h7"/>
           </svg>
-          <span id="rules-txt">قانون‌های بازی</span>
+          <span id="rules-txt">د لوبې قوانین</span>
         </button>
       </div>
 
-      <div class="hm-foot"><span id="foot-a">بازی ورق چهار نفره</span><span class="fdot">•</span><span id="foot-b">دو تیم، دو به دو</span></div>
+      <div class="hm-foot"><span id="foot-a">څلور کسيزه ورق لوبه</span><span class="fdot">•</span><span id="foot-b">دوه ټیمه، دوه پر دوه</span></div>
     </div>
 
     <div id="home-rules" class="hidden">
-      <button class="hm-back" id="btn-rules-back">→ برگشت به منو</button>
+      <button class="hm-back" id="btn-rules-back">→ مینو ته وګرځه</button>
       <div class="cardbox legend" id="rules-body">
-      📜 <b>قانون بازی (از تاوان فرار کن؛ کمتر بهتر است):</b><br>
-      هر ورق <span class="red">♥</span> <b>لال</b> = 1 تاوان (جمعاً 13)<br>
-      <b>غلام پشه</b> (J♣) = 5 تاوان · <b>ماتکه کالا</b> (Q♠) = 9 تاوان · <b>ده خشت</b> (10♦) = 3 تاوان<br>
-      هر دست 30 تاوان دارد و در این بازی <b>امتیاز نیست</b> — فقط تاوان است.<br>
-      تیمی که تاوانِ <b>جمع‌شده‌اش</b> (بانک) به <b>210</b> برسد، مسابقه را <b>می‌بازد</b> و تیمِ دیگر برنده است.<br>
-      ⭐ <b>تکان:</b> خالی را شروع کنی که هیچ‌کس ندارد → فقط یک <b>ستارهٔ قرمز (★)</b> برای تیمت؛ تکان هیچ تاوانی به این دست اضافه نمی‌کند.<br>
-      ⭐ <b>تکان معلق:</b> آن ستاره یعنی طلبِ <b>30 تاوان</b> از جمع‌شدهٔ تیمِ حریف — هر وقت جمع‌شدهٔ حریف به <b>30</b> برسد یا از آن بگذرد، 30 تاوان از بانک او کم و به بانک تیمِ تکان‌دار داده می‌شود؛ تا آن وقت فقط ستاره می‌ماند و هیچ پولی جابه‌جا نمی‌شود. اگر هر دو تیم در یک دست تکان بدهند، <b>تکان‌ها جفت‌جفت با هم ادا می‌شوند</b> و حذف می‌شوند — فقط تکانِ اضافهٔ یک تیم ستاره می‌شود.<br>
-      🙋 دست آخر: اگر پیش از بازی بگویی <b>«13 هست»</b>، تکان برایت حساب نمی‌شود.<br>
-      🏦 <b>جمع‌شدن در بانک (بندهای ده‌تایی):</b> تاوانِ نهایی هر دست این‌طور در بانکت جمع می‌شود: 0 تا 9 → <b>0</b> · 10 تا 15 → <b>10</b> · 16 تا 20 → <b>20</b> · 21 تا 30 → <b>30</b>.<br>
-      ⚖️ <b>مساوی 15-15:</b> تیمی که <b>ماتکه کالا</b> (Q♠) را گرفته، <b>20</b> جمع می‌کند و تیمِ دیگر <b>10</b>.
+      📜 <b>د لوبې قوانین (له تاوانه وتښته؛ څومره کم، هومره ښه):</b><br>هر ورق <span class="red">♥</span> <b>لال</b> = 1 تاوان (ټول 13)<br><b>غلام پشه</b> (J♣) = 5 تاوان · <b>ماتکه کالا</b> (Q♠) = 9 تاوان · <b>لس خښت</b> (10♦) = 3 تاوان<br>هر لاس 30 تاوان لري او په دې لوبه کې <b>امتیاز نشته</b> — یوازې تاوان دی.<br>هغه ټیم چې <b>جمع شوی</b> تاوان (بانک) یې <b>210</b> ته ورسېږي، لوبه <b>بایلي</b> او بل ټیم ګټونکی دی.<br>⭐ <b>تکان:</b> که هغه خال پیل کړې چې بل هېڅوک یې نه لري → یوازې یو <b>سور ستوری (★)</b> ستا ټیم ته؛ تکان دې لاس ته هېڅ تاوان نه ورزیاتوي.<br>⭐ <b>ځنډېدلی تکان:</b> هغه ستوری یعنې د سیال ټیم له جمع شوي څخه د <b>30 تاوان</b> غوښتنه — کله چې د سیال جمع شوی <b>30</b> ته ورسېږي یا ترې تېر شي، 30 تاوان د هغه له بانکه کمېږي او د تکان لرونکي ټیم بانک ته ورځي؛ تر هغه وخته یوازې ستوری پاتې کېږي او هېڅ پیسې نه بدلېږي. که دواړه ټیمونه په یوه لاس کې تکان ورکړي، <b>تکانونه جوړه جوړه یو له بله خلاصېږي</b> او له منځه ځي — یوازې د یوه ټیم زیات تکان ستوری کېږي.<br>🙋 وروستی لاس: که له لوبې مخکې ووایې <b>«13 یم»</b>، تکان درته نه حسابېږي.<br>🏦 <b>په بانک کې جمع کول (لسي بندونه):</b> د هر لاس وروستی تاوان په بانک کې داسې جمع کېږي: 0 تر 9 → <b>0</b> · 10 تر 15 → <b>10</b> · 16 تر 20 → <b>20</b> · 21 تر 30 → <b>30</b>.<br>⚖️ <b>برابر 15-15:</b> هغه ټیم چې <b>ماتکه کالا</b> (Q♠) یې نیولې، <b>20</b> جمع کوي او بل ټیم <b>10</b>.
       </div>
     </div>
   </section>
 
 <script>
 // Splash veil lift — runs the moment the parser reaches it (early in the
-// body, long before the main script at the end). Once the carpet and the
-// hero cards are decoded, the landing underneath is complete: fade the
-// veil. Hard caps keep it from ever lingering; a CSS animation in <head>
-// lifts the veil even if this script never runs.
+// body, long before the main script at the end). The veil fades once TWO
+// things are true: the carpet + hero cards are decoded, AND the main
+// script has applied the player's language (it calls __liftSplash right
+// after applyI18n). Without the language condition, a slow connection
+// reveals the landing while the main script is still streaming in
+// behind the inlined asset block — the player saw the menu in the
+// markup's static language for seconds, then watched it flip. Hard
+// caps keep the veil from ever lingering; a CSS animation in <head>
+// lifts it even if this script never runs.
+//
+// Language pre-application: the gate above is not enough on its own —
+// the CSS failsafe animation starts counting as soon as the splash is
+// styled, which can beat even the gate's caps on a slow connection.
+// So the resolved language's strings are put onto the home markup
+// (the only screen visible at first paint, and already parsed at this
+// point) RIGHT HERE, synchronously. Whichever path lifts the veil,
+// the menu underneath is already in the player's language. The main
+// script's applyI18n re-applies the full table with identical values
+// when it arrives (the flash verification asserts the two never
+// disagree); lobby / game / overlays / chat are hidden until
+// post-boot JS flows, so they need no pre-application.
 (function () {
-  var done = false;
+  try {
+    var L0 = localStorage.getItem('tore.lang');
+    if (L0 !== 'fa' && L0 !== 'en') L0 = 'ps';
+    var MINI = {
+      ps: { playerPlaceholder: 'د تورې لوبغاړی', menuQuick: 'له روباتونو سره لوبه', menuQuickSub: 'سمدستي پیل — تمرین او تفریح', menuCreate: 'کوټه جوړه کړه', menuCreateSub: 'کوټه جوړه کړه او کوډ ملګرو ته ولېږه', menuJoin: 'د کوډ سره ورګډ شه', menuJoinSub: 'د ملګري د کوټې 4 توري کوډ دننه کړه', roomCodeLabel: 'د کوټې کوډ', joinRoom: 'کوټې ته ننوځه', continueGame: 'لوبې ته دوام ورکړه', rulesBtn: 'د لوبې قوانین', homeFootA: 'څلور کسيزه ورق لوبه', homeFootB: 'دوه ټیمه، دوه پر دوه', rulesBack: '→ مینو ته وګرځه' },
+      fa: { playerPlaceholder: 'بازیکن توره', menuQuick: 'بازی با ربات‌ها', menuQuickSub: 'شروع فوری — تمرین و سرگرمی', menuCreate: 'ساختن اتاق', menuCreateSub: 'اتاق بساز و کد را به دوست‌ها بفرست', menuJoin: 'پیوستن با کد اتاق', menuJoinSub: 'کد 4 حرفی اتاق دوستت را وارد کن', roomCodeLabel: 'کد اتاق', joinRoom: 'ورود به اتاق', continueGame: 'ادامهٔ بازی', rulesBtn: 'قانون‌های بازی', homeFootA: 'بازی ورق چهار نفره', homeFootB: 'دو تیم، دو به دو', rulesBack: '→ برگشت به منو' },
+      en: { playerPlaceholder: 'Tore Player', menuQuick: 'Play with Bots', menuQuickSub: 'Instant start — practice & fun', menuCreate: 'Create a Room', menuCreateSub: 'Make a room and send the code to friends', menuJoin: 'Join with Room Code', menuJoinSub: "Enter your friend's 4-letter room code", roomCodeLabel: 'Room code', joinRoom: 'Enter Room', continueGame: 'Continue Game', rulesBtn: 'Game Rules', homeFootA: 'Four-player card game', homeFootB: 'Two teams, two vs two', rulesBack: '← Back to menu' }
+    }[L0];
+    document.documentElement.lang = L0;
+    var home0 = document.getElementById('scr-home');
+    if (home0) home0.setAttribute('dir', L0 === 'en' ? 'ltr' : 'rtl');
+    var set0 = function (sel, v) { var el = document.querySelector(sel); if (el) el.textContent = v; };
+    set0('#home-name', MINI.playerPlaceholder);
+    set0('#btn-quick b', MINI.menuQuick);
+    set0('#btn-quick small', MINI.menuQuickSub);
+    set0('#btn-create b', MINI.menuCreate);
+    set0('#btn-create small', MINI.menuCreateSub);
+    set0('#btn-join-toggle b', MINI.menuJoin);
+    set0('#btn-join-toggle small', MINI.menuJoinSub);
+    set0('.hm-join label', MINI.roomCodeLabel);
+    var codeInp0 = document.querySelector('#inp-code');
+    if (codeInp0) codeInp0.placeholder = MINI.roomCodeLabel;
+    set0('#btn-join', MINI.joinRoom);
+    set0('#continue-txt', MINI.continueGame);
+    set0('#rules-txt', MINI.rulesBtn);
+    set0('#foot-a', MINI.homeFootA);
+    set0('#foot-b', MINI.homeFootB);
+    set0('#btn-rules-back', MINI.rulesBack);
+  } catch (e) { /* the main script applies the full language anyway */ }
+  var done = false, imgsReady = false;
   function lift() {
     if (done) return; done = true;
     var sp = document.getElementById('splash');
@@ -670,7 +724,9 @@
     sp.classList.add('bye');
     setTimeout(function () { sp.style.display = 'none'; }, 450);
   }
-  window.__liftSplash = lift;
+  function attempt() { if (imgsReady && window.__i18nDone) lift(); }
+  // The main script's signal: language applied — the landing may show.
+  window.__liftSplash = function () { window.__i18nDone = true; attempt(); };
   var imgs = Array.prototype.slice.call(document.querySelectorAll('#home-fan img'));
   // Also wait for the carpet itself: read its URL from the computed style
   // (a data URI in the bundle, a plain path in dev) — no literal filename
@@ -686,18 +742,18 @@
   Promise.race([
     Promise.all(decoded),
     new Promise(function (r) { setTimeout(r, 1000); })
-  ]).then(lift);
-  setTimeout(lift, 1600); // absolute cap, whatever the network does
+  ]).then(function () { imgsReady = true; attempt(); });
+  setTimeout(lift, 5000); // absolute cap, whatever the network does
 })();
 </script>
 
   <!-- ======== LOBBY ======== -->
   <section id="scr-lobby" class="hidden">
     <div class="cardbox">
-      <div id="lobby-hint" style="text-align:center; font-size:14px; opacity:.85">کد اتاق — به دوست‌هایت بگو</div>
+      <div id="lobby-hint" style="text-align:center; font-size:14px; opacity:.85">د کوټې کوډ — ملګرو ته یې ووایه</div>
       <div class="roomcode" id="lobby-code">····</div>
       <div id="lobby-seats"></div>
-      <button id="btn-start">شروع بازی</button>
+      <button id="btn-start">لوبه پیل کړه</button>
       <div id="lobby-note" style="text-align:center; font-size:13px; opacity:.85; margin-top:8px"></div>
     </div>
   </section>
@@ -705,20 +761,20 @@
   <!-- ======== GAME ======== -->
   <section id="scr-game" class="hidden">
     <div class="ghead">
-      <button id="btn-leave" class="menubtn">منوی اصلی</button>
+      <button id="btn-leave" class="menubtn">اصلي مینو</button>
     </div>
     <div class="scorestrip">
       <div class="ss-team">
-        <div class="ss-line1"><span class="ss-tname" id="ss-name-us">تیم ما</span><span class="tkstars" id="tk-us"></span><span>·</span><span class="ss-banklbl">جمع‌شده</span><span class="ss-banknum" id="sc-us">0</span></div>
-        <div class="ss-round"><span class="ss-roundlbl">تاوان این دست: </span><span class="twnum" id="tw-us">0</span></div>
+        <div class="ss-line1"><span class="ss-tname" id="ss-name-us">زموږ ټیم</span><span class="tkstars" id="tk-us"></span><span>·</span><span class="ss-banklbl">جمع شوی</span><span class="ss-banknum" id="sc-us">0</span></div>
+        <div class="ss-round"><span class="ss-roundlbl">د دې لاس تاوان: </span><span class="twnum" id="tw-us">0</span></div>
       </div>
       <div class="ss-mid">
-        <div class="ss-roundno"><span id="round-lbl">دست </span><span id="round-no">1</span></div>
-        <div class="ss-rule" id="ss-rule">رسیدن به 210 = باخت</div>
+        <div class="ss-roundno"><span id="round-lbl">لاس </span><span id="round-no">1</span></div>
+        <div class="ss-rule" id="ss-rule">210 ته رسېدل = بایلل</div>
       </div>
       <div class="ss-team">
-        <div class="ss-line1"><span class="ss-tname" id="ss-name-them">تیم حریف</span><span class="tkstars" id="tk-them"></span><span>·</span><span class="ss-banklbl">جمع‌شده</span><span class="ss-banknum" id="sc-them">0</span></div>
-        <div class="ss-round"><span class="ss-roundlbl">تاوان این دست: </span><span class="twnum" id="tw-them">0</span></div>
+        <div class="ss-line1"><span class="ss-tname" id="ss-name-them">د سیال ټیم</span><span class="tkstars" id="tk-them"></span><span>·</span><span class="ss-banklbl">جمع شوی</span><span class="ss-banknum" id="sc-them">0</span></div>
+        <div class="ss-round"><span class="ss-roundlbl">د دې لاس تاوان: </span><span class="twnum" id="tw-them">0</span></div>
       </div>
     </div>
 
@@ -734,13 +790,13 @@
       <div class="trick" id="trick"></div>
     </div>
 
-    <button id="btn-13" class="hidden">🙋 13 هست!</button>
+    <button id="btn-13" class="hidden">🙋 13 یم!</button>
     <div class="hand" id="hand"></div>
     <div class="actionrow">
-      <button class="iconbtn" id="btn-chat" aria-label="پیام">
+      <button class="iconbtn" id="btn-chat" aria-label="پیغام">
         <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
       </button>
-      <button class="iconbtn" id="btn-mic" aria-label="میکروفون">
+      <button class="iconbtn" id="btn-mic" aria-label="مایکروفون">
         <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
       </button>
       <button class="iconbtn on" id="btn-speaker" aria-label="سپیکر روشن">
@@ -755,46 +811,46 @@
 <!-- ======== ROUND END ======== -->
 <div class="overlay" id="ov-round">
   <div class="panel">
-    <h2 id="ov-round-title">پایان دست</h2>
-    <div class="row"><span id="ovr-card-lbl">تاوان ورق‌ها</span><span><small class="sm-us">ما </small><b id="ov-card-us">0</b> · <small class="sm-them">حریف </small><b id="ov-card-them">0</b></span></div>
-    <div class="row" id="ov-tk-row"><span id="ovr-tk-lbl">تکان ⭐</span><span><small class="sm-us">ما </small><b id="ov-tk-us">—</b> · <small class="sm-them">حریف </small><b id="ov-tk-them">—</b></span></div>
+    <h2 id="ov-round-title">د لاس پای</h2>
+    <div class="row"><span id="ovr-card-lbl">د ورقو تاوان</span><span><small class="sm-us">موږ </small><b id="ov-card-us">0</b> · <small class="sm-them">سیال </small><b id="ov-card-them">0</b></span></div>
+    <div class="row" id="ov-tk-row"><span id="ovr-tk-lbl">تکان ⭐</span><span><small class="sm-us">موږ </small><b id="ov-tk-us">—</b> · <small class="sm-them">سیال </small><b id="ov-tk-them">—</b></span></div>
     <div id="ov-cancel" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
     <div id="ov-pend" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
     <div id="ov-exec" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
-    <div class="row big"><span id="ovr-final-lbl">تاوان نهایی</span><b id="ov-tw">—</b></div>
-    <div class="row"><span id="ovr-add-lbl">به بانک اضافه شد</span><span><small class="sm-us">ما </small><b id="ov-add-us">0</b> · <small class="sm-them">حریف </small><b id="ov-add-them">0</b></span></div>
+    <div class="row big"><span id="ovr-final-lbl">وروستی تاوان</span><b id="ov-tw">—</b></div>
+    <div class="row"><span id="ovr-add-lbl">بانک ته ورزیات شو</span><span><small class="sm-us">موږ </small><b id="ov-add-us">0</b> · <small class="sm-them">سیال </small><b id="ov-add-them">0</b></span></div>
     <div id="ov-bump" style="font-size:13.5px; opacity:.9; padding:2px 2px 0"></div>
-    <div class="row"><span id="ovr-bank-lbl">تاوان جمع‌شده (بانک)</span><span><small class="sm-us">ما </small><b id="ov-bk-us">0</b> · <small class="sm-them">حریف </small><b id="ov-bk-them">0</b></span></div>
-    <div class="row"><span id="ovr-qs-lbl">ماتکه کالا (Q♠) را گرفت</span><b id="ov-qs">—</b></div>
+    <div class="row"><span id="ovr-bank-lbl">جمع شوی تاوان (بانک)</span><span><small class="sm-us">موږ </small><b id="ov-bk-us">0</b> · <small class="sm-them">سیال </small><b id="ov-bk-them">0</b></span></div>
+    <div class="row"><span id="ovr-qs-lbl">ماتکه کالا (Q♠) ونیوله</span><b id="ov-qs">—</b></div>
     <div id="ov-tie" style="display:none; font-size:13.5px; opacity:.9; padding:4px 2px 0"></div>
-    <div id="ovr-next" style="margin-top:10px; font-size:13.5px; opacity:.85">دست بعدی به‌زودی شروع می‌شود…</div>
+    <div id="ovr-next" style="margin-top:10px; font-size:13.5px; opacity:.85">بل لاس ژر پیلېږي…</div>
   </div>
 </div>
 
 <!-- ======== MATCH END ======== -->
 <div class="overlay" id="ov-match">
   <div class="panel">
-    <h2 id="ov-match-title">🏆 پایان مسابقه</h2>
-    <div class="row big"><span id="ovm-final-lbl">تاوان جمع‌شدهٔ نهایی</span><b><small class="sm-us">ما </small><span id="ov-f-us">0</span> — <small class="sm-them">حریف </small><span id="ov-f-them">0</span></b></div>
+    <h2 id="ov-match-title">🏆 د لوبې پای</h2>
+    <div class="row big"><span id="ovm-final-lbl">وروستی جمع شوی تاوان</span><b><small class="sm-us">موږ </small><span id="ov-f-us">0</span> — <small class="sm-them">سیال </small><span id="ov-f-them">0</span></b></div>
     <div id="ov-f-why" style="font-size:14px; font-weight:700; padding:4px 2px 0"></div>
-    <button id="btn-newgame">بازی جدید</button>
+    <button id="btn-newgame">نوې لوبه</button>
   </div>
 </div>
 
 <!-- ======== PROFILE POPUP ======== -->
 <div class="overlay" id="ov-profile">
   <div class="panel pf-panel">
-    <h2 id="pf-title">پروفایل من</h2>
+    <h2 id="pf-title">زما پروفایل</h2>
     <div class="pf-preview" id="pf-preview"></div>
-    <span class="pf-label" id="pf-avatar-lbl">آواتار</span>
+    <span class="pf-label" id="pf-avatar-lbl">انځور</span>
     <div class="pf-grid" id="pf-grid"></div>
-    <label class="pf-label" id="pf-name-lbl" for="pf-name">نام</label>
-    <input id="pf-name" type="text" maxlength="20" placeholder="نامت — مثلاً احمد" autocomplete="name">
-    <label class="pf-label" id="pf-country-lbl" for="pf-country">کشور</label>
+    <label class="pf-label" id="pf-name-lbl" for="pf-name">نوم</label>
+    <input id="pf-name" type="text" maxlength="20" placeholder="نوم دې — لکه احمد" autocomplete="name">
+    <label class="pf-label" id="pf-country-lbl" for="pf-country">هېواد</label>
     <select id="pf-country"></select>
     <div class="pf-btns">
-      <button id="btn-profile-save">ذخیره</button>
-      <button id="btn-profile-close" class="ghost">بستن</button>
+      <button id="btn-profile-save">ساتل</button>
+      <button id="btn-profile-close" class="ghost">بندول</button>
     </div>
   </div>
 </div>
@@ -802,23 +858,23 @@
 <!-- ======== SETTINGS POPUP ======== -->
 <div class="overlay" id="ov-settings">
   <div class="panel pf-panel">
-    <h2 id="st-title">تنظیمات</h2>
-    <span class="pf-label" id="st-lang-lbl">زبان</span>
+    <h2 id="st-title">امادګي</h2>
+    <span class="pf-label" id="st-lang-lbl">ژبه</span>
     <div class="st-langs" id="st-langs">
       <button type="button" class="st-lang" data-lang="ps">پښتو</button>
       <button type="button" class="st-lang" data-lang="fa">دری</button>
       <button type="button" class="st-lang" data-lang="en">English</button>
     </div>
-    <button id="btn-logout" class="st-logout" aria-label="خروج از حساب">
+    <button id="btn-logout" class="st-logout" aria-label="له حسابه وتل">
       <svg viewBox="0 0 24 24">
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
         <path d="M16 17l5-5-5-5"/>
         <path d="M21 12H9"/>
       </svg>
-      <span id="st-logout-lbl">خروج از حساب</span>
+      <span id="st-logout-lbl">له حسابه وتل</span>
     </button>
     <div class="pf-btns">
-      <button id="btn-settings-close" class="ghost">بستن</button>
+      <button id="btn-settings-close" class="ghost">بندول</button>
     </div>
   </div>
 </div>
@@ -826,12 +882,14 @@
 <!-- ======== CHAT PANEL (slides up over the table) ======== -->
 <div id="chatpanel">
   <div class="chat-head">
-    <span class="chat-title">گفت‌وگو</span>
-    <button id="btn-chat-close" aria-label="بستن">✕</button>
+    <span class="chat-title">ګپ شپ</span>
+    <button id="btn-chat-close" aria-label="بندول">✕</button>
   </div>
-  <div class="chat-quick" id="chat-quick"></div>
-  <div class="stk-label">استیکرها</div>
-  <div class="chat-stickers" id="chat-stickers"></div>
+  <div class="chat-scroll">
+    <div class="chat-quick" id="chat-quick"></div>
+    <div class="stk-label">سټیکرونه</div>
+    <div class="chat-stickers" id="chat-stickers"></div>
+  </div>
   <div class="chat-emojis" id="chat-emojis"></div>
 </div>
 
@@ -2592,6 +2650,9 @@ async function initSessionUser() {
 // wait for this script or for __ASSETS__. Only the dynamic bits wire here.
 (function dressHome() {
   applyI18n();
+  // Language is on the page: the splash veil may lift now (it also
+  // waits for the carpet/hero decode; its own caps still apply).
+  if (window.__liftSplash) window.__liftSplash();
   renderProfileButton();
   updateContinue();
   initSessionUser();
