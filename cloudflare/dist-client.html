@@ -2095,12 +2095,19 @@ function syncVoicePairs() {
     if (!sig) { closePeer(s); delete voiceHeal[s]; continue; }
     const e = peers[s];
     if (e) {
-      if (e.sig === sig && !(e.usedFallback && iceFetchedAt)) {
+      // A pair is OUTDATED when the credentials landed (or were
+      // refreshed) after it was born: its iceServers are frozen
+      // at construction time, so only a re-form moves it onto
+      // the current relay config.
+      const outdated = iceFetchedAt > 0 && e.iceAt !== iceFetchedAt;
+      if (e.sig === sig && !outdated) {
         // Born on the fallback config and the real credentials
         // still have not landed: keep retrying the fetch in the
         // background — when one succeeds this pair re-forms on
-        // the real relay with no user action at all.
-        if (e.usedFallback) maybeRetryIceFetch();
+        // the real relay with no user action at all. (The pair's
+        // own upgrade clock in ensurePeer retries on a timer
+        // too, for the quiet moments when no sync runs at all.)
+        if (!iceFetchedAt) maybeRetryIceFetch();
         continue;
       }
       closePeer(s); // re-formed below, on the current config
@@ -2120,6 +2127,7 @@ function ensurePeer(seat) {
     stream: null,        // latest remote stream from ontrack (parked while speaker is off)
     sig,                 // direction signature this pair was built for
     usedFallback: !iceFetchedAt, // born before the relay credentials landed — re-formed when they do
+    iceAt: iceFetchedAt, // credentials generation this pair was born on (0 = fallback list)
     iceQueue: [],        // remote candidates that beat their SDP — flushed once it lands
     makingOffer: false,
     ignoreOffer: false,
@@ -2136,6 +2144,10 @@ function ensurePeer(seat) {
     needsTrack: false,   // built for sending before the mic stream existed
     wantNegotiate: false, // a negotiationneeded is still owed
     stallTimer: null,
+    probeTimer: null,    // no-remote-description watchdog (both seats)
+    upgradeTimer: null,  // fallback-born pairs: clock-driven credentials retry
+    upgradeLeft: 0,
+    healDeferred: false, // the polite stand-down may be used at most once per pair
     discTimer: null,
     healTimer: null,
   };
@@ -2195,8 +2207,8 @@ function ensurePeer(seat) {
   // toast and leaving the pair dead. (A pair that was merely slow
   // loses little: the re-formed pair renegotiates in well under a
   // second on a live path, with fresh candidates.) The impolite
-  // (lower) seat checks first; the polite seat waits longer so
-  // the two ends do not duel (see scheduleHeal).
+  // (lower) seat checks first; the polite seat waits a little
+  // longer so the two ends do not duel (see scheduleHeal).
   entry.stallTimer = setTimeout(() => {
     entry.stallTimer = null;
     if (peers[seat] !== entry || !pairWanted(seat) || entry.linked) return;
@@ -2205,7 +2217,45 @@ function ensurePeer(seat) {
         ice === 'new' || ice === 'checking' || ice === 'disconnected') {
       scheduleHeal(seat, entry);
     }
-  }, entry.initiator ? 6000 : 11000);
+  }, entry.initiator ? 6000 : 8000);
+  // No-progress probe (BOTH seats, seat order does not matter):
+  // a pair that still has no remote description ~2.5 s after
+  // formation is not negotiating at all — the offer never landed
+  // or the other end never formed — so re-form it right away
+  // (urgent heal) instead of waiting for the stall window.
+  // Without this, a HIGHER-seat (polite) talker's first mic
+  // activation recovered only through the long polite stall +
+  // heal delays, and looked dead until the other player tapped
+  // their own mic — their tap changed the pair signature and
+  // forced exactly the re-form this probe performs by itself.
+  entry.probeTimer = setTimeout(() => {
+    entry.probeTimer = null;
+    if (peers[seat] !== entry || !pairWanted(seat) || entry.linked) return;
+    if (!pc.remoteDescription) scheduleHeal(seat, entry, true);
+  }, 2500);
+  // Fallback-upgrade clock: while this pair lives on the
+  // fallback ICE list (its credentials fetch failed or lost the
+  // ~4 s abort race), retry the fetch every ~10 s — on a TIMER,
+  // not only when syncVoicePairs happens to run. In a quiet
+  // lobby nothing calls syncVoicePairs, and before this clock
+  // existed the pair sat on the dead list for as long as the
+  // polite heal path took (~20 s measured), with zero retries
+  // in between. The retry calls refreshIceServers directly,
+  // bypassing maybeRetryIceFetch's attempt throttle (an
+  // in-flight fetch is still deduplicated inside). When a
+  // retry lands the real relay config, refreshIceServers
+  // re-syncs and this pair re-forms on it — no user action and
+  // no remote state change required.
+  if (entry.usedFallback) {
+    entry.upgradeLeft = 6;
+    const upgradeTick = () => {
+      entry.upgradeTimer = null;
+      if (peers[seat] !== entry || iceFetchedAt || !pairWanted(seat)) return;
+      refreshIceServers();
+      if (--entry.upgradeLeft > 0) entry.upgradeTimer = setTimeout(upgradeTick, 10000);
+    };
+    entry.upgradeTimer = setTimeout(upgradeTick, 10000);
+  }
   return entry;
 }
 // Attach the remote stream to a playback element — only while my
@@ -2283,7 +2333,7 @@ function noteVoiceFailed(seat) {
   toast(T('voiceFailed'));
 }
 function clearPeerTimers(entry) {
-  ['stallTimer', 'discTimer', 'healTimer'].forEach((k) => {
+  ['stallTimer', 'discTimer', 'healTimer', 'probeTimer', 'upgradeTimer'].forEach((k) => {
     if (entry[k]) { clearTimeout(entry[k]); entry[k] = null; }
   });
 }
@@ -2293,10 +2343,26 @@ function clearPeerTimers(entry) {
 // budget is spent does the «غږ وصل نشو» toast appear (once per
 // seat — noteVoiceFailed de-dupes, and a pair that later heals
 // successfully never shows it at all). The polite (higher) seat
-// adds a grace delay and stands down when a fresh signal from the
-// other end is already in flight, so the two ends do not duel:
-// the lower seat is the proactive healer.
-function scheduleHeal(seat, entry) {
+// adds a short grace delay so the two ends do not duel, and may
+// stand down ONCE when a fresh signal from the other end is
+// already in flight AND that signal can actually save the pair
+// (a remote description is in place and this pair is not stuck
+// on the fallback config). It used to stand down on ANY fresh
+// signal with no limit: the lower seat's repeated heal offers
+// kept refreshing signalAt while being applied to this side's
+// fallback-born peer — whose frozen ICE config no offer can
+// fix — so the polite side's own re-form (the only one that
+// could help) starved indefinitely, and the pair only came
+// alive when a signature change (the other player tapping
+// their mic) forced a re-form on both ends at once.
+// `urgent` (the no-progress probe) skips the grace delay and
+// the stand-down entirely: no negotiation progress at all
+// means there is nothing in flight worth deferring to.
+// The re-form itself goes through ensurePeerGated, which
+// awaits a fresh credentials fetch whenever this pair was
+// fallback-born — healing never re-forms on a stale config
+// when a fetch could upgrade it.
+function scheduleHeal(seat, entry, urgent) {
   if (!pairWanted(seat) || entry.linked || entry.healTimer) return;
   const h = voiceHeal[seat] || (voiceHeal[seat] = { attempts: 0, exhausted: false });
   if (h.exhausted) return;
@@ -2306,17 +2372,21 @@ function scheduleHeal(seat, entry) {
     return;
   }
   const backoff = HEAL_BACKOFF_MS[Math.min(h.attempts, HEAL_BACKOFF_MS.length - 1)];
-  const delay = backoff + (entry.polite ? 5000 : 0);
+  const delay = backoff + (entry.polite && !urgent ? 2000 : 0);
   entry.healTimer = setTimeout(() => {
     entry.healTimer = null;
     if (peers[seat] !== entry || !pairWanted(seat) || entry.linked) return;
-    if (entry.polite && Date.now() - entry.signalAt < 4000) {
-      // A fresh offer from the other end is already in flight —
-      // stand down and let the stall detector re-check shortly
-      // instead of duelling re-formations.
+    if (!urgent && entry.polite && !entry.healDeferred && !entry.usedFallback &&
+        entry.pc.remoteDescription && Date.now() - entry.signalAt < 4000) {
+      // A fresh offer from the other end is already in flight
+      // and this pair is in a state it can rescue — stand down
+      // ONCE and re-check shortly instead of duelling
+      // re-formations. (healDeferred makes the stand-down a
+      // one-time courtesy per pair, never a starvation loop.)
+      entry.healDeferred = true;
       entry.healTimer = setTimeout(() => {
         entry.healTimer = null;
-        if (peers[seat] === entry && pairWanted(seat) && !entry.linked) scheduleHeal(seat, entry);
+        if (peers[seat] === entry && pairWanted(seat) && !entry.linked) scheduleHeal(seat, entry, urgent);
       }, 3000);
       return;
     }
