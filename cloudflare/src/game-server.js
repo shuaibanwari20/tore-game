@@ -675,21 +675,41 @@ export class GameServer {
         // guest's seat is freed at once; the HOST leaving cancels the
         // room for everyone — the remaining players get a coded
         // roomClosed notice and their clients return to the main menu.
+        // Leaving MID-MATCH (playing / roundEnd / matchEnd): the seat
+        // is handed to a bot at once — the same conversion the
+        // disconnect grace expiry performs (kind bot, profile cleared,
+        // voice off, bot name) — and the match plays on for the others.
         const room = this.rooms.get(att.code);
-        if (!room || room.phase !== 'lobby') return;
+        if (!room) return;
         const seat = room.seats[att.seat];
         if (!seat || seat.kind !== 'human') return;
-        if (att.seat === this._hostSeat(room)) {
-          room.seats.forEach((s, i) => {
-            if (i !== att.seat && s.kind === 'human' && s.connected && s.ws) {
-              send(s.ws, { type: 'roomClosed', code: 'roomCancelled' });
-            }
-          });
-          this._cancelTimers(room.code);
-          this.rooms.delete(room.code);
+        if (room.phase === 'lobby') {
+          if (att.seat === this._hostSeat(room)) {
+            room.seats.forEach((s, i) => {
+              if (i !== att.seat && s.kind === 'human' && s.connected && s.ws) {
+                send(s.ws, { type: 'roomClosed', code: 'roomCancelled' });
+              }
+            });
+            this._cancelTimers(room.code);
+            this.rooms.delete(room.code);
+          } else {
+            room.seats[att.seat] = emptySeat();
+            this._broadcastState(room);
+          }
         } else {
-          room.seats[att.seat] = emptySeat();
+          const botNo = room.seats.filter((s) => s.kind === 'bot').length;
+          seat.kind = 'bot'; // bot takes over the seat and its hand
+          seat.name = 'ربات ' + (botNo + 1);
+          seat.avatar = null;
+          seat.country = '';
+          seat.photo = null;
+          seat.voiceMic = false;
+          seat.voiceSpeaker = false;
+          seat.ws = null;
+          seat.connected = true;
+          seat.disconnectAt = null;
           this._broadcastState(room);
+          this._pumpTurn(room);
         }
         att.code = null;
         att.seat = -1;
