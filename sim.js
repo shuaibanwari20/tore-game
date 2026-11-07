@@ -1013,21 +1013,34 @@ async function serverChatRtcChecks() {
     check(b.countFrom(bMark3, (m) => m.type === 'chat') === 0,
       'server: chat from a seat not in a room ignored');
 
-    // 6) voice flags: broadcast to the room and carried in state.
-    a.send({ type: 'voice', on: true });
+    // 6) voice flags: mic/speaker are independent; they broadcast to
+    // the room together and ride in state as {mic, speaker} objects.
+    a.send({ type: 'voice', mic: true, speaker: true });
     const voiceB = await b.waitFor((m) => m.type === 'voice', 'voice at B');
-    check(voiceB.seat === roomA.seat && voiceB.on === true,
-      'server: voice-on broadcast reaches room members');
-    b.send({ type: 'voice', on: true });
+    check(voiceB.seat === roomA.seat && voiceB.mic === true && voiceB.speaker === true,
+      'server: voice broadcast carries mic+speaker to room members');
+    b.send({ type: 'voice', mic: true, speaker: true });
     await c.waitFor((m) => m.type === 'voice' && m.seat === roomB.seat, 'voice B at C');
     a.send({ type: 'start' }); // any state push now carries the flags
     const stVoice = await c.waitFor((m) => m.type === 'state' && m.phase === 'playing', 'playing state at C');
-    check(stVoice.seats[roomA.seat].voice === true && stVoice.seats[roomB.seat].voice === true &&
-      stVoice.seats[3].voice === false,
-      'server: voice flags ride in state (bot seat silent)');
-    a.send({ type: 'voice', on: false });
-    const voiceOff = await b.waitFor((m) => m.type === 'voice' && m.on === false, 'voice-off at B');
-    check(voiceOff.seat === roomA.seat, 'server: voice-off broadcast reaches room members');
+    check(stVoice.seats[roomA.seat].voice.mic === true && stVoice.seats[roomA.seat].voice.speaker === true &&
+      stVoice.seats[roomB.seat].voice.mic === true &&
+      stVoice.seats[3].voice.mic === false && stVoice.seats[3].voice.speaker === false,
+      'server: voice {mic,speaker} flags ride in state (bot seat fully off)');
+    // speaker can drop while the mic stays live (flags are independent)
+    a.send({ type: 'voice', mic: true, speaker: false });
+    const spkOff = await b.waitFor((m) => m.type === 'voice' && m.seat === roomA.seat && m.speaker === false, 'speaker-off at B');
+    check(spkOff.mic === true, 'server: speaker-off broadcast leaves mic flag untouched');
+    a.send({ type: 'voice', mic: false, speaker: true });
+    const voiceOff = await b.waitFor((m) => m.type === 'voice' && m.mic === false, 'mic-off at B');
+    check(voiceOff.seat === roomA.seat && voiceOff.speaker === true,
+      'server: mic-off broadcast reaches room members, speaker flag carried');
+    // a legacy announce ({on}) still maps onto the mic flag alone
+    c.send({ type: 'voice', on: true });
+    const legacy = await a.waitFor((m) => m.type === 'voice' && m.seat === roomC.seat, 'legacy voice at A');
+    check(legacy.mic === true && legacy.speaker === true,
+      'server: legacy {on:true} maps to mic, speaker default preserved');
+    c.send({ type: 'voice', mic: false, speaker: true });
 
     // 7) RTC signaling: reaches ONLY the addressed seat in the room.
     const cMark4 = c.msgs.length;
