@@ -284,8 +284,9 @@
   /* ---------- in-room chat panel ----------
      Slides up from the bottom over the table, in the game's dark/gold
      language. PRESET-ONLY: the quick phrases (24, in a swipe pager),
-     the GIF stickers (16, in their own swipe pager) and the 10-emoji
-     row — no free text, no message history, no input.
+     the GIF stickers (16, in their own swipe pager) and the emojis
+     (20, in a third swipe pager pinned at the panel's bottom) — no
+     free text, no message history, no input.
      A tap sends at once; the message shows as a bubble over the
      sender's badge and is gone. The panel hugs its content. */
   #chatpanel {
@@ -305,25 +306,36 @@
      overflow simply spilled past the screen's bottom edge (emoji row
      unreachable). Head and the emoji row stay pinned, always visible. */
   .chat-scroll {
-    flex: 1 1 auto; min-height: 0; overflow-y: auto;
+    flex: 1 1 auto; min-height: 0; overflow-y: auto; touch-action: pan-y;
     overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   }
   .chat-head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 4px; }
-  .chat-emojis { flex: 0 0 auto; }
+  /* The emoji zone is pinned under .chat-scroll: an emoji swipe pager
+     plus its dot row, with the safe-area inset at the very bottom.
+     The extra dot row's height comes out of the flexing .chat-scroll,
+     never out of the panel's capped height. */
+  .chat-emoji-zone { flex: 0 0 auto; padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
   .chat-title { font-size: 16px; font-weight: 800; color: #ffd75e; }
   #btn-chat-close {
     width: 32px; height: 32px; margin: 0; padding: 0; border-radius: 50%;
     border: 1px solid #d9b380; background: rgba(255,255,255,.06); color: #ffe9c9;
     font-size: 14px; font-family: inherit; cursor: pointer; line-height: 1;
   }
-  /* Phrases and stickers are INDEPENDENT horizontal swipe pagers
-     (owner order 2026-11-07): each pager scrolls sideways with
-     scroll-snap, one full grid page per stop, with dot indicators
-     under it. Swiping one never moves the other. The pagers live
-     inside .chat-scroll, whose vertical scroll still works: a
+  /* Phrases, stickers and emojis are INDEPENDENT horizontal swipe
+     pagers (owner order 2026-11-07): each pager scrolls sideways with
+     scroll-snap, one full page per stop, with dot indicators under
+     it. Swiping one never moves the others. The phrase/sticker pagers
+     live inside .chat-scroll, whose vertical scroll still works: a
      horizontal drag snaps the pager, a vertical drag scrolls the
      panel (touch-action: pan-x pan-y lets the browser split the two
-     axes by gesture direction). */
+     axes by gesture direction). The emoji pager sits in the pinned
+     zone below .chat-scroll instead. NOTE: the pagers only move at
+     all because the document touchmove handler exempts touches that
+     start inside #chatpanel — see that handler; iOS Safari ignores
+     touch-action, so the exemption is what carries the swipe there.
+     A vertical drag that starts ON one of the nested pagers is
+     forwarded to .chat-scroll by the chatPagerAxisSplit shim in JS
+     (some engines latch the gesture to the pager and never chain). */
   .pager { overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; }
   .pager::-webkit-scrollbar { display: none; }
   .pager-track { display: flex; }
@@ -348,7 +360,7 @@
   }
   .qsticker img { width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; display: block; border-radius: 9px; pointer-events: none; }
   .qsticker:active { transform: scale(.94); background: rgba(255,215,94,.25); }
-  .chat-emojis { display: flex; justify-content: space-between; padding: 7px 12px calc(10px + env(safe-area-inset-bottom)); }
+  .chat-emojis { display: flex; justify-content: space-between; padding: 7px 12px 2px; }
   .qemoji { margin: 0; padding: 2px; background: none; border: 0; font-size: 24px; line-height: 1.2; cursor: pointer; font-family: inherit; }
   .qemoji:active { transform: scale(1.25); }
   .hand { display: flex; direction: ltr; justify-content: center; align-items: flex-start; padding: 30px 6px 12px; overflow: visible; --cw: 74px; --step: 26px; margin-top: -6px; margin-inline-start: -10px; margin-inline-end: -10px; }
@@ -975,7 +987,10 @@
     <div class="pager" id="sticker-pager"><div class="pager-track" id="chat-stickers"></div></div>
     <div class="pager-dots" id="sticker-dots"></div>
   </div>
-  <div class="chat-emojis" id="chat-emojis"></div>
+  <div class="chat-emoji-zone">
+    <div class="pager" id="emoji-pager"><div class="pager-track" id="chat-emojis"></div></div>
+    <div class="pager-dots" id="emoji-dots"></div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -1854,8 +1869,9 @@ $('#btn-exit-confirm').onclick = () => {
 };
 // ---------- in-room chat (preset-only) ----------
 // There is NO free text in Tore chat: the panel offers the preset
-// phrases (24 — two swipe pages of 12), the 10 emojis and the GIF
-// stickers (16 — two swipe pages of 8), and a tap sends
+// phrases (24 — two swipe pages of 12), the emojis (20 — two swipe
+// pages of 10) and the GIF stickers (16 — two swipe pages of 8), and
+// a tap sends
 // {type:'chat', kind, value}. The server validates kind+value against
 // the same allowlists (anything else, including old-style {text}
 // frames, is dropped) and relays it to the WHOLE room including the
@@ -1864,7 +1880,8 @@ $('#btn-exit-confirm').onclick = () => {
 // Nothing is kept: no history, no list, no input.
 const CHAT_PHRASES = ['سلام', 'ښه حرکت', 'ښه لوبه', 'هاهاها', 'مننه', 'بخښنه!', 'ژر شه!', 'افرین!', 'اوس نه!', 'وای خدای', 'ښه بخت', 'بیا!',
   'ښه کار!', 'واه واه!', 'ستا وار دی', 'صبر وکړه', 'زه چمتو یم', 'یو ځل بیا!', 'نه منم!', 'مه وېرېږه', 'قوي اوسه!', 'ډېر ښه!', 'خدای دې مل شه', 'وروسته ګورو'];
-const CHAT_EMOJIS = ['😎', '😂', '😍', '😭', '😡', '👊', '😮', '👍', '❤️', '🔥'];
+const CHAT_EMOJIS = ['😎', '😂', '😍', '😭', '😡', '👊', '😮', '👍', '❤️', '🔥',
+  '🤣', '😜', '🥳', '🙏', '👏', '💪', '🎉', '🤔', '😴', '🥺'];
 const CHAT_STICKERS = ['st1', 'st2', 'st3', 'st4', 'st5', 'st6', 'st7', 'st8', 'st9', 'st10', 'st11', 'st12', 'st13', 'st14', 'st15', 'st16'];
 let chatOpen = false;
 const chatBubbles = {}; // table position -> { kind, value, until }
@@ -1942,15 +1959,51 @@ function fillPager(pagerSel, trackSel, dotsSel, items, perPage, pageClass, makeB
     b.onclick = () => { sendChat('sticker', id); closeChatPanel(); };
     return b;
   });
-  const row = $('#chat-emojis');
-  CHAT_EMOJIS.forEach((em) => {
+  fillPager('#emoji-pager', '#chat-emojis', '#emoji-dots', CHAT_EMOJIS, 10, 'chat-emojis', (em) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'qemoji';
     b.textContent = em;
     b.onclick = () => { sendChat('emoji', em); closeChatPanel(); };
-    row.appendChild(b);
+    return b;
   });
+})();
+
+// Axis-split help for the two pagers nested inside .chat-scroll:
+// some engines latch a whole touch gesture to the first scroll
+// container under the finger, so a VERTICAL drag that starts on a
+// phrase/sticker is swallowed by the horizontal pager and the panel
+// never scrolls (seen in Chromium; iOS chains per-axis natively).
+// Forward the finger's vertical travel to .chat-scroll by hand —
+// but only the part the browser did not already apply itself: the
+// target is always "start scrollTop − total finger travel", and we
+// only write when the real position lags behind it, so on engines
+// that chain natively this stays a no-op. Horizontal travel is
+// never touched (the pager's own native swipe owns it), and taps
+// are unaffected (nothing is ever preventDefaulted here).
+(function chatPagerAxisSplit() {
+  const scroller = document.querySelector('.chat-scroll');
+  if (!scroller) return;
+  let g = null;
+  document.addEventListener('touchstart', (e) => {
+    const t = e.target && e.target.closest && e.target.closest('.pager');
+    if (!t || !scroller.contains(t) || e.touches.length !== 1) { g = null; return; }
+    g = { x: e.touches[0].clientX, y: e.touches[0].clientY, top: scroller.scrollTop, mode: 0 };
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (!g || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - g.x, dy = e.touches[0].clientY - g.y;
+    if (!g.mode) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 8) return;
+      g.mode = Math.abs(dy) >= Math.abs(dx) ? 'v' : 'h';
+    }
+    if (g.mode !== 'v') return;
+    const target = g.top - dy;
+    if (Math.abs(scroller.scrollTop - target) > 2) scroller.scrollTop = target;
+  }, { passive: true });
+  const end = () => { g = null; };
+  document.addEventListener('touchend', end, { passive: true });
+  document.addEventListener('touchcancel', end, { passive: true });
 })();
 
 // A relayed chat message renders ONLY as a floating speech bubble over
@@ -2048,16 +2101,34 @@ const voiceHeal = {}; // seat -> { attempts, exhausted }
 // and drops signals from OLDER generations — see the gate in
 // processRtcSignal for why a stale signal is poisonous.
 const peerGen = {}; // seat -> generation of my current peer for that seat
-// Stats-driven single rebuild (voice4): a pair whose link is UP
-// (datachannel open / ICE connected) but whose audio byte counters
-// do not move is rebuilt ONCE on a relay-only transport policy.
-// relayForcedSeats marks the seat's profile across the rebuild;
-// statsRebuiltOnce makes the rebuild strictly once per pair-life.
-// Both clear when the pair stops being wanted (a new pair-life).
+// Audio health (voice5): a CONTINUOUS watchdog per pair — see
+// audioWatchStep below. It replaces the voice4 one-shot stats
+// check, which armed once at link-up (+12 s), judged the pair
+// against the signature of that moment and latched done forever:
+// a pair that linked before the talker's mic came on was never
+// judged again, a pair un-nominated at sample time was never
+// judged at all, and a pair whose bytes flowed into a wedged
+// <audio> element passed every check while playing nothing.
+// relayForcedSeats marks the seat's profile across a rebuild;
+// statsRebuiltOnce records that the watchdog's final escalation
+// (the relay rebuild) has fired for the seat. Both clear when
+// the pair stops being wanted (a new pair-life).
 const relayForcedSeats = {}; // seat -> true: build pairs relay-only
-const statsRebuiltOnce = {}; // seat -> true: the stats rebuild already fired
-let STATS_CHECK_DELAY_MS = 12000; // link-up → baseline stats sample
-let STATS_SAMPLE_GAP_MS = 5000;   // baseline → comparison sample
+const statsRebuiltOnce = {}; // seat -> true: the relay rebuild already fired
+// Per-seat audio-heal episode state, kept across the pair
+// re-formations an episode causes (the escalation must continue
+// where it left off, on the fresh pair): rx step 0 = nothing
+// tried, 1 = element re-attach tried, 2 = pair re-formed,
+// 3 = relay re-formed (episode exhausted until bytes flow);
+// txReformed = the send path already spent its one re-formation;
+// last = short label of the latest heal, for diagnostics.
+// Cleared when the pair stops being wanted, reset by flowing
+// bytes, and cleared by any manual voice action
+// (resetVoiceFeedback) — the user's ritual restarts automation.
+const audioHealSeats = {}; // seat -> { step, txReformed, last }
+let AUDIO_WATCH_MS = 2000;  // audio watchdog tick per pair
+let AUDIO_FROZEN_MS = 4000; // bytes frozen this long → next heal step
+let EL_STALL_MS = 3000;     // element currentTime frozen this long → stalled
 // Voice event log for the diagnostics overlay: the last voice
 // events with seconds-since-join timestamps, so a failure on a
 // real phone arrives as a readable screenshot instead of a guess.
@@ -2246,6 +2317,7 @@ function resetVoiceFeedback() {
   // budget: pairs whose automatic retries were exhausted get a
   // fresh set when the user intervenes.
   Object.keys(voiceHeal).forEach((s) => { delete voiceHeal[s]; });
+  Object.keys(audioHealSeats).forEach((s) => { delete audioHealSeats[s]; });
 }
 
 // Mic button: a tap toggles the mic; a LONG press (~600 ms) opens
@@ -2551,6 +2623,7 @@ function syncVoicePairs() {
     if (!sig) {
       closePeer(s, 'unwanted');
       delete voiceHeal[s];
+      delete audioHealSeats[s];
       delete relayForcedSeats[s]; // a future pair is a new pair-life:
       delete statsRebuiltOnce[s]; // fresh profile, fresh stats budget
       continue;
@@ -2617,10 +2690,22 @@ function ensurePeer(seat) {
     dcIn: null,          // the REMOTE side's 'ping' channel (its heartbeats arrive here)
     dcOpen: false,
     lastPingAt: 0,       // last heartbeat received on the datachannel
-    linkUpAt: 0,         // when the link first came up (dc open / ICE connected) — stats clock epoch
-    statsTimer: null,    // stats-check schedule (baseline / comparison)
-    statsBase: null,     // baseline stats sample for the byte comparison
-    statsDone: false,    // the stats check ran its course for this pair
+    linkUpAt: 0,         // when the link first came up (dc open / ICE connected)
+    audioTimer: null,    // audio watchdog schedule (voice5, see audioWatchTick)
+    watchBusy: false,    // a watchdog tick's async step is in flight
+    recvTrack: null,     // the remote audio track from ontrack (mute state source)
+    recvMuted: false,    // the remote track is currently muted (diagnostics)
+    rxExpect: false,     // receive silence is being tracked (expectation armed)
+    rxLast: null,        // last inbound audio byte count seen
+    rxFrozenAt: 0,       // when inbound bytes last moved (or tracking armed)
+    txExpect: false,     // send silence is being tracked
+    txLast: null,        // last outbound audio byte count seen
+    txFrozenAt: 0,       // when outbound bytes last moved (or tracking armed)
+    txReattachTried: false, // the send path already tried re-attaching the sender
+    elLastBytes: null,   // inbound bytes at the previous tick (element-stall gate)
+    elLastTime: -1,      // last <audio> currentTime seen (element health)
+    elFrozenAt: 0,       // when the element's currentTime last advanced
+    elHealAt: 0,         // last element re-attach + play (stall throttle / diagnostics)
     pingTimer: null,     // datachannel heartbeat schedule (initiator side)
     lastIce: '',         // last ICE state seen (diagnostics event log)
     sig,                 // direction signature this pair was built for (bookkeeping)
@@ -2722,6 +2807,29 @@ function ensurePeer(seat) {
   };
   pc.ontrack = (e) => {
     entry.stream = (e.streams && e.streams[0]) || entry.stream || new MediaStream([e.track]);
+    if (e.track) {
+      entry.recvTrack = e.track;
+      entry.recvMuted = !!e.track.muted;
+      // A remote track starts MUTED and unmutes when its first
+      // packets land; an element created and played against the
+      // still-muted track can stay wedged on Android Chrome even
+      // after the audio itself flows. The unmute is the moment
+      // to re-attach the stream and play again — no user ritual
+      // (the speaker off→on that used to "fix" it) required.
+      try {
+        e.track.onmute = () => {
+          if (peers[seat] !== entry) return;
+          entry.recvMuted = true;
+          voiceEvent('remote track muted', seat);
+        };
+        e.track.onunmute = () => {
+          if (peers[seat] !== entry) return;
+          entry.recvMuted = false;
+          voiceEvent('remote track unmuted', seat);
+          replayPeerAudio(entry, 'track unmute');
+        };
+      } catch (err) {}
+    }
     entry.lastProgressAt = Date.now();
     attachPeerAudio(entry);
     maybeLinkToast(entry); // the toast fires when the link is up AND the track is in
@@ -2794,6 +2902,12 @@ function ensurePeer(seat) {
     entry.watchTimer = setTimeout(watchTick, 2500);
   };
   entry.watchTimer = setTimeout(watchTick, 2500);
+  // Audio watchdog (voice5): a per-pair timer that runs for the
+  // pair's whole life — unlike the negotiation watchdog above it
+  // guards the CONNECTED phase: bytes that should flow but do
+  // not, and an element that should play but does not (see
+  // audioWatchStep). It reschedules itself and dies with the pair.
+  entry.audioTimer = setTimeout(() => { audioWatchTick(seat, entry); }, AUDIO_WATCH_MS);
   // Fallback-upgrade clock: while this pair lives on the
   // fallback ICE list (its credentials fetch failed or lost the
   // ~4 s abort race), retry the fetch every ~15 s — on a TIMER,
@@ -2883,15 +2997,14 @@ function startPing(seat, entry) {
   entry.pingTimer = setTimeout(tick, 5000);
 }
 // Link-up bookkeeping shared by the ICE handler and the
-// datachannel: the first link-up starts the stats clock (the
-// byte-movement check below); every link-up resets the healing
-// budget — a pair that is carrying (or is about to carry) audio
-// has proven itself, so its past deaths stop counting.
+// datachannel: the first link-up stamps linkUpAt (the audio
+// watchdog runs from pair birth and needs no arming — it judges
+// only pairs with a selected path); every link-up resets the
+// healing budget — a pair that is carrying (or is about to
+// carry) audio has proven itself, so its past deaths stop
+// counting.
 function noteLinkUp(seat, entry) {
-  if (!entry.linkUpAt) {
-    entry.linkUpAt = Date.now();
-    armStatsCheck(seat, entry);
-  }
+  if (!entry.linkUpAt) entry.linkUpAt = Date.now();
 }
 function markLinked(seat, entry) {
   entry.linked = true;
@@ -2902,82 +3015,231 @@ function markLinked(seat, entry) {
   maybeLinkToast(entry);
   attemptPlay(entry);
 }
-// One getStats sample of a pair, reduced to what the stats check
-// and the diagnostics need: whether a candidate pair is SELECTED
-// (nominated — the arming condition), the selected pair's
-// endpoint types, and the audio byte counters. Byte counters
-// prefer the RTP reports (audio only); the candidate-pair totals
-// are the fallback when a stack reports no RTP split.
+// One getStats sample of a pair, reduced to what the audio
+// watchdog and the diagnostics need: whether a candidate pair
+// has SUCCEEDED (nominated — the watchdog's connected evidence),
+// the selected pair's endpoint types, and the audio byte
+// counters. Byte counters prefer the RTP reports (audio only);
+// the candidate-pair totals are the fallback when a stack
+// reports no RTP split.
 async function readPairStats(pc) {
   const out = { nominated: false, inBytes: 0, outBytes: 0, sel: null };
   try {
     const report = await pc.getStats();
     const byId = {};
-    let transportSel = null, selPair = null, rtpIn = null, rtpOut = null;
+    let transportSel = null, selPair = null, succPair = null, rtpIn = null, rtpOut = null;
     report.forEach((s) => {
       if (!s || !s.type) return;
       if (s.id) byId[s.id] = s;
       if (s.type === 'transport' && s.selectedCandidatePairId) transportSel = s.selectedCandidatePairId;
-      if (s.type === 'candidate-pair' && s.state === 'succeeded' && (s.nominated || !selPair)) selPair = selPair || s;
+      if (s.type === 'candidate-pair' && s.state === 'succeeded' && (s.nominated || !succPair)) succPair = succPair || s;
       if (s.type === 'candidate-pair' && transportSel && s.id === transportSel) selPair = s;
       if (s.type === 'inbound-rtp' && (s.kind === 'audio' || s.mediaType === 'audio')) rtpIn = s;
       if (s.type === 'outbound-rtp' && (s.kind === 'audio' || s.mediaType === 'audio')) rtpOut = s;
     });
-    if (selPair) {
-      out.nominated = true;
-      const lc = byId[selPair.localCandidateId] || {};
-      const rc = byId[selPair.remoteCandidateId] || {};
+    // The DISPLAY pair is the transport-selected one (its
+    // endpoints are what diagnostics shows, still checking or
+    // not). NOMINATED is stricter: the pair must have
+    // SUCCEEDED — a transport selects a pair for consent
+    // checks long before it succeeds, so selection alone is
+    // not evidence of a working path in the sample either.
+    // (The audio watchdog does not gate on this field at all:
+    // it requires DTLS-level link-up — see audioWatchStep.)
+    const dispPair = selPair || succPair;
+    if (dispPair) {
+      out.nominated = dispPair.state === 'succeeded';
+      const lc = byId[dispPair.localCandidateId] || {};
+      const rc = byId[dispPair.remoteCandidateId] || {};
       out.sel = (lc.candidateType || '?') + '/' + (lc.protocol || '?') + ' <-> ' +
         (rc.candidateType || '?') + '/' + (rc.protocol || '?');
-      out.inBytes = selPair.bytesReceived || 0;
-      out.outBytes = selPair.bytesSent || 0;
+      out.inBytes = dispPair.bytesReceived || 0;
+      out.outBytes = dispPair.bytesSent || 0;
     }
     if (rtpIn) out.inBytes = rtpIn.bytesReceived || 0;
     if (rtpOut) out.outBytes = rtpOut.bytesSent || 0;
   } catch (e) { /* stats unavailable — the check simply never arms */ }
   return out;
 }
-// Stats-driven single rebuild. A pair can pass every signaling
-// and ICE check and still carry no audio (a candidate pair that
-// nominally "works" for checks but blackholes the media — the
-// failure class three fix rounds could not see from this side of
-// the sandbox). So: STATS_CHECK_DELAY_MS after link-up, sample
-// the counters; if the sample shows a NOMINATED candidate pair
-// (the arming condition — without one there is nothing to judge,
-// and in the sandbox no pair ever nominates, so the check simply
-// never arms there), take a baseline and sample again after
-// STATS_SAMPLE_GAP_MS. If the pair is expected to RECEIVE (the
-// other side's mic is on) and inbound audio bytes did not
-// increase, or expected to SEND (my mic is on) and outbound
-// bytes did not increase, the pair is rebuilt ONCE on a fresh
-// connection with a relay-only transport policy. After that the
-// existing healing rules own any further failure — the rebuild
-// never loops.
-function armStatsCheck(seat, entry) {
-  if (entry.statsTimer || entry.statsDone || entry.relayForced) return;
-  entry.statsTimer = setTimeout(() => { statsSample(seat, entry, 0); }, STATS_CHECK_DELAY_MS);
+// ---------- audio watchdog (voice5) ----------
+// The failure this exists for (owner's field report on the
+// voice4 build): he opens his mic and talks — the other player
+// hears NOTHING, until the other player toggles their SPEAKER
+// off→on, which changes the pairing signature, re-forms the
+// pair and creates a fresh element — and the voice comes
+// through. The healing in that ritual is: fresh negotiation
+// with the talker's track already live, a fresh remote
+// description, and a fresh <audio> element played inside a
+// user gesture. The watchdog performs the same healing
+// AUTOMATICALLY, the moment it detects the silent state — no
+// toggling, on either side.
+//
+// It samples getStats inbound/outbound AUDIO bytes per pair
+// (the 'ping' datachannel heartbeat is never counted as audio
+// life) against the LIVE expectations from the pairing rule:
+//   receive: theirMic && mySpeaker  → inbound bytes must grow
+//   send:    myMic && theirSpeaker  → outbound bytes must grow
+// Judgments require a FULLY-UP link — DTLS-level evidence: the
+// pair's 'ping' datachannel open, or connectionState
+// 'connected'. ICE-connected alone is NOT enough: a pair can
+// win ICE consent and still blackhole at DTLS (in this sandbox
+// two same-host pages do exactly that — ICE connects over host
+// candidates, DTLS never completes, no RTP ever flows), and
+// judging such a pair re-forms a healthy pair for a failure
+// that belongs to the negotiation/ICE heal paths. Downstream
+// of DTLS is precisely where the field failure lives (the
+// speaker-toggle ritual re-forms an already-DTLS-up pair), so
+// the stricter gate loses nothing it should catch.
+//
+// RECEIVE silence escalates per EPISODE (audioHealSeats[seat],
+// kept across the re-formations an episode causes; the episode
+// resets the moment bytes flow):
+//   (a) re-attach the stream to the element + play() — the
+//       element-level failure (bytes arriving into a wedged
+//       element) ends here, with no renegotiation at all;
+//   (b) still frozen after another window → re-form the pair
+//       (fresh negotiation, the talker's track already live);
+//   (c) still frozen → re-form ONCE on a relay-only profile
+//       (the voice4 stats rebuild, now the last step instead
+//       of the only one).
+// After (c) the episode is exhausted: no further action until
+// bytes flow. Each step waits a full AUDIO_FROZEN_MS window on
+// its own pair, so a whole episode spans ~10 s minimum — the
+// anti-churn property is structural, not a budget: a pair whose
+// bytes are flowing is never touched, ever.
+//
+// SEND silence (the talker's side — e.g. a transceiver adopted
+// trackless whose replaceTrack did not take): first re-derive
+// the sender and re-attach the track (no renegotiation); still
+// frozen after another window → re-form THAT pair once, with
+// the live track included from its first offer.
+//
+// ELEMENT stall is judged separately from byte silence: bytes
+// ARE growing but the element is paused / readyState < 3 /
+// currentTime frozen for EL_STALL_MS → re-attach + play(),
+// repeatable and cheap — it never re-forms anything.
+function audioHealRec(seat) {
+  return audioHealSeats[seat] || (audioHealSeats[seat] = { step: 0, txReformed: false, last: '' });
 }
-async function statsSample(seat, entry, phase) {
-  entry.statsTimer = null;
-  if (peers[seat] !== entry || entry.relayForced || !pairWanted(seat)) return;
+// Re-attach the pair's stream to its playback element and play:
+// the stream is detached and re-set (an element created against
+// a muted or absent track can stay wedged on the same
+// srcObject), then play() is attempted. Creates the element
+// first if none exists. Every caller is a heal or a lifecycle
+// event (track unmute) — never the steady state.
+function replayPeerAudio(entry, why) {
+  if (!entry || !speakerOn || !entry.stream) return;
+  if (!entry.audio) {
+    attachPeerAudio(entry); // creates the element, attaches, plays
+  } else {
+    try { entry.audio.muted = false; } catch (e) {}
+    try { entry.audio.srcObject = null; } catch (e) {}
+    try { entry.audio.srcObject = entry.stream; } catch (e) {}
+    attemptPlay(entry);
+  }
+  entry.elHealAt = Date.now();
+  voiceEvent('audio heal: element re-attach + play (' + why + ')', entry.seat);
+}
+function audioWatchTick(seat, entry) {
+  entry.audioTimer = null;
+  if (peers[seat] !== entry) return;
+  entry.audioTimer = setTimeout(() => { audioWatchTick(seat, entry); }, AUDIO_WATCH_MS);
+  if (entry.watchBusy) return;
+  entry.watchBusy = true;
+  audioWatchStep(seat, entry).then(
+    () => { entry.watchBusy = false; },
+    () => { entry.watchBusy = false; });
+}
+async function audioWatchStep(seat, entry) {
+  if (peers[seat] !== entry || !pairWanted(seat)) return;
+  const sig = pairSig(seat);
+  const expectR = sig.includes('R');
+  const expectS = sig.includes('S');
+  const now = Date.now();
+  // An expectation that vanished resets its tracker: if the
+  // direction becomes wanted again later, it starts from a
+  // fresh baseline — never from an instant "frozen" verdict
+  // carried over from a previous life of the direction.
+  if (!expectR) { entry.rxExpect = false; entry.rxLast = null; entry.rxFrozenAt = 0; }
+  if (!expectS) { entry.txExpect = false; entry.txLast = null; entry.txFrozenAt = 0; }
+  if (!expectR && !expectS && !entry.stream) return;
   const snap = await readPairStats(entry.pc);
   if (peers[seat] !== entry) return;
-  if (!snap.nominated) { entry.statsDone = true; return; } // never armed — nothing to judge
-  if (phase === 0) {
-    entry.statsBase = snap;
-    entry.statsTimer = setTimeout(() => { statsSample(seat, entry, 1); }, STATS_SAMPLE_GAP_MS);
-    return;
+  const inGrew = entry.elLastBytes !== null && snap.inBytes > entry.elLastBytes;
+  entry.elLastBytes = snap.inBytes;
+  // Fully-up link (DTLS-level) — see the header note. The
+  // datachannel is created on every pair before the first
+  // offer, so its open state is available on every stack;
+  // connectionState covers stacks where a channel event is
+  // missed. ICE state deliberately plays no part here.
+  const linked = entry.dcOpen || entry.pc.connectionState === 'connected';
+  const rec = audioHealRec(seat);
+  let inFlow = false, outFlow = false;
+  if (expectR && linked) {
+    if (!entry.rxExpect) { entry.rxExpect = true; entry.rxLast = snap.inBytes; entry.rxFrozenAt = now; }
+    else if (snap.inBytes > entry.rxLast) { entry.rxLast = snap.inBytes; entry.rxFrozenAt = now; inFlow = true; }
   }
-  entry.statsDone = true;
-  const sig = pairSig(seat);
-  const recvStalled = sig.includes('R') && snap.inBytes <= entry.statsBase.inBytes;
-  const sendStalled = sig.includes('S') && snap.outBytes <= entry.statsBase.outBytes;
-  if ((recvStalled || sendStalled) && !statsRebuiltOnce[seat]) {
-    statsRebuiltOnce[seat] = true;
-    relayForcedSeats[seat] = true;
-    voiceEvent('stats rebuild: link up but audio bytes frozen (' + snap.sel + ')', seat);
-    closePeer(seat, 'stats-rebuild');
-    syncVoicePairs(); // re-forms the pair at once, on the relay-only profile
+  if (expectS && linked && entry.pc.remoteDescription) {
+    if (!entry.txExpect) { entry.txExpect = true; entry.txLast = snap.outBytes; entry.txFrozenAt = now; }
+    else if (snap.outBytes > entry.txLast) { entry.txLast = snap.outBytes; entry.txFrozenAt = now; outFlow = true; }
+  }
+  // Flowing bytes end the episode: the next silence starts the
+  // escalation from step (a) again.
+  if (inFlow && rec.step) rec.step = 0;
+  if (outFlow && rec.txReformed) rec.txReformed = false;
+  // ---- receive silence: escalate (a) → (b) → (c), once each ----
+  if (expectR && linked && entry.rxExpect && entry.rxFrozenAt &&
+      now - entry.rxFrozenAt >= AUDIO_FROZEN_MS) {
+    if (rec.step === 0) {
+      rec.step = 1; rec.last = 'reattach';
+      entry.rxFrozenAt = now; // the re-attach gets its own window
+      replayPeerAudio(entry, 'inbound frozen');
+    } else if (rec.step === 1 && !entry.relayForced) {
+      rec.step = 2; rec.last = 'reform';
+      voiceEvent('audio heal: pair re-formed (inbound audio frozen)', seat);
+      closePeer(seat, 'audio-reform');
+      syncVoicePairs();
+      return;
+    } else if (rec.step === 2 && !entry.relayForced) {
+      rec.step = 3; rec.last = 'relay-reform';
+      statsRebuiltOnce[seat] = true;
+      relayForcedSeats[seat] = true;
+      voiceEvent('stats rebuild: link up but audio bytes frozen (' + (snap.sel || 'no selected pair') + ')', seat);
+      closePeer(seat, 'stats-rebuild');
+      syncVoicePairs();
+      return;
+    }
+    // step 3: the episode is exhausted — no further action
+    // until bytes flow again (which resets it above).
+  }
+  // ---- send silence: re-attach the sender once, then re-form once ----
+  if (expectS && linked && entry.pc.remoteDescription && entry.txExpect && entry.txFrozenAt &&
+      now - entry.txFrozenAt >= AUDIO_FROZEN_MS && !rec.txReformed) {
+    const hasTrack = !!(entry.sender && entry.sender.track);
+    if (!hasTrack && !entry.txReattachTried) {
+      entry.txReattachTried = true;
+      entry.txFrozenAt = now; // the re-attach gets its own window
+      voiceEvent('audio heal: sender re-attached (outbound audio frozen)', seat);
+      ensureTransceiver(entry);
+      setSenderTrack(entry);
+    } else {
+      rec.txReformed = true; rec.last = 'send-reform';
+      voiceEvent('audio heal: pair re-formed (outbound audio frozen)', seat);
+      closePeer(seat, 'send-reform');
+      syncVoicePairs();
+      return;
+    }
+  }
+  // ---- element stall: bytes ARE arriving, the element is not
+  // playing them — re-attach + play(), never a re-formation ----
+  if (linked && entry.audio && entry.stream && speakerOn && (inGrew || !expectR)) {
+    const a = entry.audio;
+    const ct = a.currentTime || 0;
+    if (ct !== entry.elLastTime) { entry.elLastTime = ct; entry.elFrozenAt = now; }
+    if (!entry.elFrozenAt) entry.elFrozenAt = now;
+    const stalled = a.paused || (a.readyState || 0) < 3 || (now - entry.elFrozenAt >= EL_STALL_MS);
+    if (stalled && now - (entry.elHealAt || 0) >= EL_STALL_MS) {
+      replayPeerAudio(entry, 'element stalled');
+    }
   }
 }
 // Attach the remote stream to a playback element — only while my
@@ -3271,7 +3533,8 @@ function closePeer(seat, why) {
   if (!entry) return;
   // Diagnostic: every re-formation leaves a trace with its reason
   // ('heal:ice-failed' | 'heal:ice-disconnected' | 'heal:no-progress'
-  // | 'upgrade' | 'signal-rebuild' | 'stats-rebuild' | 'shape-rebuild'
+  // | 'upgrade' | 'signal-rebuild' | 'stats-rebuild' | 'audio-reform'
+  // | 'send-reform' | 'shape-rebuild'
   // | 'unwanted' | 'peer-closed' | 'seat-gone' | 'teardown'), so a
   // churn loop is visible in one glance instead of inferred from
   // births. The record carries the dying pair's audio-transceiver
@@ -3290,10 +3553,11 @@ function closePeer(seat, why) {
   }
   voiceEvent('pair closed: ' + (why || 'other'), seat);
   delete peers[seat];
-  // The stats schedule and the heartbeat die with the pair (the
-  // legacy four timers are cleared by clearPeerTimers below).
+  // The audio-watchdog schedule and the heartbeat die with the
+  // pair (the legacy four timers are cleared by clearPeerTimers
+  // below).
   if (entry.pingTimer) { clearTimeout(entry.pingTimer); entry.pingTimer = null; }
-  if (entry.statsTimer) { clearTimeout(entry.statsTimer); entry.statsTimer = null; }
+  if (entry.audioTimer) { clearTimeout(entry.audioTimer); entry.audioTimer = null; }
   try { if (entry.dc) entry.dc.close(); } catch (e) {}
   try { if (entry.dcIn) entry.dcIn.close(); } catch (e) {}
   // The mesh is fully down: the voice session is OVER, so the
@@ -3399,6 +3663,12 @@ async function processRtcSignal(from, data, retried) {
       // m-line; for an answer, the generic adoption suffices.
       if (desc.type === 'offer') adoptSessionTransceiver(entry, desc.sdp);
       else ensureTransceiver(entry);
+      // A NEW remote description re-attaches the stream to the
+      // element and plays: the receiving side of the manual
+      // speaker-toggle ritual got exactly this (a fresh
+      // description under an already-live track), and an element
+      // left over from the old description can be the wedged one.
+      if (entry.stream) attachPeerAudio(entry);
       await flushIceQueue(entry);
       if (desc.type === 'offer') {
         const ans = await sdpOp(pc.createAnswer());
@@ -3493,7 +3763,10 @@ function paintVoiceDots(st) {
 // shows the pair's existence and live states, the SELECTED
 // candidate pair (endpoint types + protocols) and audio byte
 // counters from getStats, the pair's profile (normal / relay)
-// and heal attempts — then the last ~12 voice events with
+// and heal attempts — plus, for the voice5 audio watchdog, the
+// receiver track's muted state, the playback element's state
+// (playing / STALLED) and which audio-heal steps have fired for
+// the seat — then the last ~12 voice events with
 // seconds-since-join timestamps. Everything the owner needs to
 // screenshot when voice misbehaves on a real phone.
 let diagTimer = null;
@@ -3545,9 +3818,16 @@ async function renderVoiceDiag() {
       ' · conn ' + e.pc.connectionState + ' · dc ' + (e.dc ? e.dc.readyState : 'none') +
       (e.lastPingAt ? ' · ping ' + Math.max(0, Math.round((Date.now() - e.lastPingAt) / 1000)) + 's ago' : '') + '</div>');
     lines.push('<div class="vd-sub">path ' + (ds.sel || '—') + '</div>');
+    const ahr = audioHealSeats[s];
+    const elState = !e.audio ? 'none'
+      : ((e.audio.paused || (e.audio.readyState || 0) < 3) ? 'STALLED' : 'playing');
     lines.push('<div class="vd-sub">audio in ' + (ds.inBytes || 0) + ' B · out ' + (ds.outBytes || 0) + ' B' +
       ' · send ' + (e.sender && e.sender.track ? 'track' : 'silent') +
       ' · recv ' + (e.stream ? 'track' : 'none') + '</div>');
+    lines.push('<div class="vd-sub">rtrack ' + (e.recvTrack ? (e.recvMuted ? 'MUTED' : 'live') : 'none') +
+      ' · el ' + elState +
+      ' · aheal ' + (ahr ? ('rx-step ' + ahr.step + (ahr.txReformed ? ' · tx-reformed' : '') +
+        (ahr.last ? ' · last ' + ahr.last : '')) : 'rx-step 0') + '</div>');
   });
   const t0 = voiceT0 || Date.now();
   const log = voiceEvents.slice(-12).map((ev) =>
@@ -4259,9 +4539,18 @@ function attachPlayHandlers(el, code) {
   el.addEventListener('pointercancel', (e) => finish(e, false));
 }
 
-// the game screen must never scroll or rubber-band
+// The game screen must never scroll or rubber-band — but the chat
+// panel carries its own legitimate scroll regions (the vertical
+// .chat-scroll and the horizontal swipe pagers), so a touch that
+// starts inside #chatpanel is exempt. Canceling its touchmove kills
+// native scrolling there: on iOS Safari, which has no touch-action
+// support, this handler froze BOTH chat pagers solid (owner report
+// 2026-11-07 — drags did nothing, taps still worked). Everywhere
+// else on the game screen the blanket cancel stays.
 document.addEventListener('touchmove', (e) => {
-  if (!$('#scr-game').classList.contains('hidden')) e.preventDefault();
+  if ($('#scr-game').classList.contains('hidden')) return;
+  if (e.target && e.target.closest && e.target.closest('#chatpanel')) return;
+  e.preventDefault();
 }, { passive: false });
 
 // ---------- rendering ----------
