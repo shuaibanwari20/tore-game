@@ -1779,8 +1779,10 @@ function mirrorMyVoice() { if (mySeat !== null) voiceSeats[mySeat] = { mic: micO
 //     GET /turn-credentials, NORMALIZED to { iceServers: [...] }
 //     (an array, always) whichever provider answered, so no
 //     provider key ever ships in this page; refreshIceServers()
-//     loads them when a voice pair is first needed (mic-on primes
-//     it) and puts them FIRST in the list below.
+//     loads them — primed at page load and at room join — and pair
+//     formation ALWAYS awaits it (bounded, see ensurePeerGated), so
+//     no pair is ever born on the fallback list while a fetch could
+//     still upgrade it.
 //  2. Google STUN.
 //  3. The Open Relay Project endpoints — metered.ca's published
 //     public-demo TURN service (open credentials, printed in the
@@ -1807,9 +1809,8 @@ const FALLBACK_ICE_SERVERS = [
 let iceServersNow = FALLBACK_ICE_SERVERS;
 // Fetch cache: a successful answer is reused for 12 h (the minted
 // credentials live 24 h); a failed/unconfigured answer is NOT
-// cached, so the next mic-on retries — per the route contract.
-// iceAttemptAt throttles the pair-sync path's re-tries (state pushes
-// are frequent; a route-less host must not be re-probed each push).
+// cached, so the next pair formation retries — per the route
+// contract. iceAttemptAt records the last attempt time.
 let iceFetchedAt = 0; // ms epoch of last successful fetch; 0 = never
 let iceAttemptAt = 0; // ms epoch of last fetch attempt
 let iceFetchInFlight = null;
@@ -1841,6 +1842,11 @@ async function refreshIceServers() {
         if (!relayList.length) return;
         iceServersNow = relayList.concat(FALLBACK_ICE_SERVERS);
         iceFetchedAt = Date.now();
+        // The real relay config just landed: any pair that was
+        // born earlier on the fallback list (its fetch had failed,
+        // or a signal beat the fetch) is stuck with that list —
+        // re-sync so those pairs re-form on this config.
+        try { syncVoicePairs(); } catch (e) {}
       } catch (e) { /* offline / route missing — fallback stays */ }
     })();
   }
@@ -1931,35 +1937,51 @@ function stopMic() {
   syncVoicePairs();
   paintVoiceDots(state);
 }
+// Pair formation is GATED on the ICE configuration: a peer is
+// never constructed while a /turn-credentials fetch could still
+// upgrade its config, because a pair born on the fallback list
+// (Google STUN + the shared demo relay) cannot cross carrier NAT —
+// and it is never re-formed while its signature matches, so the
+// table stayed deaf until someone tapped their mic (the tap was
+// the only event that both awaited a fresh fetch and changed the
+// signature, forcing a re-form on the real relay config). The
+// fetch is time-bounded (~4 s abort inside refreshIceServers) and
+// a failed fetch falls back to the default list, so the gate can
+// delay a pair briefly but can never stall it forever.
+const peerForming = {}; // seat -> in-flight gated formation promise
+function ensurePeerGated(seat) {
+  if (peers[seat]) return Promise.resolve(peers[seat]);
+  if (peerForming[seat]) return peerForming[seat];
+  const p = (async () => {
+    try {
+      if (!iceFetchedAt) { try { await refreshIceServers(); } catch (e) {} }
+      // Re-validate after the wait: the pair may have stopped
+      // being wanted meanwhile, or been formed by the other path.
+      if (!peers[seat] && pairSig(seat)) return ensurePeer(seat);
+    } catch (e) { /* a failed formation is retried by the next sync */ }
+    return peers[seat] || null;
+  })();
+  peerForming[seat] = p;
+  const clear = () => { if (peerForming[seat] === p) delete peerForming[seat]; };
+  p.then(clear, clear);
+  return p;
+}
 // Reconcile the mesh with the current flags: for every other seat,
 // the wanted direction signature decides — no pair, a re-formed pair
-// (signature changed), or the pair that already matches.
+// (signature changed, or born on the fallback list before the relay
+// credentials arrived), or the pair that already matches.
 function syncVoicePairs() {
   if (mySeat === null) return;
-  let anyWanted = false;
   for (let s = 0; s < 4; s++) {
     if (s === mySeat) continue;
     const sig = pairSig(s);
     if (!sig) { closePeer(s); continue; }
-    anyWanted = true;
-    if (peers[s] && peers[s].sig !== sig) closePeer(s); // direction changed — re-form cleanly
-  }
-  if (!anyWanted) return;
-  // Listening needs a relay just as much as talking (a receive-only
-  // pair still crosses NAT): if no fetch has ever succeeded, prime
-  // the ICE config before forming — bounded exactly like the mic
-  // path, and throttled so a route-less host is not re-probed on
-  // every state push. A recent failed attempt falls through and
-  // forms pairs with the fallback list instead of stalling.
-  if (!iceFetchedAt) {
-    if (iceFetchInFlight || Date.now() - iceAttemptAt > 30000) {
-      refreshIceServers().then(() => syncVoicePairs());
-      return;
+    const e = peers[s];
+    if (e) {
+      if (e.sig === sig && !(e.usedFallback && iceFetchedAt)) continue;
+      closePeer(s); // re-formed below, on the current config
     }
-  }
-  for (let s = 0; s < 4; s++) {
-    if (s === mySeat) continue;
-    if (pairSig(s) && !peers[s]) ensurePeer(s);
+    ensurePeerGated(s);
   }
 }
 function ensurePeer(seat) {
@@ -1973,6 +1995,7 @@ function ensurePeer(seat) {
     audio: null,
     stream: null,        // latest remote stream from ontrack (parked while speaker is off)
     sig,                 // direction signature this pair was built for
+    usedFallback: !iceFetchedAt, // born before the relay credentials landed — re-formed when they do
     iceQueue: [],        // remote candidates that beat their SDP — flushed once it lands
     makingOffer: false,
     ignoreOffer: false,
@@ -2109,13 +2132,27 @@ function closePeer(seat) {
     try { entry.audio.srcObject = null; entry.audio.remove(); } catch (e) {}
   }
 }
-async function onRtcSignal(from, data) {
+// Signaling for one pair is processed in ARRIVAL ORDER through a
+// per-seat chain: the first signal for a pair may have to wait for
+// the ICE-credentials gate (below), and an ICE candidate must
+// never overtake the offer it belongs to while that wait happens.
+const signalChains = {}; // seat -> promise chain
+function onRtcSignal(from, data) {
   if (from === mySeat || !data || typeof data !== 'object') return;
+  const prev = signalChains[from] || Promise.resolve();
+  signalChains[from] = prev.then(() => processRtcSignal(from, data)).catch(() => {});
+}
+async function processRtcSignal(from, data) {
   // A signal for a pair neither side wants is stale — drop it. (A
   // listener with the mic off still processes signals: that is the
   // whole point of the speaker control.)
   if (!peers[from] && !pairWanted(from)) return;
-  const entry = ensurePeer(from);
+  // First signal for this pair: form the peer through the gated
+  // path — a peer constructed here used to be born instantly on
+  // the fallback ICE list (this handler never waited for the
+  // credentials fetch, and the talker's offer reliably beats that
+  // fetch), which is exactly the pair that never connects.
+  const entry = peers[from] || (await ensurePeerGated(from));
   if (!entry) return;
   const pc = entry.pc;
   try {
@@ -2330,6 +2367,13 @@ async function initSessionUser() {
   renderProfileButton();
   updateContinue();
   initSessionUser();
+  // Prime the TURN-credentials fetch NOW (on hosts with sign-in
+  // the session already exists on this page — the gate let us
+  // in): pair formation later then rarely has to wait on it, and
+  // no pair can be born on the fallback list while it is still
+  // in flight. The room-join handler primes it again (a no-op
+  // while this fetch is fresh).
+  refreshIceServers();
 })();
 
 // Server error → display text. Servers tag every error with a stable
