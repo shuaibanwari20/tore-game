@@ -629,7 +629,8 @@
     font-family: inherit; }
   .pf-idnum:active { transform: scale(.97); }
   .fr-idline { font-size: 12px; opacity: .62; letter-spacing: 1px; }
-  #ov-friendmenu { z-index: 46; }
+  /* #ov-friendmenu is styled with the popover cards below (it was
+     a centred overlay before 2026-11-09; z-index lives there). */
   #scr-dm { z-index: 36; display: flex; flex-direction: column; overflow-y: hidden; }
   .fr-inner { max-width: 520px; margin: 0 auto; padding: 14px 14px 22px; }
   .fr-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -722,15 +723,19 @@
      (lobby row or table badge), not a centred overlay: a slim
      avatar+name header over two list rows (icon + label + chevron)
      in the game's dark emerald/gold. z-index stays under the modal
-     overlays (40) so a round summary always covers it. */
-  #ov-playermenu {
+     overlays (40) so a round summary always covers it. The friend
+     row ⋯ menu shares the SAME card (owner order 2026-11-09) with
+     its own slightly higher z-index: it floats over the friends
+     screen, whose only modals are the confirms it hands off to. */
+  #ov-playermenu, #ov-friendmenu {
     position: fixed; z-index: 38; width: 234px; display: none;
     background: linear-gradient(165deg, #0f4026, #07271a);
     border: 1.5px solid #d9b380; border-radius: 14px; padding: 8px;
     box-shadow: 0 12px 30px rgba(0,0,0,.6), inset 0 0 22px rgba(0,0,0,.35);
     color: #f5e7c6;
   }
-  #ov-playermenu.show { display: block; }
+  #ov-playermenu.show, #ov-friendmenu.show { display: block; }
+  #ov-friendmenu { z-index: 44; }
   .pmpop-head { display: flex; align-items: center; gap: 9px; padding: 3px 8px 9px;
     border-bottom: 1px solid rgba(217,179,128,.35); margin-bottom: 6px; }
   .pmpop-head .pavatar { border-radius: 50%; border: 2px solid #eec95f; flex: 0 0 auto; }
@@ -1368,15 +1373,12 @@
   <button class="pmpop-row" id="btn-pm-profile"><span class="pmpop-ic">👤</span><span class="pmpop-lbl" id="pm-profile-lbl">پروفایل</span><span class="pmpop-ch">›</span></button>
 </div>
 
-<!-- ======== FRIEND ROW MENU (⋯) ======== -->
-<div class="overlay" id="ov-friendmenu">
-  <div class="panel" style="max-width:340px">
-    <div class="inv-who"><span id="fm-av"></span><span class="inv-name" id="fm-name"></span></div>
-    <div class="pf-btns">
-      <button id="btn-fm-unfriend">دوستي لرې کول</button>
-      <button id="btn-fm-block" class="ghost">بلاک</button>
-    </div>
-  </div>
+<!-- ======== FRIEND ROW MENU (⋯) — small anchored popover, the
+     player menu's card: header + two chevron rows ======== -->
+<div id="ov-friendmenu">
+  <div class="pmpop-head"><span id="fm-av"></span><span class="inv-name" id="fm-name"></span></div>
+  <button class="pmpop-row" id="btn-fm-unfriend"><span class="pmpop-ic">💔</span><span class="pmpop-lbl" id="fm-unfriend-lbl">دوستي لرې کول</span><span class="pmpop-ch">›</span></button>
+  <button class="pmpop-row" id="btn-fm-block"><span class="pmpop-ic">🚫</span><span class="pmpop-lbl" id="fm-block-lbl">بلاک</span><span class="pmpop-ch">›</span></button>
 </div>
 
 <!-- ======== PLAYER PROFILE VIEW ======== -->
@@ -1591,6 +1593,7 @@ const STR = {
     frChat: 'ګپ',
     frInvite: 'بلنه',
     frInGame: 'په لوبه کې دی',
+    frInLobby: 'په لابي کې دی',
     frWaitToast: 'لږ صبر وکړه',
     frUnfriend: 'دوست لرې کول',
     frBlock: 'بلاک',
@@ -1618,6 +1621,7 @@ const STR = {
     errSocialOffline: 'دا ملګری افلاین دی',
     errSocialNotInRoom: 'ته په دې لابي کې نه یې',
     errSocialInGame: 'دا لوبغاړی اوس په یوه لوبه کې دی',
+    errSocialBusy: 'دا لوبغاړی اوس په یوه لابي کې دی',
     errSocialCooldown: 'لږ صبر وکړه',
     errSocialNotFound: 'لوبغاړی ونه موندل شو',
     errSocialGeneric: 'عملیات ونه شول',
@@ -1768,6 +1772,7 @@ const STR = {
     frChat: 'گفت‌وگو',
     frInvite: 'دعوت',
     frInGame: 'در بازی است',
+    frInLobby: 'در لابی است',
     frWaitToast: 'کمی صبر کن',
     frUnfriend: 'حذف دوست',
     frBlock: 'بلاک',
@@ -1795,6 +1800,7 @@ const STR = {
     errSocialOffline: 'این دوست آفلاین است',
     errSocialNotInRoom: 'تو در این لابی نیستی',
     errSocialInGame: 'این بازیکن اکنون در یک بازی است',
+    errSocialBusy: 'این بازیکن اکنون در یک لابی است',
     errSocialCooldown: 'کمی صبر کن',
     errSocialNotFound: 'بازیکن پیدا نشد',
     errSocialGeneric: 'عملیات انجام نشد',
@@ -1945,6 +1951,7 @@ const STR = {
     frChat: 'Chat',
     frInvite: 'Invite',
     frInGame: 'In a game',
+    frInLobby: 'In a lobby',
     frWaitToast: 'Please wait',
     frUnfriend: 'Unfriend',
     frBlock: 'Block',
@@ -1972,6 +1979,7 @@ const STR = {
     errSocialOffline: 'This friend is offline',
     errSocialNotInRoom: 'You are not in that lobby',
     errSocialInGame: 'This player is in a game right now',
+    errSocialBusy: 'This player is in a lobby right now',
     errSocialCooldown: 'Please wait',
     errSocialNotFound: 'Player not found',
     errSocialGeneric: 'That did not work',
@@ -2171,8 +2179,8 @@ function applyI18n() {
   set('#pfnav-chat-lbl', 'navChat');
   set('#ch-list-title', 'chatsTitle');
   aria('#btn-pf-edit-av', 'pfEditAvatar');
-  set('#btn-fm-unfriend', 'frUnfriend');
-  set('#btn-fm-block', 'frBlock');
+  set('#fm-unfriend-lbl', 'frUnfriend');
+  set('#fm-block-lbl', 'frBlock');
   set('#btn-inv-accept', 'frAccept');
   set('#btn-inv-reject', 'frReject');
   set('#btn-cf-no', 'cancelBtn');
@@ -5632,8 +5640,7 @@ let frSearched = false; // a search ran (so "no hits" can show its line)
 const dmThreads = new Map();     // peerId -> [{from, text, ts}]
 const dmUnread = new Map();      // peerId -> unread count
 let dmPeer = null;               // person record of the open DM thread
-const inviteQueue = [];
-let inviteCurrent = null, inviteTimer = null;
+let inviteCurrent = null, inviteTimer = null; // the ONE invite popup on screen (never a queue)
 let confirmCb = null;
 // Invite cooldown (client mirror of the server's per-pair window):
 // id -> timestamp (ms) when that friend may be invited again. The
@@ -5734,10 +5741,15 @@ function onSocialMsg(m) {
   } else if (m.type === 's-friends') {
     applySocialLists(m);
   } else if (m.type === 's-presence') {
+    const applyPresence = (x) => {
+      x.online = !!m.online;
+      if (m.ingame !== undefined) x.ingame = !!m.ingame;
+      if (m.inlobby !== undefined) x.inlobby = !!m.inlobby;
+    };
     const p = socialPeople.get(m.id);
-    if (p) { p.online = !!m.online; if (m.ingame !== undefined) p.ingame = !!m.ingame; }
-    if (socialData) socialData.friends.forEach((f) => { if (f.id === m.id) { f.online = !!m.online; if (m.ingame !== undefined) f.ingame = !!m.ingame; } });
-    frSearchResults.forEach((r) => { if (r.id === m.id) { r.online = !!m.online; if (m.ingame !== undefined) r.ingame = !!m.ingame; } });
+    if (p) applyPresence(p);
+    if (socialData) socialData.friends.forEach((f) => { if (f.id === m.id) applyPresence(f); });
+    frSearchResults.forEach((r) => { if (r.id === m.id) applyPresence(r); });
     renderFriends();
     renderChats();
     if (dmPeer && dmPeer.id === m.id) paintDmPeer();
@@ -5768,8 +5780,16 @@ function onSocialMsg(m) {
     renderChats();
   } else if (m.type === 's-invited') {
     cachePerson(m.from);
-    inviteQueue.push({ from: m.from, code: m.code });
-    if (!inviteCurrent) showNextInvite();
+    // ONE invite popup, ever (owner order 2026-11-09): while a
+    // popup is on screen, a further invite is ignored for display —
+    // it does not replace the visible popup, restart its timer, or
+    // queue up behind it. The visible popup keeps its own inviter,
+    // code and countdown; only once it resolves (accept / reject /
+    // 30 s expiry) can the next invite show.
+    if (!inviteCurrent) {
+      inviteCurrent = { from: m.from, code: m.code };
+      showInvite();
+    }
   } else if (m.type === 's-invite-result') {
     if (m.by) cachePerson(m.by);
     if (!m.accept) toast(T('frInviteRejected', (m.by && m.by.name) || ''));
@@ -5778,11 +5798,19 @@ function onSocialMsg(m) {
     // Invite-specific routing: the row must reflect the server's
     // verdict at once (the pushed s-friends refresh is the backup).
     if (m.code === 'socialInGame' && lastInviteTo) {
-      if (socialData) socialData.friends.forEach((f) => { if (f.id === lastInviteTo) f.ingame = true; });
-      const cp = socialPeople.get(lastInviteTo); if (cp) cp.ingame = true;
+      if (socialData) socialData.friends.forEach((f) => { if (f.id === lastInviteTo) { f.ingame = true; f.inlobby = false; } });
+      const cp = socialPeople.get(lastInviteTo); if (cp) { cp.ingame = true; cp.inlobby = false; }
       inviteCd.delete(lastInviteTo);
       renderFriends();
       toast(T('errSocialInGame'));
+    } else if (m.code === 'socialBusy' && lastInviteTo) {
+      // Seated in a waiting lobby: same disabled 🎮 treatment, the
+      // lobby wording in the toast (and the button's title/aria).
+      if (socialData) socialData.friends.forEach((f) => { if (f.id === lastInviteTo) { f.inlobby = true; f.ingame = false; } });
+      const cp = socialPeople.get(lastInviteTo); if (cp) { cp.inlobby = true; cp.ingame = false; }
+      inviteCd.delete(lastInviteTo);
+      renderFriends();
+      toast(T('errSocialBusy'));
     } else if (m.code === 'socialCooldown') {
       // Quiet, single subtle toast; the button (re)enters its
       // countdown disabled state instead of error-spamming.
@@ -6017,13 +6045,14 @@ function openPlayerMenu(idx, anchor) {
   renderPlayerMenu();
   placePlayerMenu();
 }
-// Position the card next to its anchor: beside a narrow edge badge
-// (card opens toward the table centre), below a wide lobby row,
-// clamped inside the viewport with an 8 px margin on every side.
-function placePlayerMenu() {
-  const pop = $('#ov-playermenu');
-  if (!pop.classList.contains('show') || !pmAnchor || !pmAnchor.isConnected) return;
-  const r = pmAnchor.getBoundingClientRect();
+// Position an anchored card next to its anchor: beside a narrow
+// edge badge (card opens toward the table centre), below a wide
+// row, clamped inside the viewport with an 8 px margin on every
+// side. Shared by the player menu and the friend ⋯ menu — one
+// visual language, one geometry.
+function placeAnchoredCard(pop, anchor) {
+  if (!pop || !pop.classList.contains('show') || !anchor || !anchor.isConnected) return;
+  const r = anchor.getBoundingClientRect();
   const W = pop.offsetWidth || 234, H = pop.offsetHeight || 168;
   const vw = window.innerWidth, vh = window.innerHeight, M = 8;
   let x, y;
@@ -6034,6 +6063,7 @@ function placePlayerMenu() {
   pop.style.left = Math.max(M, Math.min(x, vw - W - M)) + 'px';
   pop.style.top = Math.max(M, Math.min(y, vh - H - M)) + 'px';
 }
+function placePlayerMenu() { placeAnchoredCard($('#ov-playermenu'), pmAnchor); }
 // A state push that ends the round/match or recycles the seat
 // closes the card — the anchor's player must still be the same
 // human in the same seat. A push that merely REBUILDS the anchor
@@ -6051,7 +6081,7 @@ function validatePlayerMenu() {
     placePlayerMenu();
   }
 }
-window.addEventListener('resize', placePlayerMenu);
+window.addEventListener('resize', () => { placePlayerMenu(); placeFriendMenu(); });
 function closePlayerMenu() { $('#ov-playermenu').classList.remove('show'); }
 // Tap anywhere outside the card closes it. Anchor taps are exempt —
 // the anchor's own click handler opens/switches/toggles the card.
@@ -6158,6 +6188,7 @@ function frChatBtn(p) {
 function personRow(p, actions) {
   const row = document.createElement('div');
   row.className = 'fr-row';
+  row.dataset.fid = p.id; // lets the open ⋯ popover re-anchor after a re-render
   const who = document.createElement('div');
   who.className = 'fr-who';
   who.appendChild(avatarEl(p.name, p.avatar, 38, p.photo));
@@ -6262,14 +6293,16 @@ function renderFriends() {
   socialData.friends.forEach((p) => {
     const actions = [frChatBtn(p)];
     if (code) {
-      if (p.ingame) {
-        // In a started match: disabled (greyed, never hidden). The
+      if (p.ingame || p.inlobby) {
+        // Holding ANY seat: disabled (greyed, never hidden). The
         // game icon ALONE is the visible label (owner order
-        // 2026-11-08); the in-game wording lives on as the button's
+        // 2026-11-08); the matching wording — in a match, or in a
+        // lobby (owner order 2026-11-09) — lives on as the button's
         // title/aria-label. The server rejects such invites too.
         const igBtn = frBtn('🎮', '', null);
-        igBtn.title = T('frInGame');
-        igBtn.setAttribute('aria-label', T('frInGame'));
+        const busyLbl = p.ingame ? T('frInGame') : T('frInLobby');
+        igBtn.title = busyLbl;
+        igBtn.setAttribute('aria-label', busyLbl);
         actions.push(igBtn);
       } else {
         const rem = inviteCdRemaining(p.id);
@@ -6290,7 +6323,9 @@ function renderFriends() {
         }
       }
     }
-    actions.push(frBtn('⋯', '', () => openFriendMenu(p)));
+    const dotsBtn = frBtn('⋯', '', (e) => openFriendMenu(p, e && e.currentTarget));
+    dotsBtn.classList.add('fr-dots');
+    actions.push(dotsBtn);
     listBox.appendChild(personRow(p, actions));
   });
 
@@ -6303,6 +6338,7 @@ function renderFriends() {
       frBtn(T('frUnblock'), '', () => socialSend({ type: 's-unblock', id: p.id })),
     ]));
   });
+  validateFriendMenu();
 }
 
 function doFrSearch() {
@@ -6316,19 +6352,50 @@ $('#btn-fr-search').onclick = doFrSearch;
 $('#fr-search-inp').addEventListener('keydown', (e) => { if (e.key === 'Enter') doFrSearch(); });
 
 // ---------- friend row menu (⋯) ----------
-// A small popup in the lobby player menu's family with exactly two
-// items — unfriend and block — each running the same confirm flow
-// the old inline row expansion used.
+// A SMALL ANCHORED POPOVER in the player menu's exact form (owner
+// order 2026-11-09: the old centred brown card is gone): a slim
+// avatar+name header over two chevron rows — unfriend and block —
+// anchored beside the ⋯ button that opened it; tap-outside closes.
+// Each row runs the same confirm flow the old card used (the
+// confirm popup itself is unchanged).
 let fmFriend = null;
-function openFriendMenu(p) {
+let fmAnchor = null;   // the ⋯ button the popover is anchored to
+function openFriendMenu(p, anchor) {
+  const pop = $('#ov-friendmenu');
+  // tapping the same friend's ⋯ again closes their popover
+  if (pop.classList.contains('show') && fmFriend && fmFriend.id === p.id) { closeFriendMenu(); return; }
   fmFriend = p;
+  fmAnchor = anchor || null;
   const av = $('#fm-av');
   av.innerHTML = '';
-  av.appendChild(avatarEl(p.name, p.avatar, 52, p.photo));
+  av.appendChild(avatarEl(p.name, p.avatar, 40, p.photo));
   $('#fm-name').textContent = p.name || '';
-  $('#ov-friendmenu').classList.add('show');
+  pop.classList.add('show');
+  placeFriendMenu();
 }
-function closeFriendMenu() { $('#ov-friendmenu').classList.remove('show'); fmFriend = null; }
+function placeFriendMenu() { placeAnchoredCard($('#ov-friendmenu'), fmAnchor); }
+// A list re-render (any social push rebuilds the rows) must not
+// strand the popover: re-anchor to the same friend's fresh ⋯
+// button; if he left the list entirely, close.
+function validateFriendMenu() {
+  if (!fmFriend || !$('#ov-friendmenu').classList.contains('show')) return;
+  if (fmAnchor && fmAnchor.isConnected) return;
+  const row = document.querySelector('#fr-list .fr-row[data-fid="' + fmFriend.id + '"]');
+  const btn = row && row.querySelector('.fr-dots');
+  if (!btn) { closeFriendMenu(); return; }
+  fmAnchor = btn;
+  placeFriendMenu();
+}
+function closeFriendMenu() { $('#ov-friendmenu').classList.remove('show'); fmFriend = null; fmAnchor = null; }
+// Tap anywhere outside the popover closes it. Taps on a ⋯ button
+// are exempt — that button's own click opens/switches/toggles it.
+document.addEventListener('pointerdown', (e) => {
+  const pop = $('#ov-friendmenu');
+  if (!pop.classList.contains('show')) return;
+  if (pop.contains(e.target)) return;
+  if (e.target.closest && e.target.closest('.fr-dots')) return;
+  closeFriendMenu();
+}, true);
 $('#btn-fm-unfriend').onclick = () => {
   const p = fmFriend;
   closeFriendMenu();
@@ -6343,7 +6410,7 @@ $('#btn-fm-block').onclick = () => {
   askConfirm(T('frConfirmBlockT'), T('frConfirmBlockB', p.name || ''), T('frConfirmYes'),
     () => socialSend({ type: 's-block', id: p.id }));
 };
-$('#ov-friendmenu').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeFriendMenu(); });
+
 
 // ---------- friend DM ----------
 function openDm(p, from) {
@@ -6408,11 +6475,11 @@ $('#btn-dm-send').onclick = sendDm;
 $('#dm-inp').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendDm(); });
 
 // ---------- lobby invite popup ----------
-// One popup at a time; further invites queue behind it. The popup
-// auto-dismisses after ~30 s and an auto-dismiss sends NO reply —
-// silence is not a rejection.
-function showNextInvite() {
-  inviteCurrent = inviteQueue.shift() || null;
+// Exactly ONE popup, ever: while it is on screen, further invites
+// are ignored for display (see the s-invited handler) — nothing
+// queues behind it. The popup auto-dismisses after ~30 s and an
+// auto-dismiss sends NO reply — silence is not a rejection.
+function showInvite() {
   const ov = $('#ov-invite');
   if (!inviteCurrent) { ov.classList.remove('show'); return; }
   const p = inviteCurrent.from;
@@ -6436,7 +6503,6 @@ function dismissInvite(sendReply, accept) {
   if (cur && sendReply) {
     socialSend({ type: 's-invite-reply', from: cur.from.id, code: cur.code, accept: !!accept });
   }
-  if (inviteQueue.length) showNextInvite();
 }
 $('#btn-inv-accept').onclick = () => {
   const cur = inviteCurrent;
