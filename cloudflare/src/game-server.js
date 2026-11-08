@@ -23,7 +23,16 @@
  *  - Room + timer state is snapshotted to DO storage after every
  *    mutation, so an eviction/hibernation wake rebuilds everything
  *    (Match/Round are plain-data classes in game.js; only their emit
- *    closures and rng are re-wired on revive).
+ *    closures and rng are re-wired on revive). Snapshots are PER
+ *    ROOM (key "tore:room:<CODE>"; timers under "tore:timers") so a
+ *    single bad or oversized write can never poison the whole room
+ *    directory at once, and the admission reply (the code a host
+ *    shares) is sent only after the room's snapshot is durable. A
+ *    legacy single-blob snapshot ("tore:v1", written by versions up
+ *    to 2026-11-08) is migrated to per-room keys on first wake.
+ *    Join/reconnect additionally READ-REPAIR: a room missing from
+ *    memory but present in storage is revived on the spot instead of
+ *    answering roomNotFound/sessionExpired.
  */
 
 import * as G from './game.js';
@@ -38,7 +47,9 @@ const TRICK_PAUSE_MS = 1600;      // completed trick stays on the table before i
 const RECONNECT_GRACE_MS = 120000; // seat+hand kept for a reconnecting player
 const SWEEP_MS = 10000;           // seat-expiry sweep cadence (was setInterval)
 
-const STORAGE_KEY = 'tore:v1';
+const STORAGE_KEY = 'tore:v1'; // legacy single-blob snapshot (read + migrate, never written)
+const ROOM_KEY_PREFIX = 'tore:room:'; // one snapshot per room: tore:room:<CODE>
+const TIMERS_KEY = 'tore:timers'; // { timers, timerSeq }
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 function randomHex(bytes) {
@@ -182,15 +193,40 @@ export class GameServer {
     this.timerSeq = 0;
     this.authEnabled = env.AUTH_ENABLED === '1';
     this.social = null; // SocialCore, lazily built by _ensureSocial()
+    this._pendingDeletes = new Set(); // room codes whose storage key still needs deleting
 
     state.blockConcurrencyWhile(async () => {
-      const saved = await state.storage.get(STORAGE_KEY);
-      if (!saved) return;
-      this.timerSeq = saved.timerSeq || 0;
-      this.timers = saved.timers || [];
-      for (const [code, snap] of Object.entries(saved.rooms || {})) {
-        const room = this._reviveRoom(snap);
-        this.rooms.set(code, room);
+      // Timers (their own small key; the legacy blob carried them too).
+      const meta = await state.storage.get(TIMERS_KEY).catch(() => null);
+      if (meta) {
+        this.timerSeq = meta.timerSeq || 0;
+        this.timers = Array.isArray(meta.timers) ? meta.timers : [];
+      }
+      // Per-room snapshots — the current format.
+      const listed = await state.storage.list({ prefix: ROOM_KEY_PREFIX }).catch(() => new Map());
+      for (const snap of listed.values()) {
+        if (snap && snap.code && Array.isArray(snap.seats)) {
+          this.rooms.set(snap.code, this._reviveRoom(snap));
+        }
+      }
+      // Legacy single-blob snapshot: adopt whatever it holds (rooms
+      // not already loaded per-room win a per-room key), adopt its
+      // timers when no timers key exists yet, then drop the blob so
+      // it can never shadow newer state.
+      const legacy = await state.storage.get(STORAGE_KEY).catch(() => null);
+      if (legacy) {
+        if (!meta && Array.isArray(legacy.timers)) {
+          this.timers = legacy.timers;
+          this.timerSeq = legacy.timerSeq || 0;
+        }
+        for (const snap of Object.values(legacy.rooms || {})) {
+          if (snap && snap.code && Array.isArray(snap.seats) && !this.rooms.has(snap.code)) {
+            const room = this._reviveRoom(snap);
+            this.rooms.set(snap.code, room);
+            await this._putRoom(room).catch(() => {});
+          }
+        }
+        await state.storage.delete(STORAGE_KEY).catch(() => {});
       }
       // Rebind live (hibernated) sockets to their seats.
       for (const ws of state.getWebSockets()) {
@@ -231,24 +267,75 @@ export class GameServer {
     return room;
   }
 
+  _roomSnapshot(room) {
+    return {
+      code: room.code,
+      phase: room.phase,
+      seats: room.seats.map((s) => ({
+        kind: s.kind, name: s.name, avatar: s.avatar, country: s.country,
+        photo: s.photo, sid: s.sid || null, voiceMic: !!s.voiceMic, voiceSpeaker: s.voiceSpeaker !== false,
+        token: s.token, connected: s.connected, disconnectAt: s.disconnectAt,
+      })),
+      trickHold: room.trickHold,
+      match: snapshotMatch(room.match),
+    };
+  }
+
+  async _putRoom(room) {
+    await this.state.storage.put(ROOM_KEY_PREFIX + room.code, this._roomSnapshot(room));
+  }
+
+  /** Persist one room; a failed write is logged, never thrown — the
+   *  next mutation/alarm re-runs _persist() and retries every room,
+   *  and join/reconnect read-repair can still find the last good
+   *  snapshot. One room's bad write must not break the handler that
+   *  triggered it (the old single-blob _persist threw OUT of
+   *  webSocketMessage after the reply had already been sent). */
+  async _persistRoom(room) {
+    try { await this._putRoom(room); }
+    catch (e) { console.error('tore: room persist failed', room.code, e && e.message); }
+  }
+
   async _persist() {
-    const rooms = {};
-    for (const [code, room] of this.rooms) {
-      rooms[code] = {
-        code: room.code,
-        phase: room.phase,
-        seats: room.seats.map((s) => ({
-          kind: s.kind, name: s.name, avatar: s.avatar, country: s.country,
-          photo: s.photo, sid: s.sid || null, voiceMic: !!s.voiceMic, voiceSpeaker: s.voiceSpeaker !== false,
-          token: s.token, connected: s.connected, disconnectAt: s.disconnectAt,
-        })),
-        trickHold: room.trickHold,
-        match: snapshotMatch(room.match),
-      };
+    for (const room of this.rooms.values()) await this._persistRoom(room);
+    // Rooms removed since the last flush lose their storage key too —
+    // otherwise a later read-repair/wake would resurrect them.
+    for (const code of [...this._pendingDeletes]) {
+      if (this.rooms.has(code)) { this._pendingDeletes.delete(code); continue; }
+      try {
+        await this.state.storage.delete(ROOM_KEY_PREFIX + code);
+        this._pendingDeletes.delete(code);
+      } catch { /* retried on the next flush */ }
     }
-    await this.state.storage.put(STORAGE_KEY, {
-      rooms, timers: this.timers, timerSeq: this.timerSeq,
-    });
+    try {
+      await this.state.storage.put(TIMERS_KEY, {
+        timers: this.timers, timerSeq: this.timerSeq,
+      });
+    } catch (e) { console.error('tore: timers persist failed', e && e.message); }
+  }
+
+  /** Read-repair: a room missing from memory but present in storage
+   *  (per-room key, or the legacy blob) is revived on the spot. Used
+   *  by join/reconnect so a stale in-memory directory can never
+   *  answer "room not found" for a room that is actually stored. */
+  async _loadRoom(code) {
+    const snap = await this.state.storage.get(ROOM_KEY_PREFIX + code).catch(() => null);
+    if (snap && snap.code && Array.isArray(snap.seats)) {
+      const room = this._reviveRoom(snap);
+      this.rooms.set(code, room);
+      this._ensureSweep();
+      return room;
+    }
+    const legacy = await this.state.storage.get(STORAGE_KEY).catch(() => null);
+    const lsnap = legacy && legacy.rooms ? legacy.rooms[code] : null;
+    if (lsnap && Array.isArray(lsnap.seats)) {
+      const room = this._reviveRoom(lsnap);
+      this.rooms.set(code, room);
+      this._ensureSweep();
+      await this._persistRoom(room); // give it its per-room key
+      return room;
+    }
+    return null;
   }
 
   // ------------------------------------------------------------ alarms
@@ -340,6 +427,7 @@ export class GameServer {
       if (!anyHuman) {
         this._cancelTimers(room.code);
         this.rooms.delete(room.code);
+        this._pendingDeletes.add(room.code);
       }
     }
   }
@@ -482,7 +570,7 @@ export class GameServer {
       try { await this._socialMessage(ws, att, msg); } catch { /* social errors never touch the game */ }
       return;
     }
-    try { this._handleMessage(ws, att, msg); }
+    try { await this._handleMessage(ws, att, msg); }
     catch { sendError(ws, 'خطای سرور', 'serverError'); }
     await this._persist();
   }
@@ -730,14 +818,20 @@ export class GameServer {
     att.seat = seatIdx;
     att.token = seat.token;
     this._saveAttachment(ws, att);
+    // The caller sends the room reply AFTER persisting the room
+    // (_sendRoomReply) — a code is never announced before it is
+    // durable, so a shared code can never point at a memory-only room.
+  }
+
+  _sendRoomReply(ws, room, seatIdx) {
+    const seat = room.seats[seatIdx];
     send(ws, {
       type: 'room', code: room.code, seat: seatIdx, token: seat.token,
       isHost: seatIdx === this._hostSeat(room),
     });
-    this._broadcastState(room);
   }
 
-  _handleMessage(ws, att, msg) {
+  async _handleMessage(ws, att, msg) {
     // Auth gate: with AUTH on, room actions need the signed-in user the
     // Worker verified from the session cookie (carried in the attachment).
     const needsAuth = msg.type === 'create' || msg.type === 'join' || msg.type === 'reconnect';
@@ -748,19 +842,29 @@ export class GameServer {
       case 'create': {
         const room = this._createRoom();
         this._attachPlayer(ws, att, room, 0, displayName(msg, att.user), msg);
+        await this._persistRoom(room); // durable before the code is announced
+        this._sendRoomReply(ws, room, 0);
+        this._broadcastState(room);
         break;
       }
       case 'join': {
-        const room = this.rooms.get(String(msg.code || '').toUpperCase().trim());
+        const code = String(msg.code || '').toUpperCase().trim();
+        let room = this.rooms.get(code);
+        if (!room) room = await this._loadRoom(code); // read-repair from storage
         if (!room) return sendError(ws, 'اتاق پیدا نشد — کد را بررسی کن', 'roomNotFound');
         if (room.phase !== 'lobby') return sendError(ws, 'بازی این اتاق شروع شده است', 'gameStarted');
         const idx = room.seats.findIndex((s) => s.kind === 'empty');
         if (idx === -1) return sendError(ws, 'اتاق پر است', 'roomFull');
         this._attachPlayer(ws, att, room, idx, displayName(msg, att.user), msg);
+        await this._persistRoom(room);
+        this._sendRoomReply(ws, room, idx);
+        this._broadcastState(room);
         break;
       }
       case 'reconnect': {
-        const room = this.rooms.get(String(msg.code || '').toUpperCase().trim());
+        const code = String(msg.code || '').toUpperCase().trim();
+        let room = this.rooms.get(code);
+        if (!room) room = await this._loadRoom(code); // read-repair from storage
         if (!room) return sendError(ws, 'نشست منقضی شده است — اتاق تازه بساز', 'sessionExpired');
         const idx = room.seats.findIndex((s) => s.kind === 'human' && s.token === msg.token);
         if (idx === -1) return sendError(ws, 'نشست منقضی شده است — اتاق تازه بساز', 'sessionExpired');
@@ -783,11 +887,12 @@ export class GameServer {
         att.seat = idx;
         att.token = seat.token;
         this._saveAttachment(ws, att);
-        send(ws, {
-          type: 'room', code: room.code, seat: idx, token: seat.token,
-          isHost: idx === this._hostSeat(room),
-        });
+        await this._persistRoom(room);
+        this._sendRoomReply(ws, room, idx);
         this._broadcastState(room);
+        // A read-repaired in-match room may have lost its turn timer
+        // with the in-memory state — re-arm it (cancels any duplicate).
+        if (room.phase === 'playing') this._pumpTurn(room);
         break;
       }
       case 'start': {
@@ -819,6 +924,7 @@ export class GameServer {
             });
             this._cancelTimers(room.code);
             this.rooms.delete(room.code);
+            this._pendingDeletes.add(room.code);
           } else {
             room.seats[att.seat] = emptySeat();
             this._broadcastState(room);
