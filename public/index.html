@@ -372,8 +372,9 @@
   .hand .pcard.dimhard { opacity: .32; filter: saturate(.35) brightness(.8); }
   .hand .pcard:active { transform: rotate(var(--rot, 0deg)) translateY(-9px); }
 
-  /* ---------- home: field-style menu on the carpet (approved design) ----------
-     The menu sits ON the game's own carpet, in the in-table panel language.
+  /* ---------- home: Ludo-style menu on the carpet (design 1, approved
+     2026-11-08: two big mode cards, small-card row, bottom nav) ----------
+     The menu sits ON the game's own carpet, in emerald + gold.
      The carpet is THIS style block's own background (a CSS carpet
      reference — build-deploy.js inlines every one of them), so the field is
      part of the first paint; the hero fan below is real <img> markup for
@@ -381,9 +382,9 @@
   #scr-home {
     position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 10;
     overflow-y: auto; overflow-x: hidden;
-    background-color: #3a2410; /* deep carpet tone behind the photo */
+    background-color: #06231a; /* deep emerald behind the photo */
     background-image:
-      linear-gradient(rgba(96,58,16,.10), rgba(64,36,8,.22)),
+      linear-gradient(180deg, rgba(3,26,18,.88), rgba(4,32,22,.72) 30%, rgba(4,30,20,.78) 65%, rgba(2,20,13,.94)),
       url("carpet.jpg");
     background-size: cover, cover;
     background-position: center, center;
@@ -394,16 +395,23 @@
     border: 1px solid #d9b380; border-radius: 12px; color: #f5e7c6;
     box-shadow: 0 2px 8px rgba(0,0,0,.35);
   }
-  .hm-topbar { display: flex; align-items: center; justify-content: space-between; padding: 7px 12px 7px 8px; }
-  /* Profile cluster — top-right (first in RTL flow): the avatar with the
-     player's NAME beside it. Tapping either opens the profile popup. */
+  /* Top bar straight on the carpet: profile cluster at the RTL start,
+     the settings gear at the far end. */
+  .hm-topbar { display: flex; align-items: flex-start; justify-content: space-between; }
+  /* Profile cluster — the avatar with the player's NAME pill beside it.
+     Tapping either opens the profile popup. */
   .hm-profilebtn { width: auto; margin: 0; padding: 0; background: none; border: 0;
     cursor: pointer; flex: 0 1 auto; min-width: 0;
-    display: flex; align-items: center; gap: 9px; line-height: 1.15; }
+    display: flex; align-items: center; gap: 10px; line-height: 1.15; }
   .hm-profilebtn:active { transform: scale(.97); }
-  .hm-profilebtn .pavatar { box-shadow: 0 2px 6px rgba(0,0,0,.45), inset 0 2px 3px rgba(255,255,255,.35), 0 0 0 2px rgba(255,215,94,.25); }
-  /* Player name beside the avatar — cream on the dark bar, truncates if long. */
-  .hm-pname { color: #f5e7c6; font-size: 15.5px; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,.6);
+  /* The home avatar is the circular gold-ringed exception to the
+     rounded-square portrait tile used everywhere else. */
+  #home-avatar-slot .pavatar { border-radius: 50%; border: 3px solid #eec95f;
+    box-shadow: 0 0 0 2px rgba(0,0,0,.45), 0 4px 10px rgba(0,0,0,.5); }
+  /* Player name in a dark gold-rimmed pill — truncates if long. */
+  .hm-pname { color: #ffeec2; font-size: 15.5px; font-weight: 700;
+    background: rgba(6,30,20,.82); border: 1.5px solid rgba(238,201,95,.75); border-radius: 16px;
+    padding: 5px 14px; box-shadow: 0 3px 8px rgba(0,0,0,.4); text-shadow: 0 1px 3px rgba(0,0,0,.6);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
   /* One avatar renderer everywhere (top button, popup, lobby rows):
      a rounded-square portrait tile filled by the avatar's SVG. */
@@ -413,60 +421,97 @@
   .pavatar img { width: 100%; height: 100%; display: block; object-fit: cover; }
   .pavatar.empty { border-radius: 50%; align-items: center; justify-content: center; font-weight: 800; line-height: 1;
     background: rgba(255,255,255,.07); color: rgba(245,231,198,.45); border-style: dashed; box-shadow: none; }
-  .hm-gear { width: 42px; height: 42px; margin: 0; padding: 0; flex: 0 0 auto;
-    background: linear-gradient(#7d2231, #4d1019); color: #ffe9c9;
-    border: 1px solid #d9b380; border-radius: 9px; box-shadow: 0 2px 6px rgba(0,0,0,.4);
+  .hm-gear { width: 46px; height: 46px; margin: 4px 0 0; padding: 0; flex: 0 0 auto;
+    background: rgba(6,30,20,.85); color: #eec95f;
+    border: 2px solid rgba(238,201,95,.8); border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,.45);
     display: flex; align-items: center; justify-content: center; }
-  .hm-gear svg { width: 23px; height: 23px; stroke: #ffe9c9; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-  .hm-hero { text-align: center; margin-top: 14px; position: relative; }
-  .hm-hero::before { content: ""; position: absolute; inset: -6px -30px -14px; pointer-events: none;
-    background: radial-gradient(62% 58% at 50% 46%, rgba(26,16,5,.42), transparent 72%); }
-  .hm-fan { position: relative; height: 140px; perspective: 700px; }
-  .hm-fan img { position: absolute; width: 100px; border-radius: 7px;
-    border: 1px solid rgba(60,30,0,.35);
-    box-shadow: 0 16px 22px rgba(20,8,0,.55), 0 4px 8px rgba(20,8,0,.4); }
-  .hm-fan .bk { width: 70px; right: 26px; top: 66px; transform: rotateX(16deg) rotate(24deg); opacity: .96;
-    box-shadow: 0 12px 18px rgba(20,8,0,.5); }
-  .hm-fan .f1 { right: 50%; top: 20px; transform: translateX(96%) rotateX(13deg) rotate(15deg); }
-  .hm-fan .f2 { right: 50%; top: 0;  transform: translateX(50%) rotateX(13deg) rotate(-2deg); z-index: 2; }
-  .hm-fan .f3 { right: 50%; top: 20px; transform: translateX(4%)  rotateX(13deg) rotate(-15deg); }
-  .hm-title { position: relative; font-size: 50px; font-weight: 900; line-height: 1.1; margin: 2px 0 0; text-align: center;
-    color: #ffd75e; text-shadow: 0 2px 6px rgba(0,0,0,.55), 0 0 22px rgba(0,0,0,.35); }
-  .hm-suits { position: relative; margin-top: 3px; font-size: 15px; letter-spacing: 7px; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+  .hm-gear svg { width: 24px; height: 24px; stroke: #eec95f; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Title zone: the suits, the big gold wordmark, the tagline. */
+  .hm-hero { text-align: center; margin-top: 20px; position: relative; }
+  .hm-suits { font-size: 19px; letter-spacing: 14px; margin-right: -14px; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
   .hm-suits .r { color: #ff5a4d; } .hm-suits .w { color: #f5e7c6; }
-  .hm-actions { margin-top: 26px; display: flex; flex-direction: column; gap: 16px; }
-  .hm-act { display: flex; align-items: center; gap: 14px; padding: 17px 16px; min-height: 88px; width: 100%; margin: 0;
-    text-align: start; font-family: inherit; cursor: pointer; }
-  .hm-act .txt { flex: 1; min-width: 0; }
-  .hm-act b { display: block; font-size: 20px; font-weight: 800; line-height: 1.3; color: #f5e7c6; text-shadow: 0 1px 3px rgba(0,0,0,.45); }
-  .hm-act small { display: block; font-size: 12.5px; font-weight: 400; line-height: 1.5; opacity: .88; margin-top: 1px; color: #f5e7c6; }
-  .hm-act .chev { flex: 0 0 auto; width: 20px; height: 20px; stroke: #d9b380; stroke-width: 2.4; opacity: .9;
-    fill: none; stroke-linecap: round; stroke-linejoin: round; }
-  .hm-medal { width: 52px; height: 52px; border-radius: 50%; flex: 0 0 auto;
-    border: 1px solid #d9b380;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: inset 0 2px 3px rgba(255,255,255,.28), inset 0 -5px 7px rgba(0,0,0,.5), 0 3px 7px rgba(0,0,0,.4); }
-  .hm-medal svg { width: 29px; height: 29px; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-  .hm-medal.green { background: radial-gradient(circle at 35% 28%, #2c5a3c, #0c2417 78%); }
-  .hm-medal.green svg { stroke: #ffd75e; }
-  .hm-medal.red { background: radial-gradient(circle at 35% 28%, #93303f, #4d1019 78%); }
-  .hm-medal.red svg { stroke: #ffe9c9; }
-  .hm-medal.gold { background: radial-gradient(circle at 35% 28%, #ffe9a8, #ffd75e 55%, #d9a92f); border-color: #ffe9a8; }
-  .hm-medal.gold svg { stroke: #33270a; }
-  .hm-act.primary { box-shadow: 0 0 0 2px #ffd75e, 0 4px 14px rgba(0,0,0,.45); border-color: #ffd75e; }
-  .hm-act.primary b { color: #ffd75e; }
+  .hm-title { font-size: 84px; font-weight: 900; line-height: 1.08; margin: 2px 0 0; text-align: center;
+    background: linear-gradient(180deg, #fff3c4 8%, #eec95f 45%, #b8860b 78%, #f7dc7f);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 3px 0 rgba(90,58,0,.85)) drop-shadow(0 6px 14px rgba(0,0,0,.55)); }
+  .hm-sub { color: #cfe8d8; font-size: 14px; margin-top: 4px; text-shadow: 0 2px 6px rgba(0,0,0,.7); }
+  .hm-sub .fdot { color: #ffd75e; padding: 0 5px; }
+
+  /* The two BIG mode cards. In RTL the first in the row (online) sits
+     on the RIGHT and quick play on the LEFT — the arrangement he picked.
+     Their card fans are the landing's real markup images: the splash
+     veil waits for them (see #home-fan in the splash script) and the
+     deploy build inlines them like the old hero fan. */
+  .hm-bigrow { display: flex; gap: 12px; margin-top: 24px; }
+  .hm-bigcard { flex: 1; height: 232px; width: auto; margin: 0; padding: 0; position: relative; overflow: hidden;
+    border-radius: 22px; border: 2px solid rgba(238,201,95,.9); cursor: pointer; font-family: inherit;
+    box-shadow: 0 10px 22px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.3), inset 0 -14px 26px rgba(0,0,0,.3); }
+  .hm-bigcard::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(115deg, rgba(255,255,255,.38), rgba(255,255,255,.05) 34%, rgba(255,255,255,0) 55%); }
+  .hm-bigcard.emerald { background: linear-gradient(165deg, #2e9e6b, #146545 48%, #07331f); }
+  .hm-bigcard.gold { background: linear-gradient(165deg, #f6d67c, #d9a83c 42%, #9c6f14); }
+  .hm-bigcard .fan { position: absolute; top: 24px; left: 0; right: 0; height: 118px; }
+  .hm-bigcard .fan img { width: 68px; border-radius: 6px; position: absolute; left: 50%; top: 0;
+    border: 1px solid rgba(60,30,0,.35); box-shadow: 0 6px 14px rgba(0,0,0,.5); }
+  .hm-bigcard .fan .c1 { transform: translateX(-94%) rotate(-15deg); }
+  .hm-bigcard .fan .c2 { transform: translateX(-6%) rotate(13deg); }
+  .hm-bigcard .globe { position: absolute; top: 8px; left: 8px; z-index: 3; color: #ffe9a3;
+    filter: drop-shadow(0 3px 5px rgba(0,0,0,.5)); }
+  .hm-bigcard .globe svg { width: 36px; height: 36px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .hm-bigcard .vsbadge { position: absolute; top: 96px; right: 10px; z-index: 3; background: #b3232a;
+    border: 2px solid #ffd968; color: #fff; font-weight: 900; font-size: 13px; border-radius: 50%;
+    width: 38px; height: 38px; line-height: 34px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,.5); }
+  .biglabel { position: absolute; bottom: 11px; left: 10px; right: 10px; z-index: 2; text-align: center;
+    background: rgba(4,26,17,.82); border: 1.5px solid rgba(238,201,95,.85); border-radius: 14px;
+    padding: 8px 4px; }
+  .biglabel b { display: block; font-size: 17.5px; font-weight: 800; line-height: 1.35; color: #ffeec2; }
+
+  /* Continue banner — rendered only while a saved session exists
+     (updateContinue toggles .hidden, exactly as before). */
+  .hm-continue { width: 100%; height: 54px; margin: 16px 0 0; padding: 0 16px; border-radius: 16px;
+    background: linear-gradient(90deg, rgba(10,52,34,.94), rgba(16,74,48,.94)); border: 2px solid #eec95f;
+    display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-family: inherit;
+    box-shadow: 0 6px 16px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.25);
+    font-size: 17.5px; font-weight: 800; color: #ffeec2; }
+  .hm-continue .play { width: 30px; height: 30px; flex: 0 0 auto; border-radius: 50%;
+    background: linear-gradient(180deg, #ffe9a3, #d9a83c); color: #7a5200;
+    display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+  .hm-continue .play svg { width: 13px; height: 13px; fill: currentColor; display: block; }
+
+  /* The three small mode cards: create, join with code, rules. */
+  .hm-smallrow { display: flex; gap: 11px; margin-top: 16px; }
+  .hm-small { flex: 1; height: 122px; width: auto; margin: 0; padding: 8px 4px; border-radius: 18px; cursor: pointer;
+    font-family: inherit; background: linear-gradient(170deg, rgba(20,84,54,.94), rgba(6,36,23,.96));
+    border: 2px solid rgba(238,201,95,.65); box-shadow: 0 8px 18px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.2);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+  .hm-small .ic { width: 46px; height: 46px; border-radius: 50%; color: #eec95f;
+    background: radial-gradient(circle at 32% 28%, #3f7d5c, #0d3524); border: 1.5px solid rgba(238,201,95,.8);
+    display: flex; align-items: center; justify-content: center; }
+  .hm-small .ic svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .hm-small b, .hm-small .lb { font-size: 15.5px; font-weight: 800; color: #ffeec2; text-align: center; line-height: 1.3; }
   .hm-join { margin-top: 16px; padding: 14px 16px; }
   .hm-join label { margin-top: 0; }
-  .hm-slim { margin-top: 16px; display: flex; gap: 12px; }
-  .hm-chip { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
-    width: auto; margin: 0; padding: 11px 6px;
-    background: rgba(26,16,5,.55); border: 1px solid rgba(255,215,94,.6); border-radius: 10px;
-    color: #ffd75e; font-size: 14.5px; font-weight: 700;
-    box-shadow: 0 2px 6px rgba(0,0,0,.3); text-shadow: 0 1px 3px rgba(0,0,0,.5); }
-  .hm-chip svg { width: 19px; height: 19px; stroke: #ffd75e; stroke-width: 1.9; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-  .hm-foot { margin-top: auto; padding-top: 18px; text-align: center; font-size: 12.5px; color: #f5e7c6; opacity: .94;
-    text-shadow: 0 1px 4px rgba(0,0,0,.7), 0 0 10px rgba(0,0,0,.4); letter-spacing: .2px; }
-  .hm-foot .fdot { color: #ffd75e; padding: 0 5px; }
+
+  /* Bottom nav — home screen only, pinned to the foot of the column.
+     Friends / clubs have no backend yet: their tap answers with the
+     comingSoon toast. Profile / settings open the real popups; home
+     is the raised gold centre bubble (the active tab). */
+  .hm-nav { margin: auto -16px -14px; min-height: 86px; flex: none;
+    background: linear-gradient(180deg, rgba(9,48,31,.97), rgba(3,22,14,.99));
+    border-top: 2px solid rgba(238,201,95,.55); display: flex; align-items: flex-start;
+    padding: 10px 8px 8px; box-shadow: 0 -6px 18px rgba(0,0,0,.5); }
+  .hm-navitem { flex: 1; width: auto; margin: 0; padding: 0; background: none; border: 0; cursor: pointer;
+    font-family: inherit; display: flex; flex-direction: column; align-items: center; gap: 3px; color: #eec95f; }
+  .hm-navitem .ni { height: 30px; display: flex; align-items: center; }
+  .hm-navitem .ni svg { width: 26px; height: 26px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .hm-navitem .nl { font-size: 12px; color: #cfe8d8; font-weight: 600; }
+  .hm-navitem.home { margin-top: -26px; }
+  .hm-navitem.home .bubble { width: 58px; height: 58px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 26%, #ffeeb0, #d9a83c 62%, #a8740d); border: 3px solid #fff0bd; color: #6b4a00;
+    display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 18px rgba(0,0,0,.6), 0 0 0 4px rgba(238,201,95,.25); }
+  .hm-navitem.home .bubble svg { width: 29px; height: 29px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .hm-navitem.home .nl { color: #ffe9a3; font-weight: 800; font-size: 13px; margin-top: 2px; }
   #home-rules { max-width: 520px; margin: 0 auto; padding: 16px 16px 18px; }
   #home-rules .cardbox { background: rgba(26,16,5,.88); margin-bottom: 0; }
   .hm-back { width: auto; margin: 0 0 12px; padding: 9px 18px; font-size: 15px;
@@ -550,10 +595,6 @@
   .st-logout { margin-top: 16px; display: flex; align-items: center; justify-content: center; gap: 9px;
     background: linear-gradient(#7d2231, #4d1019); color: #ffe9c9; border: 1px solid #d9b380; }
   .st-logout svg { width: 20px; height: 20px; stroke: #ffe9c9; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-  /* English reads LTR on the standalone blocks (home, panels): the
-     menu chevrons must point the other way. */
-  [dir="ltr"] .hm-act .chev { transform: scaleX(-1); }
-
   /* ---------- overlays / toast ---------- */
   .overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,.72); display: none;
@@ -637,10 +678,10 @@
 <div class="wrap">
   <div id="connbar"></div>
 
-  <!-- ======== HOME — field-style menu on the carpet (approved design) ======== -->
+  <!-- ======== HOME — Ludo-style menu on the carpet (design 1, approved 2026-11-08) ======== -->
   <section id="scr-home">
     <div id="home-main">
-      <div class="hm-panel hm-topbar">
+      <div class="hm-topbar">
         <button class="hm-profilebtn" id="btn-profile" aria-label="زما پروفایل">
           <span id="home-avatar-slot"></span>
           <span class="hm-pname" id="home-name">د تورې لوبغاړی</span>
@@ -654,55 +695,21 @@
       </div>
 
       <div class="hm-hero">
-        <div class="hm-fan" id="home-fan">
-          <img class="bk" src="cards/back.png" alt="">
-          <img class="f1" src="cards/KH.png" alt="">
-          <img class="f2" src="cards/AS.png" alt="">
-          <img class="f3" src="cards/QS.png" alt="">
-        </div>
-        <h1 class="hm-title">توره</h1>
         <div class="hm-suits"><span class="w">♠</span><span class="r">♥</span><span class="w">♣</span><span class="r">♦</span></div>
+        <h1 class="hm-title">توره</h1>
+        <div class="hm-sub"><span id="foot-a">څلور کسيزه ورق لوبه</span><span class="fdot">•</span><span id="foot-b">دوه ټیمه، دوه پر دوه</span></div>
       </div>
 
-      <div class="hm-actions">
-        <button class="hm-panel hm-act primary" id="btn-quick">
-          <span class="hm-medal gold">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 2.8v2.2"/>
-              <circle cx="12" cy="2.4" r="1.1"/>
-              <rect x="5" y="7.5" width="14" height="10.5" rx="3"/>
-              <circle cx="9.2" cy="12" r=".4" fill="currentColor"/>
-              <circle cx="14.8" cy="12" r=".4" fill="currentColor"/>
-              <path d="M9.5 15.2h5"/>
-              <path d="M5 11H2.8M21.2 11H19"/>
-            </svg>
-          </span>
-          <span class="txt"><b>له روباتونو سره لوبه</b><small>سمدستي پیل — تمرین او تفریح</small></span>
-          <svg class="chev" viewBox="0 0 24 24"><polyline points="14.5 5.5 8 12 14.5 18.5"/></svg>
+      <div class="hm-bigrow" id="home-fan">
+        <button class="hm-bigcard emerald" id="btn-online" aria-label="انلاین لوبه">
+          <span class="globe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+          <span class="fan"><img class="c1" src="cards/back.png" alt=""><img class="c2" src="cards/AS.png" alt=""></span>
+          <span class="vsbadge">VS</span>
+          <span class="biglabel"><b>انلاین لوبه</b></span>
         </button>
-
-        <button class="hm-panel hm-act" id="btn-create">
-          <span class="hm-medal red">
-            <svg viewBox="0 0 24 24">
-              <path d="M4 11.2 12 4l8 7.2"/>
-              <path d="M6.2 9.8V20h11.6V9.8"/>
-              <path d="M12 11v6M9 14h6"/>
-            </svg>
-          </span>
-          <span class="txt"><b>کوټه جوړه کړه</b><small>کوټه جوړه کړه او کوډ ملګرو ته ولېږه</small></span>
-          <svg class="chev" viewBox="0 0 24 24"><polyline points="14.5 5.5 8 12 14.5 18.5"/></svg>
-        </button>
-
-        <button class="hm-panel hm-act" id="btn-join-toggle">
-          <span class="hm-medal green">
-            <svg viewBox="0 0 24 24">
-              <circle cx="8" cy="15.5" r="4.6"/>
-              <path d="M11.3 12.2 20 3.5"/>
-              <path d="M15.4 8.1l3.4 3.4M17.8 5.7l2.3 2.3"/>
-            </svg>
-          </span>
-          <span class="txt"><b>د کوډ سره ورګډ شه</b><small>د ملګري د کوټې 4 توري کوډ دننه کړه</small></span>
-          <svg class="chev" viewBox="0 0 24 24"><polyline points="14.5 5.5 8 12 14.5 18.5"/></svg>
+        <button class="hm-bigcard gold" id="btn-quick" aria-label="له روباتونو سره لوبه">
+          <span class="fan"><img class="c1" src="cards/KH.png" alt=""><img class="c2" src="cards/QS.png" alt=""></span>
+          <span class="biglabel"><b>له روباتونو سره لوبه</b></span>
         </button>
       </div>
 
@@ -712,25 +719,48 @@
         <button id="btn-join" class="ghost">کوټې ته ننوځه</button>
       </div>
 
-      <div class="hm-slim">
-        <button class="hm-chip hidden" id="btn-continue">
-          <svg viewBox="0 0 24 24">
-            <polyline points="2.5 4.5 2.5 10 8 10"/>
-            <path d="M4.6 15.5a8.5 8.5 0 1 0 2-9.9L2.5 10"/>
-          </svg>
-          <span id="continue-txt">لوبې ته دوام ورکړه</span>
+      <button class="hm-continue hidden" id="btn-continue">
+        <span class="play"><svg viewBox="0 0 24 24"><path d="M6 3l16 9-16 9z"/></svg></span>
+        <span id="continue-txt">لوبې ته دوام ورکړه</span>
+      </button>
+
+      <div class="hm-smallrow">
+        <button class="hm-small" id="btn-create">
+          <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+          <b>کوټه جوړه کړه</b>
         </button>
-        <button class="hm-chip" id="btn-rules">
-          <svg viewBox="0 0 24 24">
-            <path d="M14 3H6.5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V8.5z"/>
-            <polyline points="14 3 14 8.5 19.5 8.5"/>
-            <path d="M8.5 13h7M8.5 16.8h7"/>
-          </svg>
-          <span id="rules-txt">د لوبې قوانین</span>
+        <button class="hm-small" id="btn-join-toggle">
+          <span class="ic"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4.5"/><path d="M11.2 11.8L20 3M16.5 6.5l3 3M13.8 9.2l2.4 2.4"/></svg></span>
+          <b>د کوډ سره ورګډ شه</b>
+        </button>
+        <button class="hm-small" id="btn-rules">
+          <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>
+          <span class="lb" id="rules-txt">د لوبې قوانین</span>
         </button>
       </div>
 
-      <div class="hm-foot"><span id="foot-a">څلور کسيزه ورق لوبه</span><span class="fdot">•</span><span id="foot-b">دوه ټیمه، دوه پر دوه</span></div>
+      <nav class="hm-nav">
+        <button class="hm-navitem" id="nav-friends">
+          <span class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+          <span class="nl" id="nav-friends-lbl">ملګري</span>
+        </button>
+        <button class="hm-navitem" id="nav-clubs">
+          <span class="ni"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+          <span class="nl" id="nav-clubs-lbl">کلبونه</span>
+        </button>
+        <button class="hm-navitem home" id="nav-home">
+          <span class="bubble"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+          <span class="nl" id="nav-home-lbl">کور</span>
+        </button>
+        <button class="hm-navitem" id="nav-profile">
+          <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+          <span class="nl" id="nav-profile-lbl">پروفایل</span>
+        </button>
+        <button class="hm-navitem" id="nav-settings">
+          <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+          <span class="nl" id="nav-settings-lbl">تنظیمات</span>
+        </button>
+      </nav>
     </div>
 
     <div id="home-rules" class="hidden">
@@ -769,9 +799,9 @@
     var L0 = localStorage.getItem('tore.lang');
     if (L0 !== 'fa' && L0 !== 'en') L0 = 'ps';
     var MINI = {
-      ps: { playerPlaceholder: 'د تورې لوبغاړی', menuQuick: 'له روباتونو سره لوبه', menuQuickSub: 'سمدستي پیل — تمرین او تفریح', menuCreate: 'کوټه جوړه کړه', menuCreateSub: 'کوټه جوړه کړه او کوډ ملګرو ته ولېږه', menuJoin: 'د کوډ سره ورګډ شه', menuJoinSub: 'د ملګري د کوټې 4 توري کوډ دننه کړه', roomCodeLabel: 'د کوټې کوډ', joinRoom: 'کوټې ته ننوځه', continueGame: 'لوبې ته دوام ورکړه', rulesBtn: 'د لوبې قوانین', homeFootA: 'څلور کسيزه ورق لوبه', homeFootB: 'دوه ټیمه، دوه پر دوه', rulesBack: '→ مینو ته وګرځه' },
-      fa: { playerPlaceholder: 'بازیکن توره', menuQuick: 'بازی با ربات‌ها', menuQuickSub: 'شروع فوری — تمرین و سرگرمی', menuCreate: 'ساختن اتاق', menuCreateSub: 'اتاق بساز و کد را به دوست‌ها بفرست', menuJoin: 'پیوستن با کد اتاق', menuJoinSub: 'کد 4 حرفی اتاق دوستت را وارد کن', roomCodeLabel: 'کد اتاق', joinRoom: 'ورود به اتاق', continueGame: 'ادامهٔ بازی', rulesBtn: 'قانون‌های بازی', homeFootA: 'بازی ورق چهار نفره', homeFootB: 'دو تیم، دو به دو', rulesBack: '→ برگشت به منو' },
-      en: { playerPlaceholder: 'Tore Player', menuQuick: 'Play with Bots', menuQuickSub: 'Instant start — practice & fun', menuCreate: 'Create a Room', menuCreateSub: 'Make a room and send the code to friends', menuJoin: 'Join with Room Code', menuJoinSub: "Enter your friend's 4-letter room code", roomCodeLabel: 'Room code', joinRoom: 'Enter Room', continueGame: 'Continue Game', rulesBtn: 'Game Rules', homeFootA: 'Four-player card game', homeFootB: 'Two teams, two vs two', rulesBack: '← Back to menu' }
+      ps: { playerPlaceholder: 'د تورې لوبغاړی', menuQuick: 'له روباتونو سره لوبه', menuQuickSub: 'سمدستي پیل — تمرین او تفریح', menuCreate: 'کوټه جوړه کړه', menuCreateSub: 'کوټه جوړه کړه او کوډ ملګرو ته ولېږه', menuJoin: 'د کوډ سره ورګډ شه', menuJoinSub: 'د ملګري د کوټې 4 توري کوډ دننه کړه', roomCodeLabel: 'د کوټې کوډ', joinRoom: 'کوټې ته ننوځه', continueGame: 'لوبې ته دوام ورکړه', rulesBtn: 'د لوبې قوانین', homeFootA: 'څلور کسيزه ورق لوبه', homeFootB: 'دوه ټیمه، دوه پر دوه', menuOnline: 'انلاین لوبه', navFriends: 'ملګري', navClubs: 'کلبونه', navHome: 'کور', navProfile: 'پروفایل', navSettings: 'تنظیمات', rulesBack: '→ مینو ته وګرځه' },
+      fa: { playerPlaceholder: 'بازیکن توره', menuQuick: 'بازی با ربات‌ها', menuQuickSub: 'شروع فوری — تمرین و سرگرمی', menuCreate: 'ساختن اتاق', menuCreateSub: 'اتاق بساز و کد را به دوست‌ها بفرست', menuJoin: 'پیوستن با کد اتاق', menuJoinSub: 'کد 4 حرفی اتاق دوستت را وارد کن', roomCodeLabel: 'کد اتاق', joinRoom: 'ورود به اتاق', continueGame: 'ادامهٔ بازی', rulesBtn: 'قانون‌های بازی', homeFootA: 'بازی ورق چهار نفره', homeFootB: 'دو تیم، دو به دو', menuOnline: 'بازی آنلاین', navFriends: 'دوستان', navClubs: 'باشگاه‌ها', navHome: 'خانه', navProfile: 'پروفایل', navSettings: 'تنظیمات', rulesBack: '→ برگشت به منو' },
+      en: { playerPlaceholder: 'Tore Player', menuQuick: 'Play with Bots', menuQuickSub: 'Instant start — practice & fun', menuCreate: 'Create a Room', menuCreateSub: 'Make a room and send the code to friends', menuJoin: 'Join with Room Code', menuJoinSub: "Enter your friend's 4-letter room code", roomCodeLabel: 'Room code', joinRoom: 'Enter Room', continueGame: 'Continue Game', rulesBtn: 'Game Rules', homeFootA: 'Four-player card game', homeFootB: 'Two teams, two vs two', menuOnline: 'Play Online', navFriends: 'Friends', navClubs: 'Clubs', navHome: 'Home', navProfile: 'Profile', navSettings: 'Settings', rulesBack: '← Back to menu' }
     }[L0];
     document.documentElement.lang = L0;
     var home0 = document.getElementById('scr-home');
@@ -788,6 +818,14 @@
     var codeInp0 = document.querySelector('#inp-code');
     if (codeInp0) codeInp0.placeholder = MINI.roomCodeLabel;
     set0('#btn-join', MINI.joinRoom);
+    set0('#btn-online b', MINI.menuOnline);
+    var onl0 = document.querySelector('#btn-online');
+    if (onl0) onl0.setAttribute('aria-label', MINI.menuOnline);
+    set0('#nav-friends-lbl', MINI.navFriends);
+    set0('#nav-clubs-lbl', MINI.navClubs);
+    set0('#nav-home-lbl', MINI.navHome);
+    set0('#nav-profile-lbl', MINI.navProfile);
+    set0('#nav-settings-lbl', MINI.navSettings);
     set0('#continue-txt', MINI.continueGame);
     set0('#rules-txt', MINI.rulesBtn);
     set0('#foot-a', MINI.homeFootA);
@@ -1042,6 +1080,13 @@ const STR = {
     menuCreateSub: 'کوټه جوړه کړه او کوډ ملګرو ته ولېږه',
     menuJoin: 'د کوډ سره ورګډ شه',
     menuJoinSub: 'د ملګري د کوټې 4 توري کوډ دننه کړه',
+    menuOnline: 'انلاین لوبه',
+    navFriends: 'ملګري',
+    navClubs: 'کلبونه',
+    navHome: 'کور',
+    navProfile: 'پروفایل',
+    navSettings: 'تنظیمات',
+    comingSoon: 'ژر راځي!',
     roomCodeLabel: 'د کوټې کوډ',
     joinRoom: 'کوټې ته ننوځه',
     continueGame: 'لوبې ته دوام ورکړه',
@@ -1154,6 +1199,13 @@ const STR = {
     menuCreateSub: 'اتاق بساز و کد را به دوست‌ها بفرست',
     menuJoin: 'پیوستن با کد اتاق',
     menuJoinSub: 'کد 4 حرفی اتاق دوستت را وارد کن',
+    menuOnline: 'بازی آنلاین',
+    navFriends: 'دوستان',
+    navClubs: 'باشگاه‌ها',
+    navHome: 'خانه',
+    navProfile: 'پروفایل',
+    navSettings: 'تنظیمات',
+    comingSoon: 'به‌زودی می‌آید!',
     roomCodeLabel: 'کد اتاق',
     joinRoom: 'ورود به اتاق',
     continueGame: 'ادامهٔ بازی',
@@ -1266,6 +1318,13 @@ const STR = {
     menuCreateSub: 'Make a room and send the code to friends',
     menuJoin: 'Join with Room Code',
     menuJoinSub: "Enter your friend's 4-letter room code",
+    menuOnline: 'Play Online',
+    navFriends: 'Friends',
+    navClubs: 'Clubs',
+    navHome: 'Home',
+    navProfile: 'Profile',
+    navSettings: 'Settings',
+    comingSoon: 'Coming soon!',
     roomCodeLabel: 'Room code',
     joinRoom: 'Enter Room',
     continueGame: 'Continue Game',
@@ -1409,6 +1468,13 @@ function applyI18n() {
   set('#btn-create small', 'menuCreateSub');
   set('#btn-join-toggle b', 'menuJoin');
   set('#btn-join-toggle small', 'menuJoinSub');
+  set('#btn-online b', 'menuOnline');
+  aria('#btn-online', 'menuOnline');
+  set('#nav-friends-lbl', 'navFriends');
+  set('#nav-clubs-lbl', 'navClubs');
+  set('#nav-home-lbl', 'navHome');
+  set('#nav-profile-lbl', 'navProfile');
+  set('#nav-settings-lbl', 'navSettings');
   set('.hm-join label', 'roomCodeLabel');
   const codeInp = $('#inp-code');
   if (codeInp) codeInp.placeholder = T('roomCodeLabel');
@@ -1759,7 +1825,7 @@ function avatarEl(name, av, px, photo) {
 function renderProfileButton() {
   const slot = $('#home-avatar-slot');
   slot.innerHTML = '';
-  slot.appendChild(avatarEl(profile.name, profile.avatar, 44, profile.photo));
+  slot.appendChild(avatarEl(profile.name, profile.avatar, 56, profile.photo));
   // The player's name sits beside the avatar; placeholder until one is saved.
   $('#home-name').textContent = (profile.name || '').trim() || T('playerPlaceholder');
 }
@@ -1780,6 +1846,9 @@ function connect(onOpen) {
 function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
 
 $('#btn-create').onclick = () => connect(() => send({ type: 'create', ...profilePayload() }));
+// The big ONLINE card is the same door as create-room: a fresh room
+// whose code goes to friends.
+$('#btn-online').onclick = () => connect(() => send({ type: 'create', ...profilePayload() }));
 $('#btn-join').onclick = () => {
   const code = $('#inp-code').value.trim().toUpperCase();
   if (code.length !== 4) return toast(T('codeLenToast'));
@@ -4193,6 +4262,16 @@ $('#btn-continue').onclick = () => {
   intentionalClose = false;
   connect(() => send({ type: 'reconnect', code: s.code, token: s.token, ...profileMsg() }));
 };
+// ---------- bottom nav (home screen) ----------
+// Friends / clubs are placeholders until their backend exists: the tap
+// answers with the coming-soon toast in the current language. Profile
+// and settings open the very same popups as the top bar; home (the
+// active tab) just returns the menu to the top.
+$('#nav-friends').onclick = () => toast(T('comingSoon'));
+$('#nav-clubs').onclick = () => toast(T('comingSoon'));
+$('#nav-home').onclick = () => { $('#scr-home').scrollTop = 0; };
+$('#nav-profile').onclick = openProfile;
+$('#nav-settings').onclick = openSettings;
 // ---------- profile popup ----------
 // Tapping the top-right avatar opens the popup: pick an avatar, edit the
 // name and country, save — everything persists in tore.profile.
