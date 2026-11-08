@@ -407,9 +407,11 @@ export class GameServer {
     for (const room of [...this.rooms.values()]) {
       if (room.phase === 'lobby') continue;
       let changed = false;
+      const goneSids = [];
       room.seats.forEach((s, i) => {
         if (s.kind === 'human' && !s.connected && s.disconnectAt &&
             now - s.disconnectAt > RECONNECT_GRACE_MS) {
+          if (s.sid) goneSids.push(s.sid);
           s.kind = 'bot'; // bot takes over the seat and its hand
           s.avatar = null;
           s.country = '';
@@ -423,6 +425,7 @@ export class GameServer {
         }
       });
       if (changed) this._broadcastState(room);
+      if (goneSids.length) this._syncInGameFor(null, goneSids);
       const anyHuman = room.seats.some((s) => s.kind === 'human');
       if (!anyHuman) {
         this._cancelTimers(room.code);
@@ -474,6 +477,7 @@ export class GameServer {
       sendTo: (id, obj) => this._socialSend(id, obj),
       persist: (data) => { this.state.storage.put('social:v1', data).catch(() => {}); },
       inviteRoomCheck: (id, code) => this._socialRoomCheck(id, code),
+      inGameCheck: (id) => this._isInGame(id),
     });
     const saved = await this.state.storage.get('social:v1').catch(() => null);
     if (saved) core.load(saved);
@@ -495,6 +499,22 @@ export class GameServer {
       const att = this._attachment(ws);
       if (att && att.sid === id) { try { ws.send(data); } catch { /* gone */ } }
     }
+  }
+
+  _isInGame(id) {
+    if (!id) return false;
+    for (const room of this.rooms.values()) {
+      if (room.phase === 'lobby') continue;
+      if (room.seats.some((s) => s.kind === 'human' && s.sid === id)) return true;
+    }
+    return false;
+  }
+
+  _syncInGameFor(room, extraSids) {
+    if (!this.social) return;
+    const ids = new Set(extraSids || []);
+    if (room) room.seats.forEach((s) => { if (s.sid) ids.add(s.sid); });
+    ids.forEach((id) => { try { this.social.syncInGame(id); } catch { /* social never breaks the game */ } });
   }
 
   _socialRoomCheck(id, code) {
@@ -682,6 +702,7 @@ export class GameServer {
     room.seats.forEach((s, i) => {
       if (s.kind === 'human' && s.connected && s.ws) send(s.ws, this._stateFor(room, i));
     });
+    this._syncInGameFor(room);
   }
   _broadcastEvent(room, obj) {
     room.seats.forEach((s) => {
@@ -919,6 +940,8 @@ export class GameServer {
         if (!room) return;
         const seat = room.seats[att.seat];
         if (!seat || seat.kind !== 'human') return;
+        const leavingSid = seat.sid || null;
+        const roomSids = room.seats.map((s) => s.sid).filter(Boolean);
         if (room.phase === 'lobby') {
           if (att.seat === this._hostSeat(room)) {
             room.seats.forEach((s, i) => {
@@ -929,9 +952,11 @@ export class GameServer {
             this._cancelTimers(room.code);
             this.rooms.delete(room.code);
             this._pendingDeletes.add(room.code);
+            this._syncInGameFor(null, roomSids);
           } else {
             room.seats[att.seat] = emptySeat();
             this._broadcastState(room);
+            if (leavingSid) this._syncInGameFor(null, [leavingSid]);
           }
         } else {
           const botNo = room.seats.filter((s) => s.kind === 'bot').length;
@@ -947,6 +972,7 @@ export class GameServer {
           seat.connected = true;
           seat.disconnectAt = null;
           this._broadcastState(room);
+          if (leavingSid) this._syncInGameFor(null, [leavingSid]);
           this._pumpTurn(room);
         }
         att.code = null;
