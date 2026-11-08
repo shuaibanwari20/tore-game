@@ -649,6 +649,10 @@ export class GameServer {
       seats: room.seats.map((s, i) => ({
         name: s.name, kind: s.kind, connected: s.connected,
         avatar: s.avatar, country: s.country, photo: s.photo, sid: s.sid || null,
+        // The seat's permanent player ID, resolved from the social
+        // directory (never client-supplied); null until the player
+        // has a directory record (their /social hello creates one).
+        uid: s.sid && this.social ? this.social.uidOf(s.sid) : null,
         voice: { mic: !!s.voiceMic, speaker: s.voiceSpeaker !== false },
         cards: round ? round.hands[i].length : 0,
       })),
