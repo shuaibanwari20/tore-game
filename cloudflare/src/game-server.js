@@ -435,7 +435,7 @@ export class GameServer {
         }
       });
       if (changed) this._broadcastState(room);
-      if (goneSids.length) this._syncInGameFor(null, goneSids);
+      if (goneSids.length) this._syncBusyFor(null, goneSids);
       const anyHuman = room.seats.some((s) => s.kind === 'human');
       if (!anyHuman) {
         this._cancelTimers(room.code);
@@ -488,6 +488,7 @@ export class GameServer {
       persist: (data) => { this.state.storage.put('social:v1', data).catch(() => {}); },
       inviteRoomCheck: (id, code) => this._socialRoomCheck(id, code),
       inGameCheck: (id) => this._isInGame(id),
+      inLobbyCheck: (id) => this._isInLobby(id),
     });
     const saved = await this.state.storage.get('social:v1').catch(() => null);
     if (saved) core.load(saved);
@@ -520,11 +521,22 @@ export class GameServer {
     return false;
   }
 
-  _syncInGameFor(room, extraSids) {
+  // A seat in a WAITING room: lobby-sitters are uninvitable too
+  // (owner order 2026-11-09) — the social core reports them socialBusy.
+  _isInLobby(id) {
+    if (!id) return false;
+    for (const room of this.rooms.values()) {
+      if (room.phase !== 'lobby') continue;
+      if (room.seats.some((s) => s.kind === 'human' && s.sid === id)) return true;
+    }
+    return false;
+  }
+
+  _syncBusyFor(room, extraSids) {
     if (!this.social) return;
     const ids = new Set(extraSids || []);
     if (room) room.seats.forEach((s) => { if (s.sid) ids.add(s.sid); });
-    ids.forEach((id) => { try { this.social.syncInGame(id); } catch { /* social never breaks the game */ } });
+    ids.forEach((id) => { try { this.social.syncBusy(id); } catch { /* social never breaks the game */ } });
   }
 
   _socialRoomCheck(id, code) {
@@ -712,7 +724,7 @@ export class GameServer {
     room.seats.forEach((s, i) => {
       if (s.kind === 'human' && s.connected && s.ws) send(s.ws, this._stateFor(room, i));
     });
-    this._syncInGameFor(room);
+    this._syncBusyFor(room);
   }
   _broadcastEvent(room, obj) {
     room.seats.forEach((s) => {
@@ -1023,11 +1035,11 @@ export class GameServer {
             this._cancelTimers(room.code);
             this.rooms.delete(room.code);
             this._pendingDeletes.add(room.code);
-            this._syncInGameFor(null, roomSids);
+            this._syncBusyFor(null, roomSids);
           } else {
             room.seats[att.seat] = emptySeat();
             this._broadcastState(room);
-            if (leavingSid) this._syncInGameFor(null, [leavingSid]);
+            if (leavingSid) this._syncBusyFor(null, [leavingSid]);
           }
         } else {
           const botNo = room.seats.filter((s) => s.kind === 'bot').length;
@@ -1043,7 +1055,7 @@ export class GameServer {
           seat.connected = true;
           seat.disconnectAt = null;
           this._broadcastState(room);
-          if (leavingSid) this._syncInGameFor(null, [leavingSid]);
+          if (leavingSid) this._syncBusyFor(null, [leavingSid]);
           this._pumpTurn(room);
         }
         att.code = null;
