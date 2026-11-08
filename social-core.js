@@ -36,18 +36,27 @@
  * s-search-result, s-requested, s-dm, s-dm-history, s-invited,
  * s-invite-result, s-error (codes: socialBlocked, socialNotFriends,
  * socialDuplicate, socialRate, socialOffline, socialNotInRoom,
- * socialNotFound, socialInGame, socialCooldown).
+ * socialNotFound, socialInGame, socialBusy, socialCooldown).
  *
- * Invite rules (2026-11-08): a target seated in a started match
- * (host hook inGameCheck) cannot be invited — person().ingame ships
- * in every list so clients can disable the button live, syncInGame()
- * pushes a fresh s-friends to the player's friends the moment the
- * flag flips, and invite() itself rejects with socialInGame. A
- * successful invite also starts a per-(sender,target) cooldown
+ * Invite rules (2026-11-08, extended 2026-11-09): a target holding
+ * ANY seat cannot be invited — a started match (host hook
+ * inGameCheck) rejects socialInGame, a waiting lobby seat (host
+ * hook inLobbyCheck) rejects socialBusy. person() ships both flags
+ * (ingame / inlobby) in every list so clients can disable the
+ * button live, and syncBusy() pushes a fresh s-friends to the
+ * player's friends the moment either flag flips. A successful
+ * invite also starts a per-(sender,target) cooldown
  * (INVITE_COOLDOWN_MS, overridable via hooks.inviteCooldownMs for
  * tests); a repeat inside the window is rejected socialCooldown.
- * Cooldowns and the known in-game map are runtime-only — never
- * persisted.
+ * On top of that, a DELIVERED invite stays pending for
+ * INVITE_PENDING_MS (the popup's on-screen life): while it is
+ * pending, another invite from the SAME sender to the same target
+ * is dropped with socialCooldown — the target never sees a second
+ * popup. The target's s-invite-reply resolves the one popup on
+ * their screen, so it clears EVERY pending invite to that target
+ * (the slot is per-target, not per-pair); the pending window
+ * lapsing clears it too. Cooldowns, pendings and the known busy
+ * map are runtime-only — never persisted.
  */
 'use strict';
 
@@ -56,6 +65,7 @@ const DM_RATE_MAX = 10;      // messages per sender per pair …
 const DM_RATE_WINDOW = 60000; // … per this window (ms)
 const DM_MAX_CHARS = 500;
 const INVITE_COOLDOWN_MS = 10000; // per sender→target pair, after a sent invite
+const INVITE_PENDING_MS = 30000;  // a delivered invite's popup life on the target's screen
 
 // ---- profile field hygiene (mirrors the game servers' rules) ------
 function cleanName(v) {
@@ -90,7 +100,8 @@ class SocialCore {
     this.dmLog = new Map();     // pairKey+'\n'+from -> [ts,...] (rate window)
     this.online = new Map();    // id -> live socket count
     this.inviteLog = new Map(); // reqKey(from,to) -> ts of last SENT invite (runtime only)
-    this.inGameKnown = new Map(); // id -> last in-game flag pushed to friends (runtime only)
+    this.pendingInvites = new Map(); // reqKey(from,to) -> ts a delivered invite awaits its reply (runtime only)
+    this.busyKnown = new Map(); // id -> last seat state ('match'|'lobby'|'') pushed to friends (runtime only)
   }
 
   // ---------- persistence (DO host; Node ignores) ----------
@@ -139,28 +150,41 @@ class SocialCore {
   _fanPresence(id, online) {
     const set = this.friends.get(id);
     if (!set) return;
-    for (const f of set) if (this.isOnline(f)) this._send(f, { type: 's-presence', id, online, ingame: this.isInGame(id) });
+    for (const f of set) if (this.isOnline(f)) this._send(f, { type: 's-presence', id, online, ingame: this.isInGame(id), inlobby: this.isInLobby(id) });
   }
 
-  // ---------- in-game flag ----------
-  // The host knows the live rooms; the core only asks its hook.
-  // Without a hook nobody is ever in a game.
+  // ---------- seat (busy) flags ----------
+  // The host knows the live rooms; the core only asks its hooks.
+  // Without a hook nobody is ever in a game or a lobby. A player
+  // holding ANY seat is "busy" for invites: 'match' (a started
+  // match) outranks 'lobby' (a waiting room) when both could apply.
   isInGame(id) {
     if (this.hooks.inGameCheck) {
       try { return !!this.hooks.inGameCheck(id); } catch (e) { return false; }
     }
     return false;
   }
+  isInLobby(id) {
+    if (this.hooks.inLobbyCheck) {
+      try { return !!this.hooks.inLobbyCheck(id); } catch (e) { return false; }
+    }
+    return false;
+  }
+  busyState(id) {
+    if (this.isInGame(id)) return 'match';
+    if (this.isInLobby(id)) return 'lobby';
+    return '';
+  }
   // Hosts call this for every identity whose room membership may
-  // have changed (state broadcasts, seat conversions, room closes).
-  // On a flip, every online friend gets a fresh s-friends so their
-  // already-open friends list repaints the invite button at once —
-  // no screen reopen, no polling.
-  syncInGame(id) {
+  // have changed (state broadcasts, seat conversions, room closes,
+  // room creates/joins/leaves). On a flip, every online friend gets
+  // a fresh s-friends so their already-open friends list repaints
+  // the invite button at once — no screen reopen, no polling.
+  syncBusy(id) {
     if (typeof id !== 'string' || !id) return;
-    const now = this.isInGame(id);
-    const prev = !!this.inGameKnown.get(id);
-    this.inGameKnown.set(id, now);
+    const now = this.busyState(id);
+    const prev = this.busyKnown.get(id) || '';
+    this.busyKnown.set(id, now);
     if (now === prev) return;
     const set = this.friends.get(id);
     if (set) for (const f of set) this.refresh(f);
@@ -177,8 +201,8 @@ class SocialCore {
   }
   person(id) {
     const r = this.directory.get(id);
-    if (!r) return { id, name: '', avatar: 'av1', photo: '', country: '', uid: null, online: this.isOnline(id), ingame: this.isInGame(id) };
-    return { id: r.id, name: r.name, avatar: r.avatar, photo: r.photo, country: r.country, uid: r.uid ? String(r.uid) : null, online: this.isOnline(id), ingame: this.isInGame(id) };
+    if (!r) return { id, name: '', avatar: 'av1', photo: '', country: '', uid: null, online: this.isOnline(id), ingame: this.isInGame(id), inlobby: this.isInLobby(id) };
+    return { id: r.id, name: r.name, avatar: r.avatar, photo: r.photo, country: r.country, uid: r.uid ? String(r.uid) : null, online: this.isOnline(id), ingame: this.isInGame(id), inlobby: this.isInLobby(id) };
   }
   listsFor(id) {
     const byName = (a, b) => a.name.localeCompare(b.name);
@@ -332,6 +356,8 @@ class SocialCore {
     this._unlinkFriends(id, other);
     this.requests.delete(reqKey(id, other));
     this.requests.delete(reqKey(other, id));
+    this.pendingInvites.delete(reqKey(id, other));
+    this.pendingInvites.delete(reqKey(other, id));
     if (!this.blocked.has(id)) this.blocked.set(id, new Set());
     this.blocked.get(id).add(other);
     this._persist();
@@ -385,33 +411,60 @@ class SocialCore {
     if (this.blockedEither(id, to)) return this._error(id, 'socialBlocked');
     if (!this.areFriends(id, to)) return this._error(id, 'socialNotFriends');
     if (!this.isOnline(to)) return this._error(id, 'socialOffline');
-    // A player seated in a started match cannot be invited — the
-    // server decides (the client's disabled button is cosmetic).
-    if (this.isInGame(to)) return this._error(id, 'socialInGame');
+    // The room rule comes before the busy rules: "you are not in
+    // the room you are inviting to" is the more fundamental
+    // rejection (a non-seated sender learns nothing about the
+    // target's state). A properly seated sender still reaches the
+    // busy checks below.
     const ok = this.hooks.inviteRoomCheck ? !!this.hooks.inviteRoomCheck(id, code) : false;
     if (!ok) return this._error(id, 'socialNotInRoom');
+    // A player holding ANY seat cannot be invited — the server
+    // decides (the client's disabled button is cosmetic). A started
+    // match reports socialInGame; a seat in a waiting lobby reports
+    // socialBusy (owner order 2026-11-09: lobby-sitters too).
+    if (this.isInGame(to)) return this._error(id, 'socialInGame');
+    if (this.isInLobby(to)) return this._error(id, 'socialBusy');
+    const now = Date.now();
+    const key = reqKey(id, to);
+    // ONE popup per pair: while my earlier invite to this target is
+    // still pending (delivered, awaiting its reply, inside the
+    // popup's on-screen life), a repeat is dropped as a cooldown —
+    // the target never sees a second popup. This window outlives
+    // the send cooldown below, so it is checked first.
+    const pendTs = this.pendingInvites.get(key) || 0;
+    if (pendTs && now - pendTs < INVITE_PENDING_MS) return this._error(id, 'socialCooldown');
     // Per-pair cooldown: one invite per sender→target per window.
     // Only a SENT invite starts the window; rejections never do.
     const cdMs = (typeof this.hooks.inviteCooldownMs === 'number' && this.hooks.inviteCooldownMs >= 0)
       ? this.hooks.inviteCooldownMs : INVITE_COOLDOWN_MS;
-    const now = Date.now();
-    const key = reqKey(id, to);
     const last = this.inviteLog.get(key) || 0;
     if (cdMs > 0 && last && now - last < cdMs) return this._error(id, 'socialCooldown');
     this.inviteLog.set(key, now);
-    // Prune stale entries opportunistically so the map stays small.
+    this.pendingInvites.set(key, now);
+    // Prune stale entries opportunistically so the maps stay small.
     if (this.inviteLog.size > 200) {
       for (const [k, t] of this.inviteLog) if (now - t >= cdMs) this.inviteLog.delete(k);
+    }
+    if (this.pendingInvites.size > 200) {
+      for (const [k, t] of this.pendingInvites) if (now - t >= INVITE_PENDING_MS) this.pendingInvites.delete(k);
     }
     this._send(to, { type: 's-invited', from: this.person(id), code });
   }
 
   inviteReply(id, from, code, accept) {
     if (typeof from !== 'string' || from === id) return;
+    // The reply resolves the ONE popup on my screen, whichever
+    // sender it came from — so it frees the popup slot entirely:
+    // every pending invite TO me is spent (including ones my
+    // client never displayed because a popup was already up), and
+    // any sender may invite me afresh from now on.
+    for (const k of [...this.pendingInvites.keys()]) {
+      if (k.endsWith('\n' + id)) this.pendingInvites.delete(k);
+    }
     if (!this.areFriends(id, from)) return; // stale popup / no longer friends: drop silently
     code = (typeof code === 'string' ? code : '').toUpperCase().trim().slice(0, 8);
     this._send(from, { type: 's-invite-result', by: this.person(id), code, accept: !!accept });
   }
 }
 
-module.exports = { SocialCore, INVITE_COOLDOWN_MS };
+module.exports = { SocialCore, INVITE_COOLDOWN_MS, INVITE_PENDING_MS };
