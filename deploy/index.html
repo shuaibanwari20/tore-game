@@ -205,6 +205,13 @@
      makes any ellipsis cut the logical END of the name, never the
      start (an RTL ellipsis used to eat the "Sh" of "Shuaib Anwari"). */
   .seatbadge .badgename .bnm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; unicode-bidi: plaintext; }
+  /* Another HUMAN's badge is tappable (owner order 2026-11-08): it
+     opens the same small player menu as the lobby rows. Only these
+     badges get pointer-events back — bots, empty seats and my own
+     badge keep pointer-events: none, so they can never swallow a
+     tap meant for the game. Press feedback mirrors .seatrow.tappable. */
+  .seatbadge.tappable { pointer-events: auto; cursor: pointer; }
+  .seatbadge.tappable:active .pavatar { filter: brightness(1.2); }
   .seatbadge[data-pos="left"] .badgename,
   .seatbadge[data-pos="right"] .badgename { max-width: 104px; padding: 1px 6px; }
   /* live-mic marker: a small green mic dot riding the avatar ring */
@@ -571,9 +578,11 @@
   /* Friends screen (owner layout order 2026-11-08): a flex column —
      the list scrolls in .fr-scroll and the home screen's bottom nav
      is pinned at the foot with ملګري as the raised active item; no
-     title, no back button: the top corner carries the blocked-list
-     button (where «شاته» used to sit) and the search toggle beside
-     it; the search box itself stays collapsed until that toggle. */
+     title: the top corner carries the ICON-ONLY blocked-list and
+     search-toggle buttons (owner order: no text on either), and the
+     search box itself stays collapsed until that toggle. A back
+     button joins the same bar ONLY when the screen was opened from
+     the lobby (to pick friends to invite); nav arrivals get none. */
   #scr-friends { display: flex; flex-direction: column; overflow-y: hidden; }
   /* Chat + profile pages (owner order 2026-11-08): same family as the
      friends screen — scrolling content, bottom nav pinned at the foot. */
@@ -632,6 +641,11 @@
   .fr-topbtn svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 2.2; fill: none; stroke-linecap: round; display: block; }
   .fr-topbtn.open { background: #ffd75e; color: #33270a; border-color: #ffd75e; }
   .fr-topbtn .nav-badge { top: -7px; inset-inline-end: -7px; }
+  /* the lobby-origin back button sits at the LEFT end of the top
+     bar: in this RTL row margin-inline-start is the physical right
+     margin, so auto there absorbs the free space between the search
+     button and this one and pins it to the physical left. */
+  .fr-topback { margin-inline-start: auto; }
   /* the blocked list lives in the #ov-blocked popup (same overlay
      family as profile/settings); its rows scroll inside the panel */
   #ov-blocked { z-index: 45; }
@@ -663,6 +677,11 @@
   .fr-act.primary { background: #ffd75e; color: #33270a; border-color: #ffd75e; }
   .fr-act.danger { background: rgba(125,34,49,.35); color: #ffb3ab; border-color: rgba(215,38,61,.6); }
   .fr-act:disabled { opacity: .45; }
+  /* icon-only DM button (owner order 2026-11-08): a proper inline
+     SVG chat bubble fills the button — no emoji, no text label; the
+     glyph is sized to sit level with the neighbouring 🎮/🔔 icons. */
+  .fr-act.fr-chatbtn { display: inline-flex; align-items: center; justify-content: center; padding: 6px 10px; }
+  .fr-act.fr-chatbtn svg { width: 20px; height: 20px; display: block; }
   .fr-unread { position: absolute; top: -6px; inset-inline-end: -6px; min-width: 18px; height: 18px;
     border-radius: 9px; background: #d7263d; color: #fff; font-size: 11px; font-weight: 800;
     display: flex; align-items: center; justify-content: center; padding: 0 5px; border: 1.5px solid #fff0b3; }
@@ -699,7 +718,32 @@
   /* lobby player menu: another human's row is tappable */
   .seatrow.tappable { cursor: pointer; border-radius: 8px; }
   .seatrow.tappable:active { background: rgba(255, 215, 94, .10); }
-  #ov-playermenu { z-index: 46; }
+  /* Player menu = a SMALL ANCHORED CARD beside the tapped avatar
+     (lobby row or table badge), not a centred overlay: a slim
+     avatar+name header over two list rows (icon + label + chevron)
+     in the game's dark emerald/gold. z-index stays under the modal
+     overlays (40) so a round summary always covers it. */
+  #ov-playermenu {
+    position: fixed; z-index: 38; width: 234px; display: none;
+    background: linear-gradient(165deg, #0f4026, #07271a);
+    border: 1.5px solid #d9b380; border-radius: 14px; padding: 8px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.6), inset 0 0 22px rgba(0,0,0,.35);
+    color: #f5e7c6;
+  }
+  #ov-playermenu.show { display: block; }
+  .pmpop-head { display: flex; align-items: center; gap: 9px; padding: 3px 8px 9px;
+    border-bottom: 1px solid rgba(217,179,128,.35); margin-bottom: 6px; }
+  .pmpop-head .pavatar { border-radius: 50%; border: 2px solid #eec95f; flex: 0 0 auto; }
+  .pmpop-head .inv-name { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pmpop-row { display: flex; align-items: center; gap: 10px; width: 100%;
+    background: transparent; border: 0; border-radius: 9px; cursor: pointer;
+    color: #f5e7c6; font: inherit; font-size: 15px; font-weight: 700;
+    padding: 10px 8px; text-align: start; }
+  .pmpop-row:active { background: rgba(255,215,94,.13); }
+  .pmpop-row:disabled { opacity: .55; cursor: default; }
+  .pmpop-ic { font-size: 17px; width: 22px; text-align: center; flex: 0 0 auto; }
+  .pmpop-lbl { flex: 1 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pmpop-ch { color: #ffd75e; font-size: 20px; line-height: 1; flex: 0 0 auto; }
   #ov-playerview { z-index: 47; }
   .pv-av { display: flex; justify-content: center; margin-bottom: 6px; }
   .pv-av .pavatar { border-radius: 50%; border: 2.5px solid #eec95f; }
@@ -1131,13 +1175,15 @@
   <div class="fr-scroll">
     <div class="fr-inner">
       <div class="fr-head">
-        <button class="fr-topbtn" id="btn-fr-openblocked">
-          <span id="fr-blocked-lbl">بلاک شوي</span>
+        <button class="fr-topbtn" id="btn-fr-openblocked" aria-label="بلاک شوي">
+          <svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.4"/><path d="M3.6 19.6c.7-3.6 3.2-5.4 6.4-5.4 1 0 2 .2 2.8.6"/><path d="M4.8 4.2l14.6 15.4"/></svg>
           <span class="nav-badge hidden" id="fr-blocked-badge">0</span>
         </button>
-        <button class="fr-topbtn" id="btn-fr-opensearch" aria-label="لټول">
+        <button class="fr-topbtn" id="btn-fr-opensearch" aria-label="په ID لټون">
           <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5L16.7 16.7"/></svg>
-          <span id="fr-opensearch-lbl">لټول</span>
+        </button>
+        <button class="fr-topbtn fr-topback hidden" id="btn-fr-back" aria-label="شاته">
+          <svg viewBox="0 0 24 24"><path d="M3.5 12h16.5"/><path d="M13.8 5.6L20.2 12l-6.4 6.4"/></svg>
         </button>
       </div>
       <div class="fr-banner hidden" id="fr-lobby-banner"></div>
@@ -1315,15 +1361,11 @@
   </div>
 </div>
 
-<!-- ======== LOBBY PLAYER MENU (tap a player in the lobby) ======== -->
-<div class="overlay" id="ov-playermenu">
-  <div class="panel" style="max-width:340px">
-    <div class="inv-who"><span id="pm-av"></span><span class="inv-name" id="pm-name"></span></div>
-    <div class="pf-btns">
-      <button id="btn-pm-add">د دوستۍ غوښتنه</button>
-      <button id="btn-pm-profile" class="ghost">پروفایل</button>
-    </div>
-  </div>
+<!-- ======== PLAYER MENU (small anchored card: lobby rows + table badges) ======== -->
+<div id="ov-playermenu">
+  <div class="pmpop-head"><span id="pm-av"></span><span class="inv-name" id="pm-name"></span></div>
+  <button class="pmpop-row" id="btn-pm-add"><span class="pmpop-ic">🤝</span><span class="pmpop-lbl" id="pm-add-lbl">د دوستۍ غوښتنه</span><span class="pmpop-ch">›</span></button>
+  <button class="pmpop-row" id="btn-pm-profile"><span class="pmpop-ic">👤</span><span class="pmpop-lbl" id="pm-profile-lbl">پروفایل</span><span class="pmpop-ch">›</span></button>
 </div>
 
 <!-- ======== FRIEND ROW MENU (⋯) ======== -->
@@ -1548,6 +1590,8 @@ const STR = {
     frReject: 'رد',
     frChat: 'ګپ',
     frInvite: 'بلنه',
+    frInGame: 'په لوبه کې دی',
+    frWaitToast: 'لږ صبر وکړه',
     frUnfriend: 'دوست لرې کول',
     frBlock: 'بلاک',
     frUnblock: 'بلاک لرې کول',
@@ -1573,6 +1617,8 @@ const STR = {
     errSocialDuplicate: 'غوښتنه مخکې استول شوې ده',
     errSocialOffline: 'دا ملګری افلاین دی',
     errSocialNotInRoom: 'ته په دې لابي کې نه یې',
+    errSocialInGame: 'دا لوبغاړی اوس په یوه لوبه کې دی',
+    errSocialCooldown: 'لږ صبر وکړه',
     errSocialNotFound: 'لوبغاړی ونه موندل شو',
     errSocialGeneric: 'عملیات ونه شول',
     roomCodeLabel: 'د کوټې کوډ',
@@ -1721,6 +1767,8 @@ const STR = {
     frReject: 'رد',
     frChat: 'گفت‌وگو',
     frInvite: 'دعوت',
+    frInGame: 'در بازی است',
+    frWaitToast: 'کمی صبر کن',
     frUnfriend: 'حذف دوست',
     frBlock: 'بلاک',
     frUnblock: 'رفع بلاک',
@@ -1746,6 +1794,8 @@ const STR = {
     errSocialDuplicate: 'درخواست قبلاً فرستاده شده است',
     errSocialOffline: 'این دوست آفلاین است',
     errSocialNotInRoom: 'تو در این لابی نیستی',
+    errSocialInGame: 'این بازیکن اکنون در یک بازی است',
+    errSocialCooldown: 'کمی صبر کن',
     errSocialNotFound: 'بازیکن پیدا نشد',
     errSocialGeneric: 'عملیات انجام نشد',
     roomCodeLabel: 'کد اتاق',
@@ -1894,6 +1944,8 @@ const STR = {
     frReject: 'Reject',
     frChat: 'Chat',
     frInvite: 'Invite',
+    frInGame: 'In a game',
+    frWaitToast: 'Please wait',
     frUnfriend: 'Unfriend',
     frBlock: 'Block',
     frUnblock: 'Unblock',
@@ -1919,6 +1971,8 @@ const STR = {
     errSocialDuplicate: 'Request already sent',
     errSocialOffline: 'This friend is offline',
     errSocialNotInRoom: 'You are not in that lobby',
+    errSocialInGame: 'This player is in a game right now',
+    errSocialCooldown: 'Please wait',
     errSocialNotFound: 'Player not found',
     errSocialGeneric: 'That did not work',
     roomCodeLabel: 'Room code',
@@ -2090,16 +2144,15 @@ function applyI18n() {
   set('#btn-leavelobby', 'leaveRoom');
   set('#lobby-friends-lbl', 'navFriends');
   // friends screen statics (the dynamic rows render via T() too)
-  set('#fr-blocked-lbl', 'frBlockedTitle');
-  set('#fr-opensearch-lbl', 'frSearchBtn');
   aria('#btn-fr-opensearch', 'frSearchBtn');
   aria('#btn-fr-openblocked', 'frBlockedTitle');
+  aria('#btn-fr-back', 'frBack');
   set('#btn-fr-search', 'frSearchBtn');
   set('#fr-req-title', 'frReqTitle');
   set('#fr-list-title', 'frListTitle');
   set('#fr-blocked-title', 'frBlockedTitle');
   set('#btn-blocked-close', 'closeBtn');
-  set('#btn-pm-profile', 'navProfile');
+  set('#pm-profile-lbl', 'navProfile');
   set('#btn-pv-close', 'closeBtn');
   set('#frnav-friends-lbl', 'navFriends');
   set('#frnav-clubs-lbl', 'navClubs');
@@ -5343,6 +5396,7 @@ function copyMyId() {
 }
 $('#pf-id-num').onclick = copyMyId;
 function openProfile() {
+  frOrigin = null; // leaving friends via a nav page drops the lobby origin
   pfAvatar = profile.avatar;
   renderMyId();
   $('#pf-name').value = profile.name || '';
@@ -5560,6 +5614,35 @@ let dmPeer = null;               // person record of the open DM thread
 const inviteQueue = [];
 let inviteCurrent = null, inviteTimer = null;
 let confirmCb = null;
+// Invite cooldown (client mirror of the server's per-pair window):
+// id -> timestamp (ms) when that friend may be invited again. The
+// remaining time is always derived from Date.now(), so a row that
+// re-renders mid-cooldown (presence refresh, language switch…)
+// keeps counting from the TRUE remaining time — never a restart.
+const INVITE_CD_MS = 10000;
+const inviteCd = new Map();
+let inviteCdTimer = null;
+let lastInviteTo = null; // target of my most recent invite attempt (for s-error routing)
+function inviteCdRemaining(id) {
+  const until = inviteCd.get(id);
+  if (!until) return 0;
+  const rem = Math.ceil((until - Date.now()) / 1000);
+  if (rem <= 0) { inviteCd.delete(id); return 0; }
+  return rem;
+}
+function setInviteCd(id, ms) {
+  inviteCd.set(id, Date.now() + (ms || INVITE_CD_MS));
+  ensureInviteCdTicker();
+}
+function ensureInviteCdTicker() {
+  if (inviteCdTimer) return;
+  inviteCdTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [k, u] of inviteCd) if (u <= now) inviteCd.delete(k);
+    renderFriends(); // repaints the ticking ⏳ seconds (and the re-enabled button at zero)
+    if (!inviteCd.size) { clearInterval(inviteCdTimer); inviteCdTimer = null; }
+  }, 500);
+}
 
 function myPid() {
   let pid = null;
@@ -5631,9 +5714,9 @@ function onSocialMsg(m) {
     applySocialLists(m);
   } else if (m.type === 's-presence') {
     const p = socialPeople.get(m.id);
-    if (p) p.online = !!m.online;
-    if (socialData) socialData.friends.forEach((f) => { if (f.id === m.id) f.online = !!m.online; });
-    frSearchResults.forEach((r) => { if (r.id === m.id) r.online = !!m.online; });
+    if (p) { p.online = !!m.online; if (m.ingame !== undefined) p.ingame = !!m.ingame; }
+    if (socialData) socialData.friends.forEach((f) => { if (f.id === m.id) { f.online = !!m.online; if (m.ingame !== undefined) f.ingame = !!m.ingame; } });
+    frSearchResults.forEach((r) => { if (r.id === m.id) { r.online = !!m.online; if (m.ingame !== undefined) r.ingame = !!m.ingame; } });
     renderFriends();
     renderChats();
     if (dmPeer && dmPeer.id === m.id) paintDmPeer();
@@ -5671,7 +5754,26 @@ function onSocialMsg(m) {
     if (!m.accept) toast(T('frInviteRejected', (m.by && m.by.name) || ''));
   } else if (m.type === 's-error') {
     if (pmSentSid) { pmSentSid = null; renderPlayerMenu(); }
-    toast(socialErrText(m.code));
+    // Invite-specific routing: the row must reflect the server's
+    // verdict at once (the pushed s-friends refresh is the backup).
+    if (m.code === 'socialInGame' && lastInviteTo) {
+      if (socialData) socialData.friends.forEach((f) => { if (f.id === lastInviteTo) f.ingame = true; });
+      const cp = socialPeople.get(lastInviteTo); if (cp) cp.ingame = true;
+      inviteCd.delete(lastInviteTo);
+      renderFriends();
+      toast(T('errSocialInGame'));
+    } else if (m.code === 'socialCooldown') {
+      // Quiet, single subtle toast; the button (re)enters its
+      // countdown disabled state instead of error-spamming.
+      if (lastInviteTo) { setInviteCd(lastInviteTo, INVITE_CD_MS); renderFriends(); }
+      toast(T('frWaitToast'));
+    } else {
+      if ((m.code === 'socialOffline' || m.code === 'socialNotInRoom') && lastInviteTo) {
+        inviteCd.delete(lastInviteTo); // a failed invite starts no cooldown
+        renderFriends();
+      }
+      toast(socialErrText(m.code));
+    }
   }
 }
 
@@ -5703,7 +5805,16 @@ function updateFriendsBadge() {
     bb.classList.toggle('hidden', bn === 0);
   }
 }
-function openFriends() {
+// Where the friends screen was opened from: 'lobby' (the lobby's
+// ملګري button — picking friends to invite) earns a back button in
+// the top bar that returns to the untouched lobby; every nav/plain
+// entry gets NO back button (owner order 2026-11-08). Leaving the
+// screen (کور, چت, پروفایل, or the back button itself) clears it.
+let frOrigin = null;
+function openFriends(origin) {
+  frOrigin = origin === 'lobby' ? 'lobby' : null;
+  const bb = $('#btn-fr-back');
+  if (bb) bb.classList.toggle('hidden', frOrigin !== 'lobby');
   // The three pages are siblings: opening one hides the other two.
   $('#scr-chats').classList.add('hidden');
   $('#scr-profile').classList.add('hidden');
@@ -5712,10 +5823,14 @@ function openFriends() {
   renderFriends();
 }
 function closeFriends() {
+  frOrigin = null;
+  const bb = $('#btn-fr-back');
+  if (bb) bb.classList.add('hidden');
   $('#scr-friends').classList.add('hidden');
   $('#ov-blocked').classList.remove('show');
 }
-$('#btn-lobby-friends').onclick = openFriends;
+$('#btn-lobby-friends').onclick = () => openFriends('lobby');
+$('#btn-fr-back').onclick = () => closeFriends();
 
 // ---------- chat page (چت) ----------
 // Every friend in one list; a row shows the last DM (one-line
@@ -5724,6 +5839,7 @@ $('#btn-lobby-friends').onclick = openFriends;
 // existing DM view with its back target set to this page.
 let dmReturn = 'friends';   // where the DM back button lands
 function openChats() {
+  frOrigin = null; // leaving friends via a nav page drops the lobby origin
   $('#scr-friends').classList.add('hidden');
   $('#scr-profile').classList.add('hidden');
   $('#scr-chats').classList.remove('hidden');
@@ -5844,13 +5960,16 @@ $('#pfnav-home').onclick = () => closeProfile();
 $('#pfnav-profile').onclick = () => {};
 $('#pfnav-chat').onclick = () => openChats();
 
-// ---------- lobby player menu (tap a player) ----------
-// Tapping another human's lobby row opens a small menu over the
-// lobby: send them a friend request, or view the profile the game
-// knows. The seat carries their social id (sid in every state push),
-// so the request rides the same /social socket as the friends
-// screen and its button paints from the same live lists.
+// ---------- player menu (tap a player: lobby row / table badge) ----------
+// Tapping another human (their lobby row, or their seat badge at
+// the table) opens a SMALL ANCHORED CARD beside the tapped avatar:
+// send them a friend request, or view the profile the game knows.
+// The seat carries their social id (sid in every state push), so
+// the request rides the same /social socket as the friends screen
+// and the row paints from the same live lists. Tap-outside closes.
 let pmSeat = null;      // snapshot of the tapped seat
+let pmIdx = null;       // seat index the menu is open for
+let pmAnchor = null;    // element the card is anchored to
 let pmSentSid = null;   // optimistic pending until the lists confirm
 function seatRelation(sid) {
   if (!sid) return 'nosid';
@@ -5861,32 +5980,86 @@ function seatRelation(sid) {
   if (socialData.blocked.some((f) => f.id === sid)) return 'blocked';
   return 'none';
 }
-function openPlayerMenu(idx) {
+function openPlayerMenu(idx, anchor) {
   const s = state && state.seats && state.seats[idx];
   if (!s || s.kind !== 'human' || idx === mySeat) return;
+  const pop = $('#ov-playermenu');
+  // tapping the same player's avatar again closes their card
+  if (pop.classList.contains('show') && pmIdx === idx) { closePlayerMenu(); return; }
+  // never open while a modal overlay (round summary, match end,
+  // invite…) owns the screen — it must stay on top
+  if (document.querySelector('.overlay.show')) return;
   pmSeat = { name: dispName(s), avatar: s.avatar, photo: s.photo, country: s.country, sid: s.sid || null, uid: s.uid ? String(s.uid) : null };
-  $('#ov-playermenu').classList.add('show');
+  pmIdx = idx;
+  pmAnchor = anchor || document.querySelector('#lobby-seats .seatrow[data-seat="' + idx + '"]') || $('#seat-' + relPos(idx));
+  pop.classList.add('show');
   renderPlayerMenu();
+  placePlayerMenu();
 }
+// Position the card next to its anchor: beside a narrow edge badge
+// (card opens toward the table centre), below a wide lobby row,
+// clamped inside the viewport with an 8 px margin on every side.
+function placePlayerMenu() {
+  const pop = $('#ov-playermenu');
+  if (!pop.classList.contains('show') || !pmAnchor || !pmAnchor.isConnected) return;
+  const r = pmAnchor.getBoundingClientRect();
+  const W = pop.offsetWidth || 234, H = pop.offsetHeight || 168;
+  const vw = window.innerWidth, vh = window.innerHeight, M = 8;
+  let x, y;
+  if (r.width < vw * 0.4 && r.left + r.width / 2 < vw / 2) { x = r.right + 10; y = r.top + r.height / 2 - H / 2; }
+  else if (r.width < vw * 0.4) { x = r.left - W - 10; y = r.top + r.height / 2 - H / 2; }
+  else if (r.bottom + H + 6 <= vh) { x = r.left + r.width / 2 - W / 2; y = r.bottom + 6; }
+  else { x = r.left + r.width / 2 - W / 2; y = r.top - H - 6; }
+  pop.style.left = Math.max(M, Math.min(x, vw - W - M)) + 'px';
+  pop.style.top = Math.max(M, Math.min(y, vh - H - M)) + 'px';
+}
+// A state push that ends the round/match or recycles the seat
+// closes the card — the anchor's player must still be the same
+// human in the same seat. A push that merely REBUILDS the anchor
+// element (lobby rows are recreated per push) just re-anchors it.
+function validatePlayerMenu() {
+  if (pmIdx === null || !$('#ov-playermenu').classList.contains('show')) return;
+  const s = state && state.seats && state.seats[pmIdx];
+  if (!s || s.kind !== 'human' || pmIdx === mySeat || !pmSeat || dispName(s) !== pmSeat.name ||
+      state.phase === 'roundEnd' || state.phase === 'matchEnd') { closePlayerMenu(); return; }
+  if (!pmAnchor || !pmAnchor.isConnected) {
+    pmAnchor = state.phase === 'lobby'
+      ? document.querySelector('#lobby-seats .seatrow[data-seat="' + pmIdx + '"]')
+      : $('#seat-' + relPos(pmIdx));
+    if (!pmAnchor || !pmAnchor.isConnected) { closePlayerMenu(); return; }
+    placePlayerMenu();
+  }
+}
+window.addEventListener('resize', placePlayerMenu);
 function closePlayerMenu() { $('#ov-playermenu').classList.remove('show'); }
+// Tap anywhere outside the card closes it. Anchor taps are exempt —
+// the anchor's own click handler opens/switches/toggles the card.
+document.addEventListener('pointerdown', (e) => {
+  const pop = $('#ov-playermenu');
+  if (!pop.classList.contains('show')) return;
+  if (pop.contains(e.target)) return;
+  if (e.target.closest && e.target.closest('.tappable')) return;
+  closePlayerMenu();
+}, true);
 function renderPlayerMenu() {
   if (!pmSeat || !$('#ov-playermenu').classList.contains('show')) return;
   const av = $('#pm-av');
   av.innerHTML = '';
-  av.appendChild(avatarEl(pmSeat.name, pmSeat.avatar, 54, pmSeat.photo));
+  av.appendChild(avatarEl(pmSeat.name, pmSeat.avatar, 40, pmSeat.photo));
   $('#pm-name').textContent = pmSeat.name;
   const btn = $('#btn-pm-add');
+  const lbl = $('#pm-add-lbl');
   const rel = seatRelation(pmSeat.sid);
   btn.onclick = null;
   btn.disabled = false;
   btn.classList.toggle('hidden', rel === 'nosid' || rel === 'blocked');
-  if (rel === 'friend') { btn.textContent = T('frIsFriend'); btn.disabled = true; }
-  else if (rel === 'outgoing' || pmSentSid === pmSeat.sid) { btn.textContent = T('frPending'); btn.disabled = true; }
+  if (rel === 'friend') { lbl.textContent = T('frIsFriend'); btn.disabled = true; }
+  else if (rel === 'outgoing' || pmSentSid === pmSeat.sid) { lbl.textContent = T('frPending'); btn.disabled = true; }
   else if (rel === 'incoming') {
-    btn.textContent = T('frRespond');
+    lbl.textContent = T('frRespond');
     btn.onclick = () => { closePlayerMenu(); openFriends(); };
   } else if (rel === 'none') {
-    btn.textContent = T('frRequestBtn');
+    lbl.textContent = T('frRequestBtn');
     btn.onclick = () => {
       socialSend({ type: 's-request', to: pmSeat.sid });
       pmSentSid = pmSeat.sid;
@@ -5914,8 +6087,21 @@ $('#btn-pm-profile').onclick = () => {
   $('#ov-playerview').classList.add('show');
 };
 $('#btn-pv-close').onclick = () => $('#ov-playerview').classList.remove('show');
-$('#ov-playermenu').addEventListener('click', (e) => { if (e.target === e.currentTarget) closePlayerMenu(); });
 $('#ov-playerview').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
+
+// ---------- table player menu (tap a player's badge) ----------
+// The table twin of the lobby rows: another HUMAN's seat badge
+// (avatar or name pill — the whole badge element) opens the very
+// same anchored card via the same openPlayerMenu(). The render
+// loop keeps .tappable on exactly those badges; openPlayerMenu
+// re-validates kind/mySeat from live state.
+['top', 'right', 'left', 'bottom'].forEach((pos) => {
+  $('#seat-' + pos).addEventListener('click', (e) => {
+    if (!e.currentTarget.classList.contains('tappable')) return;
+    const idx = seatOfPos(pos);
+    if (idx !== null) openPlayerMenu(idx, e.currentTarget);
+  });
+});
 
 function frBtn(label, cls, fn, badge) {
   const b = document.createElement('button');
@@ -5928,6 +6114,24 @@ function frBtn(label, cls, fn, badge) {
     b.appendChild(s);
   }
   if (fn) b.onclick = fn; else b.disabled = true;
+  return b;
+}
+// The friend-row DM button is ICON-ONLY (owner order 2026-11-08):
+// the 💬 emoji and the «ګپ» text both go — one properly drawn
+// inline-SVG speech bubble (pale gold, deep-green dots) stays, like
+// the icon-only 🎮 in-game button. The «ګپ» wording lives on as the
+// button's title/aria-label, and the unread badge rides in the
+// corner exactly as with any frBtn (frBtn builds it for us).
+const CHAT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+  '<path d="M12 3.5c-5.2 0-9.5 3.6-9.5 8.1 0 2.6 1.4 4.9 3.7 6.4-.3 1.3-.9 2.6-1.7 3.7-.1.2 0 .4.2.4 2.2-.1 4.3-.8 6-2 .5.1 1 .1 1.5.1 5.2 0 9.5-3.6 9.5-8.1S17.2 3.5 12 3.5Z"/>' +
+  '<circle cx="7.4" cy="11.6" r="1.45" fill="#0e2a1c"/><circle cx="12" cy="11.6" r="1.45" fill="#0e2a1c"/>' +
+  '<circle cx="16.6" cy="11.6" r="1.45" fill="#0e2a1c"/></svg>';
+function frChatBtn(p) {
+  const b = frBtn('', 'fr-chatbtn', () => openDm(p), dmUnread.get(p.id) || 0);
+  b.dataset.act = 'chat';
+  b.insertAdjacentHTML('afterbegin', CHAT_ICON_SVG);
+  b.title = T('frChat');
+  b.setAttribute('aria-label', T('frChat'));
   return b;
 }
 function personRow(p, actions) {
@@ -6035,12 +6239,35 @@ function renderFriends() {
   listBox.innerHTML = '';
   if (!socialData.friends.length) listBox.appendChild(frEmpty(T('frNoFriends')));
   socialData.friends.forEach((p) => {
-    const actions = [frBtn('💬 ' + T('frChat'), '', () => openDm(p), dmUnread.get(p.id) || 0)];
+    const actions = [frChatBtn(p)];
     if (code) {
-      actions.push(frBtn('🎮 ' + T('frInvite'), 'primary', () => {
-        if (!p.online) { toast(T('frOfflineToast', p.name || '')); return; }
-        socialSend({ type: 's-invite', to: p.id, code });
-      }));
+      if (p.ingame) {
+        // In a started match: disabled (greyed, never hidden). The
+        // game icon ALONE is the visible label (owner order
+        // 2026-11-08); the in-game wording lives on as the button's
+        // title/aria-label. The server rejects such invites too.
+        const igBtn = frBtn('🎮', '', null);
+        igBtn.title = T('frInGame');
+        igBtn.setAttribute('aria-label', T('frInGame'));
+        actions.push(igBtn);
+      } else {
+        const rem = inviteCdRemaining(p.id);
+        if (rem > 0) {
+          // Cooldown: the button itself shows the ticking seconds
+          // (Latin digits), disabled until they reach zero.
+          const cdBtn = frBtn('⏳ ' + String(rem), '', null);
+          cdBtn.dataset.cdFor = p.id;
+          actions.push(cdBtn);
+        } else {
+          actions.push(frBtn('🔔 ' + T('frInvite'), 'primary', () => {
+            if (!p.online) { toast(T('frOfflineToast', p.name || '')); return; }
+            lastInviteTo = p.id;
+            socialSend({ type: 's-invite', to: p.id, code });
+            setInviteCd(p.id, INVITE_CD_MS);
+            renderFriends();
+          }));
+        }
+      }
     }
     actions.push(frBtn('⋯', '', () => openFriendMenu(p)));
     listBox.appendChild(personRow(p, actions));
@@ -6791,6 +7018,10 @@ function render(st) {
     const el = $('#seat-' + pos);
     const isTurn = st.turn === i && st.phase === 'playing';
     el.classList.toggle('turn', isTurn);
+    // another HUMAN's badge is tappable: it opens the player menu
+    // (the #seat-<pos> click bindings below). Mine, bots and empty
+    // seats stay inert — pointer-events: none in the CSS above.
+    el.classList.toggle('tappable', s.kind === 'human' && i !== mySeat);
     const crown = (winSeat === i && st.phase === 'playing') ? '👑 ' : '';
     const kindMark = s.kind === 'human'
       ? '<span class="dot ' + (s.connected ? 'on' : '') + '"></span>' : '';
@@ -6802,6 +7033,7 @@ function render(st) {
   // rebuilt badges (the innerHTML rebuild above wiped them).
   paintVoiceDots(st);
   ['top', 'right', 'left', 'bottom'].forEach(paintChatBubble);
+  validatePlayerMenu();
 
   // won-trick piles: plain rows of card backs on the carpet in front of
   // each player, rendered purely from pileShown by the state machine
@@ -7012,7 +7244,7 @@ function renderLobby(st) {
     // my own row open nothing.
     if (s.kind === 'human' && i !== mySeat) {
       row.classList.add('tappable');
-      row.addEventListener('click', () => openPlayerMenu(i));
+      row.addEventListener('click', () => openPlayerMenu(i, row));
     }
     row.appendChild(main);
     row.appendChild(meta);
@@ -7021,6 +7253,7 @@ function renderLobby(st) {
   const isHost = mySeat === st.hostSeat;
   $('#btn-start').disabled = !isHost;
   $('#lobby-note').textContent = isHost ? T('lobbyNoteHost') : T('lobbyNoteGuest');
+  validatePlayerMenu();
 }
 </script>
 </body>
