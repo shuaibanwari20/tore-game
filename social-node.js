@@ -36,6 +36,10 @@ function createNodeSocial(opts) {
     inviteRoomCheck(id, code) {
       return opts.roomCheck ? !!opts.roomCheck(id, code) : false;
     },
+    inGameCheck(id) {
+      return opts.inGameCheck ? !!opts.inGameCheck(id) : false;
+    },
+    inviteCooldownMs: (typeof opts.inviteCooldownMs === 'number') ? opts.inviteCooldownMs : undefined,
   });
 
   function handleConnection(ws) {
