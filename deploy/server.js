@@ -68,10 +68,20 @@ function sidInGame(id) {
   }
   return false;
 }
-function syncInGameFor(room, extraSids) {
+// A seat in a WAITING room: lobby-sitters are uninvitable too
+// (owner order 2026-11-09) — the social core reports them socialBusy.
+function sidInLobby(id) {
+  if (!id) return false;
+  for (const room of rooms.values()) {
+    if (room.phase !== 'lobby') continue;
+    if (room.seats.some((s) => s.kind === 'human' && s.sid === id)) return true;
+  }
+  return false;
+}
+function syncBusyFor(room, extraSids) {
   const ids = new Set(extraSids || []);
   if (room) room.seats.forEach((s) => { if (s.sid) ids.add(s.sid); });
-  ids.forEach((id) => { try { social.core.syncInGame(id); } catch (e) { /* social never breaks the game */ } });
+  ids.forEach((id) => { try { social.core.syncBusy(id); } catch (e) { /* social never breaks the game */ } });
 }
 const social = createNodeSocial({
   roomCheck: (id, code) => {
@@ -79,6 +89,7 @@ const social = createNodeSocial({
     return !!room && room.phase === 'lobby';
   },
   inGameCheck: sidInGame,
+  inLobbyCheck: sidInLobby,
 });
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
@@ -172,7 +183,7 @@ function broadcastState(room) {
   room.seats.forEach((s, i) => {
     if (s.kind === 'human' && s.connected && s.ws) send(s.ws, stateFor(room, i));
   });
-  syncInGameFor(room);
+  syncBusyFor(room);
 }
 
 // ------------------------------------------------------------ game flow
@@ -441,7 +452,7 @@ setInterval(() => {
       }
     });
     if (changed) broadcastState(room);
-    if (goneSids.length) syncInGameFor(null, goneSids);
+    if (goneSids.length) syncBusyFor(null, goneSids);
     const anyHuman = room.seats.some((s) => s.kind === 'human');
     if (!anyHuman) {
       clearTimeout(room.turnTimer);
@@ -585,11 +596,11 @@ function handleMessage(ws, msg) {
           clearTimeout(room.roundTimer);
           clearTimeout(room.trickTimer);
           rooms.delete(room.code);
-          syncInGameFor(null, roomSids);
+          syncBusyFor(null, roomSids);
         } else {
           room.seats[ws._seat] = emptySeat();
           broadcastState(room);
-          if (leavingSid) syncInGameFor(null, [leavingSid]);
+          if (leavingSid) syncBusyFor(null, [leavingSid]);
         }
       } else {
         const botNo = room.seats.filter((s) => s.kind === 'bot').length;
@@ -605,7 +616,7 @@ function handleMessage(ws, msg) {
         seat.connected = true;
         seat.disconnectAt = null;
         broadcastState(room);
-        if (leavingSid) syncInGameFor(null, [leavingSid]);
+        if (leavingSid) syncBusyFor(null, [leavingSid]);
         pumpTurn(room);
       }
       ws._roomCode = undefined;
