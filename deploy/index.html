@@ -3530,8 +3530,20 @@ async function micSelfCheck(gen) {
     const entry = peers[s];
     if (!entry || !pairWanted(seat)) continue;
     if (!pairSig(seat).includes('S')) continue;
-    if (!(entry.dcOpen || entry.pc.connectionState === 'connected')) continue;
     if (!entry.pc.remoteDescription) continue;
+    // Round 9: direction BEFORE bytes. A pair whose negotiated
+    // direction lacks a send component can never grow outbound
+    // bytes, and judging it needs no DTLS — direction is a
+    // signaling-layer fact, settled with the descriptions. The
+    // remedy is ONE direction-repair renegotiation (never a
+    // re-form): the peer's mic-on used to supply that
+    // renegotiation by accident; the talker now supplies his
+    // own, ~3 s after opening his mic.
+    if (!sendDirectionOk(entry)) {
+      dirRepair(seat, entry, 'post-mic-on check');
+      continue;
+    }
+    if (!(entry.dcOpen || entry.pc.connectionState === 'connected')) continue;
     if (entry.txCheckBase === undefined) continue;
     const base = entry.txCheckBase;
     delete entry.txCheckBase; // one-shot per mic-on
@@ -3643,6 +3655,12 @@ function ensureTransceiver(entry) {
       }
       setSenderTrack(entry);
     }
+    // Round 9: re-assert sendrecv on the SESSION transceiver
+    // even when entry.sender was already set — the adopt path
+    // above only runs when the sender changes hands, so a
+    // transceiver left non-sendrecv by its birth (below) kept
+    // that direction forever.
+    forceSendrecv(entry);
   } catch (e) {}
 }
 // Post-offer adoption: after a remote OFFER is applied, the
@@ -3674,6 +3692,88 @@ function adoptSessionTransceiver(entry, remoteSdp) {
       setSenderTrack(entry);
     }
   } catch (e) {}
+}
+// ---------- direction guarantee (round 9) ----------
+// Field report (owner, 2026-11-08 21:16, lobby AND table): on
+// Android he turns his mic ON — the voice does not go out, he
+// cannot be heard — UNTIL the other player turns THEIR mic on;
+// at that moment his mic "activates". Measured in the round-9
+// repro (driver tore-diag9c): the plain lobby birth negotiates
+// a=sendrecv in both descriptions on desktop Chromium, but a
+// pair whose audio transceiver carries direction 'recvonly'
+// into a negotiation settles as local a=recvonly / remote
+// a=sendonly with currentDirection 'recvonly' — and the real
+// UI mic-on then attaches a LIVE track to the sender that is
+// never transmitted, because replaceTrack cannot change a
+// negotiated direction and NOTHING after pair birth ever
+// re-checked it: ensureTransceiver flipped direction only
+// while adopting a sender, adoptSessionTransceiver only when
+// the sender changed hands, so any birth that left the
+// transceiver non-sendrecv (the answerer's browser-grown
+// transceiver under a swallowed/coerced flip, a rollback
+// adoption, a browser that keeps a non-sendrecv default) was
+// PERMANENT — curable only by an unrelated renegotiation,
+// which is exactly what the peer's mic-on incidentally caused
+// on their side (their heal/reoffer traffic re-rolled the
+// session). The guarantee now has three layers: the direction
+// is forced sendrecv at EVERY offer (ensureTransceiver runs
+// before createOffer and re-asserts unconditionally) and at
+// EVERY answer (forceSendrecv before createAnswer, below);
+// the post-mic-on self-check verifies the pair can actually
+// send and spends ONE direction-repair renegotiation if not;
+// and the watchdog treats "track live + bytes frozen +
+// direction lacking send" as that same repair, never first
+// as a re-form.
+function sessionAudioTc(entry) {
+  if (!entry || !entry.pc) return null;
+  try {
+    const list = (entry.pc.getTransceivers ? entry.pc.getTransceivers() : []).filter(
+      (t) => t && t.receiver && t.receiver.track && t.receiver.track.kind === 'audio' && !t.stopped);
+    if (entry.sender) {
+      const mine = list.find((t) => t.sender === entry.sender && t.mid != null);
+      if (mine) return mine;
+      const any = list.find((t) => t.sender === entry.sender);
+      if (any) return any;
+    }
+    return list.find((t) => t.mid != null) || list[0] || null;
+  } catch (e) { return null; }
+}
+function forceSendrecv(entry) {
+  const tc = sessionAudioTc(entry);
+  if (tc && tc.direction !== 'sendrecv') {
+    try { tc.direction = 'sendrecv'; } catch (e) {}
+  }
+  return tc;
+}
+// Can this pair actually SEND right now? Judged on the
+// NEGOTIATED direction (currentDirection, once descriptions
+// are applied): it must carry a send component — 'sendrecv'
+// or 'sendonly' from my side. 'recvonly'/'inactive' means an
+// attached mic track is never transmitted, however live it
+// is. No transceiver / no negotiation yet is NOT a failure.
+function sendDirectionOk(entry) {
+  if (!entry || !entry.pc || !entry.pc.remoteDescription) return true;
+  const tc = sessionAudioTc(entry);
+  if (!tc) return true;
+  const d = tc.currentDirection || tc.direction;
+  return d === 'sendrecv' || d === 'sendonly';
+}
+// ONE direction-repair renegotiation: flip the transceiver to
+// sendrecv and re-offer through the serialized signaling
+// queue (makeOffer). Never a teardown — ICE/DTLS survive;
+// only the direction is renegotiated. Spent once per heal
+// episode (rec.dirRepaired; reset when outbound bytes flow
+// again, in audioWatchStep). Returns true when it fired.
+function dirRepair(seat, entry, why) {
+  const rec = audioHealRec(seat);
+  if (rec.dirRepaired) return false;
+  rec.dirRepaired = true;
+  rec.last = 'dir-repair';
+  forceSendrecv(entry);
+  entry.wantNegotiate = true;
+  voiceEvent('audio heal: dir-repair renegotiation (send direction missing, ' + why + ')', seat);
+  makeOffer(seat, entry);
+  return true;
 }
 // Attach/detach the mic track on a pair's one sendrecv sender.
 // This is ALL a mic toggle does to a living pair: replaceTrack
@@ -4213,8 +4313,17 @@ async function readPairStats(pc) {
 // platform's permission to play, and its remedy is the element
 // (re-attach + play, retried on the next user gesture) — never
 // a re-formation.
+//
+// DIRECTION FAILURE (round 9) cuts across the SEND ladder the
+// same way: mic on + sender track live + outbound bytes frozen
+// + the negotiated direction lacking a send component is not
+// a wedged sender — the m-line itself forbids sending. The
+// remedy is ONE direction-repair renegotiation (dirRepair),
+// spent once per episode and tried before any re-form; the
+// post-mic-on self-check runs the same test ~3 s after every
+// mic-on, without waiting for the frozen window.
 function audioHealRec(seat) {
-  return audioHealSeats[seat] || (audioHealSeats[seat] = { step: 0, txReformed: false, last: '' });
+  return audioHealSeats[seat] || (audioHealSeats[seat] = { step: 0, txReformed: false, dirRepaired: false, last: '' });
 }
 // Re-attach the pair's stream to its playback element and play:
 // the stream is detached and re-set (an element created against
@@ -4318,6 +4427,7 @@ async function audioWatchStep(seat, entry) {
   // escalation from step (a) again.
   if (inFlow && rec.step) rec.step = 0;
   if (outFlow && rec.txReformed) rec.txReformed = false;
+  if (outFlow && rec.dirRepaired) rec.dirRepaired = false;
   // Flag-edge grace (round 6): within FLAG_GRACE_MS of any
   // mic/speaker transition touching this pair, the frozen
   // windows are pinned to NOW every tick (so the post-grace
@@ -4376,7 +4486,15 @@ async function audioWatchStep(seat, entry) {
   if (!inGrace && expectS && linked && entry.pc.remoteDescription && entry.txExpect && entry.txFrozenAt &&
       now - entry.txFrozenAt >= AUDIO_FROZEN_MS && !rec.txReformed) {
     const hasTrack = !!(entry.sender && entry.sender.track);
-    if (!hasTrack && !entry.txReattachTried) {
+    if (hasTrack && !sendDirectionOk(entry) && !rec.dirRepaired) {
+      // Direction failure (round 9): the track is live and
+      // attached, but the negotiated direction has no send
+      // component — the bytes are frozen because the m-line
+      // forbids sending, not because anything is wedged. The
+      // repair is a renegotiation of the direction alone; it
+      // gets its own window before any re-form is considered.
+      if (dirRepair(seat, entry, 'watchdog send-silence')) entry.txFrozenAt = now;
+    } else if (!hasTrack && !entry.txReattachTried) {
       entry.txReattachTried = true;
       entry.txFrozenAt = now; // the re-attach gets its own window
       voiceEvent('audio heal: sender re-attached (outbound audio frozen)', seat);
@@ -4891,6 +5009,11 @@ async function processRtcSignal(from, data, retried) {
       if (entry.stream) attachPeerAudio(entry);
       await flushIceQueue(entry);
       if (desc.type === 'offer') {
+        // Round 9: the ANSWER must carry sendrecv even when the
+        // adoption above was a no-op (sender already in place)
+        // or its flip was swallowed by the browser — force the
+        // session transceiver's direction before answering.
+        forceSendrecv(entry);
         const ans = await sdpOp(pc.createAnswer());
         await sdpOp(pc.setLocalDescription(ans));
         // The session now contains everything this side had
@@ -5068,9 +5191,12 @@ async function renderVoiceDiag() {
     lines.push('<div class="vd-sub">audio in ' + (ds.inBytes || 0) + ' B · out ' + (ds.outBytes || 0) + ' B' +
       ' · send ' + (e.sender && e.sender.track ? 'track' : 'silent') +
       ' · recv ' + (e.stream ? 'track' : 'none') + '</div>');
+    const dirBad = !!(e.pc.remoteDescription && !sendDirectionOk(e));
     lines.push('<div class="vd-sub">rtrack ' + (e.recvTrack ? (e.recvMuted ? 'MUTED' : 'live') : 'none') +
       ' · el ' + elState + (e.playBlocked ? ' · PLAYBACK-BLOCKED (tap anywhere)' : '') +
+      (dirBad ? ' · DIR-BLOCKED (no send direction)' : '') +
       ' · aheal ' + (ahr ? ('rx-step ' + ahr.step + (ahr.txReformed ? ' · tx-reformed' : '') +
+        (ahr.dirRepaired ? ' · dir-repaired' : '') +
         (ahr.last ? ' · last ' + ahr.last : '')) : 'rx-step 0') + '</div>');
   });
   const t0 = voiceT0 || Date.now();
