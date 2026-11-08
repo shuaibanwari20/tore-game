@@ -336,6 +336,44 @@ function cleanPid(pid) {
   return (typeof pid === 'string' && /^[A-Za-z0-9_-]{6,64}$/.test(pid)) ? pid : null;
 }
 
+// The identity a create/join carries: the same 'p:<pid>' the seat
+// stores as its social id. (The production DO port keys by the
+// signed-in account instead — 'g:<sub>'.)
+function joinSid(prof) {
+  const pid0 = cleanPid(prof && prof.pid);
+  return pid0 ? 'p:' + pid0 : null;
+}
+
+// Reattach an EXISTING seat to a (possibly new) socket — the
+// 'reconnect' case's semantics, reached from 'join' when the joiner's
+// identity already holds a seat in the room (duplicate-seat fix,
+// 2026-11-09): the seat, its hand and its TOKEN are kept; only the
+// connection and the profile fields refresh. A repeated join can
+// therefore never mint a second seat for an identity already seated.
+function reattachSeat(ws, room, seatIdx, msg) {
+  const seat = room.seats[seatIdx];
+  if (seat.ws && seat.ws !== ws) { try { seat.ws.close(); } catch (e) {} }
+  if (msg && String(msg.name || '').trim()) seat.name = cleanName(msg.name);
+  const av = cleanAvatar(msg.avatar); if (av) seat.avatar = av;
+  const co = cleanCountry(msg.country); if (co) seat.country = co;
+  const pid = cleanPid(msg.pid); if (pid) seat.sid = 'p:' + pid;
+  if (seat.avatar === 'google') {
+    const ph = cleanPhoto(msg.photo); if (ph) seat.photo = ph;
+  } else {
+    seat.photo = null; // the photo belongs to the 'google' avatar only
+  }
+  seat.ws = ws;
+  seat.connected = true;
+  seat.disconnectAt = null;
+  ws._roomCode = room.code;
+  ws._seat = seatIdx;
+  send(ws, {
+    type: 'room', code: room.code, seat: seatIdx, token: seat.token,
+    isHost: seatIdx === hostSeat(room),
+  });
+  broadcastState(room);
+}
+
 function attachPlayer(ws, room, seatIdx, name, prof) {
   const seat = room.seats[seatIdx];
   seat.kind = 'human';
@@ -469,6 +507,16 @@ function handleMessage(ws, msg) {
     case 'join': {
       const room = rooms.get(String(msg.code || '').toUpperCase().trim());
       if (!room) return sendError(ws, 'اتاق پیدا نشد — کد را بررسی کن', 'roomNotFound');
+      // Duplicate-seat fix (2026-11-09): one identity holds AT MOST
+      // one seat per room. If this join's identity is already seated
+      // here — any phase, lobby or mid-match — the join REATTACHES
+      // to that seat instead of taking a new one, however often it
+      // is repeated and from whichever socket it arrives. (The
+      // client's join flow opens a fresh socket per call, so every
+      // repeated tap / invite re-accept used to mint another seat.)
+      const sid = joinSid(msg);
+      const mine = sid ? room.seats.findIndex((s) => s.kind === 'human' && s.sid === sid) : -1;
+      if (mine !== -1) { reattachSeat(ws, room, mine, msg); break; }
       if (room.phase !== 'lobby') return sendError(ws, 'بازی این اتاق شروع شده است', 'gameStarted');
       const idx = room.seats.findIndex((s) => s.kind === 'empty');
       if (idx === -1) return sendError(ws, 'اتاق پر است', 'roomFull');
