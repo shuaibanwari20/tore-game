@@ -36,3 +36,4 @@ function convert(file) {
 
 convert('game.js');
 convert('bots.js');
+convert('social-core.js');
