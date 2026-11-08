@@ -128,6 +128,7 @@ function stateFor(room, seatIdx) {
     seats: room.seats.map((s, i) => ({
       name: s.name, kind: s.kind, connected: s.connected,
       avatar: s.avatar, country: s.country, photo: s.photo, sid: s.sid || null,
+      uid: s.sid ? social.core.uidOf(s.sid) : null,
       voice: { mic: !!s.voiceMic, speaker: s.voiceSpeaker !== false },
       cards: round ? round.hands[i].length : 0,
     })),
