@@ -39,6 +39,9 @@ function createNodeSocial(opts) {
     inGameCheck(id) {
       return opts.inGameCheck ? !!opts.inGameCheck(id) : false;
     },
+    inLobbyCheck(id) {
+      return opts.inLobbyCheck ? !!opts.inLobbyCheck(id) : false;
+    },
     inviteCooldownMs: (typeof opts.inviteCooldownMs === 'number') ? opts.inviteCooldownMs : undefined,
   });
 
