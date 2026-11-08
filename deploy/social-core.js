@@ -1,0 +1,325 @@
+/**
+ * social-core.js — the Tore friends system: directory, friend
+ * requests, mutual friendships, unfriend, block/unblock, friend DMs
+ * and lobby invites. ONE implementation shared by every host:
+ *   - Node (server.js / deploy/server.js) requires it directly and
+ *     keeps the state in memory;
+ *   - the Cloudflare Durable Object imports the ESM copy produced by
+ *     cloudflare/scripts/sync-modules.mjs and persists the state to
+ *     DO storage through the persist hook.
+ *
+ * The core is environment-pure: no sockets, no storage, no clock of
+ * its own beyond Date.now(). The host supplies three hooks:
+ *   sendTo(id, obj)          deliver one protocol message to a player
+ *   persist()                the social state changed; save it
+ *   inviteRoomCheck(id,code) may this player invite to that room?
+ * and drives presence with socketOpened/socketClosed (the core owns
+ * the online set so presence and the online flags can never disagree).
+ *
+ * Identity keys are opaque strings chosen by the host: "g:<sub>" for
+ * a signed-in account, "p:<pid>" for a persistent client id. The
+ * directory stores ONLY public profile fields (name / avatar /
+ * photo / country) — never an email or any account secret.
+ *
+ * Protocol (client -> server): s-hello, s-search, s-request,
+ * s-respond, s-unfriend, s-block, s-unblock, s-dm, s-dm-history,
+ * s-invite, s-invite-reply.
+ * Protocol (server -> client): s-init, s-friends, s-presence,
+ * s-search-result, s-requested, s-dm, s-dm-history, s-invited,
+ * s-invite-result, s-error (codes: socialBlocked, socialNotFriends,
+ * socialDuplicate, socialRate, socialOffline, socialNotInRoom,
+ * socialNotFound).
+ */
+'use strict';
+
+const DM_KEEP = 50;          // messages kept per pair
+const DM_RATE_MAX = 10;      // messages per sender per pair …
+const DM_RATE_WINDOW = 60000; // … per this window (ms)
+const DM_MAX_CHARS = 500;
+
+// ---- profile field hygiene (mirrors the game servers' rules) ------
+function cleanName(v) {
+  if (typeof v !== 'string') return '';
+  return v.replace(/\s+/g, ' ').trim().slice(0, 20);
+}
+function cleanAvatar(v) {
+  if (v === 'google') return 'google';
+  return (typeof v === 'string' && /^av([1-9]|1[0-2])$/.test(v)) ? v : null;
+}
+function cleanPhoto(p) {
+  if (typeof p !== 'string' || !p || p.length > 300) return '';
+  if (!p.startsWith('https://')) return '';
+  if (!p.includes('googleusercontent.com')) return '';
+  return p;
+}
+function cleanCountry(v) {
+  if (typeof v !== 'string') return '';
+  return v.trim().slice(0, 40);
+}
+function pairKey(a, b) { return a < b ? a + '\n' + b : b + '\n' + a; }
+function reqKey(from, to) { return from + '\n' + to; }
+
+class SocialCore {
+  constructor(hooks) {
+    this.hooks = hooks || {};
+    this.directory = new Map(); // id -> {id,name,avatar,photo,country,lastSeen}
+    this.friends = new Map();   // id -> Set<id> (always mutual)
+    this.blocked = new Map();   // id -> Set<id> (one direction: I blocked them)
+    this.requests = new Map();  // reqKey -> {from,to,ts}
+    this.dm = new Map();        // pairKey -> [{from,text,ts}] (oldest first)
+    this.dmLog = new Map();     // pairKey+'\n'+from -> [ts,...] (rate window)
+    this.online = new Map();    // id -> live socket count
+  }
+
+  // ---------- persistence (DO host; Node ignores) ----------
+  serialize() {
+    const sets = (m) => { const o = {}; for (const [k, v] of m) o[k] = [...v]; return o; };
+    return {
+      directory: [...this.directory.values()],
+      friends: sets(this.friends),
+      blocked: sets(this.blocked),
+      requests: [...this.requests.values()],
+      dm: Object.fromEntries(this.dm),
+    };
+  }
+  load(data) {
+    if (!data || typeof data !== 'object') return;
+    const sets = (o) => new Map(Object.entries(o || {}).map(([k, v]) => [k, new Set(Array.isArray(v) ? v : [])]));
+    this.directory = new Map((Array.isArray(data.directory) ? data.directory : []).map((r) => [r.id, r]));
+    this.friends = sets(data.friends);
+    this.blocked = sets(data.blocked);
+    this.requests = new Map((Array.isArray(data.requests) ? data.requests : []).map((r) => [reqKey(r.from, r.to), r]));
+    this.dm = new Map(Object.entries(data.dm || {}));
+  }
+  _persist() { if (this.hooks.persist) { try { this.hooks.persist(this.serialize()); } catch (e) { /* host logs */ } } }
+  _send(id, obj) { if (this.hooks.sendTo) this.hooks.sendTo(id, obj); }
+  _error(id, code) { this._send(id, { type: 's-error', code }); }
+
+  // ---------- presence ----------
+  isOnline(id) { return (this.online.get(id) || 0) > 0; }
+  rebuildOnline(ids) { // after a DO wake: re-seed counts from live sockets
+    this.online = new Map();
+    for (const id of ids) this.online.set(id, (this.online.get(id) || 0) + 1);
+  }
+  socketOpened(id) {
+    const was = this.isOnline(id);
+    this.online.set(id, (this.online.get(id) || 0) + 1);
+    if (!was) this._fanPresence(id, true);
+  }
+  socketClosed(id) {
+    const n = (this.online.get(id) || 0) - 1;
+    if (n > 0) { this.online.set(id, n); return; }
+    this.online.delete(id);
+    const rec = this.directory.get(id);
+    if (rec) { rec.lastSeen = Date.now(); this._persist(); }
+    this._fanPresence(id, false);
+  }
+  _fanPresence(id, online) {
+    const set = this.friends.get(id);
+    if (!set) return;
+    for (const f of set) if (this.isOnline(f)) this._send(f, { type: 's-presence', id, online });
+  }
+
+  // ---------- views ----------
+  person(id) {
+    const r = this.directory.get(id);
+    if (!r) return { id, name: '', avatar: 'av1', photo: '', country: '', online: this.isOnline(id) };
+    return { id: r.id, name: r.name, avatar: r.avatar, photo: r.photo, country: r.country, online: this.isOnline(id) };
+  }
+  listsFor(id) {
+    const byName = (a, b) => a.name.localeCompare(b.name);
+    const friends = [...(this.friends.get(id) || [])].map((f) => this.person(f))
+      .sort((a, b) => (b.online - a.online) || byName(a, b));
+    const incoming = [], outgoing = [];
+    for (const r of this.requests.values()) {
+      if (r.to === id) incoming.push(this.person(r.from));
+      else if (r.from === id) outgoing.push(this.person(r.to));
+    }
+    incoming.sort(byName); outgoing.sort(byName);
+    const blocked = [...(this.blocked.get(id) || [])].map((b) => this.person(b)).sort(byName);
+    return { friends, incoming, outgoing, blocked };
+  }
+  refresh(id) { if (this.isOnline(id)) this._send(id, { type: 's-friends', ...this.listsFor(id) }); }
+  refreshBoth(a, b) { this.refresh(a); if (b !== a) this.refresh(b); }
+
+  // ---------- relations ----------
+  areFriends(a, b) { const s = this.friends.get(a); return !!s && s.has(b); }
+  blockedEither(a, b) {
+    const x = this.blocked.get(a), y = this.blocked.get(b);
+    return !!((x && x.has(b)) || (y && y.has(a)));
+  }
+  _linkFriends(a, b) {
+    if (!this.friends.has(a)) this.friends.set(a, new Set());
+    if (!this.friends.has(b)) this.friends.set(b, new Set());
+    this.friends.get(a).add(b); this.friends.get(b).add(a);
+  }
+  _unlinkFriends(a, b) {
+    const x = this.friends.get(a), y = this.friends.get(b);
+    if (x) x.delete(b); if (y) y.delete(a);
+  }
+
+  // ---------- hello / directory ----------
+  hello(id, profile) {
+    profile = profile || {};
+    const photo = cleanPhoto(profile.photo);
+    let avatar = cleanAvatar(profile.avatar);
+    if (avatar === 'google' && !photo) avatar = null;
+    const prev = this.directory.get(id);
+    this.directory.set(id, {
+      id,
+      name: cleanName(profile.name) || (prev && prev.name) || 'بازیکن',
+      avatar: avatar || (prev && prev.avatar) || 'av1',
+      photo,
+      country: cleanCountry(profile.country) || (prev && prev.country) || '',
+      lastSeen: Date.now(),
+    });
+    this._persist();
+    this._send(id, { type: 's-init', me: id, ...this.listsFor(id) });
+  }
+
+  // ---------- message entry ----------
+  handleMessage(id, msg) {
+    if (!msg || typeof msg.type !== 'string') return;
+    switch (msg.type) {
+      case 's-search': return this.search(id, msg.q);
+      case 's-request': return this.request(id, msg.to);
+      case 's-respond': return this.respond(id, msg.from, msg.accept);
+      case 's-unfriend': return this.unfriend(id, msg.id);
+      case 's-block': return this.block(id, msg.id);
+      case 's-unblock': return this.unblock(id, msg.id);
+      case 's-dm': return this.dmSend(id, msg.to, msg.text);
+      case 's-dm-history': return this.dmHistory(id, msg.with);
+      case 's-invite': return this.invite(id, msg.to, msg.code);
+      case 's-invite-reply': return this.inviteReply(id, msg.from, msg.code, msg.accept);
+      default: break; // unknown social messages are ignored
+    }
+  }
+
+  search(id, q) {
+    q = (typeof q === 'string' ? q : '').trim().toLowerCase().slice(0, 40);
+    if (!q) { this._send(id, { type: 's-search-result', q: '', results: [] }); return; }
+    const out = [];
+    for (const r of this.directory.values()) {
+      if (r.id === id) continue;
+      if (!r.name.toLowerCase().includes(q)) continue;
+      if (this.blockedEither(id, r.id)) continue; // blocked relations never surface
+      let relation = 'none';
+      if (this.areFriends(id, r.id)) relation = 'friend';
+      else if (this.requests.has(reqKey(id, r.id))) relation = 'outgoing';
+      else if (this.requests.has(reqKey(r.id, id))) relation = 'incoming';
+      out.push({ ...this.person(r.id), relation });
+      if (out.length >= 40) break; // scan cap; sorted + trimmed below
+    }
+    out.sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name));
+    this._send(id, { type: 's-search-result', q, results: out.slice(0, 10) });
+  }
+
+  request(id, to) {
+    if (typeof to !== 'string' || to === id || !this.directory.has(to)) return this._error(id, 'socialNotFound');
+    if (this.blockedEither(id, to)) return this._error(id, 'socialBlocked');
+    if (this.areFriends(id, to)) return this._error(id, 'socialDuplicate');
+    if (this.requests.has(reqKey(id, to))) return this._error(id, 'socialDuplicate');
+    // They already asked me: a counter-request is an accept.
+    if (this.requests.has(reqKey(to, id))) {
+      this.requests.delete(reqKey(to, id));
+      this._linkFriends(id, to);
+      this._persist();
+      this.refreshBoth(id, to);
+      return;
+    }
+    this.requests.set(reqKey(id, to), { from: id, to, ts: Date.now() });
+    this._persist();
+    this.refresh(id); // my outgoing list grows
+    if (this.isOnline(to)) {
+      this._send(to, { type: 's-requested', from: this.person(id) });
+      this.refresh(to); // their incoming list grows
+    }
+  }
+
+  respond(id, from, accept) {
+    if (typeof from !== 'string' || !this.requests.has(reqKey(from, id))) return;
+    this.requests.delete(reqKey(from, id));
+    if (accept) this._linkFriends(id, from);
+    this._persist();
+    this.refreshBoth(id, from); // accept: both lists gain a friend; decline: sender's outgoing clears
+  }
+
+  unfriend(id, other) {
+    if (typeof other !== 'string' || !this.areFriends(id, other)) return;
+    this._unlinkFriends(id, other);
+    this._persist();
+    this.refreshBoth(id, other);
+  }
+
+  block(id, other) {
+    if (typeof other !== 'string' || other === id || !this.directory.has(other)) return;
+    this._unlinkFriends(id, other);
+    this.requests.delete(reqKey(id, other));
+    this.requests.delete(reqKey(other, id));
+    if (!this.blocked.has(id)) this.blocked.set(id, new Set());
+    this.blocked.get(id).add(other);
+    this._persist();
+    this.refreshBoth(id, other); // the blocked side just sees the friendship/requests vanish
+  }
+
+  unblock(id, other) {
+    const set = this.blocked.get(id);
+    if (!set || typeof other !== 'string' || !set.has(other)) return;
+    set.delete(other); // friendship is NOT restored — a fresh request is needed
+    this._persist();
+    this.refresh(id);
+  }
+
+  dmSend(id, to, text) {
+    if (typeof to !== 'string' || to === id) return;
+    if (this.blockedEither(id, to)) return this._error(id, 'socialBlocked');
+    if (!this.areFriends(id, to)) return this._error(id, 'socialNotFriends');
+    text = (typeof text === 'string' ? text : '').slice(0, DM_MAX_CHARS);
+    if (!text.trim()) return;
+    const pk = pairKey(id, to);
+    const logKey = pk + '\n' + id;
+    const now = Date.now();
+    const log = (this.dmLog.get(logKey) || []).filter((t) => now - t < DM_RATE_WINDOW);
+    if (log.length >= DM_RATE_MAX) { this.dmLog.set(logKey, log); return this._error(id, 'socialRate'); }
+    log.push(now); this.dmLog.set(logKey, log);
+    const entry = { from: id, text, ts: now };
+    const thread = this.dm.get(pk) || [];
+    thread.push(entry);
+    while (thread.length > DM_KEEP) thread.shift();
+    this.dm.set(pk, thread);
+    this._persist();
+    const out = { type: 's-dm', from: id, to, text, ts: now };
+    this._send(to, out);   // the friend, live
+    this._send(id, out);   // sender echo (other devices + this client's render path)
+  }
+
+  dmHistory(id, withId) {
+    if (typeof withId !== 'string' || !this.areFriends(id, withId)) {
+      this._send(id, { type: 's-dm-history', with: withId || '', messages: [] });
+      if (typeof withId === 'string' && this.directory.has(withId)) this._error(id, 'socialNotFriends');
+      return;
+    }
+    const thread = (this.dm.get(pairKey(id, withId)) || []).slice();
+    this._send(id, { type: 's-dm-history', with: withId, messages: thread });
+  }
+
+  invite(id, to, code) {
+    code = (typeof code === 'string' ? code : '').toUpperCase().trim().slice(0, 8);
+    if (typeof to !== 'string' || to === id || !code) return;
+    if (this.blockedEither(id, to)) return this._error(id, 'socialBlocked');
+    if (!this.areFriends(id, to)) return this._error(id, 'socialNotFriends');
+    if (!this.isOnline(to)) return this._error(id, 'socialOffline');
+    const ok = this.hooks.inviteRoomCheck ? !!this.hooks.inviteRoomCheck(id, code) : false;
+    if (!ok) return this._error(id, 'socialNotInRoom');
+    this._send(to, { type: 's-invited', from: this.person(id), code });
+  }
+
+  inviteReply(id, from, code, accept) {
+    if (typeof from !== 'string' || from === id) return;
+    if (!this.areFriends(id, from)) return; // stale popup / no longer friends: drop silently
+    code = (typeof code === 'string' ? code : '').toUpperCase().trim().slice(0, 8);
+    this._send(from, { type: 's-invite-result', by: this.person(id), code, accept: !!accept });
+  }
+}
+
+module.exports = { SocialCore };
