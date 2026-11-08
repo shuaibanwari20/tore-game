@@ -319,8 +319,16 @@ export class GameServer {
    *  by join/reconnect so a stale in-memory directory can never
    *  answer "room not found" for a room that is actually stored. */
   async _loadRoom(code) {
+    // The in-memory copy is canonical: never revive a second object
+    // for a room this DO already holds (duplicate-seat fix, 2026-11-09
+    // — two handlers racing a read-repair could otherwise each revive
+    // their own copy and seat the same identity once per copy).
+    const held = this.rooms.get(code);
+    if (held) return held;
     const snap = await this.state.storage.get(ROOM_KEY_PREFIX + code).catch(() => null);
     if (snap && snap.code && Array.isArray(snap.seats)) {
+      const raced = this.rooms.get(code);
+      if (raced) return raced;
       const room = this._reviveRoom(snap);
       this.rooms.set(code, room);
       this._ensureSweep();
@@ -329,6 +337,8 @@ export class GameServer {
     const legacy = await this.state.storage.get(STORAGE_KEY).catch(() => null);
     const lsnap = legacy && legacy.rooms ? legacy.rooms[code] : null;
     if (lsnap && Array.isArray(lsnap.seats)) {
+      const raced = this.rooms.get(code);
+      if (raced) return raced;
       const room = this._reviveRoom(lsnap);
       this.rooms.set(code, room);
       this._ensureSweep();
@@ -848,6 +858,45 @@ export class GameServer {
     // durable, so a shared code can never point at a memory-only room.
   }
 
+  // The identity a join carries: the signed-in account ('g:<sub>',
+  // from the Worker-verified attachment) wins; otherwise the
+  // persistent player id the client sent ('p:<pid>') — the same two
+  // identities the seats store as `sid` (see _attachPlayer).
+  _joinSid(att, msg) {
+    if (att.user && att.user.sub) return 'g:' + String(att.user.sub);
+    const pid0 = cleanPid(msg && msg.pid);
+    return pid0 ? 'p:' + pid0 : null;
+  }
+
+  // Reattach an EXISTING seat to a (possibly new) socket — the
+  // 'reconnect' case's semantics, reached from 'join' when the
+  // joiner's identity already holds a seat in the room (duplicate-
+  // seat fix, 2026-11-09): the seat, its hand and its TOKEN are
+  // kept; only the connection and the profile fields refresh.
+  // Synchronous on purpose: the caller runs it in the same tick as
+  // the identity check, so no second join can slip between them.
+  _reattachSeat(ws, att, room, seatIdx, msg) {
+    const seat = room.seats[seatIdx];
+    if (seat.ws && seat.ws !== ws) { try { seat.ws.close(1012, 'replaced'); } catch { /* ignore */ } }
+    if (msg && String(msg.name || '').trim()) seat.name = cleanName(msg.name);
+    const av = cleanAvatar(msg.avatar); if (av) seat.avatar = av;
+    const co = cleanCountry(msg.country); if (co) seat.country = co;
+    if (att.user && att.user.sub) seat.sid = 'g:' + String(att.user.sub);
+    else { const pid = cleanPid(msg.pid); if (pid) seat.sid = 'p:' + pid; }
+    if (seat.avatar === 'google') {
+      const ph = cleanPhoto(msg.photo); if (ph) seat.photo = ph;
+    } else {
+      seat.photo = null; // the photo belongs to the 'google' avatar only
+    }
+    seat.ws = ws;
+    seat.connected = true;
+    seat.disconnectAt = null;
+    att.code = room.code;
+    att.seat = seatIdx;
+    att.token = seat.token;
+    this._saveAttachment(ws, att);
+  }
+
   _sendRoomReply(ws, room, seatIdx) {
     const seat = room.seats[seatIdx];
     send(ws, {
@@ -877,6 +926,28 @@ export class GameServer {
         let room = this.rooms.get(code);
         if (!room) room = await this._loadRoom(code); // read-repair from storage
         if (!room) return sendError(ws, 'اتاق پیدا نشد — کد را بررسی کن', 'roomNotFound');
+        // Duplicate-seat fix (2026-11-09): one identity holds AT
+        // MOST one seat per room. If this join's identity is already
+        // seated here — any phase, lobby or mid-match — the join
+        // REATTACHES to that seat instead of taking a new one,
+        // however often it is repeated and from whichever socket it
+        // arrives. (The client's join flow opens a fresh socket per
+        // call, so every repeated tap / invite re-accept used to
+        // mint another seat.) Everything from the canonical
+        // re-resolve below to the seat mutation is SYNCHRONOUS, so
+        // a concurrent join for the same identity cannot slip
+        // between the check and the attach.
+        room = this.rooms.get(code) || room;
+        const sid = this._joinSid(att, msg);
+        const mine = sid ? room.seats.findIndex((s) => s.kind === 'human' && s.sid === sid) : -1;
+        if (mine !== -1) {
+          this._reattachSeat(ws, att, room, mine, msg);
+          await this._persistRoom(room);
+          this._sendRoomReply(ws, room, mine);
+          this._broadcastState(room);
+          if (room.phase === 'playing') this._pumpTurn(room);
+          break;
+        }
         if (room.phase !== 'lobby') return sendError(ws, 'بازی این اتاق شروع شده است', 'gameStarted');
         const idx = room.seats.findIndex((s) => s.kind === 'empty');
         if (idx === -1) return sendError(ws, 'اتاق پر است', 'roomFull');
