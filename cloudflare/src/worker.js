@@ -50,7 +50,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261108-androidzoom';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261108-friends';
 const STICKER_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/stickers/';
 const CLIENT_MIN_BYTES = 3_000_000; // the real bundle is ~3.1 MB
@@ -348,6 +348,24 @@ export default {
         return new Response('expected a websocket upgrade', { status: 426 });
       }
       // Verify the session HERE: with the gate on, no cookie = no socket.
+      const user = await auth.readSession(request, env);
+      if (authEnabled && !user) {
+        return new Response('unauthorized — sign in first', { status: 401 });
+      }
+      const stub = env.GAME.get(env.GAME.idFromName('global'));
+      const headers = new Headers(request.headers);
+      if (user) headers.set('x-tore-user', JSON.stringify(user));
+      else headers.delete('x-tore-user');
+      return stub.fetch(new Request(request, { headers }));
+    }
+
+    if (path === '/social') {
+      // Friends system (ملګري): directory / requests / DMs / lobby
+      // invites. Same session gate as /ws, same global DO — the DO
+      // keys all social data by the account identity (g:<sub>).
+      if (request.headers.get('Upgrade') !== 'websocket') {
+        return new Response('expected a websocket upgrade', { status: 426 });
+      }
       const user = await auth.readSession(request, env);
       if (authEnabled && !user) {
         return new Response('unauthorized — sign in first', { status: 401 });
