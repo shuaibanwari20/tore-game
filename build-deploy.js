@@ -115,9 +115,9 @@ if (dataURIs !== assetCount + 2 + heroFiles.length) { // map + 2 CSS carpets + h
 
 // ---- 4: write deploy/ -------------------------------------------------------
 fs.writeFileSync(path.join(DEPLOY, 'index.html'), html);
-for (const f of ['game.js', 'bots.js']) fs.copyFileSync(path.join(ROOT, f), path.join(DEPLOY, f));
+for (const f of ['game.js', 'bots.js', 'social-core.js', 'social-node.js']) fs.copyFileSync(path.join(ROOT, f), path.join(DEPLOY, f));
 
 console.log('build-deploy: inlined ' + assetCount + ' assets (' +
   cardFiles.length + ' card images + carpet) + CSS carpets + hero imgs = ' + dataURIs + ' data URIs');
 console.log('build-deploy: deploy/index.html = ' + Buffer.byteLength(html) + ' bytes');
-console.log('build-deploy: copied game.js, bots.js -> deploy/');
+console.log('build-deploy: copied game.js, bots.js, social-core.js, social-node.js -> deploy/');
