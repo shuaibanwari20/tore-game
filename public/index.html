@@ -558,7 +558,7 @@
      behind a dark emerald veil, its own scroll. Opened from the
      bottom nav (and from the lobby's friends button); it floats
      above home/lobby/table without disturbing the game screens. */
-  #scr-friends, #scr-dm {
+  #scr-friends, #scr-dm, #scr-chats, #scr-profile {
     position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 30;
     overflow-x: hidden;
     /* The home screen's dark emerald veil, without the carpet photo:
@@ -575,9 +575,40 @@
      button (where «شاته» used to sit) and the search toggle beside
      it; the search box itself stays collapsed until that toggle. */
   #scr-friends { display: flex; flex-direction: column; overflow-y: hidden; }
+  /* Chat + profile pages (owner order 2026-11-08): same family as the
+     friends screen — scrolling content, bottom nav pinned at the foot. */
+  #scr-chats, #scr-profile { display: flex; flex-direction: column; overflow-y: hidden; }
   .fr-scroll { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; width: 100%; }
-  #scr-friends .hm-nav { margin: 0; flex: none; width: 100%;
+  #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav { margin: 0; flex: none; width: 100%;
     padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+  /* chat list rows: the whole row is the tap target into the DM view */
+  .ch-row { cursor: pointer; border-radius: 8px; }
+  .ch-row:active { background: rgba(255, 215, 94, .08); }
+  .ch-sub { font-size: 12px; opacity: .85; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; display: flex; align-items: center; gap: 5px; max-width: 210px; }
+  .ch-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: 0 0 auto; }
+  .ch-time { font-size: 10.5px; opacity: .7; white-space: nowrap; }
+  .ch-unreadslot { position: relative; width: 18px; height: 18px; }
+  .ch-unreadslot .fr-unread { top: 0; inset-inline-end: 0; }
+  /* profile PAGE (replaces the popup): big photo with the round ✏️
+     edit button on its corner; the avatar grid stays hidden until
+     the button is tapped. Name/country controls wear the game's dark
+     theme here (owner photo report: they rendered as white boxes). */
+  #scr-profile h2 { text-align: center; color: #ffd75e; font-size: 20px; margin: 2px 0 6px; }
+  .pf-pvwrap { position: relative; }
+  #scr-profile .pf-preview .pavatar { width: 96px !important; height: 96px !important; }
+  .pf-editav { position: absolute; top: 62px; left: calc(50% + 22px); width: 34px; height: 34px;
+    border-radius: 50%; padding: 0; margin: 0; font-size: 15px; line-height: 1;
+    background: #ffd75e; color: #33270a; border: 2px solid #fff0b3; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 2; }
+  .pf-editav:active { transform: scale(.94); }
+  #scr-profile input, #scr-profile select {
+    background: rgba(6, 24, 16, .88); color: #f8ecd0; border: 1px solid rgba(255, 215, 94, .55);
+  }
+  #scr-profile select { width: 100%; padding: 12px; font-size: 17px; border-radius: 10px; font-family: inherit; }
+  #scr-profile select option { background: #0d2c1d; color: #f8ecd0; }
+  #scr-profile input::placeholder { color: rgba(248, 236, 208, .45); }
+  #ov-friendmenu { z-index: 46; }
   #scr-dm { z-index: 36; display: flex; flex-direction: column; overflow-y: hidden; }
   .fr-inner { max-width: 520px; margin: 0 auto; padding: 14px 14px 22px; }
   .fr-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -671,7 +702,6 @@
      max-height media query tightens everything further so it also
      fits whole at 390x693 and on shorter phones. The overflow-y stays
      only as a safety net; it must never engage at phone sizes. */
-  #ov-profile { padding: 10px; }
   .pf-panel { text-align: start; padding: 12px 14px;
     max-height: calc(100vh - 20px); max-height: calc(100dvh - 20px); overflow-y: auto; }
   .pf-panel h2 { font-size: 19px; margin-bottom: 4px; }
@@ -898,9 +928,10 @@
           <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
           <span class="nl" id="nav-profile-lbl">پروفایل</span>
         </button>
-        <button class="hm-navitem" id="nav-settings">
-          <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-          <span class="nl" id="nav-settings-lbl">تنظیمات</span>
+        <button class="hm-navitem" id="nav-chat">
+          <span class="nav-badge hidden" id="nav-chat-badge">0</span>
+          <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+          <span class="nl" id="nav-chat-lbl">چت</span>
         </button>
       </nav>
     </div>
@@ -941,9 +972,9 @@
     var L0 = localStorage.getItem('tore.lang');
     if (L0 !== 'fa' && L0 !== 'en') L0 = 'ps';
     var MINI = {
-      ps: { playerPlaceholder: 'د تورې لوبغاړی', menuQuick: 'له روباتونو سره لوبه', menuQuickSub: 'سمدستي پیل — تمرین او تفریح', menuCreate: 'کوټه جوړه کړه', menuCreateSub: 'کوټه جوړه کړه او کوډ ملګرو ته ولېږه', menuJoin: 'د کوډ سره ورګډ شه', menuJoinSub: 'د ملګري د کوټې 4 توري کوډ دننه کړه', roomCodeLabel: 'د کوټې کوډ', joinRoom: 'کوټې ته ننوځه', continueGame: 'لوبې ته دوام ورکړه', rulesBtn: 'د لوبې قوانین', homeFootA: 'څلور کسيزه ورق لوبه', homeFootB: 'دوه ټیمه، دوه پر دوه', menuOnline: 'انلاین لوبه', navFriends: 'ملګري', navClubs: 'کلبونه', navHome: 'کور', navProfile: 'پروفایل', navSettings: 'تنظیمات', rulesBack: '→ مینو ته وګرځه' },
-      fa: { playerPlaceholder: 'بازیکن توره', menuQuick: 'بازی با ربات‌ها', menuQuickSub: 'شروع فوری — تمرین و سرگرمی', menuCreate: 'ساختن اتاق', menuCreateSub: 'اتاق بساز و کد را به دوست‌ها بفرست', menuJoin: 'پیوستن با کد اتاق', menuJoinSub: 'کد 4 حرفی اتاق دوستت را وارد کن', roomCodeLabel: 'کد اتاق', joinRoom: 'ورود به اتاق', continueGame: 'ادامهٔ بازی', rulesBtn: 'قانون‌های بازی', homeFootA: 'بازی ورق چهار نفره', homeFootB: 'دو تیم، دو به دو', menuOnline: 'بازی آنلاین', navFriends: 'دوستان', navClubs: 'باشگاه‌ها', navHome: 'خانه', navProfile: 'پروفایل', navSettings: 'تنظیمات', rulesBack: '→ برگشت به منو' },
-      en: { playerPlaceholder: 'Tore Player', menuQuick: 'Play with Bots', menuQuickSub: 'Instant start — practice & fun', menuCreate: 'Create a Room', menuCreateSub: 'Make a room and send the code to friends', menuJoin: 'Join with Room Code', menuJoinSub: "Enter your friend's 4-letter room code", roomCodeLabel: 'Room code', joinRoom: 'Enter Room', continueGame: 'Continue Game', rulesBtn: 'Game Rules', homeFootA: 'Four-player card game', homeFootB: 'Two teams, two vs two', menuOnline: 'Play Online', navFriends: 'Friends', navClubs: 'Clubs', navHome: 'Home', navProfile: 'Profile', navSettings: 'Settings', rulesBack: '← Back to menu' }
+      ps: { playerPlaceholder: 'د تورې لوبغاړی', menuQuick: 'له روباتونو سره لوبه', menuQuickSub: 'سمدستي پیل — تمرین او تفریح', menuCreate: 'کوټه جوړه کړه', menuCreateSub: 'کوټه جوړه کړه او کوډ ملګرو ته ولېږه', menuJoin: 'د کوډ سره ورګډ شه', menuJoinSub: 'د ملګري د کوټې 4 توري کوډ دننه کړه', roomCodeLabel: 'د کوټې کوډ', joinRoom: 'کوټې ته ننوځه', continueGame: 'لوبې ته دوام ورکړه', rulesBtn: 'د لوبې قوانین', homeFootA: 'څلور کسيزه ورق لوبه', homeFootB: 'دوه ټیمه، دوه پر دوه', menuOnline: 'انلاین لوبه', navFriends: 'ملګري', navClubs: 'کلبونه', navHome: 'کور', navProfile: 'پروفایل', navChat: 'چت', rulesBack: '→ مینو ته وګرځه' },
+      fa: { playerPlaceholder: 'بازیکن توره', menuQuick: 'بازی با ربات‌ها', menuQuickSub: 'شروع فوری — تمرین و سرگرمی', menuCreate: 'ساختن اتاق', menuCreateSub: 'اتاق بساز و کد را به دوست‌ها بفرست', menuJoin: 'پیوستن با کد اتاق', menuJoinSub: 'کد 4 حرفی اتاق دوستت را وارد کن', roomCodeLabel: 'کد اتاق', joinRoom: 'ورود به اتاق', continueGame: 'ادامهٔ بازی', rulesBtn: 'قانون‌های بازی', homeFootA: 'بازی ورق چهار نفره', homeFootB: 'دو تیم، دو به دو', menuOnline: 'بازی آنلاین', navFriends: 'دوستان', navClubs: 'باشگاه‌ها', navHome: 'خانه', navProfile: 'پروفایل', navChat: 'چت', rulesBack: '→ برگشت به منو' },
+      en: { playerPlaceholder: 'Tore Player', menuQuick: 'Play with Bots', menuQuickSub: 'Instant start — practice & fun', menuCreate: 'Create a Room', menuCreateSub: 'Make a room and send the code to friends', menuJoin: 'Join with Room Code', menuJoinSub: "Enter your friend's 4-letter room code", roomCodeLabel: 'Room code', joinRoom: 'Enter Room', continueGame: 'Continue Game', rulesBtn: 'Game Rules', homeFootA: 'Four-player card game', homeFootB: 'Two teams, two vs two', menuOnline: 'Play Online', navFriends: 'Friends', navClubs: 'Clubs', navHome: 'Home', navProfile: 'Profile', navChat: 'Chat', rulesBack: '← Back to menu' }
     }[L0];
     document.documentElement.lang = L0;
     var home0 = document.getElementById('scr-home');
@@ -968,7 +999,7 @@
     set0('#nav-clubs-lbl', MINI.navClubs);
     set0('#nav-home-lbl', MINI.navHome);
     set0('#nav-profile-lbl', MINI.navProfile);
-    set0('#nav-settings-lbl', MINI.navSettings);
+    set0('#nav-chat-lbl', MINI.navChat);
     set0('#continue-txt', MINI.continueGame);
     set0('#rules-txt', MINI.rulesBtn);
     set0('#foot-a', MINI.homeFootA);
@@ -1132,9 +1163,95 @@
       <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
       <span class="nl" id="frnav-profile-lbl">پروفایل</span>
     </button>
-    <button class="hm-navitem" id="frnav-settings">
-      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-      <span class="nl" id="frnav-settings-lbl">تنظیمات</span>
+    <button class="hm-navitem" id="frnav-chat">
+      <span class="nav-badge hidden" id="frnav-chat-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="nl" id="frnav-chat-lbl">چت</span>
+    </button>
+  </nav>
+</section>
+
+<!-- ======== CHATS (چت) ======== -->
+<section id="scr-chats" class="hidden">
+  <div class="fr-scroll">
+    <div class="fr-inner">
+      <div class="cardbox">
+        <h3 class="fr-sec" id="ch-list-title">ګپونه</h3>
+        <div id="ch-list"></div>
+      </div>
+    </div>
+  </div>
+  <nav class="hm-nav">
+    <button class="hm-navitem" id="chnav-friends">
+      <span class="nav-badge hidden" id="chnav-friends-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+      <span class="nl" id="chnav-friends-lbl">ملګري</span>
+    </button>
+    <button class="hm-navitem" id="chnav-clubs">
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+      <span class="nl" id="chnav-clubs-lbl">کلبونه</span>
+    </button>
+    <button class="hm-navitem" id="chnav-home">
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+      <span class="nl" id="chnav-home-lbl">کور</span>
+    </button>
+    <button class="hm-navitem" id="chnav-profile">
+      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+      <span class="nl" id="chnav-profile-lbl">پروفایل</span>
+    </button>
+    <button class="hm-navitem home" id="chnav-chat">
+      <span class="nav-badge hidden" id="chnav-chat-badge">0</span>
+      <span class="bubble"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="nl" id="chnav-chat-lbl">چت</span>
+    </button>
+  </nav>
+</section>
+
+<!-- ======== PROFILE PAGE (پروفایل) ======== -->
+<section id="scr-profile" class="hidden">
+  <div class="fr-scroll">
+    <div class="fr-inner">
+      <h2 id="pf-title">زما پروفایل</h2>
+      <div class="pf-pvwrap">
+        <div class="pf-preview" id="pf-preview"></div>
+        <button type="button" class="pf-editav" id="btn-pf-edit-av" aria-label="انځور بدلول">✏️</button>
+      </div>
+      <div id="pf-picker" class="hidden">
+        <span class="pf-label" id="pf-avatar-lbl">انځور</span>
+        <div class="pf-grid" id="pf-grid"></div>
+      </div>
+      <label class="pf-label" id="pf-name-lbl" for="pf-name">نوم</label>
+      <input id="pf-name" type="text" maxlength="20" placeholder="نوم دې — لکه احمد" autocomplete="name">
+      <label class="pf-label" id="pf-country-lbl" for="pf-country">هېواد</label>
+      <select id="pf-country"></select>
+      <div class="pf-btns">
+        <button id="btn-profile-save">ساتل</button>
+        <button id="btn-profile-close" class="ghost">بندول</button>
+      </div>
+    </div>
+  </div>
+  <nav class="hm-nav">
+    <button class="hm-navitem" id="pfnav-friends">
+      <span class="nav-badge hidden" id="pfnav-friends-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+      <span class="nl" id="pfnav-friends-lbl">ملګري</span>
+    </button>
+    <button class="hm-navitem" id="pfnav-clubs">
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+      <span class="nl" id="pfnav-clubs-lbl">کلبونه</span>
+    </button>
+    <button class="hm-navitem" id="pfnav-home">
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+      <span class="nl" id="pfnav-home-lbl">کور</span>
+    </button>
+    <button class="hm-navitem home" id="pfnav-profile">
+      <span class="bubble"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+      <span class="nl" id="pfnav-profile-lbl">پروفایل</span>
+    </button>
+    <button class="hm-navitem" id="pfnav-chat">
+      <span class="nav-badge hidden" id="pfnav-chat-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="nl" id="pfnav-chat-lbl">چت</span>
     </button>
   </nav>
 </section>
@@ -1187,6 +1304,17 @@
     <div class="pf-btns">
       <button id="btn-pm-add">د دوستۍ غوښتنه</button>
       <button id="btn-pm-profile" class="ghost">پروفایل</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== FRIEND ROW MENU (⋯) ======== -->
+<div class="overlay" id="ov-friendmenu">
+  <div class="panel" style="max-width:340px">
+    <div class="inv-who"><span id="fm-av"></span><span class="inv-name" id="fm-name"></span></div>
+    <div class="pf-btns">
+      <button id="btn-fm-unfriend">دوستي لرې کول</button>
+      <button id="btn-fm-block" class="ghost">بلاک</button>
     </div>
   </div>
 </div>
@@ -1259,22 +1387,6 @@
 </div>
 
 <!-- ======== PROFILE POPUP ======== -->
-<div class="overlay" id="ov-profile">
-  <div class="panel pf-panel">
-    <h2 id="pf-title">زما پروفایل</h2>
-    <div class="pf-preview" id="pf-preview"></div>
-    <span class="pf-label" id="pf-avatar-lbl">انځور</span>
-    <div class="pf-grid" id="pf-grid"></div>
-    <label class="pf-label" id="pf-name-lbl" for="pf-name">نوم</label>
-    <input id="pf-name" type="text" maxlength="20" placeholder="نوم دې — لکه احمد" autocomplete="name">
-    <label class="pf-label" id="pf-country-lbl" for="pf-country">هېواد</label>
-    <select id="pf-country"></select>
-    <div class="pf-btns">
-      <button id="btn-profile-save">ساتل</button>
-      <button id="btn-profile-close" class="ghost">بندول</button>
-    </div>
-  </div>
-</div>
 
 <!-- ======== SETTINGS POPUP ======== -->
 <div class="overlay" id="ov-settings">
@@ -1385,6 +1497,9 @@ const STR = {
     navHome: 'کور',
     navProfile: 'پروفایل',
     navSettings: 'تنظیمات',
+    navChat: 'چت',
+    chatsTitle: 'ګپونه',
+    pfEditAvatar: 'انځور بدلول',
     comingSoon: 'ژر راځي!',
     friendsTitle: 'ملګري',
     frBack: 'شاته',
@@ -1552,6 +1667,9 @@ const STR = {
     navHome: 'خانه',
     navProfile: 'پروفایل',
     navSettings: 'تنظیمات',
+    navChat: 'چت',
+    chatsTitle: 'گفت‌وگوها',
+    pfEditAvatar: 'تغییر عکس',
     comingSoon: 'به‌زودی می‌آید!',
     friendsTitle: 'دوستان',
     frBack: 'بازگشت',
@@ -1719,6 +1837,9 @@ const STR = {
     navHome: 'Home',
     navProfile: 'Profile',
     navSettings: 'Settings',
+    navChat: 'Chat',
+    chatsTitle: 'Chats',
+    pfEditAvatar: 'Change picture',
     comingSoon: 'Coming soon!',
     friendsTitle: 'Friends',
     frBack: 'Back',
@@ -1893,8 +2014,8 @@ function applyI18n() {
   document.documentElement.lang = LANG;
   document.title = T('docTitle');
   const ltr = LANG === 'en';
-  ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-profile', 'ov-settings', 'ov-exit', 'ov-join',
-   'scr-friends', 'scr-dm', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview']
+  ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-settings', 'ov-exit', 'ov-join',
+   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu']
     .forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.setAttribute('dir', ltr ? 'ltr' : 'rtl');
@@ -1918,7 +2039,7 @@ function applyI18n() {
   set('#nav-clubs-lbl', 'navClubs');
   set('#nav-home-lbl', 'navHome');
   set('#nav-profile-lbl', 'navProfile');
-  set('#nav-settings-lbl', 'navSettings');
+  set('#nav-chat-lbl', 'navChat');
   set('#join-code-lbl', 'roomCodeLabel');
   set('#join-title', 'menuJoin');
   set('#btn-join-close', 'cancelBtn');
@@ -1952,7 +2073,21 @@ function applyI18n() {
   set('#frnav-clubs-lbl', 'navClubs');
   set('#frnav-home-lbl', 'navHome');
   set('#frnav-profile-lbl', 'navProfile');
-  set('#frnav-settings-lbl', 'navSettings');
+  set('#frnav-chat-lbl', 'navChat');
+  set('#chnav-friends-lbl', 'navFriends');
+  set('#chnav-clubs-lbl', 'navClubs');
+  set('#chnav-home-lbl', 'navHome');
+  set('#chnav-profile-lbl', 'navProfile');
+  set('#chnav-chat-lbl', 'navChat');
+  set('#pfnav-friends-lbl', 'navFriends');
+  set('#pfnav-clubs-lbl', 'navClubs');
+  set('#pfnav-home-lbl', 'navHome');
+  set('#pfnav-profile-lbl', 'navProfile');
+  set('#pfnav-chat-lbl', 'navChat');
+  set('#ch-list-title', 'chatsTitle');
+  aria('#btn-pf-edit-av', 'pfEditAvatar');
+  set('#btn-fm-unfriend', 'frUnfriend');
+  set('#btn-fm-block', 'frBlock');
   set('#btn-inv-accept', 'frAccept');
   set('#btn-inv-reject', 'frReject');
   set('#btn-cf-no', 'cancelBtn');
@@ -2024,7 +2159,7 @@ function setLang(code) {
   renderProfileButton();
   refreshCountryOptions();
   if (state) render(state);
-  if ($('#ov-profile').classList.contains('show')) { pfRenderGrid(); pfRenderPreview(); }
+  if (!$('#scr-profile').classList.contains('hidden')) { pfRenderGrid(); pfRenderPreview(); }
 }
 const RANK_VAL = { '2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,T:10,J:11,Q:12,K:13,A:14 };
 const suitOf = (c) => c[c.length - 1];
@@ -4898,15 +5033,16 @@ $('#btn-continue').onclick = () => {
   connect(() => send({ type: 'reconnect', code: s.code, token: s.token, ...profileMsg() }));
 };
 // ---------- bottom nav (home screen) ----------
-// Friends / clubs are placeholders until their backend exists: the tap
-// answers with the coming-soon toast in the current language. Profile
-// and settings open the very same popups as the top bar; home (the
-// active tab) just returns the menu to the top.
+// ملګري opens the friends page, کلبونه answers with the coming-soon
+// toast, پروفایل opens the profile PAGE, چت opens the chat page;
+// home (the active tab) just returns the menu to the top. Settings
+// lives on the top-bar gear button only (owner order 2026-11-08:
+// the nav's fifth slot is چت now, on every page).
 $('#nav-friends').onclick = () => openFriends();
 $('#nav-clubs').onclick = () => toast(T('comingSoon'));
 $('#nav-home').onclick = () => { $('#scr-home').scrollTop = 0; };
 $('#nav-profile').onclick = openProfile;
-$('#nav-settings').onclick = openSettings;
+$('#nav-chat').onclick = () => openChats();
 // ---------- profile popup ----------
 // Tapping the top-right avatar opens the popup: pick an avatar, edit the
 // name and country, save — everything persists in tore.profile.
@@ -4954,12 +5090,17 @@ function openProfile() {
   sel.value = COUNTRIES.includes(profile.country) ? profile.country : 'افغانستان';
   pfRenderGrid();
   pfRenderPreview();
-  $('#ov-profile').classList.add('show');
+  // The avatar picker starts HIDDEN on the page — the ✏️ button on
+  // the photo opens it (owner order 2026-11-08).
+  $('#pf-picker').classList.add('hidden');
+  $('#scr-friends').classList.add('hidden');
+  $('#scr-chats').classList.add('hidden');
+  $('#scr-profile').classList.remove('hidden');
 }
-function closeProfile() { $('#ov-profile').classList.remove('show'); }
+function closeProfile() { $('#scr-profile').classList.add('hidden'); }
 $('#btn-profile').onclick = openProfile;
 $('#btn-profile-close').onclick = closeProfile;
-$('#ov-profile').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeProfile(); });
+$('#btn-pf-edit-av').onclick = () => { $('#pf-picker').classList.toggle('hidden'); };
 $('#btn-profile-save').onclick = () => {
   profile = {
     name: $('#pf-name').value.trim().slice(0, 20),
@@ -5151,7 +5292,6 @@ let socialData = null;           // {friends, incoming, outgoing, blocked}
 const socialPeople = new Map();  // id -> last seen person record
 let frSearchResults = [];
 let frSearched = false; // a search ran (so "no hits" can show its line)
-const frExpanded = new Set();    // friend ids whose ⋯ row is open
 const dmThreads = new Map();     // peerId -> [{from, text, ts}]
 const dmUnread = new Map();      // peerId -> unread count
 let dmPeer = null;               // person record of the open DM thread
@@ -5215,6 +5355,7 @@ function applySocialLists(lists) {
       !lists.friends.some((f) => f.id === pmSentSid)) pmSentSid = null;
   updateFriendsBadge();
   renderFriends();
+  renderChats();
   renderPlayerMenu();
 }
 function onSocialMsg(m) {
@@ -5230,6 +5371,7 @@ function onSocialMsg(m) {
     if (socialData) socialData.friends.forEach((f) => { if (f.id === m.id) f.online = !!m.online; });
     frSearchResults.forEach((r) => { if (r.id === m.id) r.online = !!m.online; });
     renderFriends();
+    renderChats();
     if (dmPeer && dmPeer.id === m.id) paintDmPeer();
   } else if (m.type === 's-search-result') {
     frSearchResults = m.results || [];
@@ -5251,9 +5393,11 @@ function onSocialMsg(m) {
       updateFriendsBadge();
       renderFriends();
     }
+    renderChats();
   } else if (m.type === 's-dm-history') {
     dmThreads.set(m.with, (m.messages || []).map((x) => ({ from: x.from, text: x.text, ts: x.ts })));
     if (dmPeer && dmPeer.id === m.with) renderDmThread();
+    renderChats();
   } else if (m.type === 's-invited') {
     cachePerson(m.from);
     inviteQueue.push({ from: m.from, code: m.code });
@@ -5273,13 +5417,19 @@ function myLobbyCode() {
     ? state.code : null;
 }
 function updateFriendsBadge() {
-  let n = socialData ? socialData.incoming.length : 0;
-  dmUnread.forEach((c) => { n += c; });
-  // the same count rides on the home nav item and on the friends
-  // screen's own nav (its raised ملګري item)
-  ['#nav-friends-badge', '#frnav-friends-badge'].forEach((sel) => {
+  // Badge routing (owner order 2026-11-08): the ملګري items carry
+  // ONLY the incoming friend-request count; unread DMs badge the
+  // چت items instead. Every nav copy is painted.
+  const req = socialData ? socialData.incoming.length : 0;
+  let un = 0;
+  dmUnread.forEach((c) => { un += c; });
+  ['#nav-friends-badge', '#frnav-friends-badge', '#chnav-friends-badge', '#pfnav-friends-badge'].forEach((sel) => {
     const b = $(sel);
-    if (b) { b.textContent = faNum(n); b.classList.toggle('hidden', n === 0); }
+    if (b) { b.textContent = faNum(req); b.classList.toggle('hidden', req === 0); }
+  });
+  ['#nav-chat-badge', '#frnav-chat-badge', '#chnav-chat-badge', '#pfnav-chat-badge'].forEach((sel) => {
+    const b = $(sel);
+    if (b) { b.textContent = faNum(un); b.classList.toggle('hidden', un === 0); }
   });
   // blocked-count badge on the blocked button in the top corner
   const bb = $('#fr-blocked-badge');
@@ -5290,6 +5440,9 @@ function updateFriendsBadge() {
   }
 }
 function openFriends() {
+  // The three pages are siblings: opening one hides the other two.
+  $('#scr-chats').classList.add('hidden');
+  $('#scr-profile').classList.add('hidden');
   $('#scr-friends').classList.remove('hidden');
   connectSocial();
   renderFriends();
@@ -5299,6 +5452,97 @@ function closeFriends() {
   $('#ov-blocked').classList.remove('show');
 }
 $('#btn-lobby-friends').onclick = openFriends;
+
+// ---------- chat page (چت) ----------
+// Every friend in one list; a row shows the last DM (one-line
+// preview + time) when a thread exists, else the flag/country/
+// online line. Unread DMs mark the row. Tapping a row opens the
+// existing DM view with its back target set to this page.
+let dmReturn = 'friends';   // where the DM back button lands
+function openChats() {
+  $('#scr-friends').classList.add('hidden');
+  $('#scr-profile').classList.add('hidden');
+  $('#scr-chats').classList.remove('hidden');
+  connectSocial();
+  renderChats();
+}
+function closeChats() { $('#scr-chats').classList.add('hidden'); }
+function chatRow(p) {
+  const row = document.createElement('div');
+  row.className = 'fr-row ch-row';
+  const who = document.createElement('div');
+  who.className = 'fr-who';
+  who.appendChild(avatarEl(p.name, p.avatar, 38, p.photo));
+  const meta = document.createElement('div');
+  meta.className = 'fr-meta';
+  const nm = document.createElement('div');
+  nm.className = 'fr-name';
+  nm.textContent = p.name || T('playerName');
+  const sub = document.createElement('div');
+  sub.className = 'ch-sub';
+  const dot = document.createElement('span');
+  dot.className = 'dot' + (p.online ? ' on' : '');
+  sub.appendChild(dot);
+  const th = dmThreads.get(p.id) || [];
+  const last = th.length ? th[th.length - 1] : null;
+  const st = document.createElement('span');
+  if (last) {
+    st.textContent = last.text;
+  } else {
+    const fl = p.country ? countryFlag(p.country) : '';
+    st.textContent = (fl ? fl + ' ' : '') + (p.country ? dispCountry(p.country) + ' · ' : '') +
+      (p.online ? T('frOnline') : T('frOffline'));
+  }
+  sub.appendChild(st);
+  meta.appendChild(nm);
+  meta.appendChild(sub);
+  who.appendChild(meta);
+  row.appendChild(who);
+  const un = dmUnread.get(p.id) || 0;
+  if (last || un) {
+    const side = document.createElement('div');
+    side.className = 'ch-side';
+    if (last) {
+      const tm = document.createElement('span');
+      tm.className = 'ch-time';
+      const d = new Date(last.ts);
+      tm.textContent = d.toDateString() === new Date().toDateString()
+        ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : d.toLocaleDateString([], { day: 'numeric', month: 'numeric' });
+      side.appendChild(tm);
+    }
+    if (un) {
+      const slot = document.createElement('span');
+      slot.className = 'ch-unreadslot';
+      const b = document.createElement('span');
+      b.className = 'fr-unread';
+      b.textContent = faNum(un);
+      slot.appendChild(b);
+      side.appendChild(slot);
+    }
+    row.appendChild(side);
+  }
+  row.onclick = () => openDm(p, 'chats');
+  return row;
+}
+function renderChats() {
+  if ($('#scr-chats').classList.contains('hidden')) return;
+  const box = $('#ch-list');
+  if (!box) return;
+  box.innerHTML = '';
+  if (!socialData) return;
+  if (!socialData.friends.length) { box.appendChild(frEmpty(T('frNoFriends'))); return; }
+  const withTh = [], rest = [];
+  socialData.friends.forEach((p) => {
+    const th = dmThreads.get(p.id);
+    if (th && th.length) withTh.push(p); else rest.push(p);
+  });
+  withTh.sort((a, b) => {
+    const ta = dmThreads.get(a.id), tb = dmThreads.get(b.id);
+    return (tb[tb.length - 1].ts || 0) - (ta[ta.length - 1].ts || 0);
+  });
+  withTh.concat(rest).forEach((p) => box.appendChild(chatRow(p)));
+}
 // Top corner (owner layout order 2026-11-08): the blocked-list
 // button sits where «شاته» used to be and opens the blocked popup;
 // beside it the search toggle collapses/expands the search box.
@@ -5321,7 +5565,20 @@ $('#frnav-friends').onclick = () => {};
 $('#frnav-clubs').onclick = () => toast(T('comingSoon'));
 $('#frnav-home').onclick = closeFriends;
 $('#frnav-profile').onclick = openProfile;
-$('#frnav-settings').onclick = openSettings;
+$('#frnav-chat').onclick = () => openChats();
+// Chat page nav: چت is the raised active item; the rest cross-link
+// to the sibling pages (they stack — closing one reveals the other).
+$('#chnav-friends').onclick = () => openFriends();
+$('#chnav-clubs').onclick = () => toast(T('comingSoon'));
+$('#chnav-home').onclick = () => closeChats();
+$('#chnav-profile').onclick = openProfile;
+$('#chnav-chat').onclick = () => {};
+// Profile page nav: پروفایل is the raised active item.
+$('#pfnav-friends').onclick = () => openFriends();
+$('#pfnav-clubs').onclick = () => toast(T('comingSoon'));
+$('#pfnav-home').onclick = () => closeProfile();
+$('#pfnav-profile').onclick = () => {};
+$('#pfnav-chat').onclick = () => openChats();
 
 // ---------- lobby player menu (tap a player) ----------
 // Tapping another human's lobby row opens a small menu over the
@@ -5500,11 +5757,7 @@ function renderFriends() {
     outBox.appendChild(personRow(p, [frBtn(T('frPending'), '', null)]));
   });
 
-  // friends (⋯ expansion state dies with the row: an unfriended /
-  // blocked friend who is later re-added starts collapsed again)
-  frExpanded.forEach((id) => {
-    if (!socialData.friends.some((f) => f.id === id)) frExpanded.delete(id);
-  });
+  // friends (the ⋯ button opens the small friend menu popup)
   const listBox = $('#fr-list');
   listBox.innerHTML = '';
   if (!socialData.friends.length) listBox.appendChild(frEmpty(T('frNoFriends')));
@@ -5516,23 +5769,8 @@ function renderFriends() {
         socialSend({ type: 's-invite', to: p.id, code });
       }));
     }
-    actions.push(frBtn('⋯', '', () => {
-      if (frExpanded.has(p.id)) frExpanded.delete(p.id); else frExpanded.add(p.id);
-      renderFriends();
-    }));
+    actions.push(frBtn('⋯', '', () => openFriendMenu(p)));
     listBox.appendChild(personRow(p, actions));
-    if (frExpanded.has(p.id)) {
-      const sub = document.createElement('div');
-      sub.className = 'fr-actions';
-      sub.style.cssText = 'justify-content:flex-end;padding:2px 2px 8px;';
-      sub.appendChild(frBtn(T('frUnfriend'), '', () => askConfirm(
-        T('frConfirmUnfriendT'), T('frConfirmUnfriendB', p.name || ''), T('frConfirmYes'),
-        () => socialSend({ type: 's-unfriend', id: p.id }))));
-      sub.appendChild(frBtn(T('frBlock'), 'danger', () => askConfirm(
-        T('frConfirmBlockT'), T('frConfirmBlockB', p.name || ''), T('frConfirmYes'),
-        () => socialSend({ type: 's-block', id: p.id }))));
-      listBox.appendChild(sub);
-    }
   });
 
   // blocked
@@ -5556,8 +5794,39 @@ function doFrSearch() {
 $('#btn-fr-search').onclick = doFrSearch;
 $('#fr-search-inp').addEventListener('keydown', (e) => { if (e.key === 'Enter') doFrSearch(); });
 
+// ---------- friend row menu (⋯) ----------
+// A small popup in the lobby player menu's family with exactly two
+// items — unfriend and block — each running the same confirm flow
+// the old inline row expansion used.
+let fmFriend = null;
+function openFriendMenu(p) {
+  fmFriend = p;
+  const av = $('#fm-av');
+  av.innerHTML = '';
+  av.appendChild(avatarEl(p.name, p.avatar, 52, p.photo));
+  $('#fm-name').textContent = p.name || '';
+  $('#ov-friendmenu').classList.add('show');
+}
+function closeFriendMenu() { $('#ov-friendmenu').classList.remove('show'); fmFriend = null; }
+$('#btn-fm-unfriend').onclick = () => {
+  const p = fmFriend;
+  closeFriendMenu();
+  if (!p) return;
+  askConfirm(T('frConfirmUnfriendT'), T('frConfirmUnfriendB', p.name || ''), T('frConfirmYes'),
+    () => socialSend({ type: 's-unfriend', id: p.id }));
+};
+$('#btn-fm-block').onclick = () => {
+  const p = fmFriend;
+  closeFriendMenu();
+  if (!p) return;
+  askConfirm(T('frConfirmBlockT'), T('frConfirmBlockB', p.name || ''), T('frConfirmYes'),
+    () => socialSend({ type: 's-block', id: p.id }));
+};
+$('#ov-friendmenu').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeFriendMenu(); });
+
 // ---------- friend DM ----------
-function openDm(p) {
+function openDm(p, from) {
+  dmReturn = from === 'chats' ? 'chats' : 'friends';
   dmPeer = p;
   cachePerson(p);
   dmUnread.delete(p.id);
@@ -5605,7 +5874,7 @@ function renderDmThread() {
 $('#btn-dm-back').onclick = () => {
   $('#scr-dm').classList.add('hidden');
   dmPeer = null;
-  renderFriends();
+  if (dmReturn === 'chats') renderChats(); else renderFriends();
 };
 function sendDm() {
   const inp = $('#dm-inp');
@@ -5680,7 +5949,7 @@ $('#btn-cf-no').onclick = () => {
 };
 
 // The friends screens re-render on a language switch (applyI18n hook).
-window.__frRender = () => { renderFriends(); if (dmPeer) renderDmThread(); };
+window.__frRender = () => { renderFriends(); renderChats(); if (dmPeer) renderDmThread(); };
 // The social socket lives for the whole app session.
 connectSocial();
 
