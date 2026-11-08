@@ -28,6 +28,7 @@
 
 import * as G from './game.js';
 import { chooseCard, maybeDeclare13 } from './bots.js';
+import { SocialCore } from './social-core.js';
 
 // ---- Tunables (same values as ../server.js) ----
 const TURN_TIMEOUT_MS = 30000;    // a stalled human seat is played by a bot
@@ -69,6 +70,12 @@ function cleanPhoto(p) {
   if (!p.includes('googleusercontent.com')) return null;
   return p;
 }
+// Same rule as the Node server: the client's persistent player id,
+// used for the seat's social identity when no account session backs
+// the socket. Anything else becomes null.
+function cleanPid(pid) {
+  return (typeof pid === 'string' && /^[A-Za-z0-9_-]{6,64}$/.test(pid)) ? pid : null;
+}
 function cleanName(name) {
   const n = String(name || '').trim().slice(0, 20);
   return n || 'بازیکن';
@@ -104,7 +111,7 @@ function displayName(msg, user) {
 }
 
 function emptySeat() {
-  return { kind: 'empty', name: '', avatar: null, country: '', photo: null, token: null, ws: null, connected: false, disconnectAt: null, voiceMic: false, voiceSpeaker: true, lastChatAt: 0 };
+  return { kind: 'empty', name: '', avatar: null, country: '', photo: null, token: null, ws: null, connected: false, disconnectAt: null, voiceMic: false, voiceSpeaker: true, lastChatAt: 0, sid: null };
 }
 
 function send(ws, obj) {
@@ -174,6 +181,7 @@ export class GameServer {
     this.timers = [];
     this.timerSeq = 0;
     this.authEnabled = env.AUTH_ENABLED === '1';
+    this.social = null; // SocialCore, lazily built by _ensureSocial()
 
     state.blockConcurrencyWhile(async () => {
       const saved = await state.storage.get(STORAGE_KEY);
@@ -231,7 +239,7 @@ export class GameServer {
         phase: room.phase,
         seats: room.seats.map((s) => ({
           kind: s.kind, name: s.name, avatar: s.avatar, country: s.country,
-          photo: s.photo, voiceMic: !!s.voiceMic, voiceSpeaker: s.voiceSpeaker !== false,
+          photo: s.photo, sid: s.sid || null, voiceMic: !!s.voiceMic, voiceSpeaker: s.voiceSpeaker !== false,
           token: s.token, connected: s.connected, disconnectAt: s.disconnectAt,
         })),
         trickHold: room.trickHold,
@@ -319,6 +327,7 @@ export class GameServer {
           s.avatar = null;
           s.country = '';
           s.photo = null;
+          s.sid = null;
           s.voiceMic = false;
           s.voiceSpeaker = false;
           s.connected = true;
@@ -352,9 +361,108 @@ export class GameServer {
     const pair = new WebSocketPair();
     const client = pair[0];
     const server = pair[1];
+    // Friends-system sockets ride the /social path: tagged so they
+    // can be found as a group, with their own attachment shape (the
+    // resolved social identity `sid` is filled in by the hello).
+    if (new URL(request.url).pathname === '/social') {
+      this.state.acceptWebSocket(server, ['social']);
+      server.serializeAttachment({ social: true, sid: null, user });
+      return new Response(null, { status: 101, webSocket: client });
+    }
     this.state.acceptWebSocket(server);
     server.serializeAttachment({ code: null, seat: -1, token: null, user });
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  // ---------------------------------------------------------- social
+  // The friends system (social-core.js — the same implementation the
+  // Node servers run). State persists under its own storage key,
+  // keyed by identity: "g:<sub>" for a signed-in account (the Worker
+  // verified the session and forwarded the user), else "p:<pid>"
+  // from the client's persistent player id (auth-off local runs).
+  async _ensureSocial() {
+    if (this.social) return this.social;
+    const core = new SocialCore({
+      sendTo: (id, obj) => this._socialSend(id, obj),
+      persist: (data) => { this.state.storage.put('social:v1', data).catch(() => {}); },
+      inviteRoomCheck: (id, code) => this._socialRoomCheck(id, code),
+    });
+    const saved = await this.state.storage.get('social:v1').catch(() => null);
+    if (saved) core.load(saved);
+    // Presence is rebuilt from the live (possibly hibernated)
+    // sockets — their attachments kept the resolved identities.
+    const ids = [];
+    for (const ws of this.state.getWebSockets('social')) {
+      const att = this._attachment(ws);
+      if (att && att.sid) ids.push(att.sid);
+    }
+    core.rebuildOnline(ids);
+    this.social = core;
+    return core;
+  }
+
+  _socialSend(id, obj) {
+    const data = JSON.stringify(obj);
+    for (const ws of this.state.getWebSockets('social')) {
+      const att = this._attachment(ws);
+      if (att && att.sid === id) { try { ws.send(data); } catch { /* gone */ } }
+    }
+  }
+
+  _socialRoomCheck(id, code) {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'lobby') return false;
+    if (id.startsWith('g:')) {
+      // Exact check (social and game state live in this same
+      // object): a seat of this room whose game socket belongs to
+      // the same signed-in account.
+      for (const seat of room.seats) {
+        if (seat.kind !== 'human' || !seat.ws) continue;
+        const att = this._attachment(seat.ws);
+        if (att && att.user && ('g:' + String(att.user.sub)) === id) return true;
+      }
+      return false;
+    }
+    return true; // p:<pid> seats carry no account link — spec fallback
+  }
+
+  async _socialMessage(ws, att, msg) {
+    const core = await this._ensureSocial();
+    if (msg.type === 's-hello') {
+      const prof = (msg.profile && typeof msg.profile === 'object') ? msg.profile : {};
+      let sid = att.sid || null;
+      let helloProfile = prof;
+      if (att.user && att.user.sub) {
+        // Signed-in account wins: identity, name and photo come
+        // from the session the Worker verified — never from the
+        // client's hello (only the country is the player's own).
+        sid = 'g:' + String(att.user.sub);
+        helloProfile = {
+          name: att.user.name || prof.name,
+          avatar: att.user.picture ? 'google' : prof.avatar,
+          photo: att.user.picture || '',
+          country: prof.country,
+        };
+      } else if (!sid) {
+        const pid = (typeof msg.pid === 'string' && /^[A-Za-z0-9_-]{6,64}$/.test(msg.pid))
+          ? msg.pid : ('x' + randomHex(6));
+        sid = 'p:' + pid;
+      }
+      if (att.sid !== sid) {
+        att.sid = sid;
+        this._saveAttachment(ws, att);
+        core.socketOpened(sid);
+      }
+      core.hello(sid, helloProfile);
+      return;
+    }
+    if (!att.sid) return; // hello first
+    core.handleMessage(att.sid, msg);
+  }
+
+  _socialDisconnect(ws) {
+    const att = this._attachment(ws);
+    if (att && att.sid && this.social) this.social.socketClosed(att.sid);
   }
 
   _attachment(ws) {
@@ -370,17 +478,25 @@ export class GameServer {
     try { msg = JSON.parse(typeof message === 'string' ? message : new TextDecoder().decode(message)); }
     catch { return; }
     const att = this._attachment(ws) || { code: null, seat: -1, token: null, user: null };
+    if (att.social) {
+      try { await this._socialMessage(ws, att, msg); } catch { /* social errors never touch the game */ }
+      return;
+    }
     try { this._handleMessage(ws, att, msg); }
     catch { sendError(ws, 'خطای سرور', 'serverError'); }
     await this._persist();
   }
 
   async webSocketClose(ws) {
+    const att = this._attachment(ws);
+    if (att && att.social) { this._socialDisconnect(ws); return; }
     this._onDisconnect(ws);
     await this._persist();
   }
 
   async webSocketError(ws) {
+    const att = this._attachment(ws);
+    if (att && att.social) { this._socialDisconnect(ws); return; }
     this._onDisconnect(ws);
     await this._persist();
   }
@@ -444,7 +560,7 @@ export class GameServer {
       target: G.BANK_LOSE_TARGET,
       seats: room.seats.map((s, i) => ({
         name: s.name, kind: s.kind, connected: s.connected,
-        avatar: s.avatar, country: s.country, photo: s.photo,
+        avatar: s.avatar, country: s.country, photo: s.photo, sid: s.sid || null,
         voice: { mic: !!s.voiceMic, speaker: s.voiceSpeaker !== false },
         cards: round ? round.hands[i].length : 0,
       })),
@@ -598,6 +714,14 @@ export class GameServer {
     seat.avatar = cleanAvatar(prof && prof.avatar);
     seat.country = cleanCountry(prof && prof.country);
     seat.photo = seat.avatar === 'google' ? cleanPhoto(prof && prof.photo) : null;
+    // Social identity for the lobby player menu: a signed-in
+    // account WINS — the Worker verified the session cookie and
+    // forwarded the user to this DO as the x-tore-user header (the
+    // exact handoff /social uses), and fetch() stored it in this
+    // socket's attachment. Otherwise the persistent player id the
+    // client sent, exactly like the Node servers.
+    if (att.user && att.user.sub) seat.sid = 'g:' + String(att.user.sub);
+    else { const pid0 = cleanPid(prof && prof.pid); seat.sid = pid0 ? 'p:' + pid0 : null; }
     seat.token = randomHex(8);
     seat.ws = ws;
     seat.connected = true;
@@ -645,6 +769,8 @@ export class GameServer {
         // A reconnect may carry the player's current profile — refresh it.
         const av = cleanAvatar(msg.avatar); if (av) seat.avatar = av;
         const co = cleanCountry(msg.country); if (co) seat.country = co;
+        if (att.user && att.user.sub) seat.sid = 'g:' + String(att.user.sub);
+        else { const pid = cleanPid(msg.pid); if (pid) seat.sid = 'p:' + pid; }
         if (seat.avatar === 'google') {
           const ph = cleanPhoto(msg.photo); if (ph) seat.photo = ph;
         } else {
@@ -704,6 +830,7 @@ export class GameServer {
           seat.avatar = null;
           seat.country = '';
           seat.photo = null;
+          seat.sid = null;
           seat.voiceMic = false;
           seat.voiceSpeaker = false;
           seat.ws = null;
