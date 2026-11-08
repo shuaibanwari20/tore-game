@@ -3737,6 +3737,7 @@ function ensurePeer(seat) {
     gen: (peerGen[seat] = (peerGen[seat] || 0) + 1), // this peer's signaling generation, stamped on every signal it sends
     remoteGen: null,     // generation of the remote peer's current session (adopted from its first signal)
     audio: null,
+    playBlocked: false,  // play() rejected with NotAllowedError (round 8): playback, not connection, is what is broken
     stream: null,        // latest remote stream from ontrack (parked while speaker is off)
     sender: null,        // the one sendrecv transceiver's sender (mic track attach point)
     dc: null,            // MY created 'ping' datachannel (heartbeats go out on it)
@@ -4170,6 +4171,15 @@ async function readPairStats(pc) {
 // ARE growing but the element is paused / readyState < 3 /
 // currentTime frozen for EL_STALL_MS → re-attach + play(),
 // repeatable and cheap — it never re-forms anything.
+//
+// PLAYBACK BLOCK (round 8) cuts across the receive ladder: if
+// the pair's element is marked playBlocked (a play() refused
+// with NotAllowedError — see attemptPlay), frozen-byte
+// escalation stops at step (a) however long the bytes stay
+// frozen. The pair is demonstrably up; what is broken is the
+// platform's permission to play, and its remedy is the element
+// (re-attach + play, retried on the next user gesture) — never
+// a re-formation.
 function audioHealRec(seat) {
   return audioHealSeats[seat] || (audioHealSeats[seat] = { step: 0, txReformed: false, last: '' });
 }
@@ -4294,12 +4304,29 @@ async function audioWatchStep(seat, entry) {
       rec.step = 1; rec.last = 'reattach';
       entry.rxFrozenAt = now; // the re-attach gets its own window
       replayPeerAudio(entry, 'inbound frozen');
+    } else if (rec.step === 1 && entry.playBlocked) {
+      // PLAYBACK block, not a connection failure (round 8): the
+      // pair is up and the remedy lives at the element — a
+      // play() the platform refused. The ladder STOPS here:
+      // keep re-attaching each window (a retry inside the
+      // window may land right after the user's next tap) and
+      // never re-form a healthy pair for a paused element.
+      rec.last = 'reattach-blocked';
+      entry.rxFrozenAt = now;
+      replayPeerAudio(entry, 'inbound frozen (playback blocked)');
     } else if (rec.step === 1 && !entry.relayForced) {
       rec.step = 2; rec.last = 'reform';
       voiceEvent('audio heal: pair re-formed (inbound audio frozen)', seat);
       closePeer(seat, 'audio-reform');
       syncVoicePairs();
       return;
+    } else if (rec.step === 2 && entry.playBlocked) {
+      // Same discrimination one rung up: playback blocked after
+      // a re-form — demote back to the element rung instead of
+      // spending the relay-only re-form on a paused element.
+      rec.step = 1; rec.last = 'reattach-blocked';
+      entry.rxFrozenAt = now;
+      replayPeerAudio(entry, 'inbound frozen (playback blocked)');
     } else if (rec.step === 2 && !entry.relayForced) {
       rec.step = 3; rec.last = 'relay-reform';
       statsRebuiltOnce[seat] = true;
@@ -4432,14 +4459,50 @@ async function makeOffer(seat, entry) {
     entry.makingOffer = false;
   });
 }
+// ---------- playback unlock (round 8) ----------
+// The field failure this closes (owner's report from the LOBBY,
+// 2026-11-08): on Android the talker opens his mic and the
+// listener hears nothing until the listener toggles his speaker
+// off→on. Round 7's proactive heal DID fire on the edge — in
+// the lobby exactly as at the table (V9-L: same handlers, same
+// buttons, heal + re-checks on the same warm pair) — but every
+// attemptPlay it drove was a programmatic play() with no user
+// gesture behind it, and Android Chrome answers those with a
+// NotAllowedError rejection while the element sits paused and
+// RTP flows into it. The speaker toggle "fixed" it because it
+// calls play() from inside a click handler. Two things were
+// missing: the rejection was SWALLOWED (attemptPlay's empty
+// catch — no state, no log, so the watchdog then misread the
+// silence as a CONNECTION failure and re-formed healthy pairs),
+// and no other gesture ever retried playback. Now a rejection
+// marks the pair PLAYBACK-BLOCKED (a distinct state with its
+// own remedy — element-level only, see audioWatchStep), the
+// diagnostics log records it, and ANY tap in the app retries
+// playback on every pair that owes it — the gesture half of
+// the toggle ritual, without the toggle.
+let audioUnlocked = false; // some play() has succeeded — the document can play peer audio
 function attemptPlay(entry) {
   if (!entry.audio || !speakerOn) return;
   try {
     const p = entry.audio.play();
-    // iOS Safari rejects play() outside a user gesture (ontrack is
-    // not one): the rejection is swallowed here and retried on the
-    // next tap anywhere — see the pointerdown listener below.
-    if (p && p.catch) p.catch(() => {});
+    if (p && p.then) {
+      p.then(() => {
+        audioUnlocked = true;
+        if (entry.playBlocked) {
+          entry.playBlocked = false;
+          voiceEvent('playback unblocked: play() ok', entry.seat);
+        }
+      }, (err) => {
+        if (err && err.name === 'NotAllowedError') {
+          if (!entry.playBlocked) {
+            voiceEvent('play() rejected: NotAllowedError — playback BLOCKED until a tap', entry.seat);
+          }
+          entry.playBlocked = true;
+        } else if (err) {
+          voiceEvent('play() rejected: ' + (err.name || 'error'), entry.seat);
+        }
+      });
+    }
   } catch (e) {}
 }
 function retryPeerAudio() {
@@ -4448,7 +4511,22 @@ function retryPeerAudio() {
     if (entry && entry.audio && entry.audio.paused) attemptPlay(entry);
   });
 }
-document.addEventListener('pointerdown', retryPeerAudio);
+// A gesture anywhere: attach any parked stream that has no
+// element yet, then (re)try playback on every element that is
+// paused or marked blocked — inside the gesture handler, where
+// the platform allows it. Registered for pointerdown AND click
+// (pointerdown alone misses keyboard/AT activation paths);
+// attemptPlay is idempotent, so the overlap costs nothing.
+function unlockPeerAudio() {
+  Object.keys(peers).forEach((s) => {
+    const entry = peers[s];
+    if (!entry || !speakerOn) return;
+    if (entry.stream && !entry.audio) attachPeerAudio(entry);
+    else if (entry.audio && (entry.audio.paused || entry.playBlocked)) attemptPlay(entry);
+  });
+}
+document.addEventListener('pointerdown', unlockPeerAudio);
+document.addEventListener('click', unlockPeerAudio);
 // The «غږ وصل شو» toast must mean AUDIO-READY, not merely
 // "signaling looked fine once": it fires when a pair is ICE-
 // connected AND — for a pair whose signature says I should be
@@ -4958,7 +5036,7 @@ async function renderVoiceDiag() {
       ' · send ' + (e.sender && e.sender.track ? 'track' : 'silent') +
       ' · recv ' + (e.stream ? 'track' : 'none') + '</div>');
     lines.push('<div class="vd-sub">rtrack ' + (e.recvTrack ? (e.recvMuted ? 'MUTED' : 'live') : 'none') +
-      ' · el ' + elState +
+      ' · el ' + elState + (e.playBlocked ? ' · PLAYBACK-BLOCKED (tap anywhere)' : '') +
       ' · aheal ' + (ahr ? ('rx-step ' + ahr.step + (ahr.txReformed ? ' · tx-reformed' : '') +
         (ahr.last ? ' · last ' + ahr.last : '')) : 'rx-step 0') + '</div>');
   });
