@@ -600,6 +600,7 @@
   #vdiag .vd-log { margin-top: 7px; border-top: 1px solid rgba(217,179,128,.4); padding-top: 5px; color: #b9c9a4; }
   #vdiag .vd-log div { white-space: pre-wrap; word-break: break-all; }
   #btn-mic { -webkit-touch-callout: none; }
+  #btn-mic.pending { opacity: .55; }
   #connbar { text-align: center; font-size: 12.5px; color: #ffd75e; min-height: 18px; }
   .hidden { display: none !important; }
 
@@ -2129,6 +2130,50 @@ const audioHealSeats = {}; // seat -> { step, txReformed, last }
 let AUDIO_WATCH_MS = 2000;  // audio watchdog tick per pair
 let AUDIO_FROZEN_MS = 4000; // bytes frozen this long → next heal step
 let EL_STALL_MS = 3000;     // element currentTime frozen this long → stalled
+// Voice round 6 — the mic off→on cycle. The voice5 watchdog
+// healed one-way audio, but the cycle itself could still kill
+// the mic three ways, all confirmed in the code (and in the
+// round-6 driver against the voice5 build):
+//  (1) toggleVoice's muted-start wait was BOUNDED (~1.2 s) and
+//      then announced ANYWAY: on a re-acquisition (Android, just
+//      after the previous stream was stopped) the fresh track
+//      can stay muted far longer — even indefinitely — while
+//      silence RTP flows, so the watchdog saw growing outbound
+//      bytes and never healed, and nothing re-checked the local
+//      track's mute state ever again. First activation escaped
+//      because a fresh mic session unmutes fast.
+//  (2) A peer's flag edges never reset the watchdog's per-seat
+//      episode: a step latched by an old silence survived the
+//      peer's mic-off (no bytes can flow to reset it) and the
+//      escalation resumed mid-ladder the moment he re-announced
+//      — a re-form (or the relay rebuild) fired DURING the
+//      re-on transient, and a spent txReformed left the send
+//      path with no heal at all for the new mic-on.
+//  (3) Nothing supervised the local track after mic-on: a
+//      track that muted mid-session stayed the sender forever.
+// The fixes: a muted acquisition is PENDING — never announced —
+// until the track unmutes (event + poll, generous cap, honest
+// toast/off at the cap); the local track is supervised for the
+// whole mic-on life (one re-acquisition per mute episode);
+// every mic/speaker flag edge (mine or a peer's) resets the
+// pair's episode + frozen windows and imposes a grace window
+// before any heal may fire; and a post-toggle self-check gives
+// a wedged sender exactly one track-first re-form.
+let micPending = null; // { gen, stream, track, poll, cap, onUnmute } while a muted acquisition waits to unmute
+let MIC_UNMUTE_CAP_MS = 10000; // pending gives up (toast + honest off) after this
+let MIC_MUTE_REACQ_MS = 2500;  // local track muted this long mid-session → one re-acquisition
+let MIC_SELFCHECK_MS = 3000;   // post-mic-on outbound-growth check
+let FLAG_GRACE_MS = 7000;      // no watchdog heal within this window after a flag edge
+const audioGrace = {}; // seat -> timestamp: watchdog heals gated until then
+// Local-track mute supervision (round 6): micMuteSince stamps
+// the current mute episode (kept across the re-acquisition swap
+// so the fresh track inherits the episode clock); micMuteHealed
+// = this episode already spent its one re-acquisition.
+let micMuteSince = 0;
+let micMuteHealed = false;
+let micReacquiring = false;
+let micSuperviseTimer = null;
+let micWatched = null; // { track, onMute, onUnmute } event watch on the live track
 // Voice event log for the diagnostics overlay: the last voice
 // events with seconds-since-join timestamps, so a failure on a
 // real phone arrives as a readable screenshot instead of a guess.
@@ -2319,6 +2364,31 @@ function resetVoiceFeedback() {
   Object.keys(voiceHeal).forEach((s) => { delete voiceHeal[s]; });
   Object.keys(audioHealSeats).forEach((s) => { delete audioHealSeats[s]; });
 }
+// Flag edges (round 6): ANY mic/speaker transition — mine, or a
+// peer's as observed via a voice broadcast / state push — makes
+// the pair's recent watchdog history meaningless: a silence
+// episode from BEFORE the edge must not escalate into the
+// re-on transient (a re-form landing while the talker's fresh
+// mic is still settling is how the off→on cycle kept dying),
+// and an episode step latched before the edge (which no bytes
+// could reset while the mic was off) must not resume mid-ladder.
+// So an edge wipes the pair's episode + byte trackers and opens
+// a grace window during which the audio watchdog may look but
+// never heal. The anti-churn budgets are otherwise untouched.
+function noteFlagEdge(seat) {
+  if (seat === null || seat === undefined || seat === mySeat) return;
+  audioGrace[seat] = Date.now() + FLAG_GRACE_MS;
+  delete audioHealSeats[seat];
+  const e = peers[seat];
+  if (e) {
+    e.rxExpect = false; e.rxLast = null; e.rxFrozenAt = 0;
+    e.txExpect = false; e.txLast = null; e.txFrozenAt = 0;
+    e.txReattachTried = false;
+  }
+}
+function noteAllFlagEdges() {
+  for (let s = 0; s < 4; s++) noteFlagEdge(s);
+}
 
 // Mic button: a tap toggles the mic; a LONG press (~600 ms) opens
 // the voice diagnostics overlay instead — and that press must NOT
@@ -2368,6 +2438,7 @@ function toggleSpeaker() {
     });
   }
   resetVoiceFeedback();
+  noteAllFlagEdges(); // my speaker edge: pair expectations changed — watchdogs start fresh + graced
   syncVoicePairs();
   if (speakerOn) {
     // Streams that arrived while the speaker was off were parked
@@ -2380,6 +2451,9 @@ function toggleSpeaker() {
 }
 
 async function toggleVoice() {
+  // A tap while a muted acquisition is PENDING cancels it: the
+  // mic was never announced, so "off" is just dropping the wait.
+  if (micPending) { cancelMicPending('tap'); return; }
   if (micOn) { stopMic(); return; }
   if (!RTCPeerCtor || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     toast(T('micUnavailable'));
@@ -2430,27 +2504,78 @@ async function toggleVoice() {
     // Android Chrome can hand back a track that starts MUTED —
     // the OS microphone session is still settling, typically
     // right after the previous stream was stopped (the off→on
-    // cycle). Announcing now would build the whole mesh on a
-    // silent sender: pairs connect, the toast fires, and nobody
-    // hears anything. Wait for the track to unmute first —
-    // BOUNDED (~1.2 s), so a track that never unmutes delays the
-    // mic briefly instead of stalling it forever.
-    await new Promise((resolve) => {
-      let done = false;
-      const fin = () => {
-        if (done) return;
-        done = true;
-        try { track.removeEventListener('unmute', fin); } catch (e) {}
-        resolve();
-      };
-      try { track.addEventListener('unmute', fin); } catch (e) {}
-      setTimeout(fin, 1200);
-    });
-    if (gen !== micGen) { // superseded while waiting for the unmute
-      stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} });
-      return;
-    }
+    // cycle) — and on a re-acquisition it can stay muted far
+    // longer than any short wait, even indefinitely. The old
+    // code waited ~1.2 s and then announced ANYWAY: the mesh
+    // was built on a silent sender whose silence RTP still
+    // flows, so no watchdog ever saw a failure. Round 6: a
+    // muted track is NEVER announced. The acquisition parks in
+    // micPending until the track unmutes (event-driven, with a
+    // poll for stacks that drop the event), and only then does
+    // the normal mic-on flow run. If the cap expires first,
+    // the mic gives up honestly — toast, stream stopped, mic
+    // still off — instead of announcing silence.
+    startMicPending(gen, stream);
+    return;
   }
+  completeMicOn(gen, stream);
+}
+function stopStreamTracks(stream) {
+  if (!stream) return;
+  stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} });
+}
+// Park a muted acquisition: nothing is announced, no pair is
+// built around it, the mic button shows the pending state. The
+// moment the track unmutes, completeMicOn runs with the
+// original generation ticket; a tap (or a stopMic) cancels via
+// cancelMicPending; the cap ends it honestly.
+function startMicPending(gen, stream) {
+  const track = stream.getAudioTracks()[0];
+  const p = { gen, stream, track, poll: null, cap: null, onUnmute: null };
+  micPending = p;
+  $('#btn-mic').classList.add('pending');
+  voiceEvent('mic pending: track muted — waiting for unmute before announcing');
+  const finish = () => {
+    if (micPending !== p) return;
+    clearMicPendingBits(p);
+    micPending = null;
+    $('#btn-mic').classList.remove('pending');
+    if (p.gen !== micGen || !track || track.readyState !== 'live') { stopStreamTracks(stream); return; }
+    completeMicOn(p.gen, stream);
+  };
+  p.onUnmute = finish;
+  try { track.addEventListener('unmute', finish); } catch (e) {}
+  p.poll = setInterval(() => { if (micPending === p && !track.muted) finish(); }, 400);
+  p.cap = setTimeout(() => {
+    if (micPending !== p) return;
+    clearMicPendingBits(p);
+    micPending = null;
+    $('#btn-mic').classList.remove('pending');
+    stopStreamTracks(stream);
+    voiceEvent('mic unavailable: track never unmuted');
+    toast(T('micUnavailable'));
+  }, MIC_UNMUTE_CAP_MS);
+  if (!track.muted) finish(); // unmuted between the check and the wiring
+}
+function clearMicPendingBits(p) {
+  if (p.poll) { clearInterval(p.poll); p.poll = null; }
+  if (p.cap) { clearTimeout(p.cap); p.cap = null; }
+  if (p.onUnmute && p.track) { try { p.track.removeEventListener('unmute', p.onUnmute); } catch (e) {} p.onUnmute = null; }
+}
+function cancelMicPending(why) {
+  const p = micPending;
+  if (!p) return;
+  micPending = null;
+  micGen++; // the parked acquisition's ticket dies with it
+  clearMicPendingBits(p);
+  $('#btn-mic').classList.remove('pending');
+  stopStreamTracks(p.stream);
+  voiceEvent('mic pending cancelled (' + why + ')');
+}
+// The mic-on flow proper, run exactly once per successful
+// acquisition — immediately for a live track, or from the
+// pending wait the moment a muted track unmutes.
+function completeMicOn(gen, stream) {
   localStream = stream;
   micOn = true;
   // Pairs that already exist (formed while I was listening) take
@@ -2462,19 +2587,183 @@ async function toggleVoice() {
   Object.keys(peers).forEach((s) => { if (peers[s]) setSenderTrack(peers[s]); });
   voiceEvent('mic on');
   resetVoiceFeedback();
+  noteAllFlagEdges(); // my own flag edge: every pair's watchdog starts fresh + graced
   $('#btn-mic').classList.add('on');
   mirrorMyVoice();
   announceVoice();
   syncVoicePairs();
   retryPeerAudio(); // this tap is a user gesture — unblock any stalled playback
   paintVoiceDots(state);
+  // Round 6: supervise the local track for the whole mic-on
+  // life, and schedule the one-shot post-toggle self-check.
+  micMuteSince = 0; micMuteHealed = false; micReacquiring = false;
+  armMicSupervision();
+  armMicSelfCheck(gen);
+}
+// ---------- local-track mute supervision (round 6) ----------
+// A capture track can mute AFTER mic-on too (the OS session is
+// re-routed, another app grabs the mic, the re-acquired stream
+// settles badly). Nobody hears the talker, yet his client
+// looks perfectly healthy — and a muted track's silence RTP
+// keeps the watchdog's byte counters moving, so the pair layer
+// never heals it either. The supervisor polls the live track's
+// mute state (plus mute/unmute events for the log): a mute
+// episode lasting past MIC_MUTE_REACQ_MS earns exactly ONE
+// microphone re-acquisition — a fresh getUserMedia whose track
+// is swapped onto every pair's sender (replaceTrack only, no
+// re-formation). The episode clock (micMuteSince) runs across
+// the swap: if the fresh track is also stuck muted past
+// MIC_MUTE_REACQ_MS + MIC_UNMUTE_CAP_MS, the mic turns off
+// honestly with a toast instead of announcing silence forever.
+// An unmute ends the episode and re-arms the budget.
+function armMicSupervision() {
+  clearMicSupervision();
+  const tr = localStream ? localStream.getAudioTracks()[0] : null;
+  if (tr) {
+    const onMute = () => { if (!micMuteSince) micMuteSince = Date.now(); voiceEvent('local track muted'); };
+    const onUnmute = () => { micMuteSince = 0; micMuteHealed = false; voiceEvent('local track unmuted'); };
+    try { tr.addEventListener('mute', onMute); tr.addEventListener('unmute', onUnmute); } catch (e) {}
+    micWatched = { track: tr, onMute, onUnmute };
+  }
+  micSuperviseTimer = setInterval(micSuperviseTick, 500);
+}
+function clearMicSupervision() {
+  if (micSuperviseTimer) { clearInterval(micSuperviseTimer); micSuperviseTimer = null; }
+  if (micWatched) {
+    try {
+      micWatched.track.removeEventListener('mute', micWatched.onMute);
+      micWatched.track.removeEventListener('unmute', micWatched.onUnmute);
+    } catch (e) {}
+    micWatched = null;
+  }
+}
+function micSuperviseTick() {
+  if (!micOn || !localStream) return;
+  const tr = localStream.getAudioTracks()[0];
+  if (!tr || tr.readyState !== 'live') return;
+  const now = Date.now();
+  if (tr.muted) {
+    if (!micMuteSince) micMuteSince = now;
+    const dur = now - micMuteSince;
+    if (!micMuteHealed && !micReacquiring && dur >= MIC_MUTE_REACQ_MS) {
+      reacquireMic();
+    } else if (micMuteHealed && !micReacquiring && dur >= MIC_MUTE_REACQ_MS + MIC_UNMUTE_CAP_MS) {
+      voiceEvent('mic off: track stuck muted even after a re-acquire');
+      toast(T('micUnavailable'));
+      stopMic();
+    }
+  } else if (micMuteSince) {
+    micMuteSince = 0;
+    micMuteHealed = false;
+  }
+}
+async function reacquireMic() {
+  if (micReacquiring || !micOn) return;
+  micReacquiring = true;
+  micMuteHealed = true; // this episode's one re-acquisition is now spent
+  const g = micGen;
+  voiceEvent('mic re-acquire: local track stuck muted');
+  let stream = null;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) {}
+  if (!stream) {
+    micReacquiring = false;
+    if (micOn && g === micGen) { toast(T('micUnavailable')); stopMic(); }
+    return;
+  }
+  if (!micOn || g !== micGen) { stopStreamTracks(stream); micReacquiring = false; return; }
+  const ntr = stream.getAudioTracks()[0];
+  if (!ntr || ntr.readyState === 'ended') {
+    stopStreamTracks(stream);
+    micReacquiring = false;
+    toast(T('micUnavailable'));
+    stopMic();
+    return;
+  }
+  const old = localStream;
+  const since = micMuteSince;
+  localStream = stream;
+  // Swap the fresh track onto every living pair's sender —
+  // replaceTrack only; the pairs themselves are untouched.
+  Object.keys(peers).forEach((s) => { if (peers[s]) setSenderTrack(peers[s]); });
+  if (old && old !== stream) stopStreamTracks(old);
+  armMicSupervision(); // re-point the event watch at the fresh track
+  if (!ntr.muted) {
+    micMuteSince = 0;
+    micMuteHealed = false;
+    voiceEvent('mic re-acquired: fresh track live');
+  } else {
+    // The episode clock keeps running across the swap: the
+    // supervisor's give-up deadline still applies to the fresh
+    // track (it gets the full cap from the episode's start).
+    micMuteSince = since || Date.now();
+    micMuteHealed = true;
+    voiceEvent('mic re-acquired: fresh track still muted — cap running');
+  }
+  micReacquiring = false;
+}
+// ---------- post-toggle self-check (round 6) ----------
+// ~MIC_SELFCHECK_MS after each mic-on completes, prove the
+// send path per pair that existed at mic-on: local track
+// unmuted (a muted one is the mute supervisor's case, not a
+// pair problem) and outbound audio bytes GROWING versus the
+// baseline sampled at completion. A pair failing the byte test
+// with a healthy track has a wedged sender (e.g. the pair was
+// re-formed by the other side while my mic was off and my
+// track never truly took) — it gets exactly ONE track-first
+// re-form, with the live track in the fresh pair's first
+// offer. The spend is recorded in the watchdog's own episode
+// (rec.txReformed), so the watchdog can never double-fire on
+// the same episode; pairs born after mic-on have no baseline
+// and stay the watchdog's business alone.
+function armMicSelfCheck(gen) {
+  Object.keys(peers).forEach((s) => {
+    const entry = peers[s];
+    if (!entry || !entry.pc || !entry.pc.remoteDescription) return;
+    readPairStats(entry.pc).then((snap) => {
+      if (peers[s] === entry) entry.txCheckBase = snap.outBytes;
+    }).catch(() => {});
+  });
+  setTimeout(() => { micSelfCheck(gen); }, MIC_SELFCHECK_MS);
+}
+async function micSelfCheck(gen) {
+  if (!micOn || gen !== micGen) return;
+  const tr = localStream ? localStream.getAudioTracks()[0] : null;
+  if (!tr || tr.readyState !== 'live') return;
+  if (tr.muted) { voiceEvent('self-check: local track muted — mute supervision owns it'); return; }
+  for (const s of Object.keys(peers)) {
+    const seat = +s;
+    const entry = peers[s];
+    if (!entry || !pairWanted(seat)) continue;
+    if (!pairSig(seat).includes('S')) continue;
+    if (!(entry.dcOpen || entry.pc.connectionState === 'connected')) continue;
+    if (!entry.pc.remoteDescription) continue;
+    if (entry.txCheckBase === undefined) continue;
+    const base = entry.txCheckBase;
+    delete entry.txCheckBase; // one-shot per mic-on
+    const rec = audioHealRec(seat);
+    if (rec.txReformed) continue;
+    let snap = null;
+    try { snap = await readPairStats(entry.pc); } catch (e) {}
+    if (!micOn || gen !== micGen || peers[s] !== entry) return;
+    if (snap && snap.outBytes <= base) {
+      rec.txReformed = true;
+      rec.last = 'selfcheck-reform';
+      voiceEvent('audio heal: pair re-formed (post-toggle self-check: outbound silent)', seat);
+      closePeer(seat, 'selfcheck-reform');
+      syncVoicePairs();
+    }
+  }
 }
 function stopMic() {
+  if (micPending) cancelMicPending('off');
   micGen++; // supersede any mic-on still acquiring the microphone
   micOn = false;
+  clearMicSupervision();
+  micMuteSince = 0; micMuteHealed = false; micReacquiring = false;
   $('#btn-mic').classList.remove('on');
   mirrorMyVoice();
   announceVoice();
+  noteAllFlagEdges(); // my mic edge: peers' view is broadcast, but my own send episodes reset too
   // Detach the track from every living pair's sender FIRST:
   // replaceTrack(null) is the whole mic-off for pairs that stay
   // wanted (I keep listening) — no renegotiation, no re-form.
@@ -3186,8 +3475,20 @@ async function audioWatchStep(seat, entry) {
   // escalation from step (a) again.
   if (inFlow && rec.step) rec.step = 0;
   if (outFlow && rec.txReformed) rec.txReformed = false;
+  // Flag-edge grace (round 6): within FLAG_GRACE_MS of any
+  // mic/speaker transition touching this pair, the frozen
+  // windows are pinned to NOW every tick (so the post-grace
+  // judgment starts from the settled state, not from a verdict
+  // accumulated across the transient) and neither escalation
+  // below may fire. A re-on is allowed to be briefly silent
+  // without being re-formed for it.
+  const inGrace = !!(audioGrace[seat] && now < audioGrace[seat]);
+  if (inGrace) {
+    if (entry.rxExpect) entry.rxFrozenAt = now;
+    if (entry.txExpect) entry.txFrozenAt = now;
+  }
   // ---- receive silence: escalate (a) → (b) → (c), once each ----
-  if (expectR && linked && entry.rxExpect && entry.rxFrozenAt &&
+  if (!inGrace && expectR && linked && entry.rxExpect && entry.rxFrozenAt &&
       now - entry.rxFrozenAt >= AUDIO_FROZEN_MS) {
     if (rec.step === 0) {
       rec.step = 1; rec.last = 'reattach';
@@ -3212,7 +3513,7 @@ async function audioWatchStep(seat, entry) {
     // until bytes flow again (which resets it above).
   }
   // ---- send silence: re-attach the sender once, then re-form once ----
-  if (expectS && linked && entry.pc.remoteDescription && entry.txExpect && entry.txFrozenAt &&
+  if (!inGrace && expectS && linked && entry.pc.remoteDescription && entry.txExpect && entry.txFrozenAt &&
       now - entry.txFrozenAt >= AUDIO_FROZEN_MS && !rec.txReformed) {
     const hasTrack = !!(entry.sender && entry.sender.track);
     if (!hasTrack && !entry.txReattachTried) {
@@ -3802,7 +4103,10 @@ async function renderVoiceDiag() {
   }));
   if ($('#vdiag').classList.contains('hidden')) return;
   const lines = [];
-  lines.push('<div>me: seat ' + mySeat + ' · mic ' + (micOn ? 'ON' : 'off') + ' · speaker ' + (speakerOn ? 'ON' : 'off') +
+  const myTrack = localStream ? localStream.getAudioTracks()[0] : null;
+  lines.push('<div>me: seat ' + mySeat + ' · mic ' +
+    (micOn ? 'ON · ltrack ' + (myTrack ? (myTrack.muted ? 'MUTED' : 'live') : 'none') : (micPending ? 'PENDING (track muted)' : 'off')) +
+    ' · speaker ' + (speakerOn ? 'ON' : 'off') +
     ' · ice ' + (iceFetchedAt ? 'relay' : 'fallback') + '</div>');
   seatList.forEach((s) => {
     const e = peers[s];
@@ -4043,7 +4347,14 @@ function onMsg(msg) {
     // Voice truth rides in every state: mirror the per-seat
     // {mic, speaker} flags, drop peers whose seat is gone / a bot /
     // disconnected, and reconcile the mesh with the pairing rule.
-    msg.seats.forEach((s, i) => { voiceSeats[i] = normVoice(s.voice); });
+    msg.seats.forEach((s, i) => {
+      const nv = normVoice(s.voice);
+      if (i !== mySeat) {
+        const prev = vflags(i);
+        if (prev.mic !== nv.mic || prev.speaker !== nv.speaker) noteFlagEdge(i);
+      }
+      voiceSeats[i] = nv;
+    });
     Object.keys(peers).forEach((s) => {
       const seat = msg.seats[+s];
       if (!seat || seat.kind !== 'human' || !seat.connected) closePeer(+s, 'seat-gone');
@@ -4060,7 +4371,13 @@ function onMsg(msg) {
       mic: msg.mic !== undefined ? !!msg.mic : (msg.on !== undefined ? !!msg.on : prev.mic),
       speaker: msg.speaker !== undefined ? !!msg.speaker : prev.speaker,
     };
-    if (msg.seat !== mySeat) syncVoicePairs();
+    if (msg.seat !== mySeat) {
+      // A peer flag edge resets that pair's watchdog episode and
+      // opens the grace window BEFORE pair sync runs (round 6).
+      const nv = voiceSeats[msg.seat];
+      if (prev.mic !== nv.mic || prev.speaker !== nv.speaker) noteFlagEdge(msg.seat);
+      syncVoicePairs();
+    }
     paintVoiceDots(state);
   } else if (msg.type === 'rtc') {
     onRtcSignal(msg.from, msg.data);
