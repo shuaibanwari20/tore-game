@@ -2265,9 +2265,32 @@ function normVoice(v) {
   return { mic: !!v, speaker: true };
 }
 function vflags(seat) { return voiceSeats[seat] || { mic: false, speaker: true }; }
-// Should a pair exist between me and `seat` right now? (Also false
-// for seats the latest state shows as bots / gone / disconnected.)
-function pairWanted(seat) { return pairSig(seat) !== ''; }
+// ROUND 7 — pair EXISTENCE is seat-based, no longer flag-based.
+// The field report on the voice6 build: a pair was only born at
+// the first mic-on (pairSig was the existence gate), so the
+// whole path — negotiation, ICE, DTLS, the listener's remote
+// track and its <audio> element — had to be built WHILE the
+// talker was already talking, and on Android the element born in
+// that rush stayed wedged until the listener's speaker toggle
+// re-formed everything by hand. The owner's requirement: the
+// connection stands from the moment the match starts until it
+// ends. So a pair now exists between me and every other seat
+// the latest state shows as a CONNECTED HUMAN, in the lobby and
+// at the table alike, whatever the mic/speaker flags say — and
+// it ends only when the seat does (bot / gone / disconnected).
+// The pairing rule below survives unchanged as the DIRECTION
+// signature: it decides who is expected to hear whom (watchdog
+// expectations, the link toast), never whether the pair lives.
+// Sending is still gated by the mic (setSenderTrack attaches a
+// track only while micOn) and hearing by the speaker
+// (attachPeerAudio attaches nothing while speakerOn is false) —
+// a silent pair carries no audio in either direction.
+function pairWanted(seat) {
+  if (mySeat === null || seat === mySeat) return false;
+  const st = state && state.seats ? state.seats[seat] : null;
+  if (!st) return false; // no table state yet — the first state push forms the mesh
+  return st.kind === 'human' && !!st.connected;
+}
 function pairSig(seat) {
   if (mySeat === null || seat === mySeat) return '';
   const st = state && state.seats ? state.seats[seat] : null;
@@ -2492,9 +2515,10 @@ function paintSpeakerBtn() {
 }
 
 // Speaker: an opt-out mute. Default ON — I hear every mic at the
-// table even with my own mic off. Toggling re-runs pair sync: off
-// tears down my receive directions (and silences anything already
-// playing at once); on re-forms them.
+// table even with my own mic off. Toggling never touches the
+// pairs themselves (round 7: they live for the whole match) —
+// off silences anything already playing at once and parks every
+// stream element-less; on re-attaches the parked streams.
 function toggleSpeaker() {
   speakerOn = !speakerOn;
   paintSpeakerBtn();
@@ -2839,8 +2863,8 @@ function stopMic() {
   Object.keys(peers).forEach((s) => { if (peers[s]) setSenderTrack(peers[s]); });
   voiceEvent('mic off');
   if (localStream) { localStream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} }); localStream = null; }
-  // Pairs that existed only so I could talk close; pairs I listen
-  // on survive untouched (pair sync re-forms the rest as needed).
+  // Round 7: NO pair closes on mic-off — the mesh lives for the
+  // whole match; pair sync is now just a consistency pass.
   syncVoicePairs();
   paintVoiceDots(state);
 }
@@ -2864,7 +2888,7 @@ function ensurePeerGated(seat) {
       if (!iceFetchedAt) { try { await refreshIceServers(); } catch (e) {} }
       // Re-validate after the wait: the pair may have stopped
       // being wanted meanwhile, or been formed by the other path.
-      if (!peers[seat] && pairSig(seat)) return ensurePeer(seat);
+      if (!peers[seat] && pairWanted(seat)) return ensurePeer(seat);
     } catch (e) { /* a failed formation is retried by the next sync */ }
     return peers[seat] || null;
   })();
@@ -2964,21 +2988,23 @@ function setSenderTrack(entry) {
     if (p && p.catch) p.catch(() => {});
   } catch (e) {}
 }
-// Reconcile the mesh with the current flags: for every other seat,
-// the pairing rule decides EXISTENCE only — no pair, or the pair
-// that already lives. A change in the direction signature no
-// longer re-forms anything (the pair's shape is invariant; a mic
-// toggle is a replaceTrack, see setSenderTrack). The one re-form
-// left here is the config upgrade: a pair born on the bare
-// fallback list before the relay credentials landed, settled and
-// not connected, re-forms on the real config when its CONTENT
-// actually arrives.
+// Reconcile the mesh with the table: for every other seat,
+// pairWanted (a connected human sits there — round 7) decides
+// EXISTENCE only — no pair, or the pair that already lives. The
+// direction signature is bookkeeping (expectations/toast) and
+// never a trigger: a flag change re-forms nothing (the pair's
+// shape is invariant; a mic toggle is a replaceTrack, see
+// setSenderTrack; a speaker toggle only mutes elements). The
+// one re-form left here is the config upgrade: a pair born on
+// the bare fallback list before the relay credentials landed,
+// settled and not connected, re-forms on the real config when
+// its CONTENT actually arrives.
 function syncVoicePairs() {
   if (mySeat === null) return;
   for (let s = 0; s < 4; s++) {
     if (s === mySeat) continue;
     const sig = pairSig(s);
-    if (!sig) {
+    if (!pairWanted(s)) {
       closePeer(s, 'unwanted');
       delete voiceHeal[s];
       delete audioHealSeats[s];
@@ -3024,8 +3050,8 @@ function syncVoicePairs() {
 function ensurePeer(seat) {
   if (seat === mySeat || mySeat === null) return null;
   if (peers[seat]) return peers[seat];
-  const sig = pairSig(seat);
-  if (!sig) return null;
+  const sig = pairSig(seat); // direction signature (bookkeeping — may be '' for a silent pair)
+  if (!pairWanted(seat)) return null;
   // Pair profile: normally the current ICE config as-is; after a
   // stats rebuild the seat is relay-forced — the fresh pair is
   // built with iceTransportPolicy 'relay' so every candidate it
@@ -3497,6 +3523,42 @@ function replayPeerAudio(entry, why) {
   entry.elHealAt = Date.now();
   voiceEvent('audio heal: element re-attach + play (' + why + ')', entry.seat);
 }
+// ---------- proactive listener heal (round 7) ----------
+// The other half of the speaker-toggle ritual, done for the
+// listener automatically: when a peer's mic turns ON, a listener
+// whose element was created against the still-silent pair (the
+// persistent pair negotiated long before the talker spoke — its
+// remote track sat muted, and on Android Chrome an element
+// played against a muted track can stay wedged even after the
+// audio itself flows) re-attaches the stream and plays AT THE
+// EDGE — not seconds later when the watchdog's frozen verdict
+// lands — and re-checks at ~1 s and ~3 s (the stream may only
+// park on the entry after the edge, if the pair was still
+// forming). Every attempt re-reads the live state: it fires
+// only while I am listening, the peer's mic is still on, and a
+// stream is parked. It never re-forms anything — the pair is
+// already up; this is purely the element half of the ritual.
+// (Round 5's analysis: the manual toggle healed because it was
+// fresh negotiation + fresh remote description + fresh element
+// attach/play. With persistent pairs the first two are
+// permanently in place, so the element attach is the only piece
+// the edge still owes the listener.)
+const hearHealTimers = {}; // seat -> [timeout ids]
+function proactiveHearHeal(seat) {
+  if (seat === null || seat === undefined || seat === mySeat) return;
+  const attempt = () => {
+    if (!speakerOn) return;               // I stopped listening meanwhile
+    if (!vflags(seat).mic) return;        // the talker stopped again — nothing to hear
+    const entry = peers[seat];
+    if (!entry || !entry.stream) return;  // stream not parked yet — a later re-check may find it
+    replayPeerAudio(entry, 'peer mic on');
+  };
+  attempt();
+  [1000, 3000].forEach((d) => {
+    const t = setTimeout(attempt, d);
+    (hearHealTimers[seat] = hearHealTimers[seat] || []).push(t);
+  });
+}
 function audioWatchTick(seat, entry) {
   entry.audioTimer = null;
   if (peers[seat] !== entry) return;
@@ -3735,7 +3797,14 @@ function maybeLinkToast(entry) {
   toast(T('voiceConnected'));
 }
 function noteVoiceFailed(seat) {
-  if (!pairWanted(seat) || voiceFailToastSeats[seat]) return;
+  // Round 7: pairs now live for every connected human seat, so a
+  // dead pair between two players who never opened voice would
+  // burn its background heal budget and land here — the failure
+  // toast is only honest when voice is actually in use on this
+  // pair (some direction wanted right now). The heals themselves
+  // are unaffected: the pair keeps retrying in the background
+  // and is warm the moment anyone does talk.
+  if (!pairWanted(seat) || pairSig(seat) === '' || voiceFailToastSeats[seat]) return;
   voiceFailToastSeats[seat] = true;
   voiceEvent('toast: failed', seat);
   toast(T('voiceFailed'));
@@ -3928,6 +3997,7 @@ function closePeer(seat, why) {
   // below).
   if (entry.pingTimer) { clearTimeout(entry.pingTimer); entry.pingTimer = null; }
   if (entry.audioTimer) { clearTimeout(entry.audioTimer); entry.audioTimer = null; }
+  if (hearHealTimers[seat]) { hearHealTimers[seat].forEach((t) => clearTimeout(t)); delete hearHealTimers[seat]; }
   try { if (entry.dc) entry.dc.close(); } catch (e) {}
   try { if (entry.dcIn) entry.dcIn.close(); } catch (e) {}
   // The mesh is fully down: the voice session is OVER, so the
@@ -4431,8 +4501,15 @@ function onMsg(msg) {
       if (i !== mySeat) {
         const prev = vflags(i);
         if (prev.mic !== nv.mic || prev.speaker !== nv.speaker) noteFlagEdge(i);
+        // Round 7: a peer's mic-on edge heals my element for
+        // that pair at once (see proactiveHearHeal). The flags
+        // are assigned FIRST so the heal's immediate attempt
+        // already reads the new mic state.
+        voiceSeats[i] = nv;
+        if (!prev.mic && nv.mic) proactiveHearHeal(i);
+      } else {
+        voiceSeats[i] = nv;
       }
-      voiceSeats[i] = nv;
     });
     Object.keys(peers).forEach((s) => {
       const seat = msg.seats[+s];
@@ -4455,6 +4532,9 @@ function onMsg(msg) {
       // opens the grace window BEFORE pair sync runs (round 6).
       const nv = voiceSeats[msg.seat];
       if (prev.mic !== nv.mic || prev.speaker !== nv.speaker) noteFlagEdge(msg.seat);
+      // Round 7: a peer's mic-on edge heals my element for
+      // that pair at once (see proactiveHearHeal).
+      if (!prev.mic && nv.mic) proactiveHearHeal(msg.seat);
       syncVoicePairs();
     }
     paintVoiceDots(state);
