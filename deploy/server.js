@@ -14,6 +14,7 @@ const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 const G = require('./game');
 const bots = require('./bots');
+const { createNodeSocial } = require('./social-node');
 
 // ---- Tunables (one line each) ----
 const PORT = process.env.PORT || 3000;
@@ -54,6 +55,17 @@ const wss = new WebSocketServer({ server: httpServer });
 
 // ---------------------------------------------------------------- rooms
 const rooms = new Map();
+// Friends system (ملګري): a second WebSocket endpoint, /social, on
+// this same server (see social-core.js / social-node.js). Identity on
+// the Node hosts is the persistent client player id (p:<pid>); the
+// invite check is the spec fallback — the room exists and is still
+// in its lobby phase.
+const social = createNodeSocial({
+  roomCheck: (id, code) => {
+    const room = rooms.get(code);
+    return !!room && room.phase === 'lobby';
+  },
+});
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 function newCode() {
@@ -65,7 +77,7 @@ function newCode() {
 }
 
 function emptySeat() {
-  return { kind: 'empty', name: '', avatar: null, country: '', photo: null, token: null, ws: null, connected: false, disconnectAt: null, voiceMic: false, voiceSpeaker: true, lastChatAt: 0 };
+  return { kind: 'empty', name: '', avatar: null, country: '', photo: null, token: null, ws: null, connected: false, disconnectAt: null, voiceMic: false, voiceSpeaker: true, lastChatAt: 0, sid: null };
 }
 
 function createRoom() {
@@ -115,7 +127,7 @@ function stateFor(room, seatIdx) {
     target: G.BANK_LOSE_TARGET,
     seats: room.seats.map((s, i) => ({
       name: s.name, kind: s.kind, connected: s.connected,
-      avatar: s.avatar, country: s.country, photo: s.photo,
+      avatar: s.avatar, country: s.country, photo: s.photo, sid: s.sid || null,
       voice: { mic: !!s.voiceMic, speaker: s.voiceSpeaker !== false },
       cards: round ? round.hands[i].length : 0,
     })),
@@ -298,6 +310,15 @@ function cleanPhoto(p) {
   if (!p.includes('googleusercontent.com')) return null;
   return p;
 }
+// The seat also carries the player's SOCIAL identity so the lobby
+// player menu can address a friend request: 'p:<pid>' from the
+// persistent player id the client sends with create/join/reconnect
+// (the same id its /social hello uses). Charset/length match the
+// social layer's own rule; anything else becomes null — the seat
+// still joins, the menu just hides its request button.
+function cleanPid(pid) {
+  return (typeof pid === 'string' && /^[A-Za-z0-9_-]{6,64}$/.test(pid)) ? pid : null;
+}
 
 function attachPlayer(ws, room, seatIdx, name, prof) {
   const seat = room.seats[seatIdx];
@@ -306,6 +327,8 @@ function attachPlayer(ws, room, seatIdx, name, prof) {
   seat.avatar = cleanAvatar(prof && prof.avatar);
   seat.country = cleanCountry(prof && prof.country);
   seat.photo = seat.avatar === 'google' ? cleanPhoto(prof && prof.photo) : null;
+  const pid0 = cleanPid(prof && prof.pid);
+  seat.sid = pid0 ? 'p:' + pid0 : null;
   seat.token = crypto.randomBytes(8).toString('hex');
   seat.ws = ws;
   seat.connected = true;
@@ -353,6 +376,7 @@ setInterval(() => {
         s.avatar = null;
         s.country = '';
         s.photo = null;
+        s.sid = null;
         s.voiceMic = false;
         s.voiceSpeaker = false;
         s.connected = true;
@@ -404,7 +428,10 @@ function cleanChat(kind, value) {
 }
 
 // -------------------------------------------------------------- ws layer
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
+  // Friends-system sockets live on their own endpoint (/social) and
+  // never touch the game handling below.
+  if (social.isSocialPath(req && req.url)) { social.handleConnection(ws); return; }
   ws.on('message', (raw) => {
     let msg;
     try { msg = JSON.parse(raw); } catch (e) { return; }
@@ -440,6 +467,7 @@ function handleMessage(ws, msg) {
       // was created before profiles existed) — refresh what it carries.
       const av = cleanAvatar(msg.avatar); if (av) seat.avatar = av;
       const co = cleanCountry(msg.country); if (co) seat.country = co;
+      const pid = cleanPid(msg.pid); if (pid) seat.sid = 'p:' + pid;
       if (seat.avatar === 'google') {
         const ph = cleanPhoto(msg.photo); if (ph) seat.photo = ph;
       } else {
@@ -499,6 +527,7 @@ function handleMessage(ws, msg) {
         seat.avatar = null;
         seat.country = '';
         seat.photo = null;
+        seat.sid = null;
         seat.voiceMic = false;
         seat.voiceSpeaker = false;
         seat.ws = null;
