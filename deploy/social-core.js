@@ -36,7 +36,18 @@
  * s-search-result, s-requested, s-dm, s-dm-history, s-invited,
  * s-invite-result, s-error (codes: socialBlocked, socialNotFriends,
  * socialDuplicate, socialRate, socialOffline, socialNotInRoom,
- * socialNotFound).
+ * socialNotFound, socialInGame, socialCooldown).
+ *
+ * Invite rules (2026-11-08): a target seated in a started match
+ * (host hook inGameCheck) cannot be invited — person().ingame ships
+ * in every list so clients can disable the button live, syncInGame()
+ * pushes a fresh s-friends to the player's friends the moment the
+ * flag flips, and invite() itself rejects with socialInGame. A
+ * successful invite also starts a per-(sender,target) cooldown
+ * (INVITE_COOLDOWN_MS, overridable via hooks.inviteCooldownMs for
+ * tests); a repeat inside the window is rejected socialCooldown.
+ * Cooldowns and the known in-game map are runtime-only — never
+ * persisted.
  */
 'use strict';
 
@@ -44,6 +55,7 @@ const DM_KEEP = 50;          // messages kept per pair
 const DM_RATE_MAX = 10;      // messages per sender per pair …
 const DM_RATE_WINDOW = 60000; // … per this window (ms)
 const DM_MAX_CHARS = 500;
+const INVITE_COOLDOWN_MS = 10000; // per sender→target pair, after a sent invite
 
 // ---- profile field hygiene (mirrors the game servers' rules) ------
 function cleanName(v) {
@@ -77,6 +89,8 @@ class SocialCore {
     this.dm = new Map();        // pairKey -> [{from,text,ts}] (oldest first)
     this.dmLog = new Map();     // pairKey+'\n'+from -> [ts,...] (rate window)
     this.online = new Map();    // id -> live socket count
+    this.inviteLog = new Map(); // reqKey(from,to) -> ts of last SENT invite (runtime only)
+    this.inGameKnown = new Map(); // id -> last in-game flag pushed to friends (runtime only)
   }
 
   // ---------- persistence (DO host; Node ignores) ----------
@@ -125,7 +139,35 @@ class SocialCore {
   _fanPresence(id, online) {
     const set = this.friends.get(id);
     if (!set) return;
-    for (const f of set) if (this.isOnline(f)) this._send(f, { type: 's-presence', id, online });
+    for (const f of set) if (this.isOnline(f)) this._send(f, { type: 's-presence', id, online, ingame: this.isInGame(id) });
+  }
+
+  // ---------- in-game flag ----------
+  // The host knows the live rooms; the core only asks its hook.
+  // Without a hook nobody is ever in a game.
+  isInGame(id) {
+    if (this.hooks.inGameCheck) {
+      try { return !!this.hooks.inGameCheck(id); } catch (e) { return false; }
+    }
+    return false;
+  }
+  // Hosts call this for every identity whose room membership may
+  // have changed (state broadcasts, seat conversions, room closes).
+  // On a flip, every online friend gets a fresh s-friends so their
+  // already-open friends list repaints the invite button at once —
+  // no screen reopen, no polling.
+  syncInGame(id) {
+    if (typeof id !== 'string' || !id) return;
+    const now = this.isInGame(id);
+    const prev = !!this.inGameKnown.get(id);
+    this.inGameKnown.set(id, now);
+    if (now === prev) return;
+    const set = this.friends.get(id);
+    if (set) for (const f of set) this.refresh(f);
+    // The flipped player's own lists carry friends' flags, not
+    // their own — but a refresh is harmless and keeps any second
+    // device of theirs in step.
+    this.refresh(id);
   }
 
   // ---------- views ----------
@@ -135,8 +177,8 @@ class SocialCore {
   }
   person(id) {
     const r = this.directory.get(id);
-    if (!r) return { id, name: '', avatar: 'av1', photo: '', country: '', uid: null, online: this.isOnline(id) };
-    return { id: r.id, name: r.name, avatar: r.avatar, photo: r.photo, country: r.country, uid: r.uid ? String(r.uid) : null, online: this.isOnline(id) };
+    if (!r) return { id, name: '', avatar: 'av1', photo: '', country: '', uid: null, online: this.isOnline(id), ingame: this.isInGame(id) };
+    return { id: r.id, name: r.name, avatar: r.avatar, photo: r.photo, country: r.country, uid: r.uid ? String(r.uid) : null, online: this.isOnline(id), ingame: this.isInGame(id) };
   }
   listsFor(id) {
     const byName = (a, b) => a.name.localeCompare(b.name);
@@ -343,8 +385,24 @@ class SocialCore {
     if (this.blockedEither(id, to)) return this._error(id, 'socialBlocked');
     if (!this.areFriends(id, to)) return this._error(id, 'socialNotFriends');
     if (!this.isOnline(to)) return this._error(id, 'socialOffline');
+    // A player seated in a started match cannot be invited — the
+    // server decides (the client's disabled button is cosmetic).
+    if (this.isInGame(to)) return this._error(id, 'socialInGame');
     const ok = this.hooks.inviteRoomCheck ? !!this.hooks.inviteRoomCheck(id, code) : false;
     if (!ok) return this._error(id, 'socialNotInRoom');
+    // Per-pair cooldown: one invite per sender→target per window.
+    // Only a SENT invite starts the window; rejections never do.
+    const cdMs = (typeof this.hooks.inviteCooldownMs === 'number' && this.hooks.inviteCooldownMs >= 0)
+      ? this.hooks.inviteCooldownMs : INVITE_COOLDOWN_MS;
+    const now = Date.now();
+    const key = reqKey(id, to);
+    const last = this.inviteLog.get(key) || 0;
+    if (cdMs > 0 && last && now - last < cdMs) return this._error(id, 'socialCooldown');
+    this.inviteLog.set(key, now);
+    // Prune stale entries opportunistically so the map stays small.
+    if (this.inviteLog.size > 200) {
+      for (const [k, t] of this.inviteLog) if (now - t >= cdMs) this.inviteLog.delete(k);
+    }
     this._send(to, { type: 's-invited', from: this.person(id), code });
   }
 
@@ -356,4 +414,4 @@ class SocialCore {
   }
 }
 
-module.exports = { SocialCore };
+module.exports = { SocialCore, INVITE_COOLDOWN_MS };
