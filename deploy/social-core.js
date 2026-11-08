@@ -21,6 +21,14 @@
  * directory stores ONLY public profile fields (name / avatar /
  * photo / country) — never an email or any account secret.
  *
+ * Every identity also owns a permanent public player ID (`uid`): a
+ * random 6-digit number assigned by the core the first time the
+ * identity says hello (legacy records get theirs on their next
+ * hello), stored on the directory record so it survives restarts,
+ * and NEVER changed afterwards — re-hellos, profile edits and new
+ * devices on the same account all keep it. Players find each other
+ * BY this ID: s-search takes an ID, never a name.
+ *
  * Protocol (client -> server): s-hello, s-search, s-request,
  * s-respond, s-unfriend, s-block, s-unblock, s-dm, s-dm-history,
  * s-invite, s-invite-reply.
@@ -62,7 +70,7 @@ function reqKey(from, to) { return from + '\n' + to; }
 class SocialCore {
   constructor(hooks) {
     this.hooks = hooks || {};
-    this.directory = new Map(); // id -> {id,name,avatar,photo,country,lastSeen}
+    this.directory = new Map(); // id -> {id,name,avatar,photo,country,uid,lastSeen}
     this.friends = new Map();   // id -> Set<id> (always mutual)
     this.blocked = new Map();   // id -> Set<id> (one direction: I blocked them)
     this.requests = new Map();  // reqKey -> {from,to,ts}
@@ -121,10 +129,14 @@ class SocialCore {
   }
 
   // ---------- views ----------
+  uidOf(id) {
+    const r = this.directory.get(id);
+    return r && r.uid ? String(r.uid) : null;
+  }
   person(id) {
     const r = this.directory.get(id);
-    if (!r) return { id, name: '', avatar: 'av1', photo: '', country: '', online: this.isOnline(id) };
-    return { id: r.id, name: r.name, avatar: r.avatar, photo: r.photo, country: r.country, online: this.isOnline(id) };
+    if (!r) return { id, name: '', avatar: 'av1', photo: '', country: '', uid: null, online: this.isOnline(id) };
+    return { id: r.id, name: r.name, avatar: r.avatar, photo: r.photo, country: r.country, uid: r.uid ? String(r.uid) : null, online: this.isOnline(id) };
   }
   listsFor(id) {
     const byName = (a, b) => a.name.localeCompare(b.name);
@@ -159,22 +171,40 @@ class SocialCore {
   }
 
   // ---------- hello / directory ----------
+  _newUid() {
+    // A random 6-digit ID, retried until it is unique across the
+    // whole directory. The scan-then-check race cannot split across
+    // hosts: there is exactly one core instance per host process.
+    const taken = new Set();
+    for (const r of this.directory.values()) if (r.uid) taken.add(String(r.uid));
+    for (let i = 0; i < 100; i++) {
+      const uid = String(100000 + Math.floor(Math.random() * 900000));
+      if (!taken.has(uid)) return uid;
+    }
+    for (let n = 100000; n <= 999999; n++) if (!taken.has(String(n))) return String(n);
+    return null; // directory impossibly full — caller keeps uid null
+  }
   hello(id, profile) {
     profile = profile || {};
     const photo = cleanPhoto(profile.photo);
     let avatar = cleanAvatar(profile.avatar);
     if (avatar === 'google' && !photo) avatar = null;
     const prev = this.directory.get(id);
+    // The permanent player ID: kept from the existing record when
+    // there is one; assigned exactly once otherwise (this is also
+    // the migration path for records created before IDs existed).
+    const uid = (prev && prev.uid) ? String(prev.uid) : this._newUid();
     this.directory.set(id, {
       id,
       name: cleanName(profile.name) || (prev && prev.name) || 'بازیکن',
       avatar: avatar || (prev && prev.avatar) || 'av1',
       photo,
       country: cleanCountry(profile.country) || (prev && prev.country) || '',
+      uid,
       lastSeen: Date.now(),
     });
     this._persist();
-    this._send(id, { type: 's-init', me: id, ...this.listsFor(id) });
+    this._send(id, { type: 's-init', me: id, uid: uid || null, ...this.listsFor(id) });
   }
 
   // ---------- message entry ----------
@@ -196,22 +226,26 @@ class SocialCore {
   }
 
   search(id, q) {
-    q = (typeof q === 'string' ? q : '').trim().toLowerCase().slice(0, 40);
-    if (!q) { this._send(id, { type: 's-search-result', q: '', results: [] }); return; }
-    const out = [];
+    // Search is BY PLAYER ID ONLY (owner order 2026-11-08): names
+    // are not unique and not searchable. The query is normalized to
+    // digits and matched EXACTLY against the permanent uids — at
+    // most one player can ever come back.
+    const digits = (typeof q === 'string' ? q : '').replace(/\D/g, '').slice(0, 12);
+    if (!digits) { this._send(id, { type: 's-search-result', q: digits, results: [] }); return; }
+    let hit = null;
     for (const r of this.directory.values()) {
       if (r.id === id) continue;
-      if (!r.name.toLowerCase().includes(q)) continue;
-      if (this.blockedEither(id, r.id)) continue; // blocked relations never surface
-      let relation = 'none';
-      if (this.areFriends(id, r.id)) relation = 'friend';
-      else if (this.requests.has(reqKey(id, r.id))) relation = 'outgoing';
-      else if (this.requests.has(reqKey(r.id, id))) relation = 'incoming';
-      out.push({ ...this.person(r.id), relation });
-      if (out.length >= 40) break; // scan cap; sorted + trimmed below
+      if (r.uid && String(r.uid) === digits) { hit = r; break; }
     }
-    out.sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name));
-    this._send(id, { type: 's-search-result', q, results: out.slice(0, 10) });
+    const out = [];
+    if (hit && !this.blockedEither(id, hit.id)) { // blocked relations never surface
+      let relation = 'none';
+      if (this.areFriends(id, hit.id)) relation = 'friend';
+      else if (this.requests.has(reqKey(id, hit.id))) relation = 'outgoing';
+      else if (this.requests.has(reqKey(hit.id, id))) relation = 'incoming';
+      out.push({ ...this.person(hit.id), relation });
+    }
+    this._send(id, { type: 's-search-result', q: digits, results: out });
   }
 
   request(id, to) {
