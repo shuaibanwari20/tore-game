@@ -608,6 +608,18 @@
   #scr-profile select { width: 100%; padding: 12px; font-size: 17px; border-radius: 10px; font-family: inherit; }
   #scr-profile select option { background: #0d2c1d; color: #f8ecd0; }
   #scr-profile input::placeholder { color: rgba(248, 236, 208, .45); }
+  /* My-ID row: the permanent player ID, big Latin digits, tap to
+     copy (the room-code copy pattern). Read-only by design — no
+     edit control exists for it anywhere. */
+  .pf-idrow { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin: 4px 0 2px; padding: 9px 12px; border: 1px solid rgba(255, 215, 94, .35);
+    border-radius: 12px; background: rgba(0,0,0,.22); }
+  .pf-idrow .pf-label { margin: 0; }
+  .pf-idnum { width: auto; margin: 0; padding: 2px 6px; background: transparent; border: 0;
+    color: #ffd75e; font-size: 25px; font-weight: 800; letter-spacing: 4px; cursor: pointer;
+    font-family: inherit; }
+  .pf-idnum:active { transform: scale(.97); }
+  .fr-idline { font-size: 12px; opacity: .62; letter-spacing: 1px; }
   #ov-friendmenu { z-index: 46; }
   #scr-dm { z-index: 36; display: flex; flex-direction: column; overflow-y: hidden; }
   .fr-inner { max-width: 520px; margin: 0 auto; padding: 14px 14px 22px; }
@@ -629,7 +641,9 @@
     border: 1px solid #d9b380; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
   .fr-sec { font-size: 15px; font-weight: 800; color: #ffd75e; margin: 0 0 6px; }
   .fr-searchrow { display: flex; gap: 8px; }
-  .fr-searchrow input { flex: 1; min-width: 0; }
+  .fr-searchrow input { flex: 1; min-width: 0;
+    background: rgba(6, 24, 16, .88); color: #f8ecd0; border: 1px solid rgba(255, 215, 94, .55); }
+  .fr-searchrow input::placeholder { color: rgba(248, 236, 208, .45); }
   .fr-searchrow button { width: auto; margin: 0; padding: 0 18px; flex: 0 0 auto; }
   .fr-banner { background: linear-gradient(90deg, rgba(10,52,34,.95), rgba(16,74,48,.95));
     border: 1.5px solid #eec95f; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px;
@@ -1129,8 +1143,8 @@
       <div class="fr-banner hidden" id="fr-lobby-banner"></div>
       <div class="cardbox hidden" id="fr-searchbox">
         <div class="fr-searchrow">
-          <input id="fr-search-inp" type="text" maxlength="40" placeholder="د لوبغاړي نوم ولټوه…">
-          <button id="btn-fr-search">لټون</button>
+          <input id="fr-search-inp" type="text" inputmode="numeric" maxlength="40" placeholder="د لوبغاړي ID ولټوه…">
+          <button id="btn-fr-search">په ID لټون</button>
         </div>
         <div id="fr-results"></div>
       </div>
@@ -1215,6 +1229,10 @@
       <div class="pf-pvwrap">
         <div class="pf-preview" id="pf-preview"></div>
         <button type="button" class="pf-editav" id="btn-pf-edit-av" aria-label="انځور بدلول">✏️</button>
+      </div>
+      <div class="pf-idrow">
+        <span class="pf-label" id="pf-id-lbl">زما ID</span>
+        <button type="button" class="pf-idnum" id="pf-id-num" dir="ltr">…</button>
       </div>
       <div id="pf-picker" class="hidden">
         <span class="pf-label" id="pf-avatar-lbl">انځور</span>
@@ -1325,6 +1343,7 @@
     <div class="pv-av" id="pv-av"></div>
     <span class="inv-name pv-name" id="pv-name"></span>
     <div class="pv-line" id="pv-country"></div>
+    <div class="pv-line" id="pv-id" dir="ltr"></div>
     <div class="pv-rel" id="pv-rel"></div>
     <div class="pf-btns">
       <button id="btn-pv-close" class="ghost">بندول</button>
@@ -1507,13 +1526,16 @@ const STR = {
     comingSoon: 'ژر راځي!',
     friendsTitle: 'ملګري',
     frBack: 'شاته',
-    frSearchPh: 'د لوبغاړي نوم ولټوه…',
-    frSearchBtn: 'لټون',
+    frSearchPh: 'د لوبغاړي ID ولټوه…',
+    frSearchBtn: 'په ID لټون',
+    frMyId: 'زما ID',
+    frIdLabel: 'ID',
+    frIdCopied: 'ID کاپي شو!',
     frNoResults: 'هېڅوک ونه موندل شول',
     frReqTitle: 'د دوستۍ غوښتنې',
     frNoRequests: 'هېڅ غوښتنه نشته',
     frListTitle: 'زما ملګري',
-    frNoFriends: 'تر اوسه هېڅ ملګری نه لرې — په نوم یې ولټوه او غوښتنه ور واستوه',
+    frNoFriends: 'تر اوسه هېڅ ملګری نه لرې — د هغه ID ولټوه او غوښتنه ور واستوه',
     frBlockedTitle: 'بلاک شوي',
     frNoBlocked: 'هېڅوک بلاک نه دی',
     frAdd: 'دوست کېدل',
@@ -1677,13 +1699,16 @@ const STR = {
     comingSoon: 'به‌زودی می‌آید!',
     friendsTitle: 'دوستان',
     frBack: 'بازگشت',
-    frSearchPh: 'نام بازیکن را جست‌وجو کن…',
-    frSearchBtn: 'جست‌وجو',
+    frSearchPh: 'آیدی بازیکن را جست‌وجو کن…',
+    frSearchBtn: 'جست‌وجو با آیدی',
+    frMyId: 'آیدی من',
+    frIdLabel: 'آیدی',
+    frIdCopied: 'آیدی کپی شد!',
     frNoResults: 'کسی پیدا نشد',
     frReqTitle: 'درخواست‌های دوستی',
     frNoRequests: 'درخواستی نیست',
     frListTitle: 'دوستان من',
-    frNoFriends: 'هنوز دوستی نداری — با نام جست‌وجوش کن و درخواست بفرست',
+    frNoFriends: 'هنوز دوستی نداری — با آیدی جست‌وجوش کن و درخواست بفرست',
     frBlockedTitle: 'بلاک‌شده‌ها',
     frNoBlocked: 'کسی بلاک نیست',
     frAdd: 'دوست شدن',
@@ -1847,13 +1872,16 @@ const STR = {
     comingSoon: 'Coming soon!',
     friendsTitle: 'Friends',
     frBack: 'Back',
-    frSearchPh: 'Search a player by name…',
-    frSearchBtn: 'Search',
+    frSearchPh: 'Search a player by ID…',
+    frSearchBtn: 'Search by ID',
+    frMyId: 'My ID',
+    frIdLabel: 'ID',
+    frIdCopied: 'ID copied!',
     frNoResults: 'No players found',
     frReqTitle: 'Friend requests',
     frNoRequests: 'No requests',
     frListTitle: 'My friends',
-    frNoFriends: 'No friends yet — search by name and send a request',
+    frNoFriends: 'No friends yet — search by ID and send a request',
     frBlockedTitle: 'Blocked',
     frNoBlocked: 'Nobody is blocked',
     frAdd: 'Add friend',
@@ -2133,6 +2161,7 @@ function applyI18n() {
   set('#pf-avatar-lbl', 'avatarLbl');
   set('#pf-name-lbl', 'nameLbl');
   set('#pf-country-lbl', 'countryLbl');
+  set('#pf-id-lbl', 'frMyId');
   const nameInp = $('#pf-name');
   if (nameInp) nameInp.placeholder = T('namePlaceholder');
   set('#btn-profile-save', 'saveBtn');
@@ -5164,8 +5193,32 @@ function pfRenderGrid() {
     grid.appendChild(cell);
   });
 }
+// My permanent player ID: server-assigned (s-init), shown big on
+// the profile page, tap to copy — the room-code copy pattern.
+// There is deliberately no way to edit it.
+function renderMyId() {
+  const el = $('#pf-id-num');
+  if (el && !el.dataset.flash) el.textContent = socialUid || '…';
+}
+function copyMyId() {
+  if (!socialUid) return;
+  const el = $('#pf-id-num');
+  const done = (ok) => {
+    if (!ok || !el) return;
+    el.dataset.flash = '1';
+    el.textContent = T('frIdCopied');
+    setTimeout(() => { delete el.dataset.flash; renderMyId(); }, 1600);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(socialUid).then(() => done(true), () => done(fallbackCopyText(socialUid)));
+  } else {
+    done(fallbackCopyText(socialUid));
+  }
+}
+$('#pf-id-num').onclick = copyMyId;
 function openProfile() {
   pfAvatar = profile.avatar;
+  renderMyId();
   $('#pf-name').value = profile.name || '';
   const sel = $('#pf-country');
   refreshCountryOptions();
@@ -5370,6 +5423,7 @@ function onMsg(msg) {
 // just sends the hello and renders what the server answers.
 let sws = null, swsOpen = false, swsRetry = null;
 let socialMe = null;
+let socialUid = null;            // my permanent player ID (from s-init; never changes)
 let socialData = null;           // {friends, incoming, outgoing, blocked}
 const socialPeople = new Map();  // id -> last seen person record
 let frSearchResults = [];
@@ -5444,6 +5498,8 @@ function onSocialMsg(m) {
   if (!m || typeof m.type !== 'string') return;
   if (m.type === 's-init') {
     socialMe = m.me;
+    if (m.uid) socialUid = String(m.uid);
+    renderMyId();
     applySocialLists(m);
   } else if (m.type === 's-friends') {
     applySocialLists(m);
@@ -5682,7 +5738,7 @@ function seatRelation(sid) {
 function openPlayerMenu(idx) {
   const s = state && state.seats && state.seats[idx];
   if (!s || s.kind !== 'human' || idx === mySeat) return;
-  pmSeat = { name: dispName(s), avatar: s.avatar, photo: s.photo, country: s.country, sid: s.sid || null };
+  pmSeat = { name: dispName(s), avatar: s.avatar, photo: s.photo, country: s.country, sid: s.sid || null, uid: s.uid ? String(s.uid) : null };
   $('#ov-playermenu').classList.add('show');
   renderPlayerMenu();
 }
@@ -5721,6 +5777,9 @@ $('#btn-pm-profile').onclick = () => {
   $('#pv-name').textContent = pmSeat.name;
   const fl = pmSeat.country ? countryFlag(pmSeat.country) : '';
   $('#pv-country').textContent = pmSeat.country ? (fl ? fl + ' ' : '') + dispCountry(pmSeat.country) : '—';
+  const pvId = $('#pv-id');
+  pvId.textContent = pmSeat.uid ? (T('frIdLabel') + ': ' + pmSeat.uid) : '';
+  pvId.style.display = pmSeat.uid ? '' : 'none';
   const rel = seatRelation(pmSeat.sid);
   $('#pv-rel').textContent = rel === 'friend' ? T('frIsFriend')
     : rel === 'outgoing' ? T('frPending')
@@ -5768,6 +5827,12 @@ function personRow(p, actions) {
   sub.appendChild(st);
   meta.appendChild(nm);
   meta.appendChild(sub);
+  if (p.uid) {
+    const idl = document.createElement('div');
+    idl.className = 'fr-idline';
+    idl.textContent = T('frIdLabel') + ': ' + p.uid;
+    meta.appendChild(idl);
+  }
   who.appendChild(meta);
   row.appendChild(who);
   const act = document.createElement('div');
