@@ -2553,6 +2553,7 @@ function connect(onOpen) {
   ws.onopen = onOpen;
   ws.onmessage = (ev) => { try { onMsg(JSON.parse(ev.data)); } catch (e) {} };
   ws.onclose = () => {
+    endJoinFlight(); // an unanswered join dies with its socket
     if (intentionalClose) return;
     // Peer connections were negotiated over this socket's session:
     // drop them; they re-form after the reconnect re-announces voice.
@@ -2570,9 +2571,27 @@ $('#btn-online').onclick = () => connect(() => send({ type: 'create', ...profile
 // The one join flow — the code popup and the friends-invite accept
 // both land here, so every join gets the same validation and the
 // same server error toasts (full room, already started, …).
+// Duplicate-seat fix, client layer (2026-11-09): while a join is in
+// flight, further calls send NOTHING — a double-tap or a repeated
+// invite-accept cannot even reach the server twice. (The server is
+// the authority: it reattaches by identity, so a repeated join could
+// never take a second seat anyway; this just keeps the wire quiet.)
+// The flight ends on the room reply, on any error, on socket close,
+// or after 10 s unanswered — the button never wedges shut.
+let joinInFlight = false;
+let joinFlightTimer = null;
+function endJoinFlight() {
+  joinInFlight = false;
+  if (joinFlightTimer) { clearTimeout(joinFlightTimer); joinFlightTimer = null; }
+  const b = $('#btn-join'); if (b) b.disabled = false;
+}
 function joinRoomWithCode(code) {
   code = String(code || '').trim().toUpperCase();
   if (code.length !== 4) { toast(T('codeLenToast')); return; }
+  if (joinInFlight) return;
+  joinInFlight = true;
+  const b = $('#btn-join'); if (b) b.disabled = true;
+  joinFlightTimer = setTimeout(endJoinFlight, 10000);
   connect(() => send({ type: 'join', code, ...profilePayload() }));
 }
 $('#btn-join').onclick = () => joinRoomWithCode($('#inp-code').value);
@@ -5490,6 +5509,7 @@ function serverMsgText(msg) {
 
 function onMsg(msg) {
   if (msg.type === 'room') {
+    endJoinFlight(); // the join (or create/reconnect) landed
     closeJoin(); // the join popup has done its job — never cover the lobby
     mySeat = msg.seat;
     if (!voiceT0) voiceT0 = Date.now(); // diagnostics log epoch: seconds since join
@@ -5575,6 +5595,7 @@ function onMsg(msg) {
     toast(T('roomCancelled'));
     show('scr-home');
   } else if (msg.type === 'error') {
+    endJoinFlight(); // a rejected join re-arms the join button
     quickPlay = false;
     toast(serverMsgText(msg));
     // Session expiry: detected by the machine code; the old «نشست»
