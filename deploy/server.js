@@ -60,11 +60,25 @@ const rooms = new Map();
 // the Node hosts is the persistent client player id (p:<pid>); the
 // invite check is the spec fallback — the room exists and is still
 // in its lobby phase.
+function sidInGame(id) {
+  if (!id) return false;
+  for (const room of rooms.values()) {
+    if (room.phase === 'lobby') continue;
+    if (room.seats.some((s) => s.kind === 'human' && s.sid === id)) return true;
+  }
+  return false;
+}
+function syncInGameFor(room, extraSids) {
+  const ids = new Set(extraSids || []);
+  if (room) room.seats.forEach((s) => { if (s.sid) ids.add(s.sid); });
+  ids.forEach((id) => { try { social.core.syncInGame(id); } catch (e) { /* social never breaks the game */ } });
+}
 const social = createNodeSocial({
   roomCheck: (id, code) => {
     const room = rooms.get(code);
     return !!room && room.phase === 'lobby';
   },
+  inGameCheck: sidInGame,
 });
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
@@ -158,6 +172,7 @@ function broadcastState(room) {
   room.seats.forEach((s, i) => {
     if (s.kind === 'human' && s.connected && s.ws) send(s.ws, stateFor(room, i));
   });
+  syncInGameFor(room);
 }
 
 // ------------------------------------------------------------ game flow
@@ -370,9 +385,11 @@ setInterval(() => {
   for (const room of rooms.values()) {
     if (room.phase === 'lobby') continue;
     let changed = false;
+    const goneSids = [];
     room.seats.forEach((s, i) => {
       if (s.kind === 'human' && !s.connected && s.disconnectAt &&
           now - s.disconnectAt > RECONNECT_GRACE_MS) {
+        if (s.sid) goneSids.push(s.sid);
         s.kind = 'bot'; // bot takes over the seat and its hand
         s.avatar = null;
         s.country = '';
@@ -386,6 +403,7 @@ setInterval(() => {
       }
     });
     if (changed) broadcastState(room);
+    if (goneSids.length) syncInGameFor(null, goneSids);
     const anyHuman = room.seats.some((s) => s.kind === 'human');
     if (!anyHuman) {
       clearTimeout(room.turnTimer);
@@ -506,6 +524,8 @@ function handleMessage(ws, msg) {
       if (!room) return;
       const seat = room.seats[ws._seat];
       if (!seat || seat.kind !== 'human') return;
+      const leavingSid = seat.sid || null;
+      const roomSids = room.seats.map((s) => s.sid).filter(Boolean);
       if (room.phase === 'lobby') {
         if (ws._seat === hostSeat(room)) {
           room.seats.forEach((s, i) => {
@@ -517,9 +537,11 @@ function handleMessage(ws, msg) {
           clearTimeout(room.roundTimer);
           clearTimeout(room.trickTimer);
           rooms.delete(room.code);
+          syncInGameFor(null, roomSids);
         } else {
           room.seats[ws._seat] = emptySeat();
           broadcastState(room);
+          if (leavingSid) syncInGameFor(null, [leavingSid]);
         }
       } else {
         const botNo = room.seats.filter((s) => s.kind === 'bot').length;
@@ -535,6 +557,7 @@ function handleMessage(ws, msg) {
         seat.connected = true;
         seat.disconnectAt = null;
         broadcastState(room);
+        if (leavingSid) syncInGameFor(null, [leavingSid]);
         pumpTurn(room);
       }
       ws._roomCode = undefined;
