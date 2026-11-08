@@ -230,6 +230,12 @@
   @keyframes bubblein { from { opacity: 0; transform: translateX(-50%) translateY(4px) scale(.85); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
   .seatbadge[data-pos="left"] .chatbubble { left: -4px; transform: none; animation: bubbleinL .18s ease-out; }
   .seatbadge[data-pos="right"] .chatbubble { left: auto; right: -4px; transform: none; animation: bubbleinL .18s ease-out; }
+  /* live-mic dot inside a lobby row, beside the avatar */
+  .seatrow .vmic {
+    width: 19px; height: 19px; border-radius: 50%; background: #22c55e; flex: 0 0 auto;
+    border: 1.5px solid #0d2b16; font-size: 11px; line-height: 16px; text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,.5); pointer-events: none;
+  }
   @keyframes bubbleinL { from { opacity: 0; transform: translateY(4px) scale(.85); } to { opacity: 1; transform: translateY(0) scale(1); } }
   .seatbadge.turn .pavatar {
     box-shadow: 0 0 0 2px #ffd75e, 0 0 16px 5px rgba(255,215,94,.75), 0 2px 7px rgba(0,0,0,.5);
@@ -293,8 +299,8 @@
   .iconbtn.on svg { stroke: #4a2c07; }
   /* speaker button: sound waves show while listening is ON, the
      slash shows while it is OFF (the .on class carries the gold). */
-  #btn-speaker:not(.on) .spk-waves { display: none; }
-  #btn-speaker.on .spk-slash { display: none; }
+  .spkbtn:not(.on) .spk-waves { display: none; }
+  .spkbtn.on .spk-slash { display: none; }
 
   /* ---------- in-room chat panel ----------
      Slides up from the bottom over the table, in the game's dark/gold
@@ -505,8 +511,8 @@
     display: flex; align-items: center; justify-content: center; }
   .hm-small .ic svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; display: block; }
   .hm-small b, .hm-small .lb { font-size: 15.5px; font-weight: 800; color: #ffeec2; text-align: center; line-height: 1.3; }
-  .hm-join { margin-top: 16px; padding: 14px 16px; }
-  .hm-join label { margin-top: 0; }
+  /* Join-by-code lives in the #ov-join popup now (owner order
+     2026-11-08) — the old inline .hm-join expansion is gone. */
 
   /* Bottom nav — home screen only, pinned to the foot of the column.
      Friends / clubs have no backend yet: their tap answers with the
@@ -535,67 +541,193 @@
 
   /* ---------- lobby ---------- */
   .roomcode { text-align: center; font-size: 40px; font-weight: 900; letter-spacing: 10px; color: #ffd75e; margin: 4px 0; }
-  /* the code sits beside a one-tap copy button (clipboard, with a
-     legacy fallback — see copyRoomCode()) */
+  /* No copy button any more (owner order 2026-11-08): tapping the
+     code itself copies it (clipboard, with a legacy fallback — see
+     copyRoomCode()), and the code briefly shows the «copied» label. */
   .codereel { display: flex; align-items: center; justify-content: center; gap: 12px; }
-  .copybtn {
-    width: auto; margin: 0; padding: 7px 12px; font-size: 13.5px; font-weight: 700; font-family: inherit;
-    background: rgba(255,215,94,.14); color: #ffd75e; border: 1px solid #ffd75e;
-    border-radius: 999px; cursor: pointer; white-space: nowrap;
-  }
-  .copybtn:active { transform: scale(.96); }
-  .seatrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 4px; border-bottom: 1px dashed rgba(255,255,255,.2); font-size: 15px; }
+  #lobby-code { cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  #lobby-code:active { transform: scale(.96); }
+  .seatrow { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 4px; border-bottom: 1px dashed rgba(255,255,255,.2); font-size: 15px; }
   .seatrow:last-child { border-bottom: 0; }
   .sr-main { display: flex; align-items: center; gap: 9px; min-width: 0; }
   .sr-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .teamtag { font-size: 12px; opacity: .8; white-space: nowrap; }
 
+  /* ---------- friends (ملګري) ----------
+     A full screen in the home screen's language: fixed, carpet
+     behind a dark emerald veil, its own scroll. Opened from the
+     bottom nav (and from the lobby's friends button); it floats
+     above home/lobby/table without disturbing the game screens. */
+  #scr-friends, #scr-dm {
+    position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 30;
+    overflow-x: hidden;
+    /* The home screen's dark emerald veil, without the carpet photo:
+       build-deploy.js inlines exactly two CSS carpet references
+       (game + home), so these screens wear the veil colour alone. */
+    background:
+      linear-gradient(180deg, rgba(3,26,18,.97), rgba(4,32,22,.94) 30%, rgba(4,30,20,.95) 65%, rgba(2,20,13,.99)),
+      radial-gradient(ellipse at top, #1d6a3c 0%, #0d3b21 70%, #082a17 100%);
+  }
+  /* Friends screen (owner layout order 2026-11-08): a flex column —
+     the list scrolls in .fr-scroll and the home screen's bottom nav
+     is pinned at the foot with ملګري as the raised active item; no
+     title, no back button: the top corner carries the blocked-list
+     button (where «شاته» used to sit) and the search toggle beside
+     it; the search box itself stays collapsed until that toggle. */
+  #scr-friends { display: flex; flex-direction: column; overflow-y: hidden; }
+  .fr-scroll { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; width: 100%; }
+  #scr-friends .hm-nav { margin: 0; flex: none; width: 100%;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+  #scr-dm { z-index: 36; display: flex; flex-direction: column; overflow-y: hidden; }
+  .fr-inner { max-width: 520px; margin: 0 auto; padding: 14px 14px 22px; }
+  .fr-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .fr-topbtn { position: relative; width: auto; margin: 0; padding: 8px 16px; font-size: 15px;
+    display: inline-flex; align-items: center; gap: 7px; font-family: inherit; cursor: pointer;
+    background: linear-gradient(rgba(26,16,5,.93), rgba(26,16,5,.86)); color: #ffd75e;
+    border: 1px solid #d9b380; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+  .fr-topbtn:active { transform: scale(.96); }
+  .fr-topbtn svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 2.2; fill: none; stroke-linecap: round; display: block; }
+  .fr-topbtn.open { background: #ffd75e; color: #33270a; border-color: #ffd75e; }
+  .fr-topbtn .nav-badge { top: -7px; inset-inline-end: -7px; }
+  /* the blocked list lives in the #ov-blocked popup (same overlay
+     family as profile/settings); its rows scroll inside the panel */
+  #ov-blocked { z-index: 45; }
+  #ov-blocked #fr-blocked { max-height: 46vh; overflow-y: auto; text-align: start; }
+  .fr-back { width: auto; margin: 0; padding: 8px 16px; font-size: 15px;
+    background: linear-gradient(rgba(26,16,5,.93), rgba(26,16,5,.86)); color: #ffd75e;
+    border: 1px solid #d9b380; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+  .fr-sec { font-size: 15px; font-weight: 800; color: #ffd75e; margin: 0 0 6px; }
+  .fr-searchrow { display: flex; gap: 8px; }
+  .fr-searchrow input { flex: 1; min-width: 0; }
+  .fr-searchrow button { width: auto; margin: 0; padding: 0 18px; flex: 0 0 auto; }
+  .fr-banner { background: linear-gradient(90deg, rgba(10,52,34,.95), rgba(16,74,48,.95));
+    border: 1.5px solid #eec95f; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px;
+    font-size: 14.5px; font-weight: 700; color: #ffeec2; text-align: center; }
+  .fr-row { display: flex; align-items: center; gap: 8px; padding: 8px 2px;
+    border-bottom: 1px dashed rgba(255,255,255,.18); }
+  .fr-row:last-child { border-bottom: 0; }
+  .fr-who { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; }
+  .fr-meta { min-width: 0; }
+  .fr-name { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fr-sub { font-size: 11.5px; opacity: .85; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
+  .fr-actions { display: flex; gap: 6px; flex: 0 0 auto; align-items: center; }
+  .fr-act { width: auto; margin: 0; padding: 7px 11px; font-size: 13.5px; font-weight: 700;
+    border-radius: 9px; background: rgba(255,255,255,.08); color: #f5e7c6;
+    border: 1px solid rgba(217,179,128,.55); cursor: pointer; font-family: inherit; position: relative; }
+  .fr-act:active { transform: scale(.95); }
+  .fr-act.primary { background: #ffd75e; color: #33270a; border-color: #ffd75e; }
+  .fr-act.danger { background: rgba(125,34,49,.35); color: #ffb3ab; border-color: rgba(215,38,61,.6); }
+  .fr-act:disabled { opacity: .45; }
+  .fr-unread { position: absolute; top: -6px; inset-inline-end: -6px; min-width: 18px; height: 18px;
+    border-radius: 9px; background: #d7263d; color: #fff; font-size: 11px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; padding: 0 5px; border: 1.5px solid #fff0b3; }
+  .fr-empty { font-size: 13.5px; opacity: .8; padding: 6px 2px; line-height: 1.9; }
+  /* unread/request badge on the bottom-nav friends item */
+  .hm-navitem { position: relative; }
+  .nav-badge { position: absolute; top: -2px; inset-inline-end: calc(50% - 24px); min-width: 19px; height: 19px;
+    border-radius: 10px; background: #d7263d; color: #fff; font-size: 11.5px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; padding: 0 5px;
+    border: 1.5px solid #fff0b3; box-shadow: 0 2px 6px rgba(0,0,0,.5); z-index: 2; }
+  /* DM view: header, scrolling thread, pinned composer */
+  .dm-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px;
+    max-width: 520px; margin: 0 auto; width: 100%; flex: 0 0 auto; }
+  .dm-head .fr-name { font-size: 17px; }
+  #dm-msgs { flex: 1; overflow-y: auto; width: 100%; max-width: 520px; margin: 0 auto;
+    padding: 6px 14px 12px; display: flex; flex-direction: column; gap: 7px; }
+  .dm-bub { max-width: 78%; padding: 8px 12px; border-radius: 14px; font-size: 15px; line-height: 1.55;
+    white-space: pre-wrap; word-break: break-word; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+  .dm-bub.mine { align-self: flex-end; background: linear-gradient(165deg, #2e9e6b, #146545); color: #f2fff7;
+    border-end-end-radius: 4px; }
+  .dm-bub.theirs { align-self: flex-start; background: rgba(26,16,5,.9); color: #f5e7c6;
+    border: 1px solid rgba(217,179,128,.5); border-end-start-radius: 4px; }
+  .dm-bub .dm-ts { display: block; font-size: 10px; opacity: .7; margin-top: 2px; text-align: end; }
+  .dm-inputrow { flex: 0 0 auto; width: 100%; max-width: 520px; margin: 0 auto;
+    display: flex; gap: 8px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
+  .dm-inputrow input { flex: 1; min-width: 0; }
+  .dm-inputrow button { width: auto; margin: 0; padding: 0 20px; flex: 0 0 auto; font-size: 18px; }
+  /* lobby-invite popup card */
+  #ov-invite { z-index: 65; }
+  .inv-who { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 6px; }
+  .inv-who .pavatar { border-radius: 50%; border: 2.5px solid #eec95f; }
+  .inv-name { font-size: 18px; font-weight: 800; color: #ffeec2; }
+  .inv-code { font-size: 13px; opacity: .85; margin-top: 2px; }
+  /* lobby player menu: another human's row is tappable */
+  .seatrow.tappable { cursor: pointer; border-radius: 8px; }
+  .seatrow.tappable:active { background: rgba(255, 215, 94, .10); }
+  #ov-playermenu { z-index: 46; }
+  #ov-playerview { z-index: 47; }
+  .pv-av { display: flex; justify-content: center; margin-bottom: 6px; }
+  .pv-av .pavatar { border-radius: 50%; border: 2.5px solid #eec95f; }
+  .pv-name { display: block; text-align: center; }
+  .pv-line { text-align: center; font-size: 14.5px; margin-top: 3px; }
+  .pv-rel { text-align: center; font-size: 13px; opacity: .85; margin-top: 2px; min-height: 18px; }
+
   /* ---------- profile popup ----------
-     Compact by design: the WHOLE popup (title, preview, 12-tile grid,
-     name, country, buttons) must fit on screen with no scrolling —
-     sizes below are budgeted for a 390x844 viewport, and the
+     Compact by design: the WHOLE popup (title, preview, Google tile +
+     12 portraits, name, country, buttons) must fit on screen with NO
+     scrolling — tightened again 2026-11-08 (owner screenshot: the
+     buttons fell below the fold and the panel scrolled internally).
+     Sizes below are budgeted for a 390x844 viewport, and the
      max-height media query tightens everything further so it also
-     fits whole at 390x700 and on shorter phones. */
+     fits whole at 390x693 and on shorter phones. The overflow-y stays
+     only as a safety net; it must never engage at phone sizes. */
   #ov-profile { padding: 10px; }
-  .pf-panel { text-align: start; padding: 14px 16px;
+  .pf-panel { text-align: start; padding: 12px 14px;
     max-height: calc(100vh - 20px); max-height: calc(100dvh - 20px); overflow-y: auto; }
-  .pf-panel h2 { font-size: 19px; margin-bottom: 6px; }
-  .pf-preview { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 0; }
+  .pf-panel h2 { font-size: 19px; margin-bottom: 4px; }
+  .pf-preview { display: flex; flex-direction: column; align-items: center; gap: 3px; margin: 0; }
+  .pf-preview .pavatar { width: 72px !important; height: 72px !important; }
   .pf-pvname { font-size: 12.5px; font-weight: 700; color: #ffd75e; }
-  .pf-label { display: block; font-size: 12.5px; font-weight: 700; color: #ffd75e; margin: 10px 0 5px; opacity: 1; }
-  .pf-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  .pf-cell { width: auto; margin: 0; padding: 5px 2px 4px; background: rgba(255,255,255,.06);
+  .pf-label { display: block; font-size: 12.5px; font-weight: 700; color: #ffd75e; margin: 8px 0 4px; opacity: 1; }
+  .pf-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  .pf-cell { width: auto; margin: 0; padding: 4px 2px 3px; background: rgba(255,255,255,.06);
     border: 2px solid rgba(217,179,128,.25); border-radius: 12px; cursor: pointer; font-family: inherit;
-    display: flex; flex-direction: column; align-items: center; gap: 3px; }
-  .pf-cell .pavatar { width: min(64px, 100%); height: auto; aspect-ratio: 1 / 1; border-width: 1px; }
+    display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .pf-cell .pavatar { width: min(52px, 100%); height: auto; aspect-ratio: 1 / 1; border-width: 1px; }
   .pf-cell .pf-name { font-size: 11px; font-weight: 700; line-height: 1.2; color: #f5e7c6; text-align: center; }
   .pf-cell.sel { border-color: #ffd75e; background: rgba(255,215,94,.16); box-shadow: 0 0 0 1px #ffd75e; }
   .pf-cell.sel .pf-name { color: #ffd75e; }
-  .pf-panel input { padding: 10px 12px; }
+  .pf-panel input { padding: 9px 12px; }
   .pf-panel select {
-    width: 100%; padding: 10px 12px; font-size: 16.5px; border-radius: 10px; font-family: inherit;
+    width: 100%; padding: 9px 12px; font-size: 16.5px; border-radius: 10px; font-family: inherit;
     border: 1px solid #9db8a6; background: #fdfdf8; color: #123;
   }
   .exit-body { font-size: 15px; opacity: .95; margin: 0 0 4px; }
-  .pf-btns { display: flex; gap: 10px; margin-top: 12px; }
-  .pf-btns button { margin-top: 0; padding: 11px; }
+  .pf-btns { display: flex; gap: 10px; margin-top: 10px; }
+  .pf-btns button { margin-top: 0; padding: 10px; }
   /* Short viewports (<=760px tall, e.g. 390x700): squeeze every block
      a step further so nothing falls below the fold. */
   @media (max-height: 760px) {
-    .pf-panel { padding: 12px 14px; }
-    .pf-panel h2 { font-size: 18px; margin-bottom: 4px; }
-    .pf-preview { gap: 3px; }
-    .pf-preview .pavatar { width: 76px !important; height: 76px !important; }
-    .pf-pvname { font-size: 12px; }
-    .pf-label { font-size: 12px; margin: 7px 0 4px; }
-    .pf-grid { gap: 6px; }
-    .pf-cell { padding: 4px 2px 3px; gap: 2px; border-radius: 10px; }
-    .pf-cell .pavatar { width: min(54px, 100%); }
-    .pf-cell .pf-name { font-size: 10.5px; }
-    .pf-panel input { padding: 9px 12px; }
-    .pf-panel select { padding: 9px 12px; }
-    .pf-btns { margin-top: 10px; }
-    .pf-btns button { padding: 10px; }
+    .pf-panel { padding: 10px 12px; }
+    .pf-panel h2 { font-size: 17px; margin-bottom: 3px; }
+    .pf-preview { gap: 2px; }
+    .pf-preview .pavatar { width: 56px !important; height: 56px !important; }
+    .pf-pvname { font-size: 11.5px; }
+    .pf-label { font-size: 11.5px; margin: 5px 0 3px; }
+    .pf-grid { gap: 5px; }
+    .pf-cell { padding: 3px 2px 2px; gap: 2px; border-radius: 10px; }
+    .pf-cell .pavatar { width: min(42px, 100%); }
+    .pf-cell .pf-name { font-size: 10px; }
+    .pf-panel input { padding: 8px 11px; }
+    .pf-panel select { padding: 8px 11px; }
+    .pf-btns { margin-top: 8px; }
+    .pf-btns button { padding: 9px; }
+  }
+  /* Very short viewports (<=700px tall, e.g. 390x693): one step
+     tighter again — measured content was ~42px over the panel at
+     390x693 with 13 tiles before this tier existed. */
+  @media (max-height: 700px) {
+    .pf-panel { padding: 8px 12px; }
+    .pf-panel h2 { font-size: 16px; margin-bottom: 2px; }
+    .pf-preview .pavatar { width: 46px !important; height: 46px !important; }
+    .pf-label { margin: 4px 0 2px; }
+    .pf-grid { gap: 4px; }
+    .pf-cell { padding: 2px 2px 1px; }
+    .pf-cell .pavatar { width: min(36px, 100%); }
+    .pf-panel input { padding: 7px 11px; }
+    .pf-panel select { padding: 7px 11px; }
+    .pf-btns { margin-top: 6px; }
+    .pf-btns button { padding: 8px; }
   }
 
   /* ---------- settings popup ----------
@@ -655,8 +787,8 @@
   #vdiag .vd-sub { color: #a9bd8f; padding-left: 8px; white-space: pre-wrap; word-break: break-all; }
   #vdiag .vd-log { margin-top: 7px; border-top: 1px solid rgba(217,179,128,.4); padding-top: 5px; color: #b9c9a4; }
   #vdiag .vd-log div { white-space: pre-wrap; word-break: break-all; }
-  #btn-mic { -webkit-touch-callout: none; }
-  #btn-mic.pending { opacity: .55; }
+  .micbtn { -webkit-touch-callout: none; }
+  .micbtn.pending { opacity: .55; }
   #connbar { text-align: center; font-size: 12.5px; color: #ffd75e; min-height: 18px; }
   .hidden { display: none !important; }
 
@@ -728,12 +860,6 @@
         </button>
       </div>
 
-      <div class="hm-panel hm-join hidden" id="join-panel">
-        <label for="inp-code">د کوټې کوډ</label>
-        <input id="inp-code" class="code" type="text" maxlength="4" placeholder="د کوټې کوډ">
-        <button id="btn-join" class="ghost">کوټې ته ننوځه</button>
-      </div>
-
       <button class="hm-continue hidden" id="btn-continue">
         <span class="play"><svg viewBox="0 0 24 24"><path d="M6 3l16 9-16 9z"/></svg></span>
         <span id="continue-txt">لوبې ته دوام ورکړه</span>
@@ -756,6 +882,7 @@
 
       <nav class="hm-nav">
         <button class="hm-navitem" id="nav-friends">
+          <span class="nav-badge hidden" id="nav-friends-badge">0</span>
           <span class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
           <span class="nl" id="nav-friends-lbl">ملګري</span>
         </button>
@@ -829,7 +956,8 @@
     set0('#btn-create small', MINI.menuCreateSub);
     set0('#btn-join-toggle b', MINI.menuJoin);
     set0('#btn-join-toggle small', MINI.menuJoinSub);
-    set0('.hm-join label', MINI.roomCodeLabel);
+    set0('#join-code-lbl', MINI.roomCodeLabel);
+    set0('#join-title', MINI.menuJoin);
     var codeInp0 = document.querySelector('#inp-code');
     if (codeInp0) codeInp0.placeholder = MINI.roomCodeLabel;
     set0('#btn-join', MINI.joinRoom);
@@ -883,13 +1011,21 @@
     <div class="cardbox">
       <div id="lobby-hint" style="text-align:center; font-size:14px; opacity:.85">د کوټې کوډ — ملګرو ته یې ووایه</div>
       <div class="codereel">
-        <div class="roomcode" id="lobby-code">····</div>
-        <button id="btn-copycode" class="copybtn" type="button">📋 <span id="copycode-lbl">کوډ کاپي کړه</span></button>
+        <div class="roomcode" id="lobby-code" role="button" tabindex="0" title="کوډ کاپي کړه">····</div>
       </div>
       <div id="lobby-seats"></div>
       <button id="btn-start">لوبه پیل کړه</button>
+      <button id="btn-lobby-friends" class="ghost">👥 <span id="lobby-friends-lbl">ملګري</span></button>
       <button id="btn-leavelobby" class="ghost">له کوټې ووځه</button>
       <div id="lobby-note" style="text-align:center; font-size:13px; opacity:.85; margin-top:8px"></div>
+      <div class="actionrow lobby-actions">
+        <button class="iconbtn micbtn" id="btn-lobby-mic" aria-label="مایکروفون">
+          <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
+        <button class="iconbtn spkbtn on" id="btn-lobby-speaker" aria-label="سپیکر روشن">
+          <svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path class="spk-waves" d="M15.5 8.5a5 5 0 0 1 0 7"/><path class="spk-waves" d="M18.6 5.4a9.5 9.5 0 0 1 0 13.2"/><line class="spk-slash" x1="3" y1="3" x2="21" y2="21"/></svg>
+        </button>
+      </div>
     </div>
   </section>
 
@@ -933,10 +1069,10 @@
       <button class="iconbtn" id="btn-chat" aria-label="پیغام">
         <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
       </button>
-      <button class="iconbtn" id="btn-mic" aria-label="مایکروفون">
+      <button class="iconbtn micbtn" id="btn-mic" aria-label="مایکروفون">
         <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
       </button>
-      <button class="iconbtn on" id="btn-speaker" aria-label="سپیکر روشن">
+      <button class="iconbtn spkbtn on" id="btn-speaker" aria-label="سپیکر روشن">
         <svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path class="spk-waves" d="M15.5 8.5a5 5 0 0 1 0 7"/><path class="spk-waves" d="M18.6 5.4a9.5 9.5 0 0 1 0 13.2"/><line class="spk-slash" x1="3" y1="3" x2="21" y2="21"/></svg>
       </button>
     </div>
@@ -944,6 +1080,141 @@
 </div>
 
 <div id="takanbanner"></div>
+
+<!-- ======== FRIENDS (ملګري) ======== -->
+<section id="scr-friends" class="hidden">
+  <div class="fr-scroll">
+    <div class="fr-inner">
+      <div class="fr-head">
+        <button class="fr-topbtn" id="btn-fr-openblocked">
+          <span id="fr-blocked-lbl">بلاک شوي</span>
+          <span class="nav-badge hidden" id="fr-blocked-badge">0</span>
+        </button>
+        <button class="fr-topbtn" id="btn-fr-opensearch" aria-label="لټول">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5L16.7 16.7"/></svg>
+          <span id="fr-opensearch-lbl">لټول</span>
+        </button>
+      </div>
+      <div class="fr-banner hidden" id="fr-lobby-banner"></div>
+      <div class="cardbox hidden" id="fr-searchbox">
+        <div class="fr-searchrow">
+          <input id="fr-search-inp" type="text" maxlength="40" placeholder="د لوبغاړي نوم ولټوه…">
+          <button id="btn-fr-search">لټون</button>
+        </div>
+        <div id="fr-results"></div>
+      </div>
+      <div class="cardbox">
+        <h3 class="fr-sec" id="fr-req-title">د دوستۍ غوښتنې</h3>
+        <div id="fr-incoming"></div>
+        <div id="fr-outgoing"></div>
+      </div>
+      <div class="cardbox">
+        <h3 class="fr-sec" id="fr-list-title">زما ملګري</h3>
+        <div id="fr-list"></div>
+      </div>
+    </div>
+  </div>
+  <nav class="hm-nav">
+    <button class="hm-navitem home" id="frnav-friends">
+      <span class="nav-badge hidden" id="frnav-friends-badge">0</span>
+      <span class="bubble"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+      <span class="nl" id="frnav-friends-lbl">ملګري</span>
+    </button>
+    <button class="hm-navitem" id="frnav-clubs">
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+      <span class="nl" id="frnav-clubs-lbl">کلبونه</span>
+    </button>
+    <button class="hm-navitem" id="frnav-home">
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+      <span class="nl" id="frnav-home-lbl">کور</span>
+    </button>
+    <button class="hm-navitem" id="frnav-profile">
+      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+      <span class="nl" id="frnav-profile-lbl">پروفایل</span>
+    </button>
+    <button class="hm-navitem" id="frnav-settings">
+      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+      <span class="nl" id="frnav-settings-lbl">تنظیمات</span>
+    </button>
+  </nav>
+</section>
+
+<!-- ======== FRIEND DM ======== -->
+<section id="scr-dm" class="hidden">
+  <div class="dm-head">
+    <button class="fr-back" id="btn-dm-back">→</button>
+    <span id="dm-peer-av"></span>
+    <div class="fr-meta">
+      <div class="fr-name" id="dm-peer-name"></div>
+      <div class="fr-sub" id="dm-peer-sub"></div>
+    </div>
+  </div>
+  <div id="dm-msgs"></div>
+  <div class="dm-inputrow">
+    <input id="dm-inp" type="text" maxlength="500" placeholder="پیغام ولیکه…">
+    <button id="btn-dm-send" aria-label="send">➤</button>
+  </div>
+</section>
+
+<!-- ======== LOBBY INVITE POPUP ======== -->
+<div class="overlay" id="ov-invite">
+  <div class="panel" style="max-width:340px">
+    <div class="inv-who"><span id="inv-av"></span><span class="inv-name" id="inv-name"></span></div>
+    <p class="exit-body" id="inv-text"></p>
+    <div class="inv-code" id="inv-code"></div>
+    <div class="pf-btns">
+      <button id="btn-inv-accept">تایید</button>
+      <button id="btn-inv-reject" class="ghost">رد</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== BLOCKED LIST POPUP ======== -->
+<div class="overlay" id="ov-blocked">
+  <div class="panel" style="max-width:380px">
+    <h2 id="fr-blocked-title">بلاک شوي</h2>
+    <div id="fr-blocked"></div>
+    <div class="pf-btns">
+      <button id="btn-blocked-close" class="ghost">بندول</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== LOBBY PLAYER MENU (tap a player in the lobby) ======== -->
+<div class="overlay" id="ov-playermenu">
+  <div class="panel" style="max-width:340px">
+    <div class="inv-who"><span id="pm-av"></span><span class="inv-name" id="pm-name"></span></div>
+    <div class="pf-btns">
+      <button id="btn-pm-add">د دوستۍ غوښتنه</button>
+      <button id="btn-pm-profile" class="ghost">پروفایل</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== PLAYER PROFILE VIEW ======== -->
+<div class="overlay" id="ov-playerview">
+  <div class="panel" style="max-width:340px">
+    <div class="pv-av" id="pv-av"></div>
+    <span class="inv-name pv-name" id="pv-name"></span>
+    <div class="pv-line" id="pv-country"></div>
+    <div class="pv-rel" id="pv-rel"></div>
+    <div class="pf-btns">
+      <button id="btn-pv-close" class="ghost">بندول</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== GENERIC CONFIRM (unfriend / block) ======== -->
+<div class="overlay" id="ov-confirm">
+  <div class="panel" style="max-width:340px">
+    <h2 id="cf-title"></h2>
+    <p class="exit-body" id="cf-body"></p>
+    <div class="pf-btns">
+      <button id="btn-cf-yes">هو</button>
+      <button id="btn-cf-no" class="ghost">لغوه</button>
+    </div>
+  </div>
+</div>
 
 <!-- ======== ROUND END ======== -->
 <div class="overlay" id="ov-round">
@@ -971,6 +1242,19 @@
     <div class="row big"><span id="ovm-final-lbl">وروستی جمع شوی تاوان</span><b><small class="sm-us">موږ </small><span id="ov-f-us">0</span> — <small class="sm-them">سیال </small><span id="ov-f-them">0</span></b></div>
     <div id="ov-f-why" style="font-size:14px; font-weight:700; padding:4px 2px 0"></div>
     <button id="btn-newgame">نوې لوبه</button>
+  </div>
+</div>
+
+<!-- ======== JOIN POPUP ======== -->
+<div class="overlay" id="ov-join">
+  <div class="panel pf-panel">
+    <h2 id="join-title">د کوډ سره ورګډ شه</h2>
+    <label class="pf-label" id="join-code-lbl" for="inp-code" style="margin-top:0">د کوټې کوډ</label>
+    <input id="inp-code" class="code" type="text" maxlength="4" placeholder="د کوټې کوډ">
+    <div class="pf-btns">
+      <button id="btn-join">کوټې ته ننوځه</button>
+      <button id="btn-join-close" class="ghost">لغوه</button>
+    </div>
   </div>
 </div>
 
@@ -1106,6 +1390,54 @@ const STR = {
     navProfile: 'پروفایل',
     navSettings: 'تنظیمات',
     comingSoon: 'ژر راځي!',
+    friendsTitle: 'ملګري',
+    frBack: 'شاته',
+    frSearchPh: 'د لوبغاړي نوم ولټوه…',
+    frSearchBtn: 'لټون',
+    frNoResults: 'هېڅوک ونه موندل شول',
+    frReqTitle: 'د دوستۍ غوښتنې',
+    frNoRequests: 'هېڅ غوښتنه نشته',
+    frListTitle: 'زما ملګري',
+    frNoFriends: 'تر اوسه هېڅ ملګری نه لرې — په نوم یې ولټوه او غوښتنه ور واستوه',
+    frBlockedTitle: 'بلاک شوي',
+    frNoBlocked: 'هېڅوک بلاک نه دی',
+    frAdd: 'دوست کېدل',
+    frRequestBtn: 'د دوستۍ غوښتنه',
+    frRequestSent: 'د دوستۍ غوښتنه واستول شوه',
+    frPending: 'په انتظار کې',
+    frRespond: 'ځواب ورکړه',
+    frIsFriend: 'دوست دی',
+    frAccept: 'تایید',
+    frReject: 'رد',
+    frChat: 'ګپ',
+    frInvite: 'بلنه',
+    frUnfriend: 'دوست لرې کول',
+    frBlock: 'بلاک',
+    frUnblock: 'بلاک لرې کول',
+    frOnline: 'انلاین',
+    frOffline: 'افلاین',
+    frLobbyBanner: (code) => 'ته په لابي ' + code + ' کې یې — ملګري دې دې لابي ته وبله',
+    frInviteText: 'تا د لوبې لابي ته بلي',
+    frInviteRoom: (code) => 'د کوټې کوډ: ' + code,
+    frInviteRejected: (name) => name + ' ستا بلنه رد کړه',
+    frOfflineToast: (name) => name + ' افلاین دی',
+    frNewRequest: (name) => name + ' د دوستۍ غوښتنه واستوله',
+    frConfirmUnfriendT: 'دوست لرې کوې؟',
+    frConfirmUnfriendB: (name) => name + ' به ستا له ملګرو لرې شي.',
+    frConfirmBlockT: 'بلاک کوې؟',
+    frConfirmBlockB: (name) => name + ' به بلاک شي: دوستي ختمېږي او نور به درسره اړیکه نه شي نیولی.',
+    frConfirmYes: 'هو',
+    frDmPh: 'پیغام ولیکه…',
+    frDmEmpty: 'تر اوسه پیغام نشته — لومړی پیغام واستوه',
+    frSentLbl: 'استول شوې',
+    errSocialBlocked: 'دا لوبغاړی بلاک شوی دی',
+    errSocialNotFriends: 'یوازې له خپلو ملګرو سره دا کار کولی شې',
+    errSocialRate: 'ډېر ژر پیغامونه استوې — لږ صبر وکړه',
+    errSocialDuplicate: 'غوښتنه مخکې استول شوې ده',
+    errSocialOffline: 'دا ملګری افلاین دی',
+    errSocialNotInRoom: 'ته په دې لابي کې نه یې',
+    errSocialNotFound: 'لوبغاړی ونه موندل شو',
+    errSocialGeneric: 'عملیات ونه شول',
     roomCodeLabel: 'د کوټې کوډ',
     joinRoom: 'کوټې ته ننوځه',
     continueGame: 'لوبې ته دوام ورکړه',
@@ -1225,6 +1557,54 @@ const STR = {
     navProfile: 'پروفایل',
     navSettings: 'تنظیمات',
     comingSoon: 'به‌زودی می‌آید!',
+    friendsTitle: 'دوستان',
+    frBack: 'بازگشت',
+    frSearchPh: 'نام بازیکن را جست‌وجو کن…',
+    frSearchBtn: 'جست‌وجو',
+    frNoResults: 'کسی پیدا نشد',
+    frReqTitle: 'درخواست‌های دوستی',
+    frNoRequests: 'درخواستی نیست',
+    frListTitle: 'دوستان من',
+    frNoFriends: 'هنوز دوستی نداری — با نام جست‌وجوش کن و درخواست بفرست',
+    frBlockedTitle: 'بلاک‌شده‌ها',
+    frNoBlocked: 'کسی بلاک نیست',
+    frAdd: 'دوست شدن',
+    frRequestBtn: 'درخواست دوستی',
+    frRequestSent: 'درخواست دوستی فرستاده شد',
+    frPending: 'در انتظار',
+    frRespond: 'پاسخ بده',
+    frIsFriend: 'دوست است',
+    frAccept: 'تایید',
+    frReject: 'رد',
+    frChat: 'گفت‌وگو',
+    frInvite: 'دعوت',
+    frUnfriend: 'حذف دوست',
+    frBlock: 'بلاک',
+    frUnblock: 'رفع بلاک',
+    frOnline: 'آنلاین',
+    frOffline: 'آفلاین',
+    frLobbyBanner: (code) => 'تو در لابی ' + code + ' هستی — دوستانت را به این لابی دعوت کن',
+    frInviteText: 'تو را به لابی بازی دعوت می‌کند',
+    frInviteRoom: (code) => 'کد اتاق: ' + code,
+    frInviteRejected: (name) => name + ' دعوتت را رد کرد',
+    frOfflineToast: (name) => name + ' آفلاین است',
+    frNewRequest: (name) => name + ' درخواست دوستی فرستاد',
+    frConfirmUnfriendT: 'دوست را حذف می‌کنی؟',
+    frConfirmUnfriendB: (name) => name + ' از دوستانت حذف می‌شود.',
+    frConfirmBlockT: 'بلاک می‌کنی؟',
+    frConfirmBlockB: (name) => name + ' بلاک می‌شود: دوستی پایان می‌یابد و دیگر نمی‌تواند با تو تماس بگیرد.',
+    frConfirmYes: 'بلی',
+    frDmPh: 'پیام بنویس…',
+    frDmEmpty: 'هنوز پیامی نیست — اولین پیام را بفرست',
+    frSentLbl: 'ارسال‌شده',
+    errSocialBlocked: 'این بازیکن بلاک شده است',
+    errSocialNotFriends: 'این کار فقط با دوستانت ممکن است',
+    errSocialRate: 'خیلی سریع پیام می‌فرستی — کمی صبر کن',
+    errSocialDuplicate: 'درخواست قبلاً فرستاده شده است',
+    errSocialOffline: 'این دوست آفلاین است',
+    errSocialNotInRoom: 'تو در این لابی نیستی',
+    errSocialNotFound: 'بازیکن پیدا نشد',
+    errSocialGeneric: 'عملیات انجام نشد',
     roomCodeLabel: 'کد اتاق',
     joinRoom: 'ورود به اتاق',
     continueGame: 'ادامهٔ بازی',
@@ -1344,6 +1724,54 @@ const STR = {
     navProfile: 'Profile',
     navSettings: 'Settings',
     comingSoon: 'Coming soon!',
+    friendsTitle: 'Friends',
+    frBack: 'Back',
+    frSearchPh: 'Search a player by name…',
+    frSearchBtn: 'Search',
+    frNoResults: 'No players found',
+    frReqTitle: 'Friend requests',
+    frNoRequests: 'No requests',
+    frListTitle: 'My friends',
+    frNoFriends: 'No friends yet — search by name and send a request',
+    frBlockedTitle: 'Blocked',
+    frNoBlocked: 'Nobody is blocked',
+    frAdd: 'Add friend',
+    frRequestBtn: 'Friend request',
+    frRequestSent: 'Friend request sent',
+    frPending: 'Pending',
+    frRespond: 'Respond',
+    frIsFriend: 'Friends',
+    frAccept: 'Accept',
+    frReject: 'Reject',
+    frChat: 'Chat',
+    frInvite: 'Invite',
+    frUnfriend: 'Unfriend',
+    frBlock: 'Block',
+    frUnblock: 'Unblock',
+    frOnline: 'Online',
+    frOffline: 'Offline',
+    frLobbyBanner: (code) => 'You are in lobby ' + code + ' — invite your friends to this lobby',
+    frInviteText: 'Invites you to their game lobby',
+    frInviteRoom: (code) => 'Room code: ' + code,
+    frInviteRejected: (name) => name + ' rejected your invitation',
+    frOfflineToast: (name) => name + ' is offline',
+    frNewRequest: (name) => name + ' sent you a friend request',
+    frConfirmUnfriendT: 'Remove this friend?',
+    frConfirmUnfriendB: (name) => name + ' will be removed from your friends.',
+    frConfirmBlockT: 'Block this player?',
+    frConfirmBlockB: (name) => name + ' will be blocked: the friendship ends and they can no longer contact you.',
+    frConfirmYes: 'Yes',
+    frDmPh: 'Write a message…',
+    frDmEmpty: 'No messages yet — send the first one',
+    frSentLbl: 'Sent',
+    errSocialBlocked: 'This player is blocked',
+    errSocialNotFriends: 'You can only do this with your friends',
+    errSocialRate: 'Too many messages — slow down a little',
+    errSocialDuplicate: 'Request already sent',
+    errSocialOffline: 'This friend is offline',
+    errSocialNotInRoom: 'You are not in that lobby',
+    errSocialNotFound: 'Player not found',
+    errSocialGeneric: 'That did not work',
     roomCodeLabel: 'Room code',
     joinRoom: 'Enter Room',
     continueGame: 'Continue Game',
@@ -1469,7 +1897,8 @@ function applyI18n() {
   document.documentElement.lang = LANG;
   document.title = T('docTitle');
   const ltr = LANG === 'en';
-  ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-profile', 'ov-settings', 'ov-exit']
+  ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-profile', 'ov-settings', 'ov-exit', 'ov-join',
+   'scr-friends', 'scr-dm', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview']
     .forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.setAttribute('dir', ltr ? 'ltr' : 'rtl');
@@ -1494,7 +1923,9 @@ function applyI18n() {
   set('#nav-home-lbl', 'navHome');
   set('#nav-profile-lbl', 'navProfile');
   set('#nav-settings-lbl', 'navSettings');
-  set('.hm-join label', 'roomCodeLabel');
+  set('#join-code-lbl', 'roomCodeLabel');
+  set('#join-title', 'menuJoin');
+  set('#btn-join-close', 'cancelBtn');
   const codeInp = $('#inp-code');
   if (codeInp) codeInp.placeholder = T('roomCodeLabel');
   set('#btn-join', 'joinRoom');
@@ -1508,7 +1939,34 @@ function applyI18n() {
   set('#lobby-hint', 'lobbyHint');
   set('#btn-start', 'startGame');
   set('#btn-leavelobby', 'leaveRoom');
-  set('#copycode-lbl', 'copyCode');
+  set('#lobby-friends-lbl', 'navFriends');
+  // friends screen statics (the dynamic rows render via T() too)
+  set('#fr-blocked-lbl', 'frBlockedTitle');
+  set('#fr-opensearch-lbl', 'frSearchBtn');
+  aria('#btn-fr-opensearch', 'frSearchBtn');
+  aria('#btn-fr-openblocked', 'frBlockedTitle');
+  set('#btn-fr-search', 'frSearchBtn');
+  set('#fr-req-title', 'frReqTitle');
+  set('#fr-list-title', 'frListTitle');
+  set('#fr-blocked-title', 'frBlockedTitle');
+  set('#btn-blocked-close', 'closeBtn');
+  set('#btn-pm-profile', 'navProfile');
+  set('#btn-pv-close', 'closeBtn');
+  set('#frnav-friends-lbl', 'navFriends');
+  set('#frnav-clubs-lbl', 'navClubs');
+  set('#frnav-home-lbl', 'navHome');
+  set('#frnav-profile-lbl', 'navProfile');
+  set('#frnav-settings-lbl', 'navSettings');
+  set('#btn-inv-accept', 'frAccept');
+  set('#btn-inv-reject', 'frReject');
+  set('#btn-cf-no', 'cancelBtn');
+  { const si = $('#fr-search-inp'); if (si) si.placeholder = T('frSearchPh'); }
+  { const di = $('#dm-inp'); if (di) di.placeholder = T('frDmPh'); }
+  // The friends module registers its re-render here once it loads
+  // (a language switch repaints the open friends/DM screens too).
+  if (typeof window.__frRender === 'function') window.__frRender();
+  aria('#lobby-code', 'copyCode');
+  { const lc = $('#lobby-code'); if (lc) lc.title = T('copyCode'); }
   const lvBtn = $('#btn-leave');
   if (lvBtn) { lvBtn.setAttribute('aria-label', T('exitGame')); lvBtn.title = T('exitGame'); }
   set('#exit-title', 'exitConfirmQ');
@@ -1523,6 +1981,7 @@ function applyI18n() {
   set('#btn-13', 'declare13');
   aria('#btn-chat', 'chatAria');
   aria('#btn-mic', 'micAria');
+  aria('#btn-lobby-mic', 'micAria');
   paintSpeakerBtn();
   set('#ovr-card-lbl', 'rowCardTawan');
   set('#ovr-tk-lbl', 'rowTakan');
@@ -1764,6 +2223,30 @@ function dispCountry(c) {
   const m = COUNTRY_NAMES[c];
   return (m && m[LANG]) || c;
 }
+// ISO 3166-1 alpha-2 codes for every country in COUNTRIES, keyed by
+// the same canonical (Dari) value. Display-only (the lobby rows show
+// the flag instead of the الف/ب team label — owner order 2026-11-08);
+// the stored/sent country value is unchanged.
+const COUNTRY_ISO = {
+  'افغانستان': 'AF', 'ایران': 'IR', 'پاکستان': 'PK', 'تاجیکستان': 'TJ', 'ازبکستان': 'UZ', 'ترکمنستان': 'TM',
+  'ترکیه': 'TR', 'امارات متحده عربی': 'AE', 'قطر': 'QA', 'عربستان سعودی': 'SA', 'کویت': 'KW', 'عمان': 'OM',
+  'بحرین': 'BH', 'عراق': 'IQ', 'یمن': 'YE', 'اردن': 'JO', 'لبنان': 'LB', 'سوریه': 'SY', 'فلسطین': 'PS',
+  'هند': 'IN', 'بنگلادش': 'BD', 'نپال': 'NP', 'سریلانکا': 'LK', 'مالدیو': 'MV',
+  'چین': 'CN', 'ژاپن': 'JP', 'کره جنوبی': 'KR', 'مالزیا': 'MY', 'اندونزیا': 'ID', 'تایلند': 'TH', 'ویتنام': 'VN', 'فیلیپین': 'PH', 'سنگاپور': 'SG',
+  'روسیه': 'RU', 'اوکراین': 'UA', 'قزاقستان': 'KZ', 'قرقیزستان': 'KG', 'آذربایجان': 'AZ', 'گرجستان': 'GE', 'ارمنستان': 'AM', 'بلاروس': 'BY', 'مولداوی': 'MD',
+  'بریتانیا': 'GB', 'آلمان': 'DE', 'فرانسه': 'FR', 'ایتالیا': 'IT', 'اسپانیا': 'ES', 'پرتغال': 'PT', 'هلند': 'NL', 'بلژیک': 'BE', 'سوئیس': 'CH', 'اتریش': 'AT',
+  'سوئد': 'SE', 'نروژ': 'NO', 'دانمارک': 'DK', 'فنلاند': 'FI', 'ایرلند': 'IE', 'لهستان': 'PL', 'چک': 'CZ', 'یونان': 'GR', 'رومانی': 'RO', 'مجارستان': 'HU',
+  'آمریکا': 'US', 'کانادا': 'CA', 'مکزیک': 'MX', 'برزیل': 'BR', 'آرژانتین': 'AR', 'شیلی': 'CL', 'کلمبیا': 'CO', 'پرو': 'PE',
+  'استرالیا': 'AU', 'نیوزیلند': 'NZ',
+  'مصر': 'EG', 'مراکش': 'MA', 'الجزایر': 'DZ', 'تونس': 'TN', 'لیبی': 'LY', 'سودان': 'SD', 'اتیوپی': 'ET', 'کنیا': 'KE', 'نیجریه': 'NG', 'آفریقای جنوبی': 'ZA',
+};
+// Flag emoji from the ISO code (regional-indicator pair); '' when the
+// country is unknown to the map.
+function countryFlag(c) {
+  const iso = COUNTRY_ISO[c];
+  if (!iso) return '';
+  return String.fromCodePoint(...[...iso].map((ch) => 0x1F1E6 + ch.charCodeAt(0) - 65));
+}
 // (Re)build the profile country <select>: option VALUES stay the
 // canonical names (that is what gets stored and sent); only the
 // visible labels follow the current language.
@@ -1807,10 +2290,13 @@ function saveProfile() {
 function myName() {
   return (profile.name || '').trim() || session?.name || T('playerName');
 }
-// The {avatar, country} pair every seat message carries; the Google
-// photo rides along ONLY while the 'google' avatar is in use.
+// The {avatar, country, pid} triple every seat message carries; the
+// Google photo rides along ONLY while the 'google' avatar is in use.
+// pid is the persistent player id — the servers stamp it on the seat
+// as its social identity (p:<pid>), so the lobby player menu can
+// address a friend request to the right person.
 function profileMsg() {
-  const m = { avatar: profile.avatar, country: profile.country };
+  const m = { avatar: profile.avatar, country: profile.country, pid: myPid() };
   if (profile.avatar === 'google' && profile.photo) m.photo = profile.photo;
   return m;
 }
@@ -1868,11 +2354,15 @@ $('#btn-create').onclick = () => connect(() => send({ type: 'create', ...profile
 // The big ONLINE card is the same door as create-room: a fresh room
 // whose code goes to friends.
 $('#btn-online').onclick = () => connect(() => send({ type: 'create', ...profilePayload() }));
-$('#btn-join').onclick = () => {
-  const code = $('#inp-code').value.trim().toUpperCase();
-  if (code.length !== 4) return toast(T('codeLenToast'));
+// The one join flow — the code popup and the friends-invite accept
+// both land here, so every join gets the same validation and the
+// same server error toasts (full room, already started, …).
+function joinRoomWithCode(code) {
+  code = String(code || '').trim().toUpperCase();
+  if (code.length !== 4) { toast(T('codeLenToast')); return; }
   connect(() => send({ type: 'join', code, ...profilePayload() }));
-};
+}
+$('#btn-join').onclick = () => joinRoomWithCode($('#inp-code').value);
 $('#btn-start').onclick = () => send({ type: 'start' });
 // Leaving the waiting room is a SERVER act, not just a local exit:
 // a guest's seat is freed for the next player, and the HOST leaving
@@ -1911,9 +2401,14 @@ function copyRoomCode() {
   if (!code || code.includes('·')) return;
   const done = (ok) => {
     if (!ok) return;
-    const lbl = $('#copycode-lbl');
-    lbl.textContent = T('copied');
-    setTimeout(() => { lbl.textContent = T('copyCode'); }, 1600);
+    // Feedback lives on the code element itself: it briefly shows
+    // the localized «copied» label, then the code returns (renderLobby
+    // repaints it on the next state push anyway).
+    const el = $('#lobby-code');
+    el.textContent = T('copied');
+    setTimeout(() => {
+      el.textContent = (state && state.code) ? state.code.split('').join(' ') : code.split('').join(' ');
+    }, 1600);
   };
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(code).then(() => done(true), () => done(fallbackCopyText(code)));
@@ -1921,7 +2416,10 @@ function copyRoomCode() {
     done(fallbackCopyText(code));
   }
 }
-$('#btn-copycode').onclick = copyRoomCode;
+$('#lobby-code').addEventListener('click', copyRoomCode);
+$('#lobby-code').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); copyRoomCode(); }
+});
 $('#btn-13').onclick = () => {
   send({ type: 'declare13' });
   $('#btn-13').classList.add('hidden'); // until the confirming state arrives
@@ -2098,6 +2596,11 @@ function fillPager(pagerSel, trackSel, dotsSel, items, perPage, pageClass, makeB
 function onChatMsg(m) {
   showChatBubble(m.seat, m.kind, m.value);
 }
+function seatOfPos(pos) {
+  if (mySeat === null) return null;
+  const idx = ['bottom', 'right', 'top', 'left'].indexOf(pos);
+  return idx < 0 ? null : (mySeat + idx) % 4;
+}
 function showChatBubble(seat, kind, value) {
   if (mySeat === null || !state) return;
   const pos = relPos(seat);
@@ -2108,19 +2611,32 @@ function showChatBubble(seat, kind, value) {
   chatBubbles[pos] = { kind, value, until: Date.now() + life };
   paintChatBubble(pos);
   setTimeout(() => {
-    const badge = $('#seat-' + pos);
-    const el = badge && badge.querySelector('.chatbubble');
-    if (el) { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; }
+    bubbleHosts(pos).forEach((host) => {
+      const el = host && host.querySelector('.chatbubble');
+      if (el) { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; }
+    });
   }, life - 300);
   setTimeout(() => {
     const b = chatBubbles[pos];
     if (b && Date.now() >= b.until) { delete chatBubbles[pos]; paintChatBubble(pos); }
   }, life + 50);
 }
-function paintChatBubble(pos) {
+// A bubble lives on the sender's table badge only. (Part E first
+// mirrored it onto the sender's LOBBY row too; the owner ordered
+// chat out of the lobby, so a chat arriving while the lobby is up
+// paints nowhere — the receive handler itself is untouched.)
+function bubbleHosts(pos) {
+  const hosts = [];
   const badge = $('#seat-' + pos);
-  if (!badge) return;
-  const old = badge.querySelector('.chatbubble');
+  if (badge) hosts.push(badge);
+  return hosts;
+}
+function paintChatBubble(pos) {
+  bubbleHosts(pos).forEach((host) => paintBubbleInto(host, pos));
+}
+function paintBubbleInto(host, pos) {
+  if (!host) return;
+  const old = host.querySelector('.chatbubble');
   if (old) old.remove();
   const b = chatBubbles[pos];
   if (!b || Date.now() >= b.until) return;
@@ -2135,7 +2651,7 @@ function paintChatBubble(pos) {
     d.className = 'chatbubble' + (b.kind === 'emoji' ? ' emoji' : '');
     d.textContent = b.value;
   }
-  badge.appendChild(d);
+  host.appendChild(d);
 }
 
 // ---------- in-room voice (WebRTC, peer-to-peer, opt-in) ----------
@@ -2502,31 +3018,38 @@ function noteAllFlagEdges() {
 // also toggle the mic when the finger lifts (the click still
 // fires), so the fired long-press suppresses exactly one click.
 let micLpTimer = null, micLpFired = false;
+// The mic / speaker / chat buttons exist TWICE — on the table and in
+// the lobby (Part E) — over ONE underlying state. Every paint goes
+// through these helpers so both copies always show the same thing.
+function eachMicBtn(fn) { ['#btn-mic', '#btn-lobby-mic'].forEach((s) => { const b = $(s); if (b) fn(b); }); }
+function eachSpeakerBtn(fn) { ['#btn-speaker', '#btn-lobby-speaker'].forEach((s) => { const b = $(s); if (b) fn(b); }); }
 {
-  const micBtn = $('#btn-mic');
-  micBtn.addEventListener('pointerdown', () => {
-    micLpFired = false;
-    if (micLpTimer) clearTimeout(micLpTimer);
-    micLpTimer = setTimeout(() => { micLpFired = true; openVoiceDiag(); }, 600);
+  document.querySelectorAll('#btn-mic, #btn-lobby-mic').forEach((micBtn) => {
+    micBtn.addEventListener('pointerdown', () => {
+      micLpFired = false;
+      if (micLpTimer) clearTimeout(micLpTimer);
+      micLpTimer = setTimeout(() => { micLpFired = true; openVoiceDiag(); }, 600);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) =>
+      micBtn.addEventListener(ev, () => { if (micLpTimer) { clearTimeout(micLpTimer); micLpTimer = null; } }));
+    micBtn.addEventListener('contextmenu', (e) => { e.preventDefault(); });
   });
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) =>
-    micBtn.addEventListener(ev, () => { if (micLpTimer) { clearTimeout(micLpTimer); micLpTimer = null; } }));
-  micBtn.addEventListener('contextmenu', (e) => { e.preventDefault(); });
 }
-$('#btn-mic').onclick = () => {
+const onMicTap = () => {
   if (micLpFired) { micLpFired = false; return; } // the long-press already acted
   toggleVoice();
 };
-$('#btn-speaker').onclick = () => { toggleSpeaker(); };
+eachMicBtn((b) => { b.onclick = onMicTap; });
+eachSpeakerBtn((b) => { b.onclick = () => { toggleSpeaker(); }; });
 $('#vdiag-close').onclick = () => { closeVoiceDiag(); };
 
 function paintSpeakerBtn() {
-  const b = $('#btn-speaker');
-  if (!b) return;
-  b.classList.toggle('on', speakerOn);
-  const lbl = T(speakerOn ? 'speakerOn' : 'speakerOff');
-  b.setAttribute('aria-label', lbl);
-  b.title = lbl;
+  eachSpeakerBtn((b) => {
+    b.classList.toggle('on', speakerOn);
+    const lbl = T(speakerOn ? 'speakerOn' : 'speakerOff');
+    b.setAttribute('aria-label', lbl);
+    b.title = lbl;
+  });
 }
 
 // Speaker: an opt-out mute. Default ON — I hear every mic at the
@@ -2641,13 +3164,13 @@ function startMicPending(gen, stream) {
   const track = stream.getAudioTracks()[0];
   const p = { gen, stream, track, poll: null, cap: null, onUnmute: null };
   micPending = p;
-  $('#btn-mic').classList.add('pending');
+  eachMicBtn((b) => b.classList.add('pending'));
   voiceEvent('mic pending: track muted — waiting for unmute before announcing');
   const finish = () => {
     if (micPending !== p) return;
     clearMicPendingBits(p);
     micPending = null;
-    $('#btn-mic').classList.remove('pending');
+    eachMicBtn((b) => b.classList.remove('pending'));
     if (p.gen !== micGen || !track || track.readyState !== 'live') { stopStreamTracks(stream); return; }
     completeMicOn(p.gen, stream);
   };
@@ -2658,7 +3181,7 @@ function startMicPending(gen, stream) {
     if (micPending !== p) return;
     clearMicPendingBits(p);
     micPending = null;
-    $('#btn-mic').classList.remove('pending');
+    eachMicBtn((b) => b.classList.remove('pending'));
     stopStreamTracks(stream);
     voiceEvent('mic unavailable: track never unmuted');
     toast(T('micUnavailable'));
@@ -2676,7 +3199,7 @@ function cancelMicPending(why) {
   micPending = null;
   micGen++; // the parked acquisition's ticket dies with it
   clearMicPendingBits(p);
-  $('#btn-mic').classList.remove('pending');
+  eachMicBtn((b) => b.classList.remove('pending'));
   stopStreamTracks(p.stream);
   voiceEvent('mic pending cancelled (' + why + ')');
 }
@@ -2696,7 +3219,7 @@ function completeMicOn(gen, stream) {
   voiceEvent('mic on');
   resetVoiceFeedback();
   noteAllFlagEdges(); // my own flag edge: every pair's watchdog starts fresh + graced
-  $('#btn-mic').classList.add('on');
+  eachMicBtn((b) => b.classList.add('on'));
   mirrorMyVoice();
   announceVoice();
   syncVoicePairs();
@@ -2868,7 +3391,7 @@ function stopMic() {
   micOn = false;
   clearMicSupervision();
   micMuteSince = 0; micMuteHealed = false; micReacquiring = false;
-  $('#btn-mic').classList.remove('on');
+  eachMicBtn((b) => b.classList.remove('on'));
   mirrorMyVoice();
   announceVoice();
   noteAllFlagEdges(); // my mic edge: peers' view is broadcast, but my own send episodes reset too
@@ -4193,21 +4716,42 @@ async function processRtcSignal(from, data, retried) {
 // The green mic dot on a badge mirrors the seat's MIC flag;
 // render() calls this after every state push, and voice broadcasts
 // call it directly.
+function lobbyRowOf(seat) {
+  return document.querySelector('#lobby-seats .seatrow[data-seat="' + seat + '"]');
+}
 function paintVoiceDots(st) {
   if (!st || !st.seats) return;
   st.seats.forEach((s, i) => {
+    const mic = vflags(i).mic;
     const badge = $('#seat-' + relPos(i));
-    if (!badge) return;
-    let dot = badge.querySelector('.vmic');
-    if (vflags(i).mic) {
-      if (!dot) {
-        dot = document.createElement('span');
-        dot.className = 'vmic';
-        dot.textContent = '🎤';
-        badge.appendChild(dot);
+    if (badge) {
+      let dot = badge.querySelector('.vmic');
+      if (mic) {
+        if (!dot) {
+          dot = document.createElement('span');
+          dot.className = 'vmic';
+          dot.textContent = '🎤';
+          badge.appendChild(dot);
+        }
+      } else if (dot) {
+        dot.remove();
       }
-    } else if (dot) {
-      dot.remove();
+    }
+    // the same dot on the player's LOBBY row (Part E)
+    const row = lobbyRowOf(i);
+    if (row) {
+      let rdot = row.querySelector('.vmic');
+      if (mic) {
+        if (!rdot) {
+          rdot = document.createElement('span');
+          rdot.className = 'vmic';
+          rdot.textContent = '🎤';
+          const main = row.querySelector('.sr-main');
+          if (main) main.appendChild(rdot);
+        }
+      } else if (rdot) {
+        rdot.remove();
+      }
     }
   });
 }
@@ -4301,11 +4845,17 @@ $('#btn-quick').onclick = () => {
   quickPlay = true;
   connect(() => send({ type: 'create', ...profilePayload() }));
 };
-$('#btn-join-toggle').onclick = () => {
-  const p = $('#join-panel');
-  p.classList.toggle('hidden');
-  if (!p.classList.contains('hidden')) $('#inp-code').focus();
-};
+// Join with a code: the small menu card opens a proper POPUP — the
+// #ov-join overlay, same family as the profile/settings popups (owner
+// order 2026-11-08). The code input and the join button live there;
+// the old inline expansion inside the home screen is gone. Backdrop
+// tap or the cancel button closes it; a successful join closes it
+// too (see the 'room' handler), a failed one leaves it open to retry.
+function openJoin() { $('#ov-join').classList.add('show'); $('#inp-code').focus(); }
+function closeJoin() { $('#ov-join').classList.remove('show'); }
+$('#btn-join-toggle').onclick = openJoin;
+$('#btn-join-close').onclick = closeJoin;
+$('#ov-join').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeJoin(); });
 // Rules: the existing legend, as its own view over the carpet (back returns).
 function openRules() {
   $('#home-main').classList.add('hidden');
@@ -4356,7 +4906,7 @@ $('#btn-continue').onclick = () => {
 // answers with the coming-soon toast in the current language. Profile
 // and settings open the very same popups as the top bar; home (the
 // active tab) just returns the menu to the top.
-$('#nav-friends').onclick = () => toast(T('comingSoon'));
+$('#nav-friends').onclick = () => openFriends();
 $('#nav-clubs').onclick = () => toast(T('comingSoon'));
 $('#nav-home').onclick = () => { $('#scr-home').scrollTop = 0; };
 $('#nav-profile').onclick = openProfile;
@@ -4423,6 +4973,7 @@ $('#btn-profile-save').onclick = () => {
     photo: profile.photo || '',
   };
   saveProfile();
+  socialHello(); // the friends directory record follows the profile
   closeProfile();
 };
 // Google identity → game profile: on hosts with sign-in (the Cloudflare
@@ -4491,6 +5042,7 @@ function serverMsgText(msg) {
 
 function onMsg(msg) {
   if (msg.type === 'room') {
+    closeJoin(); // the join popup has done its job — never cover the lobby
     mySeat = msg.seat;
     if (!voiceT0) voiceT0 = Date.now(); // diagnostics log epoch: seconds since join
     session = { code: msg.code, token: msg.token, name: myName() };
@@ -4588,6 +5140,553 @@ function onMsg(msg) {
     }
   }
 }
+
+// ---------- friends (ملګري): the /social socket ----------
+// A SECOND WebSocket beside the game socket, open for the whole
+// app session (home, lobby, table): the friends directory, requests,
+// DMs and lobby invites live on it (see social-core.js on the
+// servers). Identity: on the signed-in host the server keys me by my
+// account (g:<sub>) from the session; on the plain Node hosts it
+// keys me by the persistent player id below (p:<pid>). The client
+// just sends the hello and renders what the server answers.
+let sws = null, swsOpen = false, swsRetry = null;
+let socialMe = null;
+let socialData = null;           // {friends, incoming, outgoing, blocked}
+const socialPeople = new Map();  // id -> last seen person record
+let frSearchResults = [];
+let frSearched = false; // a search ran (so "no hits" can show its line)
+const frExpanded = new Set();    // friend ids whose ⋯ row is open
+const dmThreads = new Map();     // peerId -> [{from, text, ts}]
+const dmUnread = new Map();      // peerId -> unread count
+let dmPeer = null;               // person record of the open DM thread
+const inviteQueue = [];
+let inviteCurrent = null, inviteTimer = null;
+let confirmCb = null;
+
+function myPid() {
+  let pid = null;
+  try { pid = localStorage.getItem('tore.pid'); } catch (e) { /* private mode */ }
+  if (!pid || !/^[A-Za-z0-9_-]{6,64}$/.test(pid)) {
+    pid = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+    try { localStorage.setItem('tore.pid', pid); } catch (e) { /* ignore */ }
+  }
+  return pid;
+}
+function socialSend(obj) {
+  if (sws && sws.readyState === 1) { try { sws.send(JSON.stringify(obj)); } catch (e) { /* gone */ } }
+}
+function socialHello() {
+  socialSend({ type: 's-hello', pid: myPid(), profile: profilePayload() });
+}
+function connectSocial() {
+  if (sws && (sws.readyState === 0 || sws.readyState === 1)) return;
+  const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+  let sock;
+  try { sock = new WebSocket(proto + location.host + '/social'); }
+  catch (e) { scheduleSocialRetry(); return; }
+  sws = sock;
+  sock.onopen = () => {
+    swsOpen = true;
+    socialHello();
+    if (dmPeer) socialSend({ type: 's-dm-history', with: dmPeer.id });
+  };
+  sock.onmessage = (ev) => {
+    let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    onSocialMsg(m);
+  };
+  sock.onclose = () => { swsOpen = false; if (sws === sock) sws = null; scheduleSocialRetry(); };
+  sock.onerror = () => { try { sock.close(); } catch (e) { /* ignore */ } };
+}
+function scheduleSocialRetry() {
+  if (swsRetry) return;
+  swsRetry = setTimeout(() => { swsRetry = null; connectSocial(); }, 3000);
+}
+
+function cachePerson(p) { if (p && p.id) socialPeople.set(p.id, p); }
+function socialErrText(code) {
+  const c = String(code || 'socialGeneric');
+  const key = 'err' + c.charAt(0).toUpperCase() + c.slice(1);
+  return (key in STR.fa) ? T(key) : T('errSocialGeneric');
+}
+function applySocialLists(lists) {
+  socialData = lists;
+  ['friends', 'incoming', 'outgoing', 'blocked'].forEach((k) => (lists[k] || []).forEach(cachePerson));
+  // The optimistic lobby-menu pending survives only while a refresh
+  // has not yet ruled on it: once the lists know the id (outgoing or
+  // friends) the live relation paints the button; a refresh that
+  // still does not know it means the send never landed — clear it.
+  if (pmSentSid && !lists.outgoing.some((f) => f.id === pmSentSid) &&
+      !lists.friends.some((f) => f.id === pmSentSid)) pmSentSid = null;
+  updateFriendsBadge();
+  renderFriends();
+  renderPlayerMenu();
+}
+function onSocialMsg(m) {
+  if (!m || typeof m.type !== 'string') return;
+  if (m.type === 's-init') {
+    socialMe = m.me;
+    applySocialLists(m);
+  } else if (m.type === 's-friends') {
+    applySocialLists(m);
+  } else if (m.type === 's-presence') {
+    const p = socialPeople.get(m.id);
+    if (p) p.online = !!m.online;
+    if (socialData) socialData.friends.forEach((f) => { if (f.id === m.id) f.online = !!m.online; });
+    frSearchResults.forEach((r) => { if (r.id === m.id) r.online = !!m.online; });
+    renderFriends();
+    if (dmPeer && dmPeer.id === m.id) paintDmPeer();
+  } else if (m.type === 's-search-result') {
+    frSearchResults = m.results || [];
+    frSearchResults.forEach(cachePerson);
+    renderFriends();
+  } else if (m.type === 's-requested') {
+    cachePerson(m.from);
+    toast(T('frNewRequest', (m.from && m.from.name) || ''));
+    // the s-friends refresh right behind it repaints the lists + badge
+  } else if (m.type === 's-dm') {
+    const peerId = m.from === socialMe ? m.to : m.from;
+    const th = dmThreads.get(peerId) || [];
+    th.push({ from: m.from, text: m.text, ts: m.ts });
+    dmThreads.set(peerId, th);
+    if (dmPeer && dmPeer.id === peerId && !$('#scr-dm').classList.contains('hidden')) {
+      renderDmThread();
+    } else if (m.from !== socialMe) {
+      dmUnread.set(peerId, (dmUnread.get(peerId) || 0) + 1);
+      updateFriendsBadge();
+      renderFriends();
+    }
+  } else if (m.type === 's-dm-history') {
+    dmThreads.set(m.with, (m.messages || []).map((x) => ({ from: x.from, text: x.text, ts: x.ts })));
+    if (dmPeer && dmPeer.id === m.with) renderDmThread();
+  } else if (m.type === 's-invited') {
+    cachePerson(m.from);
+    inviteQueue.push({ from: m.from, code: m.code });
+    if (!inviteCurrent) showNextInvite();
+  } else if (m.type === 's-invite-result') {
+    if (m.by) cachePerson(m.by);
+    if (!m.accept) toast(T('frInviteRejected', (m.by && m.by.name) || ''));
+  } else if (m.type === 's-error') {
+    if (pmSentSid) { pmSentSid = null; renderPlayerMenu(); }
+    toast(socialErrText(m.code));
+  }
+}
+
+// ---------- friends screen ----------
+function myLobbyCode() {
+  return (session && state && state.phase === 'lobby' && state.code && session.code === state.code)
+    ? state.code : null;
+}
+function updateFriendsBadge() {
+  let n = socialData ? socialData.incoming.length : 0;
+  dmUnread.forEach((c) => { n += c; });
+  // the same count rides on the home nav item and on the friends
+  // screen's own nav (its raised ملګري item)
+  ['#nav-friends-badge', '#frnav-friends-badge'].forEach((sel) => {
+    const b = $(sel);
+    if (b) { b.textContent = faNum(n); b.classList.toggle('hidden', n === 0); }
+  });
+  // blocked-count badge on the blocked button in the top corner
+  const bb = $('#fr-blocked-badge');
+  if (bb) {
+    const bn = socialData ? socialData.blocked.length : 0;
+    bb.textContent = faNum(bn);
+    bb.classList.toggle('hidden', bn === 0);
+  }
+}
+function openFriends() {
+  $('#scr-friends').classList.remove('hidden');
+  connectSocial();
+  renderFriends();
+}
+function closeFriends() {
+  $('#scr-friends').classList.add('hidden');
+  $('#ov-blocked').classList.remove('show');
+}
+$('#btn-lobby-friends').onclick = openFriends;
+// Top corner (owner layout order 2026-11-08): the blocked-list
+// button sits where «شاته» used to be and opens the blocked popup;
+// beside it the search toggle collapses/expands the search box.
+function openBlocked() { renderFriends(); $('#ov-blocked').classList.add('show'); }
+function closeBlocked() { $('#ov-blocked').classList.remove('show'); }
+$('#btn-fr-openblocked').onclick = openBlocked;
+$('#btn-blocked-close').onclick = closeBlocked;
+$('#ov-blocked').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeBlocked(); });
+let frSearchOpen = false;
+$('#btn-fr-opensearch').onclick = () => {
+  frSearchOpen = !frSearchOpen;
+  $('#fr-searchbox').classList.toggle('hidden', !frSearchOpen);
+  $('#btn-fr-opensearch').classList.toggle('open', frSearchOpen);
+  if (frSearchOpen) { const i = $('#fr-search-inp'); if (i) i.focus(); }
+};
+// The friends screen carries the same bottom nav as home, with
+// ملګري raised as the active page; کور is the exit (the old back
+// button's job — the screen floats over home or the lobby).
+$('#frnav-friends').onclick = () => {};
+$('#frnav-clubs').onclick = () => toast(T('comingSoon'));
+$('#frnav-home').onclick = closeFriends;
+$('#frnav-profile').onclick = openProfile;
+$('#frnav-settings').onclick = openSettings;
+
+// ---------- lobby player menu (tap a player) ----------
+// Tapping another human's lobby row opens a small menu over the
+// lobby: send them a friend request, or view the profile the game
+// knows. The seat carries their social id (sid in every state push),
+// so the request rides the same /social socket as the friends
+// screen and its button paints from the same live lists.
+let pmSeat = null;      // snapshot of the tapped seat
+let pmSentSid = null;   // optimistic pending until the lists confirm
+function seatRelation(sid) {
+  if (!sid) return 'nosid';
+  if (!socialData) return 'none';
+  if (socialData.friends.some((f) => f.id === sid)) return 'friend';
+  if (socialData.outgoing.some((f) => f.id === sid)) return 'outgoing';
+  if (socialData.incoming.some((f) => f.id === sid)) return 'incoming';
+  if (socialData.blocked.some((f) => f.id === sid)) return 'blocked';
+  return 'none';
+}
+function openPlayerMenu(idx) {
+  const s = state && state.seats && state.seats[idx];
+  if (!s || s.kind !== 'human' || idx === mySeat) return;
+  pmSeat = { name: dispName(s), avatar: s.avatar, photo: s.photo, country: s.country, sid: s.sid || null };
+  $('#ov-playermenu').classList.add('show');
+  renderPlayerMenu();
+}
+function closePlayerMenu() { $('#ov-playermenu').classList.remove('show'); }
+function renderPlayerMenu() {
+  if (!pmSeat || !$('#ov-playermenu').classList.contains('show')) return;
+  const av = $('#pm-av');
+  av.innerHTML = '';
+  av.appendChild(avatarEl(pmSeat.name, pmSeat.avatar, 54, pmSeat.photo));
+  $('#pm-name').textContent = pmSeat.name;
+  const btn = $('#btn-pm-add');
+  const rel = seatRelation(pmSeat.sid);
+  btn.onclick = null;
+  btn.disabled = false;
+  btn.classList.toggle('hidden', rel === 'nosid' || rel === 'blocked');
+  if (rel === 'friend') { btn.textContent = T('frIsFriend'); btn.disabled = true; }
+  else if (rel === 'outgoing' || pmSentSid === pmSeat.sid) { btn.textContent = T('frPending'); btn.disabled = true; }
+  else if (rel === 'incoming') {
+    btn.textContent = T('frRespond');
+    btn.onclick = () => { closePlayerMenu(); openFriends(); };
+  } else if (rel === 'none') {
+    btn.textContent = T('frRequestBtn');
+    btn.onclick = () => {
+      socialSend({ type: 's-request', to: pmSeat.sid });
+      pmSentSid = pmSeat.sid;
+      toast(T('frRequestSent'));
+      renderPlayerMenu();
+    };
+  }
+}
+$('#btn-pm-profile').onclick = () => {
+  if (!pmSeat) return;
+  const pv = $('#pv-av');
+  pv.innerHTML = '';
+  pv.appendChild(avatarEl(pmSeat.name, pmSeat.avatar, 84, pmSeat.photo));
+  $('#pv-name').textContent = pmSeat.name;
+  const fl = pmSeat.country ? countryFlag(pmSeat.country) : '';
+  $('#pv-country').textContent = pmSeat.country ? (fl ? fl + ' ' : '') + dispCountry(pmSeat.country) : '—';
+  const rel = seatRelation(pmSeat.sid);
+  $('#pv-rel').textContent = rel === 'friend' ? T('frIsFriend')
+    : rel === 'outgoing' ? T('frPending')
+    : rel === 'incoming' ? T('frRespond') : '—';
+  closePlayerMenu();
+  $('#ov-playerview').classList.add('show');
+};
+$('#btn-pv-close').onclick = () => $('#ov-playerview').classList.remove('show');
+$('#ov-playermenu').addEventListener('click', (e) => { if (e.target === e.currentTarget) closePlayerMenu(); });
+$('#ov-playerview').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
+
+function frBtn(label, cls, fn, badge) {
+  const b = document.createElement('button');
+  b.className = 'fr-act' + (cls ? ' ' + cls : '');
+  b.textContent = label;
+  if (badge) {
+    const s = document.createElement('span');
+    s.className = 'fr-unread';
+    s.textContent = faNum(badge);
+    b.appendChild(s);
+  }
+  if (fn) b.onclick = fn; else b.disabled = true;
+  return b;
+}
+function personRow(p, actions) {
+  const row = document.createElement('div');
+  row.className = 'fr-row';
+  const who = document.createElement('div');
+  who.className = 'fr-who';
+  who.appendChild(avatarEl(p.name, p.avatar, 38, p.photo));
+  const meta = document.createElement('div');
+  meta.className = 'fr-meta';
+  const nm = document.createElement('div');
+  nm.className = 'fr-name';
+  nm.textContent = p.name || T('playerName');
+  const sub = document.createElement('div');
+  sub.className = 'fr-sub';
+  const dot = document.createElement('span');
+  dot.className = 'dot' + (p.online ? ' on' : '');
+  sub.appendChild(dot);
+  const st = document.createElement('span');
+  const fl = p.country ? countryFlag(p.country) : '';
+  st.textContent = (fl ? fl + ' ' : '') + (p.country ? dispCountry(p.country) + ' · ' : '') +
+    (p.online ? T('frOnline') : T('frOffline'));
+  sub.appendChild(st);
+  meta.appendChild(nm);
+  meta.appendChild(sub);
+  who.appendChild(meta);
+  row.appendChild(who);
+  const act = document.createElement('div');
+  act.className = 'fr-actions';
+  actions.forEach((a) => act.appendChild(a));
+  row.appendChild(act);
+  return row;
+}
+function frEmpty(text) {
+  const d = document.createElement('div');
+  d.className = 'fr-empty';
+  d.textContent = text;
+  return d;
+}
+
+function renderFriends() {
+  updateFriendsBadge();
+  if ($('#scr-friends').classList.contains('hidden')) return;
+  const code = myLobbyCode();
+  const banner = $('#fr-lobby-banner');
+  if (code) { banner.textContent = T('frLobbyBanner', code); banner.classList.remove('hidden'); }
+  else banner.classList.add('hidden');
+
+  // search results
+  const resBox = $('#fr-results');
+  resBox.innerHTML = '';
+  frSearchResults.forEach((p) => {
+    // The relation is derived from the LIVE lists at paint time, not
+    // frozen at search time: a request accepted since the search
+    // must not still offer «دوست کېدل» on the stale row, and a
+    // player blocked since the search drops off it entirely (the
+    // server excludes blocked relations from fresh results too).
+    if (socialData && socialData.blocked.some((f) => f.id === p.id)) return;
+    let rel = p.relation;
+    if (socialData) {
+      if (socialData.friends.some((f) => f.id === p.id)) rel = 'friend';
+      else if (socialData.outgoing.some((f) => f.id === p.id)) rel = 'outgoing';
+      else if (socialData.incoming.some((f) => f.id === p.id)) rel = 'incoming';
+      else rel = 'none';
+    }
+    let btn;
+    if (rel === 'friend') btn = frBtn(T('frIsFriend'), '', null);
+    else if (rel === 'outgoing') btn = frBtn(T('frPending'), '', null);
+    else if (rel === 'incoming') btn = frBtn(T('frRespond'), 'primary', () => {
+      const inc = $('#fr-incoming');
+      if (inc) inc.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    else btn = frBtn(T('frAdd'), 'primary', () => socialSend({ type: 's-request', to: p.id }));
+    resBox.appendChild(personRow(p, [btn]));
+  });
+  if (frSearched && !frSearchResults.length) resBox.appendChild(frEmpty(T('frNoResults')));
+
+  if (!socialData) return;
+  // incoming requests (+ my outgoing below them)
+  const incBox = $('#fr-incoming');
+  incBox.innerHTML = '';
+  if (!socialData.incoming.length && !socialData.outgoing.length) {
+    incBox.appendChild(frEmpty(T('frNoRequests')));
+  }
+  socialData.incoming.forEach((p) => {
+    incBox.appendChild(personRow(p, [
+      frBtn(T('frAccept'), 'primary', () => socialSend({ type: 's-respond', from: p.id, accept: true })),
+      frBtn(T('frReject'), '', () => socialSend({ type: 's-respond', from: p.id, accept: false })),
+    ]));
+  });
+  const outBox = $('#fr-outgoing');
+  outBox.innerHTML = '';
+  socialData.outgoing.forEach((p) => {
+    outBox.appendChild(personRow(p, [frBtn(T('frPending'), '', null)]));
+  });
+
+  // friends (⋯ expansion state dies with the row: an unfriended /
+  // blocked friend who is later re-added starts collapsed again)
+  frExpanded.forEach((id) => {
+    if (!socialData.friends.some((f) => f.id === id)) frExpanded.delete(id);
+  });
+  const listBox = $('#fr-list');
+  listBox.innerHTML = '';
+  if (!socialData.friends.length) listBox.appendChild(frEmpty(T('frNoFriends')));
+  socialData.friends.forEach((p) => {
+    const actions = [frBtn('💬 ' + T('frChat'), '', () => openDm(p), dmUnread.get(p.id) || 0)];
+    if (code) {
+      actions.push(frBtn('🎮 ' + T('frInvite'), 'primary', () => {
+        if (!p.online) { toast(T('frOfflineToast', p.name || '')); return; }
+        socialSend({ type: 's-invite', to: p.id, code });
+      }));
+    }
+    actions.push(frBtn('⋯', '', () => {
+      if (frExpanded.has(p.id)) frExpanded.delete(p.id); else frExpanded.add(p.id);
+      renderFriends();
+    }));
+    listBox.appendChild(personRow(p, actions));
+    if (frExpanded.has(p.id)) {
+      const sub = document.createElement('div');
+      sub.className = 'fr-actions';
+      sub.style.cssText = 'justify-content:flex-end;padding:2px 2px 8px;';
+      sub.appendChild(frBtn(T('frUnfriend'), '', () => askConfirm(
+        T('frConfirmUnfriendT'), T('frConfirmUnfriendB', p.name || ''), T('frConfirmYes'),
+        () => socialSend({ type: 's-unfriend', id: p.id }))));
+      sub.appendChild(frBtn(T('frBlock'), 'danger', () => askConfirm(
+        T('frConfirmBlockT'), T('frConfirmBlockB', p.name || ''), T('frConfirmYes'),
+        () => socialSend({ type: 's-block', id: p.id }))));
+      listBox.appendChild(sub);
+    }
+  });
+
+  // blocked
+  const blkBox = $('#fr-blocked');
+  blkBox.innerHTML = '';
+  if (!socialData.blocked.length) blkBox.appendChild(frEmpty(T('frNoBlocked')));
+  socialData.blocked.forEach((p) => {
+    blkBox.appendChild(personRow(p, [
+      frBtn(T('frUnblock'), '', () => socialSend({ type: 's-unblock', id: p.id })),
+    ]));
+  });
+}
+
+function doFrSearch() {
+  const q = $('#fr-search-inp').value.trim();
+  if (!q) { frSearched = false; frSearchResults = []; renderFriends(); return; }
+  frSearched = true;
+  connectSocial();
+  socialSend({ type: 's-search', q });
+}
+$('#btn-fr-search').onclick = doFrSearch;
+$('#fr-search-inp').addEventListener('keydown', (e) => { if (e.key === 'Enter') doFrSearch(); });
+
+// ---------- friend DM ----------
+function openDm(p) {
+  dmPeer = p;
+  cachePerson(p);
+  dmUnread.delete(p.id);
+  updateFriendsBadge();
+  $('#scr-dm').classList.remove('hidden');
+  paintDmPeer();
+  renderDmThread();
+  socialSend({ type: 's-dm-history', with: p.id });
+}
+function paintDmPeer() {
+  if (!dmPeer) return;
+  const p = socialPeople.get(dmPeer.id) || dmPeer;
+  const av = $('#dm-peer-av');
+  av.innerHTML = '';
+  av.appendChild(avatarEl(p.name, p.avatar, 38, p.photo));
+  $('#dm-peer-name').textContent = p.name || '';
+  const fl = p.country ? countryFlag(p.country) : '';
+  $('#dm-peer-sub').textContent = (fl ? fl + ' ' : '') + (p.country ? dispCountry(p.country) + ' · ' : '') +
+    (p.online ? T('frOnline') : T('frOffline'));
+}
+function renderDmThread() {
+  if (!dmPeer) return;
+  paintDmPeer();
+  const box = $('#dm-msgs');
+  box.innerHTML = '';
+  const th = dmThreads.get(dmPeer.id) || [];
+  if (!th.length) {
+    const d = frEmpty(T('frDmEmpty'));
+    d.style.textAlign = 'center';
+    box.appendChild(d);
+    return;
+  }
+  th.forEach((m) => {
+    const b = document.createElement('div');
+    b.className = 'dm-bub ' + (m.from === socialMe ? 'mine' : 'theirs');
+    b.textContent = m.text;
+    const ts = document.createElement('span');
+    ts.className = 'dm-ts';
+    ts.textContent = new Date(m.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    b.appendChild(ts);
+    box.appendChild(b);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+$('#btn-dm-back').onclick = () => {
+  $('#scr-dm').classList.add('hidden');
+  dmPeer = null;
+  renderFriends();
+};
+function sendDm() {
+  const inp = $('#dm-inp');
+  const text = inp.value.slice(0, 500);
+  if (!text.trim() || !dmPeer) return;
+  socialSend({ type: 's-dm', to: dmPeer.id, text });
+  inp.value = '';
+}
+$('#btn-dm-send').onclick = sendDm;
+$('#dm-inp').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendDm(); });
+
+// ---------- lobby invite popup ----------
+// One popup at a time; further invites queue behind it. The popup
+// auto-dismisses after ~30 s and an auto-dismiss sends NO reply —
+// silence is not a rejection.
+function showNextInvite() {
+  inviteCurrent = inviteQueue.shift() || null;
+  const ov = $('#ov-invite');
+  if (!inviteCurrent) { ov.classList.remove('show'); return; }
+  const p = inviteCurrent.from;
+  const av = $('#inv-av');
+  av.innerHTML = '';
+  av.appendChild(avatarEl(p.name, p.avatar, 52, p.photo));
+  $('#inv-name').textContent = p.name || '';
+  // The inviter's name shows ONCE — in the header beside the avatar
+  // (owner order 2026-11-08); the body sentence carries no name.
+  $('#inv-text').textContent = T('frInviteText');
+  $('#inv-code').textContent = T('frInviteRoom', inviteCurrent.code);
+  ov.classList.add('show');
+  clearTimeout(inviteTimer);
+  inviteTimer = setTimeout(() => dismissInvite(false), 30000);
+}
+function dismissInvite(sendReply, accept) {
+  const cur = inviteCurrent;
+  clearTimeout(inviteTimer);
+  inviteCurrent = null;
+  $('#ov-invite').classList.remove('show');
+  if (cur && sendReply) {
+    socialSend({ type: 's-invite-reply', from: cur.from.id, code: cur.code, accept: !!accept });
+  }
+  if (inviteQueue.length) showNextInvite();
+}
+$('#btn-inv-accept').onclick = () => {
+  const cur = inviteCurrent;
+  dismissInvite(true, true);
+  if (cur) {
+    closeFriends();
+    $('#scr-dm').classList.add('hidden');
+    dmPeer = null;
+    joinRoomWithCode(cur.code);
+  }
+};
+$('#btn-inv-reject').onclick = () => dismissInvite(true, false);
+
+// ---------- generic confirm (unfriend / block) ----------
+function askConfirm(title, body, yesLabel, cb) {
+  $('#cf-title').textContent = title;
+  $('#cf-body').textContent = body;
+  $('#btn-cf-yes').textContent = yesLabel;
+  confirmCb = cb;
+  $('#ov-confirm').classList.add('show');
+}
+$('#btn-cf-yes').onclick = () => {
+  $('#ov-confirm').classList.remove('show');
+  const cb = confirmCb;
+  confirmCb = null;
+  if (cb) cb();
+};
+$('#btn-cf-no').onclick = () => {
+  $('#ov-confirm').classList.remove('show');
+  confirmCb = null;
+};
+
+// The friends screens re-render on a language switch (applyI18n hook).
+window.__frRender = () => { renderFriends(); if (dmPeer) renderDmThread(); };
+// The social socket lives for the whole app session.
+connectSocial();
 
 // resume a previous session on load
 if (session && session.code && session.token) {
@@ -5040,7 +6139,7 @@ function attachPlayHandlers(el, code) {
 // else on the game screen the blanket cancel stays.
 document.addEventListener('touchmove', (e) => {
   if ($('#scr-game').classList.contains('hidden')) return;
-  if (e.target && e.target.closest && e.target.closest('#chatpanel')) return;
+  if (e.target && e.target.closest && e.target.closest('#chatpanel, #scr-friends, #scr-dm')) return;
   e.preventDefault();
 }, { passive: false });
 
@@ -5331,7 +6430,7 @@ function renderLobby(st) {
   st.seats.forEach((s, i) => {
     const row = document.createElement('div');
     row.className = 'seatrow';
-    const team = i % 2 === 0 ? T('teamA') : T('teamB');
+    row.dataset.seat = i;
     const main = document.createElement('span');
     main.className = 'sr-main';
     if (s.kind === 'empty') {
@@ -5350,11 +6449,33 @@ function renderLobby(st) {
       nm.className = 'sr-name';
       nm.textContent = dispName(s) + (i === mySeat ? T('youSuffix') : '');
       main.appendChild(nm);
+      // live-mic dot beside the lobby avatar, same as the table badge
+      if (vflags(i).mic) {
+        const dot = document.createElement('span');
+        dot.className = 'vmic';
+        dot.textContent = '🎤';
+        main.appendChild(dot);
+      }
     }
+    // Meta slot: NO team label any more (owner order 2026-11-08) —
+    // a human shows their country's flag + name, a bot shows 🤖, the
+    // host keeps the host mark; empty seats show nothing.
     const meta = document.createElement('span');
     meta.className = 'teamtag';
-    meta.textContent = (s.kind !== 'empty' && s.country ? dispCountry(s.country) + ' · ' : '') +
-      team + (i === st.hostSeat ? ' · ' + T('hostTag') : '');
+    if (s.kind === 'bot') {
+      meta.textContent = '🤖' + (i === st.hostSeat ? ' · ' + T('hostTag') : '');
+    } else if (s.kind !== 'empty') {
+      const fl = s.country ? countryFlag(s.country) : '';
+      meta.textContent = (s.country ? (fl ? fl + ' ' : '') + dispCountry(s.country) + (i === st.hostSeat ? ' · ' : '') : '') +
+        (i === st.hostSeat ? T('hostTag') : '');
+    }
+    // Another HUMAN's row is tappable: it opens the small player
+    // menu (friend request + profile view). Bots, empty seats and
+    // my own row open nothing.
+    if (s.kind === 'human' && i !== mySeat) {
+      row.classList.add('tappable');
+      row.addEventListener('click', () => openPlayerMenu(i));
+    }
     row.appendChild(main);
     row.appendChild(meta);
     box.appendChild(row);
