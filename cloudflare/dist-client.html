@@ -3,6 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<script>
+  // Android phones render the game's items a bit too large (the menu
+  // overflows and the bottom nav is cut off). On Android only, start the
+  // page at 85% viewport scale: the browser lays everything out on a
+  // slightly larger canvas and paints it ~15% smaller, so every item
+  // shrinks and the whole menu fits. Layout and JS geometry stay in one
+  // coordinate system, so the card flights are unaffected. (CSS zoom was
+  // tried first and rejected: it shrinks the fixed 100dvh screens to the
+  // top ~85% of the screen and breaks rect->style flight geometry.)
+  // iPhone/desktop keep the original scale-1 viewport, untouched.
+  if (/Android/i.test(navigator.userAgent)) {
+    document.querySelector('meta[name="viewport"]').setAttribute('content',
+      'width=device-width, initial-scale=0.85, maximum-scale=1, user-scalable=no');
+  }
+</script>
 <title>توره — د قندهار ورق لوبه</title>
 <!--
   Asset credits:
