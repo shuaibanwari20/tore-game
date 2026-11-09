@@ -194,6 +194,13 @@ export class GameServer {
     this.authEnabled = env.AUTH_ENABLED === '1';
     this.social = null; // SocialCore, lazily built by _ensureSocial()
     this._pendingDeletes = new Set(); // room codes whose storage key still needs deleting
+    this._reapedRooms = new Set(); // rooms mutated by a social-side reap; persisted after the message
+    // Busy-flag liveness window (stale-busy fix, 2026-11-09): a
+    // seat counts toward "busy" while connected or disconnected
+    // inside this grace. TORE_BUSY_GRACE_MS is a test lever only;
+    // production uses the reconnect grace.
+    const bgv = Number(env && env.TORE_BUSY_GRACE_MS);
+    this.busyGraceMs = (Number.isFinite(bgv) && bgv >= 0) ? bgv : RECONNECT_GRACE_MS;
 
     state.blockConcurrencyWhile(async () => {
       // Timers (their own small key; the legacy blob carried them too).
@@ -489,6 +496,7 @@ export class GameServer {
       inviteRoomCheck: (id, code) => this._socialRoomCheck(id, code),
       inGameCheck: (id) => this._isInGame(id),
       inLobbyCheck: (id) => this._isInLobby(id),
+      verifyBusy: (id) => this._verifyBusy(id),
     });
     const saved = await this.state.storage.get('social:v1').catch(() => null);
     if (saved) core.load(saved);
@@ -512,11 +520,22 @@ export class GameServer {
     }
   }
 
+  // Busy-flag liveness (stale-busy fix, 2026-11-09): a seat counts
+  // toward "busy" only while its player is actually there —
+  // connected, or disconnected inside the busy grace (a transient
+  // drop; the client auto-reconnects within seconds). A lobby seat
+  // stays RESERVED past that (the sweep never expires a waiting
+  // room, so the player can always reconnect back into it), but a
+  // long-dead seat must not report its owner busy forever.
+  _seatLive(s) {
+    return s.connected || (!!s.disconnectAt && Date.now() - s.disconnectAt <= this.busyGraceMs);
+  }
+
   _isInGame(id) {
     if (!id) return false;
     for (const room of this.rooms.values()) {
       if (room.phase === 'lobby') continue;
-      if (room.seats.some((s) => s.kind === 'human' && s.sid === id)) return true;
+      if (room.seats.some((s) => s.kind === 'human' && s.sid === id && this._seatLive(s))) return true;
     }
     return false;
   }
@@ -527,9 +546,63 @@ export class GameServer {
     if (!id) return false;
     for (const room of this.rooms.values()) {
       if (room.phase !== 'lobby') continue;
-      if (room.seats.some((s) => s.kind === 'human' && s.sid === id)) return true;
+      if (room.seats.some((s) => s.kind === 'human' && s.sid === id && this._seatLive(s))) return true;
     }
     return false;
+  }
+
+  // Invite-time verification (stale-busy fix, 2026-11-09): re-check
+  // the busy claim against live room state. Every seat of this
+  // identity that is NOT live (socket dead past the busy grace —
+  // the app was closed without leaving) is reaped on the spot: a
+  // lobby seat is freed (the first remaining human becomes host,
+  // exactly like a guest leaving; a lobby left with no humans is
+  // deleted), an in-match seat gets the sweep's bot conversion.
+  // The corrected presence is pushed via _syncBusyFor, and the
+  // VERIFIED state is returned: 'match' | 'lobby' | ''. Live seats
+  // verify unchanged. Mutated rooms are queued in _reapedRooms —
+  // _socialMessage persists them once the core call returns.
+  _verifyBusy(id) {
+    if (!id) return '';
+    let state = '';
+    for (const room of [...this.rooms.values()]) {
+      let changed = false;
+      room.seats.forEach((s, i) => {
+        if (s.kind !== 'human' || s.sid !== id) return;
+        if (this._seatLive(s)) {
+          if (room.phase !== 'lobby') state = 'match';
+          else if (!state) state = 'lobby';
+          return;
+        }
+        if (room.phase === 'lobby') {
+          room.seats[i] = emptySeat();
+        } else {
+          s.kind = 'bot'; // bot takes over the seat and its hand
+          s.avatar = null;
+          s.country = '';
+          s.photo = null;
+          s.sid = null;
+          s.voiceMic = false;
+          s.voiceSpeaker = false;
+          s.connected = true;
+          s.disconnectAt = null;
+          this._pumpTurn(room);
+        }
+        changed = true;
+      });
+      if (changed) {
+        this._reapedRooms.add(room.code);
+        this._broadcastState(room);
+        const anyHuman = room.seats.some((s) => s.kind === 'human');
+        if (!anyHuman) {
+          this._cancelTimers(room.code);
+          this.rooms.delete(room.code);
+          this._pendingDeletes.add(room.code);
+        }
+      }
+    }
+    this._syncBusyFor(null, [id]);
+    return state;
   }
 
   _syncBusyFor(room, extraSids) {
@@ -588,6 +661,14 @@ export class GameServer {
     }
     if (!att.sid) return; // hello first
     core.handleMessage(att.sid, msg);
+    // An invite may have reaped stale seats (see _verifyBusy): the
+    // social path returns before webSocketMessage's trailing
+    // persist, so flush the mutated rooms (and any room deletion)
+    // here — a reap must survive a DO eviction like any mutation.
+    if (this._reapedRooms.size) {
+      this._reapedRooms.clear();
+      await this._persist();
+    }
   }
 
   _socialDisconnect(ws) {
