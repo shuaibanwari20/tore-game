@@ -6748,6 +6748,16 @@ function onSocialMsg(m) {
     clDisc = m;
     clDiscAt = Date.now();
     renderClubs();
+    // a live re-query (s-clubs-changed) hands the scroll back —
+    // the grid rebuild must not throw the browsing player to the
+    // top of the list (manual refreshes keep the natural reset)
+    if (clLiveScroll !== null) {
+      const sc = $('#cl-disc-scroll');
+      if (sc) sc.scrollTop = clLiveScroll;
+      clLiveScroll = null;
+    }
+  } else if (m.type === 's-clubs-changed') {
+    onClubsChanged();
   } else if (m.type === 's-club-view-result') {
     clPublic = m.club || null;
     if (clPublic) { renderClubPublic(); $('#ov-clubview').classList.add('show'); }
@@ -7675,6 +7685,9 @@ let clCountryFilter = '';        // canonical country name or '' (global)
 let clCountryMore = false;       // the «نور» country select is open
 let clDisc = null;               // last s-club-discover-result payload
 let clDiscAt = 0;                // when it arrived (soft-refresh throttle)
+let clLiveTimer = null;          // pending live re-query (s-clubs-changed debounce)
+let clLiveScroll = null;         // discovery scrollTop saved across a live re-render
+let clClubsDirty = false;        // a change landed while the clubs screen was away
 let clPodIdx = 0;                // podium carousel centre index
 let clPodTimer = null;
 let clPublic = null;             // public club page payload (s-club-view-result)
@@ -7691,6 +7704,7 @@ function openClubs() {
   $('#scr-clubseatreqs').classList.add('hidden');
   $('#scr-clubs').classList.remove('hidden');
   clubUnread = 0;
+  clClubsDirty = false; // the entry query below settles any missed change
   connectSocial();
   requestDiscover();
   renderClubs();
@@ -7726,6 +7740,36 @@ function requestDiscover() {
   connectSocial();
   socialSend({ type: 's-club-discover', tab: clTab, country: clTab === 'mine' ? '' : clCountryFilter });
 }
+// Live discovery sync (2026-11-09): the server broadcasts the
+// payload-free s-clubs-changed whenever the club catalogue moves
+// (a club created / edited / dissolved, a like, a join / leave /
+// kick, a transfer). An open discovery page re-runs its CURRENT
+// query — same tab, same country filter, same search text — so a
+// club created on another phone appears at once, no refresh, no
+// re-entry (Shuaib's live report). Bursts coalesce behind one
+// 300 ms timer. Overlays sitting on discovery (create form,
+// public page, popups) are never closed or re-anchored: the grid
+// simply repaints underneath them. Away from the clubs screen we
+// only mark it dirty — entering re-queries as it always has.
+function onClubsChanged() {
+  if ($('#scr-clubs').classList.contains('hidden')) { clClubsDirty = true; return; }
+  if (clLiveTimer) return;
+  const sc = $('#cl-disc-scroll');
+  clLiveScroll = sc ? sc.scrollTop : null;
+  clLiveTimer = setTimeout(() => {
+    clLiveTimer = null;
+    requestDiscover();
+    if (clubSearched) {
+      const q = $('#cl-search-inp').value.trim();
+      if (q) { connectSocial(); socialSend({ type: 's-club-search', q }); }
+    }
+  }, 300);
+}
+// Belt-and-braces: returning to the tab re-queries too, in case a
+// signal was missed while the page slept.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && !$('#scr-clubs').classList.contains('hidden')) requestDiscover();
+});
 function clubRow(summary, actions) {
   const row = document.createElement('div');
   row.className = 'fr-row';
