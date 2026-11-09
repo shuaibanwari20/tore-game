@@ -50,9 +50,11 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261109-clubs2';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261109-clubpage';
 const STICKER_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/stickers/';
+const COVER_URL_BASE_DEFAULT =
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/covers/';
 const CLIENT_MIN_BYTES = 3_000_000; // the real bundle is ~3.1 MB
 const CLIENT_CACHE_TTL = 86400; // seconds the edge keeps the client copy
 
@@ -170,6 +172,39 @@ async function serveSticker(env, name) {
         });
         if (cache) { try { await cache.put(cacheKey, gif.clone()); } catch { /* serve anyway */ } }
         return gif;
+      }
+    }
+  } catch { /* fall through to 404 */ }
+  return new Response('not found', { status: 404 });
+}
+
+// The club cover gallery: 10 real photo covers, static files in
+// the repo (cloudflare/covers/<id>.jpg), served exactly like the
+// stickers — public, edge-cached. Uploaded owner covers are NOT
+// here: they live in DO storage behind /club-cover/<cid>.
+async function serveCover(env, name) {
+  const src = (env.COVERS_URL || COVER_URL_BASE_DEFAULT) + name;
+  const cacheKey = new Request(src, { method: 'GET' });
+  let cache = null;
+  try {
+    cache = caches.default;
+    const hit = await cache.match(cacheKey);
+    if (hit) return hit;
+  } catch { cache = null; }
+
+  try {
+    const res = await fetch(src, { headers: { 'User-Agent': 'tore-game-worker' } });
+    if (res.ok) {
+      const buf = await res.arrayBuffer();
+      if (buf.byteLength > 0) {
+        const jpg = new Response(buf, {
+          headers: {
+            'Content-Type': 'image/jpeg',
+            'Cache-Control': 'public, max-age=' + CLIENT_CACHE_TTL,
+          },
+        });
+        if (cache) { try { await cache.put(cacheKey, jpg.clone()); } catch { /* serve anyway */ } }
+        return jpg;
       }
     }
   } catch { /* fall through to 404 */ }
@@ -341,6 +376,43 @@ export default {
       const name = path.slice('/stickers/'.length);
       if (/^st([1-9]|1[0-6])\.gif$/.test(name)) return serveSticker(env, name);
       return new Response('not found', { status: 404 });
+    }
+
+    if (path.startsWith('/covers/') && request.method === 'GET') {
+      // Club cover gallery photos: only the 10 known ids exist.
+      // Public like the stickers — no session needed to load one.
+      const name = path.slice('/covers/'.length);
+      if (/^(mountains|mosque|caravan|pomegranate|city|carpet|eagle|river|tent|trophy)\.jpg$/.test(name)) return serveCover(env, name);
+      return new Response('not found', { status: 404 });
+    }
+
+    if (path === '/club-cover' && request.method === 'POST') {
+      // A club owner uploads his club's cover photo. The bytes go
+      // to the social DO, which stores them under the club id and
+      // flips the club record to cover 'custom'. Session rules are
+      // exactly the game's: with the gate on, no cookie = 401, and
+      // the identity the DO trusts comes from the verified session
+      // (x-tore-user) — a client-sent x-tore-pid is honoured ONLY
+      // with the gate off (local/dev parity with the Node hosts).
+      const user = await auth.readSession(request, env);
+      if (authEnabled && !user) {
+        return new Response('unauthorized — sign in first', { status: 401 });
+      }
+      const stub = env.GAME.get(env.GAME.idFromName('global'));
+      const headers = new Headers(request.headers);
+      if (user) { headers.set('x-tore-user', JSON.stringify(user)); headers.delete('x-tore-pid'); }
+      else headers.delete('x-tore-user');
+      return stub.fetch(new Request(request, { headers }));
+    }
+
+    if (path.startsWith('/club-cover/') && request.method === 'GET') {
+      // An uploaded club cover: public read (like the stickers) —
+      // the ?v=<coverV> query is the cache buster. The DO owns the
+      // bytes; a dissolved club or a gallery switch answers 404.
+      const cid = path.slice('/club-cover/'.length);
+      if (!/^\d{6}$/.test(cid)) return new Response('not found', { status: 404 });
+      const stub = env.GAME.get(env.GAME.idFromName('global'));
+      return stub.fetch(request);
     }
 
     if (path === '/ws') {
