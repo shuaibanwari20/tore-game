@@ -141,6 +141,31 @@
  * with the verified state ('match' | 'lobby' | ''). A genuinely
  * seated player verifies unchanged, so the rejections above are
  * identical for them.
+ *
+ * Open entry — visitor mode (2026-11-09, owner order): entering
+ * a club no longer needs the founder's approval. ANY signed-in
+ * player may walk into ANY club's room as a GUEST (میلمه): he
+ * sees the room live, LISTENS in the voice room and POSTS club
+ * chat like a member. Membership (join request / invite) still
+ * exists for the member list + roles, but is NOT required to
+ * enter. The ONLY founder-gated act left is sitting in a mic
+ * seat, through the same owner-approved seat-request list —
+ * the owner's rows flag guests with visitor:true so he knows.
+ * Presence is RUNTIME ONLY (clubVisitors / clubVisitOf, never
+ * persisted): s-club-visit {club} enters, s-club-unvisit
+ * leaves; presence also ends on disconnect, dissolve, and on
+ * joining/creating a club (joining the VISITED club upgrades
+ * the session in place — seat and voice carry over). The
+ * visitor's state ships as s-club-visit {club} carrying a
+ * visitor variant of the club view (relation 'visitor',
+ * myRole null, seatReqs/requests ALWAYS empty). Room-bound
+ * operations (chat, voice join, mic, seat sit/stand/request)
+ * resolve through _roomClub(): the visited club when visiting,
+ * else the member club — so members behave exactly as before.
+ * The s-rtc relay gate extends to (member OR present-visitor
+ * of the same room club), keeping the hibernation self-heal.
+ * Protocol additions (client -> server): s-club-visit,
+ * s-club-unvisit. (server -> client): s-club-visit.
  */
 'use strict';
 
@@ -237,6 +262,12 @@ class SocialCore {
     // playerId) -> {club, from, seat, ts}. Never persisted; a
     // restart simply drops pending asks.
     this.clubSeatReqs = new Map();
+    // Open entry (visitor mode) — RUNTIME ONLY, never persisted:
+    // who is standing in whose club room as a guest. A DO wake
+    // starts both maps empty; clients re-visit through their
+    // reconcile, exactly like members re-join the voice room.
+    this.clubVisitors = new Map(); // cid -> Set<playerId>
+    this.clubVisitOf = new Map();  // playerId -> cid
     // Live discovery sync (2026-11-09): a runtime-only version
     // counter for the club catalogue. Every mutation that changes
     // what s-club-discover shows bumps it and broadcasts the
@@ -348,8 +379,16 @@ class SocialCore {
     // from person() data too) — the club page must flip live like
     // the friends page does.
     const club = this.clubOf.has(id) ? this.clubs.get(this.clubOf.get(id)) : null;
-    if (club) for (const m of club.members) {
-      if (m.id !== id && this.isOnline(m.id) && !(set && set.has(m.id))) this._send(m.id, msg);
+    if (club) {
+      for (const m of club.members) {
+        if (m.id !== id && this.isOnline(m.id) && !(set && set.has(m.id))) this._send(m.id, msg);
+      }
+      // Guests standing in the room render the same member rows:
+      // a member coming online/offline flips live for them too.
+      const vis = this.clubVisitors.get(club.cid);
+      if (vis) for (const v of vis) {
+        if (v !== id && this.isOnline(v) && !(set && set.has(v))) this._send(v, msg);
+      }
     }
   }
 
@@ -475,6 +514,10 @@ class SocialCore {
     this._persist();
     this._send(id, { type: 's-init', me: id, uid: uid || null, ...this.listsFor(id) });
     this.refreshClub(id, true); // the clubs state rides right behind the init
+    // A guest visit that survived (same core instance, sockets
+    // reconnected) re-ships its room state behind the init too,
+    // so a reconnected visitor's room is whole again at once.
+    if (this.clubVisitOf.has(id)) this.refreshVisitor(id, true);
   }
 
   // ---------- message entry ----------
@@ -517,6 +560,8 @@ class SocialCore {
       case 's-club-seat-request-cancel': return this.clubSeatRequestCancel(id);
       case 's-club-seat-respond': return this.clubSeatRespond(id, msg.from, msg.accept === true);
       case 's-club-stand': return this.clubStand(id);
+      case 's-club-visit': return this.clubVisit(id, msg.club);
+      case 's-club-unvisit': return this.clubUnvisit(id);
       case 's-rtc': return this.rtcRelay(id, msg);
       default: break; // unknown social messages are ignored
     }
@@ -814,7 +859,9 @@ class SocialCore {
     return [...this.clubSeatReqs.values()]
       .filter((r) => r.club === cid)
       .sort((a, b) => a.ts - b.ts)
-      .map((r) => ({ ...this.person(r.from), seat: r.seat, ts: r.ts }));
+      // visitor:true marks a GUEST's ask (open entry) — the
+      // owner's list rows carry a «میلمه» chip for those.
+      .map((r) => ({ ...this.person(r.from), seat: r.seat, ts: r.ts, visitor: this.clubOf.get(r.from) !== cid }));
   }
   _clubVoiceIds(cid) {
     const room = this.clubVoice.get(cid);
@@ -866,6 +913,97 @@ class SocialCore {
     const club = this.clubs.get(cid);
     if (!club) return;
     for (const m of club.members) this.refreshClub(m.id, withChat);
+    this.fanVisitors(cid, withChat); // guests in the room see the same changes live
+  }
+  // ---------- open entry: visitor presence (runtime only) ----------
+  // The club a player is standing in: the VISITED club while he
+  // is a guest there, otherwise his own (member) club. Every
+  // room-bound operation resolves through this, so a member in
+  // his own room behaves exactly as before open entry existed.
+  _roomClub(id) {
+    const vc = this.clubVisitOf.get(id);
+    if (vc) { const c = this.clubs.get(vc); if (c) return c; }
+    return this._clubOf(id);
+  }
+  _roomCid(id) {
+    const c = this._roomClub(id);
+    return c ? c.cid : null;
+  }
+  // The visitor variant of the club view: the same room shape
+  // (summary, member list for display, seats, voice, chat tail)
+  // with relation 'visitor' and myRole null — and the owner-only
+  // fields (seatReqs, join requests) are ALWAYS empty here.
+  clubVisitorView(cid, forId, withChat) {
+    const club = this.clubs.get(cid);
+    if (!club) return null;
+    const rank = { owner: 0, deputy: 1, member: 2 };
+    const members = club.members.map((m) => ({ ...this.person(m.id), role: m.role }))
+      .sort((a, b) => (rank[a.role] - rank[b.role]) || (b.online - a.online) || a.name.localeCompare(b.name));
+    const view = {
+      ...this.clubSummary(club, forId),
+      visitor: true,
+      myRole: null,
+      members,
+      seats: this._clubSeatsView(cid),
+      voice: this._clubVoiceIds(cid),
+      seatReqs: [],
+      requests: [],
+    };
+    view.relation = 'visitor';
+    if (withChat) {
+      view.chat = (this.clubChat.get(cid) || []).map((m) => {
+        const p = this.person(m.from);
+        return { from: m.from, name: p.name, avatar: p.avatar, photo: p.photo, text: m.text, ts: m.ts };
+      });
+    }
+    return view;
+  }
+  refreshVisitor(id, withChat) {
+    const cid = this.clubVisitOf.get(id);
+    if (!cid || !this.isOnline(id)) return;
+    const view = this.clubVisitorView(cid, id, withChat);
+    if (view) this._send(id, { type: 's-club-visit', club: view });
+  }
+  fanVisitors(cid, withChat) {
+    const set = this.clubVisitors.get(cid);
+    if (!set) return;
+    for (const v of [...set]) this.refreshVisitor(v, withChat);
+  }
+  // s-club-visit {club}: walk into a club's room as a guest —
+  // no approval, no membership. One visit at a time; visiting
+  // my OWN club is not a visit at all (the member room is the
+  // room) and just re-ships the member state. Re-visiting the
+  // same club is the wake/reconnect heal: presence re-registers
+  // and the full visitor payload comes back.
+  clubVisit(id, cidRaw) {
+    const cid = (typeof cidRaw === 'string' ? cidRaw : '').replace(/\D/g, '').slice(0, 6);
+    const club = this.clubs.get(cid);
+    if (!club || this.blockedEither(id, club.owner)) return this._error(id, 'clubNotFound');
+    if (this.clubOf.get(id) === cid) { this.refreshClub(id, true); return; }
+    const prev = this.clubVisitOf.get(id);
+    if (prev && prev !== cid) this._dropVisit(id); // one room at a time
+    if (!this.clubVisitors.has(cid)) this.clubVisitors.set(cid, new Set());
+    this.clubVisitors.get(cid).add(id);
+    this.clubVisitOf.set(id, cid);
+    this._send(id, { type: 's-club-visit', club: this.clubVisitorView(cid, id, true) });
+  }
+  clubUnvisit(id) {
+    if (!this.clubVisitOf.has(id)) return;
+    this._dropVisit(id);
+    this._send(id, { type: 's-club-visit', club: null });
+  }
+  // Ends id's guest presence in the club he is visiting: his
+  // pending seat ask, seat, mic flag and voice-room place in
+  // THAT club die with the presence (the same cleanup a member
+  // gets on voice-leave). No push — callers that must tell the
+  // client send s-club-visit {club:null} themselves.
+  _dropVisit(id) {
+    const cid = this.clubVisitOf.get(id);
+    if (!cid) return;
+    this.clubVisitOf.delete(id);
+    const set = this.clubVisitors.get(cid);
+    if (set) { set.delete(id); if (!set.size) this.clubVisitors.delete(cid); }
+    this._clubPresenceGone(cid, id);
   }
   // Joining by ANY path: membership lands, and the joiner's other
   // pending business (outgoing requests elsewhere, invites) is
@@ -873,6 +1011,24 @@ class SocialCore {
   // affected clubs' managers get a refresh so their request lists
   // drop the name at once.
   _joinClub(id, club) {
+    // Open entry: joining ends any visit. Joining the VISITED
+    // club upgrades the session IN PLACE — only the guest
+    // bookkeeping goes; his seat, mic flag and voice-room place
+    // carry over untouched. A visit elsewhere ends completely
+    // (presence cleanup in that room). No s-club-visit push is
+    // needed either way: the member payload below lands on a
+    // client whose membership just changed, and it clears its
+    // visitor state on that transition itself.
+    const vc = this.clubVisitOf.get(id);
+    if (vc) {
+      if (vc === club.cid) {
+        this.clubVisitOf.delete(id);
+        const set = this.clubVisitors.get(vc);
+        if (set) { set.delete(id); if (!set.size) this.clubVisitors.delete(vc); }
+      } else {
+        this._dropVisit(id);
+      }
+    }
     const touched = new Set();
     for (const [k, r] of [...this.clubRequests]) {
       if (r.from === id) { this.clubRequests.delete(k); if (r.club !== club.cid) touched.add(r.club); }
@@ -895,6 +1051,9 @@ class SocialCore {
 
   clubCreate(id, msg) {
     if (this.clubOf.has(id)) return this._error(id, 'clubInClub');
+    // Founding my own club ends any guest visit elsewhere —
+    // my room is my own club's room now.
+    if (this.clubVisitOf.has(id)) this._dropVisit(id);
     const name = this._cleanClubName(msg && msg.name);
     if (name.length < 2) return this._error(id, 'clubBadName');
     const cid = this._newClubId();
@@ -1180,6 +1339,11 @@ class SocialCore {
     if (!club) return;
     if (this._clubRole(club, id) !== 'owner') return this._error(id, 'clubNoPerm');
     const memberIds = club.members.map((m) => m.id);
+    // Guests standing in the room are ejected with the club:
+    // their visit ends and their clients are told the room is
+    // gone (empty voice-state + s-club-visit null), so they
+    // land back on discovery with no dangling room state.
+    const visitorIds = [...(this.clubVisitors.get(club.cid) || [])];
     const hadCustomCover = club.cover === CLUB_COVER_CUSTOM;
     // Pending seat requests die with the club.
     for (const [, r] of [...this.clubSeatReqs]) if (r.club === club.cid) this._clearSeatReq(r, 'gone');
@@ -1202,11 +1366,22 @@ class SocialCore {
       if (this.isOnline(mid)) this._send(mid, { type: 's-club-voice-state', club: club.cid, members: [], seats: [] });
       this.refreshClub(mid, true);
     }
+    for (const vid of visitorIds) {
+      if (this.clubVisitOf.get(vid) === club.cid) this.clubVisitOf.delete(vid);
+      if (this.isOnline(vid)) {
+        this._send(vid, { type: 's-club-voice-state', club: club.cid, members: [], seats: [] });
+        this._send(vid, { type: 's-club-visit', club: null });
+      }
+    }
+    this.clubVisitors.delete(club.cid);
     this._clubsChanged(); // the club is gone: open discovery pages drop it live
   }
 
   clubChatSend(id, text) {
-    const club = this._clubOf(id);
+    // Open entry: chat is a ROOM right, not a membership right —
+    // anyone present (member in his own room, or a guest
+    // visiting this room) posts; anyone not present is refused.
+    const club = this._roomClub(id);
     if (!club) return this._error(id, 'clubNoPerm');
     text = (typeof text === 'string' ? text : '').slice(0, DM_MAX_CHARS);
     if (!text.trim()) return;
@@ -1224,6 +1399,8 @@ class SocialCore {
     const p = this.person(id);
     const out = { type: 's-club-chat', club: club.cid, from: id, name: p.name, avatar: p.avatar, photo: p.photo, text, ts: now };
     for (const m of club.members) if (this.isOnline(m.id)) this._send(m.id, out);
+    const vis = this.clubVisitors.get(club.cid);
+    if (vis) for (const v of vis) if (this.isOnline(v)) this._send(v, out);
   }
 
   // ================= clubs v2: discovery / likes / voice =================
@@ -1317,17 +1494,20 @@ class SocialCore {
     const club = this.clubs.get(cid);
     if (!club) return;
     const mics = this.clubMic.get(cid);
+    // Seats carry the holder's person record too: a seated
+    // GUEST is in nobody's member list, and his name/avatar must
+    // still paint on every screen watching the room.
     const seats = [...(this.clubSeats.get(cid) || new Map()).entries()]
-      .map(([seat, pid]) => ({ seat, id: pid, mic: !!(mics && mics.has(pid)) })).sort((a, b) => a.seat - b.seat);
+      .map(([seat, pid]) => ({ seat, id: pid, person: this.person(pid), mic: !!(mics && mics.has(pid)) })).sort((a, b) => a.seat - b.seat);
     const msg = { type: 's-club-voice-state', club: cid, members: this._clubVoiceIds(cid), seats };
     for (const m of club.members) if (this.isOnline(m.id)) this._send(m.id, msg);
+    const vis = this.clubVisitors.get(cid);
+    if (vis) for (const v of vis) if (this.isOnline(v)) this._send(v, msg);
   }
-  // Frees id's seat + voice-room place in their club and fans the
-  // change. Called on voice-leave, club leave/kick and when the
-  // last social socket closes.
-  _clubVoiceGone(id) {
-    const cid = this.clubOf.get(id);
-    if (!cid) return;
+  // Frees id's seat + voice-room place IN CLUB cid and fans the
+  // change: the one presence cleanup every exit path shares
+  // (voice-leave, club leave/kick, visit end, socket close).
+  _clubPresenceGone(cid, id) {
     // My own pending seat ask dies with my club page (and with my
     // membership — club leave/kick call this too). The club's
     // OTHER waiting asks are untouched: the list waits for the
@@ -1346,10 +1526,19 @@ class SocialCore {
     if (room && room.delete(id)) { changed = true; if (!room.size) this.clubVoice.delete(cid); }
     if (changed) this._fanClubVoice(cid);
   }
+  // Voice-leave semantics for a whole player: his presence ends
+  // in his member club AND in any club he is visiting (a guest's
+  // voice-leave IS his visit ending — he was only ever there as
+  // a listener/seat-holder).
+  _clubVoiceGone(id) {
+    const cid = this.clubOf.get(id);
+    if (cid) this._clubPresenceGone(cid, id);
+    if (this.clubVisitOf.has(id)) this._dropVisit(id);
+  }
   clubVoiceSet(id, action) {
-    const club = this._clubOf(id);
     if (action === 'leave') { this._clubVoiceGone(id); return; }
     if (action !== 'join') return;
+    const club = this._roomClub(id);
     if (!club) return this._error(id, 'clubNoPerm');
     if (!this.clubVoice.has(club.cid)) this.clubVoice.set(club.cid, new Set());
     const room = this.clubVoice.get(club.cid);
@@ -1361,7 +1550,7 @@ class SocialCore {
   // the muted badge on his seat, fanned with the voice state.
   // Change-only: a repeat announce fans nothing out.
   clubMicSet(id, on) {
-    const club = this._clubOf(id);
+    const club = this._roomClub(id);
     if (!club) return;
     const cid = club.cid;
     if (!this.clubMic.has(cid)) this.clubMic.set(cid, new Set());
@@ -1372,12 +1561,13 @@ class SocialCore {
     this._fanClubVoice(cid);
   }
   clubSeatSit(id, seat, viaApproval) {
-    const club = this._clubOf(id);
+    const club = this._roomClub(id);
     if (!club) return this._error(id, 'clubNoPerm');
     // Sitting is approval-gated (owner order 2026-11-09): the
     // OWNER sits directly; everyone else's seat comes from an
     // approved seat request (clubSeatRespond calls this with
-    // viaApproval). A bare s-club-seat from a member is refused.
+    // viaApproval). A bare s-club-seat from a member — or from
+    // a visiting guest — is refused the same way.
     if (!viaApproval && this._clubRole(club, id) !== 'owner') return this._error(id, 'clubSeatReqNeeded');
     seat = Number(seat);
     if (!Number.isInteger(seat) || seat < 0 || seat >= CLUB_SEATS) return;
@@ -1394,7 +1584,7 @@ class SocialCore {
     this._fanClubVoice(club.cid);
   }
   clubStand(id) {
-    const cid = this.clubOf.get(id);
+    const cid = this._roomCid(id);
     if (!cid) return;
     const seats = this.clubSeats.get(cid);
     if (!seats) return;
@@ -1419,7 +1609,13 @@ class SocialCore {
     const rank = { owner: 0, deputy: 1, member: 2 };
     const myRole = this._clubRole(club, id);
     const theirRole = this._clubRole(club, other);
-    if (!myRole || !theirRole || myRole === 'member' || rank[myRole] >= rank[theirRole]) {
+    if (!myRole || myRole === 'member') return this._error(id, 'clubNoPerm');
+    if (theirRole) {
+      if (rank[myRole] >= rank[theirRole]) return this._error(id, 'clubNoPerm');
+    } else if (myRole !== 'owner') {
+      // A seated GUEST (open entry) holds no role in the club:
+      // only the owner — who personally approved his seat
+      // request — may lift him back out of it.
       return this._error(id, 'clubNoPerm');
     }
     const seats = this.clubSeats.get(club.cid);
@@ -1449,7 +1645,11 @@ class SocialCore {
     if (club) this.refreshClub(club.owner);
   }
   clubSeatRequest(id, seat) {
-    const club = this._clubOf(id);
+    // Resolves through the ROOM club: a visiting guest asks the
+    // visited club's owner exactly like a member asks his own —
+    // the ask lands in the same waiting list, flagged as a
+    // guest's (visitor:true in clubSeatReqsView).
+    const club = this._roomClub(id);
     if (!club) return this._error(id, 'clubNoPerm');
     // The owner never requests — he sits (his tap IS the sit).
     if (this._clubRole(club, id) === 'owner') { this.clubSeatSit(id, seat); return; }
@@ -1471,10 +1671,13 @@ class SocialCore {
     this._send(id, { type: 's-club-seat-req-state', club: club.cid, pending: true, seat });
   }
   clubSeatRequestCancel(id) {
-    const cid = this.clubOf.get(id);
-    if (!cid) return;
-    const req = this.clubSeatReqs.get(reqKey(cid, id));
-    if (req) this._clearSeatReq(req, 'cancelled');
+    // My ask lives in whichever room I made it in — my own club
+    // or the club I am visiting; cancel finds it in either.
+    for (const cid of [this.clubVisitOf.get(id), this.clubOf.get(id)]) {
+      if (!cid) continue;
+      const req = this.clubSeatReqs.get(reqKey(cid, id));
+      if (req) { this._clearSeatReq(req, 'cancelled'); return; }
+    }
   }
   clubSeatRespond(id, from, accept) {
     const club = this._clubOf(id);
@@ -1499,23 +1702,27 @@ class SocialCore {
     this.clubSeatSit(from, chosen, true);
   }
   // WebRTC signaling relay for the club voice room — the social
-  // twin of the game server's room relay. The gate is club
-  // MEMBERSHIP (persisted), never the runtime voice set: the DO
-  // hibernates between messages and wakes with its seat/voice
-  // maps empty while the members' screens still show their seats
-  // — gating on the volatile set silently dropped every offer
-  // and answer there (the «seated, mic on, silent» bug). A
-  // successful relay also re-registers both ends in the voice
-  // room, so the volatile state heals itself on first use.
-  // Blocked pairs never signal. Media never passes through here.
+  // twin of the game server's room relay. The gate is ROOM
+  // PRESENCE (persisted membership, or a live guest visit),
+  // never the runtime voice set: the DO hibernates between
+  // messages and wakes with its seat/voice maps empty while the
+  // members' screens still show their seats — gating on the
+  // volatile set silently dropped every offer and answer there
+  // (the «seated, mic on, silent» bug). A successful relay also
+  // re-registers both ends in the voice room, so the volatile
+  // state heals itself on first use. Open entry extends the
+  // gate to guests: a seated visitor is a legitimate speaker,
+  // a listening visitor a legitimate peer — both resolve to
+  // their room club exactly like members do. Blocked pairs
+  // never signal. Media never passes through here.
   rtcRelay(id, msg) {
     const to = msg && msg.to;
     if (typeof to !== 'string' || to === id) return;
     const data = msg.data;
     if (!data || typeof data !== 'object') return;
     try { if (JSON.stringify(data).length > 32768) return; } catch (e) { return; }
-    const cid = this.clubOf.get(id);
-    if (!cid || this.clubOf.get(to) !== cid) return;
+    const cid = this._roomCid(id);
+    if (!cid || this._roomCid(to) !== cid) return;
     if (this.blockedEither(id, to)) return;
     // Self-heal the volatile voice room (see the note above):
     // both ends are members talking voice — that IS the room.
