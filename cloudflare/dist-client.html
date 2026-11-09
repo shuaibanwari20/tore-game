@@ -8104,15 +8104,26 @@ function canSeatKick(c, targetId) {
   if (!mem) return false;
   return mine < rank[mem.role];
 }
+// May I throw this player out of the CLUB entirely? (mirrors
+// the server's clubKick rank rule: the owner kicks anyone below
+// him, a deputy kicks members only, a member kicks nobody)
+function canClubKick(c, targetId) {
+  if (!c || targetId === socialMe) return false;
+  const mem = (c.members || []).find((m) => m.id === targetId);
+  if (!mem) return false;
+  return (c.myRole === 'owner' && mem.role !== 'owner')
+    || (c.myRole === 'deputy' && mem.role === 'member');
+}
 async function onClubSeatTap(seat, occupantId, anchorEl) {
   const c = roomClub();
   if (!c) return;
   if (occupantId) {
     if (occupantId === socialMe) { socialSend({ type: 's-club-stand' }); cv.wantSeat = -1; cv.setMic(false); }
-    else if (canSeatKick(c, occupantId)) {
-      // A manager tapping another player's seat opens the small
-      // anchored menu (remove from seat / profile). Plain
-      // members tapping a seat get nothing.
+    else {
+      // ANY member tapping another player's occupied seat opens
+      // the small anchored menu; its rows follow the tapper's
+      // role (friend / profile for everyone, the kicks only
+      // where the server's own rules allow — renderClubSeatMenu).
       openClubSeatMenu(clubSeatPerson(c, occupantId), anchorEl);
     }
     return;
@@ -9303,8 +9314,9 @@ function fillProfileView(m) {
   $('#pv-rel').textContent = rel === 'friend' ? T('frIsFriend')
     : rel === 'outgoing' ? T('frPending') : rel === 'incoming' ? T('frRespond') : '—';
 }
-// A manager tapped another player's OCCUPIED seat: exactly two
-// rows — remove him from the seat, or open his profile.
+// A player tapped another player's OCCUPIED seat: the anchored
+// menu opens for EVERY member — renderClubSeatMenu decides the
+// rows from the tapper's role.
 function openClubSeatMenu(p, anchor) {
   const pop = $('#ov-clubmenu');
   if (pop.classList.contains('show') && popCtx && popCtx.kind === 'seat' && popCtx.id === p.id) { closeClubMenu(); return; }
@@ -9380,7 +9392,7 @@ function renderClubMenu() {
   }
   // manage section (rank-bounded, mirroring the server rules)
   const myRole = cc.myRole;
-  const canKick = (myRole === 'owner' && m.role !== 'owner') || (myRole === 'deputy' && m.role === 'member');
+  const canKick = canClubKick(cc, m.id);
   const manage = [];
   if (myRole === 'owner' && m.role === 'member') {
     manage.push(cmRow('⬆️', T('clPromote'), () => { socialSend({ type: 's-club-role', id: m.id, role: 'deputy' }); closeClubMenu(); }));
@@ -9407,6 +9419,17 @@ function renderClubMenu() {
     manage.forEach((r) => rows.appendChild(r));
   }
 }
+// The seat menu's rows follow the TAPPER's role (owner order
+// 2026-11-09, second round): the friend row comes first for
+// everyone — state-aware, the table player menu's own logic
+// (friends / pending read disabled, an incoming ask routes to
+// the friends screen, a stranger gets درخواست دوستی and the tap
+// really sends s-request). An ordinary member also gets
+// پروفایل; the founder's set is the friend row + the two kicks
+// (his own listing — no profile row). A deputy's kicks ride
+// below a separator, each shown ONLY when the server's rule
+// would allow it: seat-kick = rank strictly above the target,
+// club-kick = owner → anyone below / deputy → members only.
 function renderClubSeatMenu() {
   const pop = $('#ov-clubmenu');
   const c = roomClub();
@@ -9418,16 +9441,49 @@ function renderClubSeatMenu() {
   $('#cm-name').textContent = p.name || '';
   const rows = $('#cm-rows');
   rows.innerHTML = '';
-  rows.appendChild(cmRow('🚪', T('clSeatKickOut'), () => {
-    const target = popCtx.id;
+  // friend relation (the player menu's state machine)
+  const rel = seatRelation(p.id);
+  if (rel === 'friend') rows.appendChild(cmRow('🤝', T('frIsFriend'), null, true));
+  else if (rel === 'outgoing') rows.appendChild(cmRow('🤝', T('frPending'), null, true));
+  else if (rel === 'incoming') rows.appendChild(cmRow('🤝', T('frRespond'), () => { closeClubMenu(); openFriends(); }));
+  else if (rel === 'none') rows.appendChild(cmRow('🤝', T('frRequestBtn'), () => {
+    socialSend({ type: 's-request', to: p.id });
+    toast(T('frRequestSent'));
     closeClubMenu();
-    socialSend({ type: 's-club-seat-kick', id: target });
   }));
-  rows.appendChild(cmRow('👤', T('navProfile'), () => {
-    fillProfileView(p);
-    closeClubMenu();
-    $('#ov-playerview').classList.add('show');
-  }));
+  // پروفایل — everyone but the founder (his three rows are the
+  // friend row and the two kicks, per his own listing)
+  if (c.myRole !== 'owner') {
+    rows.appendChild(cmRow('👤', T('navProfile'), () => {
+      fillProfileView(p);
+      closeClubMenu();
+      $('#ov-playerview').classList.add('show');
+    }));
+  }
+  const seatKick = canSeatKick(c, p.id);
+  const clubKick = canClubKick(c, p.id);
+  if (seatKick || clubKick) {
+    const sep = document.createElement('div');
+    sep.className = 'pmpop-sep';
+    rows.appendChild(sep);
+  }
+  if (seatKick) {
+    rows.appendChild(cmRow('🚪', T('clSeatKickOut'), () => {
+      const target = popCtx.id;
+      closeClubMenu();
+      socialSend({ type: 's-club-seat-kick', id: target });
+    }));
+  }
+  if (clubKick) {
+    rows.appendChild(cmRow('🚪', T('clKick'), () => {
+      const target = popCtx.id;
+      const tname = p.name || '';
+      closeClubMenu();
+      // the members-page club-kick confirmation, unchanged
+      askConfirm(T('clConfirmKickT'), T('clConfirmKickB', tname), T('frConfirmYes'),
+        () => socialSend({ type: 's-club-kick', id: target }));
+    }));
+  }
 }
 function renderClubExitMenu() {
   const pop = $('#ov-clubmenu');
@@ -9456,11 +9512,11 @@ function validateClubMenu() {
   const pop = $('#ov-clubmenu');
   if (!pop.classList.contains('show')) return;
   if (popCtx && popCtx.kind === 'seat') {
-    // the seat menu lives only while its target still sits and I
-    // can still lift him
+    // the seat menu lives only while its target still sits;
+    // every role may hold it open now — the rows inside follow
+    // the role and re-render on every push
     const c = roomClub();
-    if (!c || !canSeatKick(c, popCtx.id)
-      || !(c.seatMap || []).some((s) => s.id === popCtx.id)) closeClubMenu();
+    if (!c || !(c.seatMap || []).some((s) => s.id === popCtx.id)) closeClubMenu();
     else renderClubMenu();
     return;
   }
