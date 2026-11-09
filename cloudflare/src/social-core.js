@@ -816,6 +816,12 @@ class SocialCore {
       liked: forId ? (Array.isArray(club.likes) && club.likes.includes(forId)) : false,
       announcement: typeof club.announcement === 'string' ? club.announcement : '',
       owner: club.owner, ownerName: owner ? owner.name : '',
+      // Clubs v7.1: the founder's profile rides the summary too —
+      // the owner exit menu's header wears HIM (avatar/photo +
+      // name), not the club emblem; directory-sourced like
+      // ownerName, so it stays fresh across profile changes and
+      // untouched by club renames.
+      ownerAvatar: owner ? owner.avatar : 'av1', ownerPhoto: owner ? owner.photo : '',
       count: club.members.length, created: club.created, relation,
     };
   }
