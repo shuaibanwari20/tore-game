@@ -25,7 +25,12 @@ function cleanPid(v) {
 function createNodeSocial(opts) {
   opts = opts || {};
   const sockets = new Map(); // identity id -> Set<ws>
+  // Uploaded club covers (owner photos): cid -> {type, buf}.
+  // Memory-only like the rest of the Node social state — the
+  // Cloudflare DO is the persistent production host.
+  const coverBlobs = new Map();
   const core = new SocialCore({
+    coverBlobDelete(cid) { coverBlobs.delete(cid); },
     sendTo(id, obj) {
       const set = sockets.get(id);
       if (!set) return;
@@ -46,6 +51,7 @@ function createNodeSocial(opts) {
       return opts.verifyBusy ? opts.verifyBusy(id) : undefined;
     },
     inviteCooldownMs: (typeof opts.inviteCooldownMs === 'number') ? opts.inviteCooldownMs : undefined,
+    seatReqTimeoutMs: (typeof opts.seatReqTimeoutMs === 'number') ? opts.seatReqTimeoutMs : undefined,
   });
 
   function handleConnection(ws) {
@@ -84,6 +90,19 @@ function createNodeSocial(opts) {
     core,
     handleConnection,
     isSocialPath(url) { return typeof url === 'string' && url.split('?')[0] === '/social'; },
+    // ---- uploaded club covers (the hosts' HTTP routes) ----
+    // Store an owner's uploaded cover, then flip the club record
+    // to the custom marker through the core. Returns {cid, v} or
+    // null when the identity owns no club.
+    uploadCover(identityId, type, buf) {
+      const club = core.ownedClub(identityId);
+      if (!club) return null;
+      coverBlobs.set(club.cid, { type, buf });
+      const out = core.setCustomCover(identityId);
+      if (!out) { coverBlobs.delete(club.cid); return null; }
+      return out;
+    },
+    getCover(cid) { return coverBlobs.get(cid) || null; },
   };
 }
 
