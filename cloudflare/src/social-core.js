@@ -141,13 +141,23 @@ const CLUB_NAME_MAX = 24;
 const CLUB_DESC_MAX = 120;
 const CLUB_CHAT_KEEP = 50;        // messages kept per club
 const CLUB_EMBLEMS = ['trophy', 'shield', 'star', 'crown', 'gem', 'crescent', 'flame', 'laurel'];
-// Clubs v2: the built-in cover gallery (ids only — the client owns
-// the artwork), the join categories, the announcement cap and the
-// club room's mic seats.
+// Clubs v2: the built-in cover gallery (ids only — the client
+// resolves each id to its static photo file /covers/<id>.jpg),
+// the join categories, the announcement cap and the club room's
+// mic seats. A club may instead carry cover 'custom': the owner
+// uploaded a photo through the host's HTTP endpoint; the image
+// bytes live in HOST storage (never in this state) under the club
+// id, and coverV (bumped on every upload) busts its cache.
 const CLUB_COVERS = ['mountains', 'mosque', 'caravan', 'pomegranate', 'city', 'carpet', 'eagle', 'river', 'tent', 'trophy'];
+const CLUB_COVER_CUSTOM = 'custom';
 const CLUB_CATEGORIES = ['social', 'game', 'family'];
 const CLUB_ANN_MAX = 200;
 const CLUB_SEATS = 8;
+// Seat requests (owner order 2026-11-09): a member who wants a
+// mic seat asks the club OWNER, who approves or rejects. One
+// pending request per member per club; a request lives at most
+// this long and dies with the club page on either side.
+const CLUB_SEAT_REQ_MS = 60000;
 // Club LEVEL is derived from the member count, never stored:
 // Lv1 = 1–9, Lv2 = 10–19, Lv3 = 20–29, Lv4 = 30–39, Lv5 = 40–50.
 function clubLevel(count) {
@@ -201,6 +211,12 @@ class SocialCore {
     // room empty (the seat map is rebuilt by joins, not loads).
     this.clubSeats = new Map();   // cid -> Map(seatIdx -> playerId)
     this.clubVoice = new Map();   // cid -> Set<playerId> (in the voice room)
+    // Seat requests — RUNTIME ONLY like the seats: reqKey(cid,
+    // playerId) -> {club, from, seat, ts}. Never persisted; a
+    // restart simply drops pending asks (they time out anyway).
+    this.clubSeatReqs = new Map();
+    this.seatReqMs = (hooks && typeof hooks.seatReqTimeoutMs === 'number' && hooks.seatReqTimeoutMs > 0)
+      ? hooks.seatReqTimeoutMs : CLUB_SEAT_REQ_MS;
   }
 
   // ---------- persistence (DO host; Node ignores) ----------
@@ -242,7 +258,8 @@ class SocialCore {
     // defaults in place so every reader can trust the shape.
     for (const c of this.clubs.values()) {
       if (!c || typeof c !== 'object') continue;
-      if (!CLUB_COVERS.includes(c.cover)) c.cover = 'mountains';
+      if (c.cover !== CLUB_COVER_CUSTOM && !CLUB_COVERS.includes(c.cover)) c.cover = 'mountains';
+      if (typeof c.coverV !== 'number' || !(c.coverV >= 0)) c.coverV = 0;
       if (typeof c.country !== 'string') c.country = '';
       if (!CLUB_CATEGORIES.includes(c.category)) c.category = 'social';
       if (!Array.isArray(c.likes)) c.likes = [];
@@ -453,6 +470,9 @@ class SocialCore {
       case 's-club-announce': return this.clubAnnounce(id, msg.text);
       case 's-club-voice': return this.clubVoiceSet(id, msg.action);
       case 's-club-seat': return this.clubSeatSit(id, msg.seat);
+      case 's-club-seat-request': return this.clubSeatRequest(id, msg.seat);
+      case 's-club-seat-request-cancel': return this.clubSeatRequestCancel(id);
+      case 's-club-seat-respond': return this.clubSeatRespond(id, msg.from, msg.accept === true);
       case 's-club-stand': return this.clubStand(id);
       case 's-rtc': return this.rtcRelay(id, msg);
       default: break; // unknown social messages are ignored
@@ -684,7 +704,9 @@ class SocialCore {
   }
   // Clubs v2 field cleaners: the core validates ids/enums and
   // stores plain strings; all artwork and display names live in
-  // the client (covers are inline SVG scenes there).
+  // the client (gallery covers are static photo files there). The
+  // 'custom' cover is never accepted over the socket — only the
+  // host's authenticated upload endpoint sets it (setCustomCover).
   _cleanCover(v) {
     return (typeof v === 'string' && CLUB_COVERS.includes(v)) ? v : 'mountains';
   }
@@ -717,7 +739,9 @@ class SocialCore {
     }
     return {
       cid: club.cid, name: club.name, emblem: club.emblem, desc: club.desc,
-      cover: CLUB_COVERS.includes(club.cover) ? club.cover : 'mountains',
+      cover: club.cover === CLUB_COVER_CUSTOM ? CLUB_COVER_CUSTOM
+        : (CLUB_COVERS.includes(club.cover) ? club.cover : 'mountains'),
+      coverV: (typeof club.coverV === 'number' && club.coverV > 0) ? club.coverV : 0,
       country: typeof club.country === 'string' ? club.country : '',
       category: CLUB_CATEGORIES.includes(club.category) ? club.category : 'social',
       level: clubLevel(club.members.length),
@@ -826,6 +850,7 @@ class SocialCore {
       // country defaults to the CREATOR's profile country (his
       // directory record) when the client does not name one.
       cover: this._cleanCover(msg && msg.cover),
+      coverV: 0,
       country: (msg && typeof msg.country === 'string' && msg.country.trim())
         ? this._cleanClubCountry(msg.country)
         : ((this.directory.get(id) || {}).country || ''),
@@ -1026,11 +1051,48 @@ class SocialCore {
     }
     if (typeof msg.emblem === 'string') club.emblem = this._cleanEmblem(msg.emblem);
     if (typeof msg.desc === 'string') club.desc = this._cleanClubDesc(msg.desc);
-    if (typeof msg.cover === 'string') club.cover = this._cleanCover(msg.cover);
+    if (typeof msg.cover === 'string') {
+      const wasCustom = club.cover === CLUB_COVER_CUSTOM;
+      // A form that still shows the custom cover (the settings
+      // page sends it back untouched) keeps it; picking any
+      // gallery cover replaces it — and the uploaded blob is
+      // deleted with the switch, so it stops costing host storage.
+      club.cover = (msg.cover === CLUB_COVER_CUSTOM && wasCustom)
+        ? CLUB_COVER_CUSTOM : this._cleanCover(msg.cover);
+      if (wasCustom && club.cover !== CLUB_COVER_CUSTOM) this._deleteCoverBlob(club.cid);
+    }
     if (typeof msg.country === 'string') club.country = this._cleanClubCountry(msg.country);
     if (typeof msg.category === 'string') club.category = this._cleanCategory(msg.category);
     this._persistClubs();
     this.fanClub(club.cid);
+  }
+
+  // The club this identity OWNS (role 'owner'), or null. The
+  // hosts' cover-upload endpoints gate on exactly this.
+  ownedClub(id) {
+    const club = this._clubOf(id);
+    return (club && this._clubRole(club, id) === 'owner') ? club : null;
+  }
+  // Host entry point AFTER it has stored an uploaded cover image
+  // for the owner's club: the record flips to the custom marker
+  // and the version bumps (the client reads /club-cover/<cid>?v=N,
+  // so the bump is what makes the new photo show). Returns
+  // {cid, v} or null when the identity owns no club.
+  setCustomCover(id) {
+    const club = this.ownedClub(id);
+    if (!club) return null;
+    club.cover = CLUB_COVER_CUSTOM;
+    club.coverV = (typeof club.coverV === 'number' && club.coverV > 0 ? club.coverV : 0) + 1;
+    this._persistClubs();
+    this.fanClub(club.cid);
+    return { cid: club.cid, v: club.coverV };
+  }
+  // The uploaded bytes live in host storage; the host's hook
+  // removes them. Fired when a custom cover stops being the
+  // club's cover (gallery switch, dissolve) — never on replace,
+  // where the host simply overwrites the same key.
+  _deleteCoverBlob(cid) {
+    if (this.hooks.coverBlobDelete) { try { this.hooks.coverBlobDelete(cid); } catch (e) { /* host logs */ } }
   }
 
   clubDissolve(id) {
@@ -1038,6 +1100,9 @@ class SocialCore {
     if (!club) return;
     if (this._clubRole(club, id) !== 'owner') return this._error(id, 'clubNoPerm');
     const memberIds = club.members.map((m) => m.id);
+    const hadCustomCover = club.cover === CLUB_COVER_CUSTOM;
+    // Pending seat requests die with the club.
+    for (const [, r] of [...this.clubSeatReqs]) if (r.club === club.cid) this._clearSeatReq(r, 'gone');
     // The voice room dies with the club: clear the runtime maps,
     // then push one empty voice-state so every member's client
     // tears its peer connections down.
@@ -1048,6 +1113,9 @@ class SocialCore {
     for (const [k, inv] of [...this.clubInvites]) if (inv.club === club.cid) this.clubInvites.delete(k);
     this.clubChat.delete(club.cid);
     this.clubs.delete(club.cid);
+    // A dissolved club's uploaded cover dies with it (owner
+    // order: it must not keep wasting host storage).
+    if (hadCustomCover) this._deleteCoverBlob(club.cid);
     this._persistClubs();
     for (const mid of memberIds) {
       if (this.isOnline(mid)) this._send(mid, { type: 's-club-voice-state', club: club.cid, members: [], seats: [] });
@@ -1176,6 +1244,16 @@ class SocialCore {
   _clubVoiceGone(id) {
     const cid = this.clubOf.get(id);
     if (!cid) return;
+    // Seat requests die with the club page: my own pending ask if
+    // I'm a requester — ALL of my club's asks if I'm its owner
+    // (there is nobody left to approve them).
+    const reqClub = this.clubs.get(cid);
+    if (reqClub && reqClub.owner === id) {
+      for (const [, r] of [...this.clubSeatReqs]) if (r.club === cid) this._clearSeatReq(r, 'gone');
+    } else {
+      const mine = this.clubSeatReqs.get(reqKey(cid, id));
+      if (mine) this._clearSeatReq(mine, 'gone');
+    }
     let changed = false;
     const seats = this.clubSeats.get(cid);
     if (seats) {
@@ -1195,10 +1273,24 @@ class SocialCore {
     const room = this.clubVoice.get(club.cid);
     if (!room.has(id)) { room.add(id); this._fanClubVoice(club.cid); }
     else this._fanClubVoice(club.cid); // a re-join re-syncs the joiner
+    // An owner (re)entering the room is re-shown his club's live
+    // seat requests — they pend quietly while he is away and are
+    // never promised to anyone in the meantime.
+    if (club.owner === id) {
+      this._pruneSeatReqs();
+      for (const r of this.clubSeatReqs.values()) {
+        if (r.club === club.cid) this._send(id, { type: 's-club-seat-req', club: club.cid, from: this.person(r.from), seat: r.seat });
+      }
+    }
   }
-  clubSeatSit(id, seat) {
+  clubSeatSit(id, seat, viaApproval) {
     const club = this._clubOf(id);
     if (!club) return this._error(id, 'clubNoPerm');
+    // Sitting is approval-gated (owner order 2026-11-09): the
+    // OWNER sits directly; everyone else's seat comes from an
+    // approved seat request (clubSeatRespond calls this with
+    // viaApproval). A bare s-club-seat from a member is refused.
+    if (!viaApproval && this._clubRole(club, id) !== 'owner') return this._error(id, 'clubSeatReqNeeded');
     seat = Number(seat);
     if (!Number.isInteger(seat) || seat < 0 || seat >= CLUB_SEATS) return;
     if (!this.clubSeats.has(club.cid)) this.clubSeats.set(club.cid, new Map());
@@ -1223,10 +1315,92 @@ class SocialCore {
     if (!seats.size) this.clubSeats.delete(cid);
     if (changed) this._fanClubVoice(cid);
   }
+  // ---------- seat requests (owner-approved sitting) ----------
+  // A member asks the club OWNER for a mic seat; the owner
+  // approves (the member is seated — requested seat, else first
+  // free) or rejects. One pending request per member per club;
+  // requests are runtime-only and die on answer, on either side
+  // leaving the club page (voice-leave / socket close run through
+  // _clubVoiceGone), on club dissolve, and on timeout (pruned
+  // lazily at every seat/voice entry point; both sides are told).
+  _clearSeatReq(req, reason) {
+    if (!this.clubSeatReqs.delete(reqKey(req.club, req.from))) return;
+    this._send(req.from, { type: 's-club-seat-req-state', club: req.club, pending: false, reason });
+    const club = this.clubs.get(req.club);
+    if (club && club.owner !== req.from && this.isOnline(club.owner)) {
+      this._send(club.owner, { type: 's-club-seat-req-gone', club: req.club, from: req.from });
+    }
+  }
+  _pruneSeatReqs() {
+    const now = Date.now();
+    for (const [, r] of [...this.clubSeatReqs]) {
+      if (now - r.ts >= this.seatReqMs) this._clearSeatReq(r, 'timeout');
+    }
+  }
+  clubSeatRequest(id, seat) {
+    this._pruneSeatReqs();
+    const club = this._clubOf(id);
+    if (!club) return this._error(id, 'clubNoPerm');
+    // The owner never requests — he sits (his tap IS the sit).
+    if (this._clubRole(club, id) === 'owner') { this.clubSeatSit(id, seat); return; }
+    seat = Number(seat);
+    if (!Number.isInteger(seat) || seat < 0 || seat >= CLUB_SEATS) return;
+    const seats = this.clubSeats.get(club.cid);
+    if (seats && [...seats.values()].includes(id)) return; // already seated
+    const key = reqKey(club.cid, id);
+    const existing = this.clubSeatReqs.get(key);
+    if (existing) {
+      // One pending per member: a second ask COALESCES — my own
+      // state is re-shipped, the owner is never prompted twice.
+      this._send(id, { type: 's-club-seat-req-state', club: club.cid, pending: true, seat: existing.seat });
+      return;
+    }
+    const req = { club: club.cid, from: id, seat, ts: Date.now() };
+    this.clubSeatReqs.set(key, req);
+    if (this.isOnline(club.owner)) {
+      this._send(club.owner, { type: 's-club-seat-req', club: club.cid, from: this.person(id), seat });
+    }
+    this._send(id, { type: 's-club-seat-req-state', club: club.cid, pending: true, seat });
+  }
+  clubSeatRequestCancel(id) {
+    const cid = this.clubOf.get(id);
+    if (!cid) return;
+    const req = this.clubSeatReqs.get(reqKey(cid, id));
+    if (req) this._clearSeatReq(req, 'cancelled');
+  }
+  clubSeatRespond(id, from, accept) {
+    this._pruneSeatReqs();
+    const club = this._clubOf(id);
+    if (!club || club.owner !== id) return; // only the founder answers
+    if (typeof from !== 'string') return;
+    const req = this.clubSeatReqs.get(reqKey(club.cid, from));
+    if (!req) return;
+    if (!accept) { this._clearSeatReq(req, 'rejected'); return; }
+    if (!this.clubSeats.has(club.cid)) this.clubSeats.set(club.cid, new Map());
+    const seats = this.clubSeats.get(club.cid);
+    let chosen = -1;
+    if (!seats.has(req.seat)) chosen = req.seat;
+    else for (let s = 0; s < CLUB_SEATS; s++) if (!seats.has(s)) { chosen = s; break; }
+    if (chosen < 0) {
+      this._error(id, 'clubSeatsFull');
+      this._clearSeatReq(req, 'full');
+      return;
+    }
+    this.clubSeatReqs.delete(reqKey(club.cid, from));
+    this._send(id, { type: 's-club-seat-req-gone', club: club.cid, from });
+    this._send(from, { type: 's-club-seat-req-state', club: club.cid, pending: false, reason: 'approved' });
+    this.clubSeatSit(from, chosen, true);
+  }
   // WebRTC signaling relay for the club voice room — the social
-  // twin of the game server's room relay. Both ends must be
-  // members of the SAME club and present in its voice room;
-  // blocked pairs never signal. Media never passes through here.
+  // twin of the game server's room relay. The gate is club
+  // MEMBERSHIP (persisted), never the runtime voice set: the DO
+  // hibernates between messages and wakes with its seat/voice
+  // maps empty while the members' screens still show their seats
+  // — gating on the volatile set silently dropped every offer
+  // and answer there (the «seated, mic on, silent» bug). A
+  // successful relay also re-registers both ends in the voice
+  // room, so the volatile state heals itself on first use.
+  // Blocked pairs never signal. Media never passes through here.
   rtcRelay(id, msg) {
     const to = msg && msg.to;
     if (typeof to !== 'string' || to === id) return;
@@ -1235,11 +1409,15 @@ class SocialCore {
     try { if (JSON.stringify(data).length > 32768) return; } catch (e) { return; }
     const cid = this.clubOf.get(id);
     if (!cid || this.clubOf.get(to) !== cid) return;
-    const room = this.clubVoice.get(cid);
-    if (!room || !room.has(id) || !room.has(to)) return;
     if (this.blockedEither(id, to)) return;
+    // Self-heal the volatile voice room (see the note above):
+    // both ends are members talking voice — that IS the room.
+    if (!this.clubVoice.has(cid)) this.clubVoice.set(cid, new Set());
+    const room = this.clubVoice.get(cid);
+    room.add(id);
+    room.add(to);
     this._send(to, { type: 's-rtc', from: id, data });
   }
 }
 
-export { SocialCore, INVITE_COOLDOWN_MS, INVITE_PENDING_MS, CLUB_CAP, CLUB_EMBLEMS, CLUB_COVERS, CLUB_CATEGORIES, CLUB_SEATS, clubLevel };
+export { SocialCore, INVITE_COOLDOWN_MS, INVITE_PENDING_MS, CLUB_CAP, CLUB_EMBLEMS, CLUB_COVERS, CLUB_COVER_CUSTOM, CLUB_CATEGORIES, CLUB_SEATS, CLUB_SEAT_REQ_MS, clubLevel };
