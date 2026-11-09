@@ -414,15 +414,22 @@
   #scr-home {
     position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 10;
     overflow-y: auto; overflow-x: hidden;
-    background-color: #57125f;
+    background-color: #6d0d3f;
     background-image:
-      linear-gradient(45deg, rgba(255,255,255,.05) 1px, transparent 1.3px),
-      linear-gradient(-45deg, rgba(255,255,255,.05) 1px, transparent 1.3px),
-      linear-gradient(180deg, #3d0745 0%, #651171 28%, #8e239b 52%, #751a85 74%, #42084c 100%);
+      linear-gradient(45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(-45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(180deg, #4a0727 0%, #7d1046 28%, #a1185c 52%, #8a1250 74%, #4a0727 100%);
     background-size: 34px 34px, 34px 34px, 100% 100%;
     background-repeat: repeat, repeat, no-repeat;
   }
-  #home-main { min-height: 100%; max-width: 520px; margin: 0 auto; padding: 16px 16px 14px; display: flex; flex-direction: column; }
+  #home-main { min-height: 100%; max-width: 520px; margin: 0 auto; padding: 16px 16px 14px; display: flex; flex-direction: column; position: relative; }
+  /* Faint oversized wordmark watermark behind the cards area, like
+     the reference's ghosted logo (ludomenu round 2). First child of
+     #home-main; every sibling is lifted above it. */
+  .hm-wm { position: absolute; left: 0; right: 0; top: 46%; transform: translateY(-50%); text-align: center; pointer-events: none; z-index: 0; }
+  .hm-wm svg { width: 58px; height: 36px; display: block; margin: 0 auto -8px; }
+  .hm-wm .wm-t { font-size: 118px; font-weight: 900; line-height: 1.05; color: rgba(255,255,255,.055); }
+  #home-main > *:not(.hm-wm) { position: relative; z-index: 1; }
   .hm-panel {
     background: linear-gradient(rgba(26,16,5,.93), rgba(26,16,5,.86));
     border: 1px solid #d9b380; border-radius: 12px; color: #f5e7c6;
@@ -455,10 +462,10 @@
   .pavatar.empty { border-radius: 50%; align-items: center; justify-content: center; font-weight: 800; line-height: 1;
     background: rgba(255,255,255,.07); color: rgba(245,231,198,.45); border-style: dashed; box-shadow: none; }
   .hm-gear { width: 46px; height: 46px; margin: 4px 0 0; padding: 0; flex: 0 0 auto;
-    background: radial-gradient(circle at 32% 26%, #5a5a68, #17171f 78%); color: #f2e9ff;
-    border: 2px solid rgba(255,255,255,.35); border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,.45), inset 0 2px 3px rgba(255,255,255,.35);
+    background: none; color: #fff; border: 0; border-radius: 50%; box-shadow: none;
+    filter: drop-shadow(0 3px 5px rgba(20,0,20,.55));
     display: flex; align-items: center; justify-content: center; }
-  .hm-gear svg { width: 24px; height: 24px; stroke: #f2e9ff; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .hm-gear svg { width: 32px; height: 32px; display: block; }
 
   /* Title zone: the suits, the big gold wordmark, the tagline —
      compacted in the ludomenu reskin so the cards own the screen,
@@ -479,20 +486,20 @@
      right, bots orange/gold on the left — each carrying an ORIGINAL
      inline-SVG fan of Tore cards (no dice, no raster art), the label
      printed straight on the card like the reference. */
-  .hm-bigrow { display: flex; gap: 12px; margin-top: 18px; }
-  .hm-bigcard { flex: 1; height: 204px; width: auto; margin: 0; padding: 0; position: relative; overflow: hidden;
+  .hm-bigrow { display: flex; gap: 12px; margin-top: 40px; }
+  .hm-bigcard { flex: 1; height: 204px; width: auto; margin: 0; padding: 0; position: relative; overflow: visible;
     border-radius: 24px; border: 3px solid rgba(255,255,255,.5); cursor: pointer; font-family: inherit;
     box-shadow: 0 10px 22px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -16px 28px rgba(0,0,0,.28); }
   .hm-bigcard:active { transform: scale(.98); }
-  .hm-bigcard::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  .hm-bigcard::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 24px;
     background: linear-gradient(115deg, rgba(255,255,255,.38), rgba(255,255,255,.05) 34%, rgba(255,255,255,0) 55%); }
   .hm-bigcard.violet { background: linear-gradient(165deg, #9d6bf5, #6d28d9 48%, #4c1d95); }
   .hm-bigcard.orange { background: linear-gradient(165deg, #ffc44d, #f59e0b 45%, #c26d0a); }
-  .hm-bigcard .fan { position: absolute; top: 12px; left: 0; right: 0; height: 124px;
+  .hm-bigcard .fan { position: absolute; top: -34px; left: 0; right: 0; height: 172px; z-index: 2;
     display: flex; justify-content: center; pointer-events: none; }
-  .hm-bigcard .fan svg { height: 124px; width: auto; display: block;
-    filter: drop-shadow(0 8px 13px rgba(0,0,0,.45)); }
-  .hm-bigcard .globe { position: absolute; top: 8px; left: 8px; z-index: 3; color: #ffe9a3;
+  .hm-bigcard .fan svg { height: 172px; width: auto; display: block;
+    filter: drop-shadow(0 10px 12px rgba(0,0,0,.5)); }
+  .hm-bigcard .globe { position: absolute; top: -12px; left: -4px; z-index: 4; color: #ffe9a3;
     filter: drop-shadow(0 3px 5px rgba(0,0,0,.5)); }
   .hm-bigcard .globe svg { width: 32px; height: 32px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; display: block; }
   .biglabel { position: absolute; bottom: 13px; left: 8px; right: 8px; z-index: 2; text-align: center;
@@ -516,11 +523,16 @@
      friends (ludomenu reskin — the rules card moved into the settings
      sheet; the third card opens the friends page, like the
      reference's «play with friends» card). */
-  .hm-smallrow { display: flex; gap: 11px; margin-top: 16px; }
-  .hm-small { flex: 1; height: 120px; width: auto; margin: 0; padding: 8px 4px; border-radius: 20px; cursor: pointer;
-    font-family: inherit; background: linear-gradient(170deg, #8a2ea6, #571271 60%, #42084c);
+  .hm-smallrow { display: flex; gap: 11px; margin-top: 42px; }
+  .hm-small { flex: 1; height: 118px; width: auto; margin: 0; padding: 34px 4px 8px; border-radius: 20px; cursor: pointer;
+    font-family: inherit; background: linear-gradient(170deg, #8a2ea6, #571271 60%, #42084c); position: relative; overflow: visible;
     border: 2.5px solid rgba(255,255,255,.42); box-shadow: 0 8px 18px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.25);
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0; }
+  /* Round 2: the icon is a glossy CLUSTER overflowing the card's top
+     edge (fanned cards + gold token / gold key / avatar faces). */
+  .hm-small .cluster { position: absolute; top: -25px; left: 50%; transform: translateX(-50%); z-index: 2;
+    filter: drop-shadow(0 5px 6px rgba(0,0,0,.45)); pointer-events: none; }
+  .hm-small .cluster svg { height: 62px; width: auto; display: block; }
   .hm-small:active { transform: scale(.97); }
   .hm-small .ic { width: 50px; height: 50px; border-radius: 50%; color: #fff;
     background: radial-gradient(circle at 32% 26%, #ff9de2, #d63384 58%, #a4136b); border: 2px solid rgba(255,255,255,.55);
@@ -535,26 +547,30 @@
   /* Bottom nav — the shared shell nav (a copy lives in every shell
      screen; clubs hide theirs, ludoclub v6.1). Friends and clubs open
      their real pages (the social layer); profile opens the profile
-     page; the ACTIVE screen's item is the raised bubble. ludomenu
-     reskin: chunky purple bar, glossy icons, and the raised bubble in
-     BRIGHT MAGENTA like the reference's home pillar (on the home
-     screen the raised centre item is کور itself). */
+     page. ludomenu round 2: LARGE colorful 3D-style icons and the
+     ACTIVE item on a RAISED MAGENTA PANEL like the reference's home
+     pillar (on the home screen the raised centre item is کور). */
   .hm-nav { margin: auto -16px -14px; min-height: 86px; flex: none;
     background: linear-gradient(180deg, #57125f, #38073f);
-    border-top: 2px solid rgba(255,255,255,.18); display: flex; align-items: flex-start;
-    padding: 10px 8px 8px; box-shadow: 0 -6px 18px rgba(0,0,0,.5); }
-  .hm-navitem { flex: 1; width: auto; margin: 0; padding: 0; background: none; border: 0; cursor: pointer;
-    font-family: inherit; display: flex; flex-direction: column; align-items: center; gap: 3px; color: #e9c6ff; }
-  .hm-navitem .ni { height: 30px; display: flex; align-items: center; }
-  .hm-navitem .ni svg { width: 27px; height: 27px; stroke: currentColor; stroke-width: 2.1; fill: none; stroke-linecap: round; stroke-linejoin: round; display: block;
-    filter: drop-shadow(0 2px 2px rgba(0,0,0,.5)); }
+    border-top: 2px solid rgba(255,255,255,.18); display: flex; align-items: stretch;
+    padding: 10px 8px 0; box-shadow: 0 -6px 18px rgba(0,0,0,.5); }
+  .hm-navitem { flex: 1; width: auto; margin: 0; padding: 0 0 calc(8px + env(safe-area-inset-bottom)); background: none; border: 0; cursor: pointer;
+    font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; color: #e9c6ff; }
+  .hm-navitem .ni { height: 48px; display: flex; align-items: flex-end; }
+  .hm-navitem .ni svg { width: 46px; height: 46px; display: block;
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,.45)); }
   .hm-navitem .nl { font-size: 12px; color: #e8d5f5; font-weight: 600; }
-  .hm-navitem.home { margin-top: -26px; }
-  .hm-navitem.home .bubble { width: 58px; height: 58px; border-radius: 50%;
-    background: radial-gradient(circle at 32% 26%, #ff9de2, #e84393 55%, #c2187a); border: 3px solid #ffd7f2; color: #fff;
-    display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 18px rgba(0,0,0,.6), 0 0 0 4px rgba(232,67,147,.3), inset 0 2px 4px rgba(255,255,255,.5); }
-  .hm-navitem.home .bubble svg { width: 29px; height: 29px; stroke: currentColor; stroke-width: 2.1; fill: none; stroke-linecap: round; stroke-linejoin: round; display: block; }
-  .hm-navitem.home .nl { color: #ffc7ec; font-weight: 800; font-size: 13px; margin-top: 2px; }
+  /* Round 2: the ACTIVE item is a RAISED MAGENTA PANEL flush with the
+     bar's bottom edge, its big 3D icon on top and the label inside —
+     the reference's home pillar, generalized to whichever is active. */
+  .hm-navitem.home { margin-top: -32px; padding: 9px 2px calc(10px + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, #f0569f, #d63384 55%, #b3126e);
+    border: 2px solid rgba(255,255,255,.4); border-bottom: 0; border-radius: 18px 18px 0 0;
+    box-shadow: 0 -6px 16px rgba(20,0,25,.45), inset 0 2px 4px rgba(255,255,255,.5), inset 0 -6px 10px rgba(90,0,50,.35); }
+  .hm-navitem.home .bubble { display: flex; align-items: center; justify-content: center; }
+  .hm-navitem.home .bubble svg { width: 52px; height: 52px; display: block;
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); }
+  .hm-navitem.home .nl { color: #fff; font-weight: 800; font-size: 13px; margin-top: 2px; }
   #home-rules { max-width: 520px; margin: 0 auto; padding: 16px 16px 18px; }
   #home-rules .cardbox { background: rgba(43,6,54,.92); border-color: rgba(255,255,255,.3); margin-bottom: 0; }
   .hm-back { width: auto; margin: 0 0 12px; padding: 9px 18px; font-size: 15px;
@@ -604,8 +620,7 @@
      friends screen — scrolling content, bottom nav pinned at the foot. */
   #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs { display: flex; flex-direction: column; overflow-y: hidden; }
   .fr-scroll { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; width: 100%; }
-  #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav, #scr-clubpage .hm-nav, #scr-clubmembers .hm-nav, #scr-clubseatreqs .hm-nav { margin: 0; flex: none; width: 100%;
-    padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+  #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav, #scr-clubpage .hm-nav, #scr-clubmembers .hm-nav, #scr-clubseatreqs .hm-nav { margin: 0; flex: none; width: 100%; }
   /* chat list rows: the whole row is the tap target into the DM view */
   .ch-row { cursor: pointer; border-radius: 8px; }
   .ch-row:active { background: rgba(255, 215, 94, .08); }
@@ -999,15 +1014,34 @@
      while the club ROOM keeps the v6 city night: the same stack
      now hangs on #cl-room itself (the room is a child of
      #scr-clubs, so the paint is unchanged). */
+  /* v6.6 texture (?v=20261109-ludomenu4, owner order 2026-11-09):
+     the discovery browse field was a flat gradient with a barely
+     visible lattice — it is now a layered CSS texture (gradients
+     ONLY, no image assets): a gentle vignette on top, soft
+     radial glows (pink / violet / magenta), two offset sparkle
+     dot tiles, a CLEARER fine diamond lattice over a fainter
+     wide one, all over the same magenta-purple base. This rule
+     paints #scr-clubs only (the browse view); the room and the
+     club sub-pages keep their own city-night rule below,
+     untouched. */
   #scr-clubs {
     color: #f6efff;
     background-color: #57125f;
     background-image:
-      linear-gradient(45deg, rgba(255,255,255,.05) 1px, transparent 1.3px),
-      linear-gradient(-45deg, rgba(255,255,255,.05) 1px, transparent 1.3px),
+      radial-gradient(ellipse 125% 92% at 50% 42%, transparent 56%, rgba(24,1,36,.40) 100%),
+      radial-gradient(ellipse 72% 32% at 84% -4%, rgba(255,110,200,.27), transparent 70%),
+      radial-gradient(ellipse 56% 30% at 6% 38%, rgba(150,90,255,.20), transparent 70%),
+      radial-gradient(ellipse 84% 34% at 50% 108%, rgba(255,60,160,.15), transparent 70%),
+      radial-gradient(rgba(255,238,250,.17) 1px, transparent 1.6px),
+      radial-gradient(rgba(255,205,242,.11) 1px, transparent 1.5px),
+      linear-gradient(45deg, rgba(255,255,255,.09) 1px, transparent 1.4px),
+      linear-gradient(-45deg, rgba(255,255,255,.09) 1px, transparent 1.4px),
+      linear-gradient(45deg, rgba(255,255,255,.05) 1px, transparent 1.4px),
+      linear-gradient(-45deg, rgba(255,255,255,.05) 1px, transparent 1.4px),
       linear-gradient(180deg, #93339f 0%, #7a1f8c 24%, #63146f 50%, #4e0d57 76%, #3a073f 100%);
-    background-size: 34px 34px, 34px 34px, 100% 100%;
-    background-repeat: repeat, repeat, no-repeat;
+    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 26px 26px, 26px 26px, 34px 34px, 34px 34px, 102px 102px, 102px 102px, 100% 100%;
+    background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 13px 15px, 0 0, 0 0, 0 0, 0 0, 0 0;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, repeat, repeat, repeat, repeat, no-repeat;
   }
   /* --- clubs v6.1 (owner order 2026-11-09): NO bottom nav
      inside the club section --- the club takes the FULL screen
@@ -1066,14 +1100,16 @@
   #scr-clubs .cl-chip.sel { background: linear-gradient(165deg, #ffd75e, #d9a83f); color: #33270a; border-color: #ffd75e; }
   /* ===== clubs v6.2 — DISCOVERY as the owner's Ludo Star clubs
      page (his screenshot, 2026-11-09): the exit is a glossy RED
-     round ✖, a header row with his gold-ringed avatar + the
-     create action, a fat magenta tab bar with painted glyphs,
+     round ✖, a header row with the ✖ + the create action
+     (v6.6, ?v=20261109-ludomenu4: the profile avatar button
+     left the header row — the red ✖ sits in its slot now, and
+     the separate corner ✖ row is gone), a fat magenta tab
+     bar with painted glyphs,
      the «غوره کلبونه» stage behind RED CURTAINS with the crowd
      below, country chips in a 4-wide grid (selected = hot pink)
      and lavender club cards with the level SHIELD on the cover.
      Discovery-only paint: the room keeps the v6.1 city night.
      The podium is a STATIC top-3 now — no rotation, no dots. */
-  .cl-xrow { display: flex; margin-bottom: 4px; }
   .cl-xbtn { flex: 0 0 46px; width: 46px; height: 46px; margin: 0; padding: 0; border-radius: 50%; cursor: pointer;
     background: radial-gradient(circle at 35% 27%, #ff9a86, #f03434 52%, #b30d0d 88%);
     border: 2px solid rgba(255,255,255,.4);
@@ -1083,9 +1119,7 @@
     filter: drop-shadow(0 1px 1px rgba(90,0,0,.6)); }
   .cl-xbtn:active { transform: scale(.92); }
   .cl-headrow { display: flex; align-items: center; gap: 11px; direction: ltr; margin-bottom: 11px; }
-  .cl-meav { flex: 0 0 auto; display: inline-flex; }
-  .cl-meav .pavatar { border-radius: 50%; border: 2.5px solid #e9c46a; box-shadow: 0 3px 9px rgba(0,0,0,.45); }
-  .cl-createbtn { direction: rtl; margin: 0; padding: 10px 22px; font-family: inherit; font-size: 15px; font-weight: 800;
+  .cl-createbtn { flex: 1 1 auto; direction: rtl; margin: 0; padding: 10px 22px; font-family: inherit; font-size: 15px; font-weight: 800;
     color: #fff; background: linear-gradient(180deg, #ff7ad9, #e84393 55%, #cf2f7f);
     border: 1.5px solid #ffadd9; border-radius: 999px; cursor: pointer;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -3px 6px rgba(120,10,70,.35), 0 4px 12px rgba(214,51,132,.45); }
@@ -1515,9 +1549,175 @@
   #splash .sp-suits { font-size: 16px; letter-spacing: 8px; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
   #splash .sp-suits .r { color: #ff5a4d; } #splash .sp-suits .w { color: #f5e7c6; }
   @keyframes splashAuto { to { opacity: 0; visibility: hidden; } }
+
+  /* ===== ludopages (?v=20261109-ludomenu6, owner refs 2026-11-09):
+     PROFILE as the Ludo profile card, SETTINGS as the Ludo settings
+     card, FRIENDS in the same visual language (wood sign + magenta
+     tiles). All paint is original CSS; every control stays real —
+     the two settings switches drive tore.set.vibrate / tore.set.chat
+     in localStorage, and the profile شمېرې rows show only data the
+     game actually has (server ID, friends count, club, country). */
+  /* --- profile: the card --- */
+  #scr-profile .pf-card { position: relative; color: #fff; border-radius: 22px; padding: 16px 14px 16px;
+    border: 3px solid #f0b93e;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 32%, #8e1a63 66%, #67124e 100%);
+    box-shadow: 0 12px 28px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35); }
+  #scr-profile .pf-card .pf-x { position: absolute; top: -15px; inset-inline-start: -7px; z-index: 3;
+    width: 46px; height: 46px; margin: 0; padding: 0; border-radius: 50%; cursor: pointer;
+    background: radial-gradient(circle at 35% 27%, #ff9a86, #f03434 52%, #b30d0d 88%);
+    border: 2px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 3px rgba(255,255,255,.6), inset 0 -4px 7px rgba(90,0,0,.5), 0 4px 10px rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center; }
+  #scr-profile .pf-card .pf-x svg { width: 21px; height: 21px; stroke: #fff; fill: none; stroke-width: 3.1;
+    stroke-linecap: round; filter: drop-shadow(0 1px 1px rgba(90,0,0,.6)); }
+  #scr-profile .pf-card .pf-x:active { transform: scale(.92); }
+  .pf-headrow { display: flex; align-items: center; gap: 10px; background: rgba(43,6,54,.45);
+    border-radius: 14px; padding: 8px 10px; box-shadow: inset 0 2px 6px rgba(0,0,0,.3); }
+  #pf-head-av { flex: 0 0 auto; display: inline-flex; line-height: 0; }
+  #pf-head-av .pavatar { width: 54px !important; height: 54px !important; border-radius: 50%;
+    border: 3px solid #eec95f; box-shadow: 0 0 0 2px rgba(0,0,0,.35), 0 3px 8px rgba(0,0,0,.4); }
+  .pf-headname { flex: 1; min-width: 0; font-size: 19px; font-weight: 800; color: #fff;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px rgba(0,0,0,.55); }
+  .pf-pencil { width: 40px; height: 40px; flex: 0 0 auto; margin: 0; padding: 0; border-radius: 50%; cursor: pointer;
+    background: radial-gradient(circle at 32% 26%, #cda6f9, #7d30e8 58%, #5c17c4);
+    border: 2px solid rgba(255,255,255,.55);
+    box-shadow: 0 3px 8px rgba(0,0,0,.4), inset 0 2px 3px rgba(255,255,255,.45);
+    display: flex; align-items: center; justify-content: center; }
+  .pf-pencil svg { width: 19px; height: 19px; fill: #fff; display: block; filter: drop-shadow(0 1px 1px rgba(40,0,80,.6)); }
+  .pf-pencil:active { transform: scale(.93); }
+  .pf-pencil.sm { width: 34px; height: 34px; }
+  .pf-pencil.sm svg { width: 16px; height: 16px; }
+  .pf-flagrow { display: flex; align-items: center; gap: 9px; margin: 10px 2px 0; }
+  .pf-flagname { font-size: 16.5px; font-weight: 800; letter-spacing: .4px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.55); }
+  #scr-profile .pf-card .pf-pvwrap { margin-top: 14px; display: flex; justify-content: center; }
+  #scr-profile .pf-card .pf-preview { flex: 0 1 auto; }
+  #scr-profile .pf-card .pf-preview { background: rgba(43,6,54,.5); border: 2.5px solid #f0b93e; border-radius: 18px;
+    padding: 14px 20px 10px; box-shadow: inset 0 2px 9px rgba(0,0,0,.45), 0 4px 12px rgba(0,0,0,.3); }
+  #scr-profile .pf-card .pf-preview .pavatar { width: 128px !important; height: 128px !important; border-radius: 22px; }
+  #scr-profile .pf-card .pf-pvname { color: #fff; font-size: 15px; margin-top: 4px; }
+  #scr-profile .pf-card .pf-editav { top: -9px; left: calc(50% + 56px); width: 38px; height: 38px;
+    background: radial-gradient(circle at 32% 26%, #cda6f9, #7d30e8 58%, #5c17c4);
+    border: 2px solid rgba(255,255,255,.55); box-shadow: 0 3px 8px rgba(0,0,0,.45), inset 0 2px 3px rgba(255,255,255,.45); }
+  #scr-profile .pf-card .pf-editav svg { width: 18px; height: 18px; fill: #fff; display: block; }
+  #scr-profile .pf-card .pf-label { color: #ffd7f2; }
+  #pf-editbox { margin-top: 12px; background: rgba(43,6,54,.45); border-radius: 14px; padding: 4px 12px 12px;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.3); }
+  #scr-profile .pf-card input, #scr-profile .pf-card select { background: rgba(20,4,30,.78); color: #fff;
+    border: 1px solid rgba(255,255,255,.42); }
+  #scr-profile .pf-card select option { background: #2a0a45; color: #fff; }
+  #scr-profile .pf-card input::placeholder { color: rgba(255,255,255,.4); }
+  #scr-profile .pf-card .pf-cell { background: rgba(43,6,54,.5); border-color: rgba(255,255,255,.3); }
+  #scr-profile .pf-card .pf-cell.sel { border-color: #ffd75e; background: rgba(255,215,94,.18); }
+  #scr-profile .pf-card .pf-cell .pf-name { color: #ffd7f2; }
+  #scr-profile .pf-card .ghost { color: #fff; border-color: rgba(255,255,255,.5); background: rgba(255,255,255,.08); }
+  .pf-stats { margin-top: 14px; background: rgba(43,6,54,.55); border-radius: 16px; padding: 10px 14px 4px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,.35); }
+  .pf-stats-title { position: relative; text-align: center; font-size: 16.5px; font-weight: 900; color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,.5); margin-bottom: 4px; }
+  .pf-stats-title::before, .pf-stats-title::after { content: ""; position: absolute; top: 50%; width: 26%; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255,183,224,.75)); border-radius: 2px; }
+  .pf-stats-title::before { inset-inline-start: 0; }
+  .pf-stats-title::after { inset-inline-end: 0; transform: scaleX(-1); }
+  .pf-stat { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0;
+    border-bottom: 1px solid rgba(255,255,255,.12); }
+  .pf-stat:last-child { border-bottom: 0; }
+  .pf-stat-lbl { font-size: 14.5px; font-weight: 700; color: #ffd7f2; }
+  .pf-stat-val { font-size: 15.5px; font-weight: 800; color: #fff; background: rgba(0,0,0,.28);
+    border-radius: 9px; padding: 4px 12px; min-width: 58px; text-align: center; }
+  #scr-profile .pf-card .pf-idnum { color: #fff; background: rgba(0,0,0,.28); border-radius: 9px;
+    font-size: 20px; letter-spacing: 3px; padding: 4px 12px; }
+  /* --- settings: the card --- */
+  #ov-settings .panel { position: relative; border: 3px solid #f0b93e; border-radius: 22px; color: #fff;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
+    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
+    padding: 22px 16px 16px; text-align: start; }
+  #ov-settings .panel h2 { color: #fff; text-align: center; font-size: 23px; margin-bottom: 12px;
+    text-shadow: 0 2px 4px rgba(0,0,0,.45); }
+  .st-ribbon { position: absolute; top: -17px; inset-inline-start: 16px; width: 44px; height: 54px; margin: 0;
+    padding: 0 0 10px; cursor: pointer; border: 0; z-index: 2;
+    background: linear-gradient(180deg, #ff9a44, #f06414 58%, #d94e06);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+    box-shadow: 0 4px 8px rgba(0,0,0,.4);
+    display: flex; align-items: flex-start; justify-content: center; }
+  .st-ribbon svg { width: 20px; height: 20px; stroke: #fff; stroke-width: 3.2; fill: none; stroke-linecap: round;
+    margin-top: 10px; filter: drop-shadow(0 1px 1px rgba(90,30,0,.65)); }
+  .st-ribbon:active { transform: scale(.94); }
+  .st-langrow { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: rgba(255,255,255,.17); border-radius: 13px; padding: 8px 12px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
+  .st-langpair { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+  .st-langpair .pf-label { margin: 0; color: #ffd7f2; }
+  .st-langcur { font-size: 17.5px; font-weight: 800; color: #fff; }
+  #ov-settings .st-langs { margin-top: 8px; }
+  #ov-settings .st-lang { background: rgba(43,6,54,.5); color: #fff; border: 1.5px solid rgba(255,255,255,.35); }
+  #ov-settings .st-lang.sel { background: linear-gradient(180deg, #ffd75e, #d9a83c); color: #33270a;
+    border-color: #ffd75e; box-shadow: 0 0 0 1px #ffd75e; }
+  .st-rows { margin-top: 12px; background: rgba(43,6,54,.55); border-radius: 16px; padding: 2px 14px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,.35); }
+  #ov-settings .st-rules, #ov-settings .st-logout { width: 100%; margin: 0; padding: 13px 2px; gap: 9px;
+    justify-content: space-between; background: none; color: #fff; border: 0; border-radius: 0;
+    border-bottom: 1px solid rgba(255,255,255,.13); box-shadow: none; font-size: 16.5px; font-weight: 700; }
+  #ov-settings .st-logout { border-bottom: 0; }
+  #ov-settings .st-rules svg { stroke: #ffd7f2; }
+  #ov-settings .st-logout svg { stroke: #ffd7f2; }
+  .st-togrow { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 12px 2px; border-bottom: 1px solid rgba(255,255,255,.13); cursor: pointer; }
+  .st-tog-lbl { font-size: 16.5px; font-weight: 700; color: #fff; }
+  .st-check { width: 34px; height: 34px; flex: 0 0 auto; border: 2.5px solid #f0b93e; border-radius: 7px;
+    background: rgba(0,0,0,.25); box-shadow: inset 0 2px 5px rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center; }
+  .st-check svg { width: 22px; height: 22px; stroke: #3ce862; stroke-width: 3.4; fill: none;
+    stroke-linecap: round; stroke-linejoin: round; opacity: 0; transform: scale(.55);
+    transition: opacity .15s, transform .15s; filter: drop-shadow(0 1px 2px rgba(0,60,0,.65)); }
+  .st-check.on svg { opacity: 1; transform: scale(1); }
+  .st-follow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
+  .st-follow span { font-size: 14.5px; font-weight: 700; color: #ffd7f2; }
+  .st-ig { width: 46px; height: 46px; flex: 0 0 auto; border-radius: 13px; text-decoration: none;
+    background: linear-gradient(45deg, #f9ce34 0%, #ee2a7b 55%, #6228d7 100%);
+    border: 2px solid rgba(255,255,255,.55); box-shadow: 0 4px 10px rgba(0,0,0,.4);
+    display: flex; align-items: center; justify-content: center; }
+  .st-ig svg { width: 26px; height: 26px; stroke: #fff; stroke-width: 2; fill: none; display: block; }
+  .st-ig:active { transform: scale(.94); }
+  #ov-settings .ghost { color: #fff; border-color: rgba(255,255,255,.5); background: rgba(255,255,255,.08); }
+  /* --- friends: wood sign + magenta tiles + lavender cards --- */
+  #scr-friends { background-color: #6d0d3f;
+    background-image:
+      linear-gradient(45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(-45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(180deg, #4a0727 0%, #7d1046 28%, #a1185c 52%, #8a1250 74%, #4a0727 100%);
+    background-size: 34px 34px, 34px 34px, 100% 100%;
+    background-repeat: repeat, repeat, no-repeat; }
+  .fr-woodsign { position: relative; margin: 0 auto 14px; max-width: 330px; text-align: center;
+    padding: 12px 20px 14px; border-radius: 12px; border: 3px solid #5e2a08;
+    background:
+      repeating-linear-gradient(180deg, rgba(0,0,0,.16) 0 2px, transparent 2px 36px),
+      linear-gradient(180deg, #a05a24 0%, #8a4517 45%, #74350e 100%);
+    box-shadow: inset 0 2px 0 rgba(255,210,140,.5), inset 0 -7px 13px rgba(40,15,0,.5), 0 6px 14px rgba(0,0,0,.5); }
+  .fr-woodsign::before, .fr-woodsign::after { content: ""; position: absolute; top: 9px; width: 9px; height: 9px;
+    border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ececf4, #7a7a88 60%, #3c3c46);
+    box-shadow: inset 0 -1px 2px rgba(0,0,0,.6), 0 1px 2px rgba(0,0,0,.5); }
+  .fr-woodsign::before { inset-inline-start: 11px; }
+  .fr-woodsign::after { inset-inline-end: 11px; }
+  .fr-woodsign span { font-size: 27px; font-weight: 900; letter-spacing: .5px; color: #ffdf8e;
+    text-shadow: 0 2px 0 rgba(70,30,0,.85), 0 4px 8px rgba(0,0,0,.5); }
+  #scr-friends .fr-topbtn { background: linear-gradient(180deg, #b06bf7, #7d30e8 55%, #5c17c4); color: #fff;
+    border: 1.5px solid rgba(255,255,255,.45); border-radius: 13px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -3px 6px rgba(40,0,90,.45), 0 4px 10px rgba(20,2,50,.45); }
+  #scr-friends .fr-topbtn.open { background: linear-gradient(180deg, #ff8ade, #dd379b); color: #fff; border-color: #ffc2e8; }
+  #scr-friends .cardbox { background: linear-gradient(180deg, rgba(168,38,110,.88), rgba(96,16,80,.92));
+    border: 1.5px solid rgba(255,255,255,.3); border-radius: 16px; color: #fff;
+    box-shadow: 0 6px 16px rgba(20,0,25,.45), inset 0 1px 0 rgba(255,255,255,.22); }
+  #scr-friends .fr-sec { color: #ffd7f2; }
+  #scr-friends .fr-row { border-bottom-color: rgba(255,255,255,.15); }
+  #scr-friends input { background: rgba(20,4,30,.82); color: #fff; border-color: rgba(255,255,255,.42); }
+  #scr-friends input::placeholder { color: rgba(255,255,255,.42); }
+  #scr-friends .fr-act { background: rgba(43,6,54,.5); color: #ffe3f6; border-color: rgba(255,255,255,.35); }
+  #scr-friends .fr-act.fr-busybtn { color: #ffd75e; }
+  #scr-friends .fr-act.primary { background: linear-gradient(180deg, #ffd75e, #d9a83c); color: #33270a; border-color: #ffd75e; }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="nvGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset=".45" stop-color="#f7c948"/><stop offset="1" stop-color="#d18d06"/></linearGradient><linearGradient id="nvPink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb1e3"/><stop offset=".5" stop-color="#f0569f"/><stop offset="1" stop-color="#c2187a"/></linearGradient><linearGradient id="nvGreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8f5cd"/><stop offset=".5" stop-color="#3fce62"/><stop offset="1" stop-color="#1d9e4b"/></linearGradient><linearGradient id="nvBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe0ff"/><stop offset=".5" stop-color="#55a8f5"/><stop offset="1" stop-color="#2470c2"/></linearGradient><linearGradient id="nvWhite" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9d4ee"/></linearGradient></defs></svg>
 <div id="splash" aria-hidden="true">
   <div class="sp-title">توره</div>
   <div class="sp-suits"><span class="w">♠</span><span class="r">♥</span><span class="w">♣</span><span class="r">♦</span></div>
@@ -1528,16 +1728,14 @@
   <!-- ======== HOME — Ludo-style menu on the carpet (design 1, approved 2026-11-08) ======== -->
   <section id="scr-home">
     <div id="home-main">
+      <div class="hm-wm" aria-hidden="true"><svg viewBox="0 0 48 30"><path d="M6 24 3 9l10 6L24 4l11 11 10-6-3 15z" fill="rgba(255,255,255,.06)"/><rect x="6" y="24" width="36" height="3.4" rx="1.7" fill="rgba(255,255,255,.06)"/></svg><div class="wm-t">توره</div></div>
       <div class="hm-topbar">
         <button class="hm-profilebtn" id="btn-profile" aria-label="زما پروفایل">
           <span id="home-avatar-slot"></span>
           <span class="hm-pname" id="home-name">د تورې لوبغاړی</span>
         </button>
         <button class="hm-gear" id="btn-settings" aria-label="امادګي">
-          <svg viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-          </svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="gearG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cdbfe8"/></linearGradient></defs><path fill-rule="evenodd" fill="url(#gearG)" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg>
         </button>
       </div>
 
@@ -1550,11 +1748,11 @@
       <div class="hm-bigrow" id="home-fan">
         <button class="hm-bigcard violet" id="btn-online" aria-label="انلاین لوبه">
           <span class="globe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
-          <span class="fan"><svg viewBox="0 0 200 128" aria-hidden="true"><defs><linearGradient id="fanBackV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7c5cd6"/><stop offset="1" stop-color="#4527a0"/></linearGradient></defs><g transform="rotate(-16 100 116)"><rect x="69" y="14" width="62" height="88" rx="7" fill="url(#fanBackV)" stroke="#e9d8ff" stroke-width="2"/><rect x="75" y="20" width="50" height="76" rx="5" fill="none" stroke="#ffd75e" stroke-width="1.6"/><text x="100" y="70" text-anchor="middle" font-size="28" fill="#ffd75e">♠</text></g><g transform="rotate(16 100 116)"><rect x="69" y="14" width="62" height="88" rx="7" fill="#fdfdf8" stroke="rgba(0,0,0,.3)"/><text x="76" y="31" font-size="15" font-weight="700" fill="#d7263d">A</text><text x="76" y="45" font-size="12" fill="#d7263d">♥</text><text x="100" y="71" text-anchor="middle" font-size="32" fill="#d7263d">♥</text></g><g><rect x="69" y="8" width="62" height="88" rx="7" fill="#fdfdf8" stroke="rgba(0,0,0,.3)"/><text x="76" y="25" font-size="15" font-weight="700" fill="#20242e">Q</text><text x="76" y="39" font-size="12" fill="#20242e">♠</text><text x="100" y="65" text-anchor="middle" font-size="32" fill="#20242e">♠</text><g transform="rotate(180 100 52)"><text x="76" y="25" font-size="15" font-weight="700" fill="#20242e">Q</text><text x="76" y="39" font-size="12" fill="#20242e">♠</text></g></g></svg></span>
+          <span class="fan"><svg viewBox="0 0 200 176" aria-hidden="true"><defs><linearGradient id="fanBackV2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b6be8"/><stop offset="1" stop-color="#4527a0"/></linearGradient><linearGradient id="fanCoinV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset="1" stop-color="#d18d06"/></linearGradient></defs><g transform="rotate(-19 100 150)"><rect x="60" y="30" width="80" height="112" rx="10" fill="url(#fanBackV2)" stroke="#ffd75e" stroke-width="3"/><rect x="68" y="38" width="64" height="96" rx="7" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.6"/><text x="100" y="100" text-anchor="middle" font-size="38" fill="#ffd75e">♠</text></g><g transform="rotate(19 100 150)"><rect x="60" y="30" width="80" height="112" rx="10" fill="#fdfdf8" stroke="rgba(0,0,0,.3)" stroke-width="2"/><text x="69" y="50" font-size="16" font-weight="700" fill="#d7263d">A</text><text x="69" y="65" font-size="12" fill="#d7263d">♥</text><text x="100" y="100" text-anchor="middle" font-size="38" fill="#d7263d">♥</text></g><g><rect x="60" y="14" width="80" height="112" rx="10" fill="#fdfdf8" stroke="rgba(30,10,50,.6)" stroke-width="3"/><rect x="66" y="20" width="68" height="100" rx="7" fill="none" stroke="#e9c46a" stroke-width="1.4"/><text x="69" y="36" font-size="17" font-weight="700" fill="#20242e">Q</text><text x="69" y="51" font-size="12" fill="#20242e">♠</text><text x="100" y="86" text-anchor="middle" font-size="44" fill="#20242e">♠</text><g transform="rotate(180 100 70)"><text x="69" y="36" font-size="17" font-weight="700" fill="#20242e">Q</text><text x="69" y="51" font-size="12" fill="#20242e">♠</text></g></g><circle cx="170" cy="142" r="17" fill="url(#fanCoinV)" stroke="#a86e00" stroke-width="2.5"/><text x="170" y="150" text-anchor="middle" font-size="19" fill="#7a4d00">♠</text><circle cx="27" cy="150" r="11" fill="url(#fanCoinV)" stroke="#a86e00" stroke-width="2"/><text x="27" y="155" text-anchor="middle" font-size="12" fill="#7a4d00">♠</text><path d="M28 8l2.4 6.6L37 17l-6.6 2.4L28 26l-2.4-6.6L19 17l6.6-2.4z" fill="#ffe98a" opacity=".95"/></svg></span>
           <span class="biglabel"><b>انلاین لوبه</b></span>
         </button>
         <button class="hm-bigcard orange" id="btn-quick" aria-label="له روباتونو سره لوبه">
-          <span class="fan"><svg viewBox="0 0 200 128" aria-hidden="true"><defs><linearGradient id="fanBackO" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e08a2e"/><stop offset="1" stop-color="#9c5410"/></linearGradient></defs><g transform="rotate(-16 100 116)"><rect x="69" y="14" width="62" height="88" rx="7" fill="url(#fanBackO)" stroke="#ffe9c9" stroke-width="2"/><rect x="75" y="20" width="50" height="76" rx="5" fill="none" stroke="#fff3c4" stroke-width="1.6"/><text x="100" y="70" text-anchor="middle" font-size="28" fill="#fff3c4">♣</text></g><g transform="rotate(16 100 116)"><rect x="69" y="14" width="62" height="88" rx="7" fill="#fdfdf8" stroke="rgba(0,0,0,.3)"/><text x="76" y="31" font-size="15" font-weight="700" fill="#d7263d">K</text><text x="76" y="45" font-size="12" fill="#d7263d">♥</text><text x="100" y="71" text-anchor="middle" font-size="32" fill="#d7263d">♥</text></g><g><rect x="69" y="8" width="62" height="88" rx="7" fill="#fdfdf8" stroke="rgba(0,0,0,.3)"/><text x="76" y="25" font-size="15" font-weight="700" fill="#20242e">J</text><text x="76" y="39" font-size="12" fill="#20242e">♣</text><text x="100" y="65" text-anchor="middle" font-size="32" fill="#20242e">♣</text><g transform="rotate(180 100 52)"><text x="76" y="25" font-size="15" font-weight="700" fill="#20242e">J</text><text x="76" y="39" font-size="12" fill="#20242e">♣</text></g></g></svg></span>
+          <span class="fan"><svg viewBox="0 0 200 176" aria-hidden="true"><defs><linearGradient id="fanBackO2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f5a83d"/><stop offset="1" stop-color="#9c5410"/></linearGradient><linearGradient id="fanCoinV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset="1" stop-color="#d18d06"/></linearGradient></defs><g transform="rotate(-19 100 150)"><rect x="60" y="30" width="80" height="112" rx="10" fill="url(#fanBackO2)" stroke="#ffe9c9" stroke-width="3"/><rect x="68" y="38" width="64" height="96" rx="7" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.6"/><text x="100" y="100" text-anchor="middle" font-size="38" fill="#fff3c4">♣</text></g><g transform="rotate(19 100 150)"><rect x="60" y="30" width="80" height="112" rx="10" fill="#fdfdf8" stroke="rgba(0,0,0,.3)" stroke-width="2"/><text x="69" y="50" font-size="16" font-weight="700" fill="#d7263d">K</text><text x="69" y="65" font-size="12" fill="#d7263d">♥</text><text x="100" y="100" text-anchor="middle" font-size="38" fill="#d7263d">♥</text></g><g><rect x="60" y="14" width="80" height="112" rx="10" fill="#fdfdf8" stroke="rgba(30,10,50,.6)" stroke-width="3"/><rect x="66" y="20" width="68" height="100" rx="7" fill="none" stroke="#e9c46a" stroke-width="1.4"/><text x="69" y="36" font-size="17" font-weight="700" fill="#20242e">J</text><text x="69" y="51" font-size="12" fill="#20242e">♣</text><text x="100" y="86" text-anchor="middle" font-size="44" fill="#20242e">♣</text><g transform="rotate(180 100 70)"><text x="69" y="36" font-size="17" font-weight="700" fill="#20242e">J</text><text x="69" y="51" font-size="12" fill="#20242e">♣</text></g></g><circle cx="170" cy="142" r="17" fill="url(#fanCoinV)" stroke="#a86e00" stroke-width="2.5"/><text x="170" y="150" text-anchor="middle" font-size="19" fill="#7a4d00">♣</text><circle cx="27" cy="150" r="11" fill="url(#fanCoinV)" stroke="#a86e00" stroke-width="2"/><text x="27" y="155" text-anchor="middle" font-size="12" fill="#7a4d00">♣</text><path d="M28 8l2.4 6.6L37 17l-6.6 2.4L28 26l-2.4-6.6L19 17l6.6-2.4z" fill="#ffe98a" opacity=".95"/></svg></span>
           <span class="biglabel"><b>له روباتونو سره لوبه</b></span>
         </button>
       </div>
@@ -1566,15 +1764,15 @@
 
       <div class="hm-smallrow">
         <button class="hm-small" id="btn-create">
-          <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+          <span class="cluster"><svg viewBox="0 0 96 64" aria-hidden="true"><defs><linearGradient id="clCoin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset="1" stop-color="#d18d06"/></linearGradient><linearGradient id="clGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe98a"/><stop offset="1" stop-color="#e0a408"/></linearGradient><linearGradient id="clBack" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b6be8"/><stop offset="1" stop-color="#4527a0"/></linearGradient><linearGradient id="clViolet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b388ff"/><stop offset="1" stop-color="#6d28d9"/></linearGradient></defs><g transform="rotate(-13 40 34)"><rect x="24" y="10" width="32" height="45" rx="5" fill="#fdfdf8" stroke="rgba(0,0,0,.3)" stroke-width="1.6"/><text x="40" y="42" text-anchor="middle" font-size="17" fill="#20242e">♠</text></g><g transform="rotate(13 58 34)"><rect x="42" y="10" width="32" height="45" rx="5" fill="url(#clBack)" stroke="#ffd75e" stroke-width="2"/><text x="58" y="42" text-anchor="middle" font-size="15" fill="#ffd75e">♠</text></g><circle cx="76" cy="46" r="14" fill="url(#clCoin)" stroke="#a86e00" stroke-width="2"/><text x="76" y="53" text-anchor="middle" font-size="19" font-weight="800" fill="#7a4d00">+</text></svg></span>
           <b>کوټه جوړه کړه</b>
         </button>
         <button class="hm-small" id="btn-join-toggle">
-          <span class="ic"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4.5"/><path d="M11.2 11.8L20 3M16.5 6.5l3 3M13.8 9.2l2.4 2.4"/></svg></span>
+          <span class="cluster"><svg viewBox="0 0 96 64" aria-hidden="true"><circle cx="22" cy="18" r="13" fill="url(#clCoin)" stroke="#a86e00" stroke-width="2"/><text x="22" y="24" text-anchor="middle" font-size="14" font-weight="800" fill="#7a4d00">#</text><circle cx="80" cy="14" r="9" fill="url(#clViolet)" stroke="rgba(255,255,255,.65)" stroke-width="1.5"/><circle cx="76" cy="14" r="1.5" fill="#fff"/><circle cx="80" cy="14" r="1.5" fill="#fff"/><circle cx="84" cy="14" r="1.5" fill="#fff"/><circle cx="38" cy="36" r="12" fill="none" stroke="url(#clGold)" stroke-width="6.5"/><path d="M46 44 74 58" stroke="url(#clGold)" stroke-width="6.5" stroke-linecap="round"/><path d="M64 51v-8M74 58v-9" stroke="url(#clGold)" stroke-width="5.5" stroke-linecap="round"/></svg></span>
           <b>د کوډ سره ورګډ شه</b>
         </button>
         <button class="hm-small" id="btn-friends-card" aria-label="له ملګرو سره لوبه">
-          <span class="ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+          <span class="cluster"><svg viewBox="0 0 96 64" aria-hidden="true"><rect x="3" y="1" width="25" height="17" rx="6" fill="url(#nvPink)"/><path d="M9 16.5 9 23l7-5.5z" fill="#e84393"/><circle cx="10" cy="9.5" r="1.6" fill="#fff"/><circle cx="15.5" cy="9.5" r="1.6" fill="#fff"/><circle cx="21" cy="9.5" r="1.6" fill="#fff"/><rect x="68" y="1" width="25" height="17" rx="6" fill="url(#nvGreen)"/><path d="M87 16.5 87 23l-7-5.5z" fill="#28b751"/><circle cx="75" cy="9.5" r="1.6" fill="#fff"/><circle cx="80.5" cy="9.5" r="1.6" fill="#fff"/><circle cx="86" cy="9.5" r="1.6" fill="#fff"/><circle cx="35" cy="41" r="16" fill="url(#nvBlue)"/><circle cx="61" cy="41" r="16" fill="url(#nvGreen)"/><circle cx="29.5" cy="38" r="1.9" fill="#10365e"/><circle cx="40.5" cy="38" r="1.9" fill="#10365e"/><path d="M28.5 45a7 7 0 0 0 13 0" fill="none" stroke="#10365e" stroke-width="2" stroke-linecap="round"/><circle cx="55.5" cy="38" r="1.9" fill="#0d4d24"/><circle cx="66.5" cy="38" r="1.9" fill="#0d4d24"/><path d="M54.5 45a7 7 0 0 0 13 0" fill="none" stroke="#0d4d24" stroke-width="2" stroke-linecap="round"/></svg></span>
           <b>له ملګرو سره لوبه</b>
         </button>
       </div>
@@ -1582,25 +1780,25 @@
       <nav class="hm-nav">
         <button class="hm-navitem" id="nav-friends">
           <span class="nav-badge hidden" id="nav-friends-badge">0</span>
-          <span class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+          <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M1.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M27.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M10.5 43c.8-9.5 6.3-15 13.5-15s12.7 5.5 13.5 15z" fill="url(#nvBlue)"/><circle cx="11" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="37" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="24" cy="19.5" r="8.4" fill="url(#nvWhite)"/></svg></span>
           <span class="nl" id="nav-friends-lbl">ملګري</span>
         </button>
         <button class="hm-navitem" id="nav-clubs">
           <span class="nav-badge hidden" id="nav-clubs-badge">0</span>
-          <span class="ni"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+          <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M15 5h18v6.5a9 9 0 0 1-18 0z" fill="url(#nvGold)"/><path d="M15 8.5H8a7 7 0 0 0 7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M33 8.5h7a7 7 0 0 1-7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M22 20h4v13h-4z" fill="url(#nvGold)"/><path d="M15 33h18l2.6 6H12.4z" fill="url(#nvGold)"/><rect x="11.5" y="39" width="25" height="4.6" rx="2.3" fill="url(#nvGold)"/><path d="M24 7.6l1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5z" fill="#fff3c4"/></svg></span>
           <span class="nl" id="nav-clubs-lbl">کلبونه</span>
         </button>
         <button class="hm-navitem home" id="nav-home">
-          <span class="bubble"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+          <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
           <span class="nl" id="nav-home-lbl">کور</span>
         </button>
         <button class="hm-navitem" id="nav-profile">
-          <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+          <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
           <span class="nl" id="nav-profile-lbl">پروفایل</span>
         </button>
         <button class="hm-navitem" id="nav-chat">
           <span class="nav-badge hidden" id="nav-chat-badge">0</span>
-          <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+          <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="19" y="4" width="25" height="20" rx="7" fill="url(#nvGreen)"/><path d="M35 22.5 35 30l-7.5-6.5z" fill="#28b751"/><rect x="4" y="15" width="29" height="22" rx="8" fill="url(#nvPink)"/><path d="M11 35.5 11 43l8-6.6z" fill="#e84393"/><ellipse cx="29" cy="9" rx="7" ry="2.6" fill="#fff" opacity=".35"/><ellipse cx="13" cy="20" rx="8" ry="2.8" fill="#fff" opacity=".35"/><circle cx="12.5" cy="26" r="2.1" fill="#fff"/><circle cx="18.5" cy="26" r="2.1" fill="#fff"/><circle cx="24.5" cy="26" r="2.1" fill="#fff"/></svg></span>
           <span class="nl" id="nav-chat-lbl">چت</span>
         </button>
       </nav>
@@ -1791,6 +1989,7 @@
 <section id="scr-friends" class="hidden">
   <div class="fr-scroll">
     <div class="fr-inner">
+      <div class="fr-woodsign"><span id="fr-sign-title">ملګري</span></div>
       <div class="fr-head">
         <button class="fr-topbtn" id="btn-fr-openblocked" aria-label="بلاک شوي">
           <svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.4"/><path d="M3.6 19.6c.7-3.6 3.2-5.4 6.4-5.4 1 0 2 .2 2.8.6"/><path d="M4.8 4.2l14.6 15.4"/></svg>
@@ -1825,25 +2024,25 @@
   <nav class="hm-nav">
     <button class="hm-navitem home" id="frnav-friends">
       <span class="nav-badge hidden" id="frnav-friends-badge">0</span>
-      <span class="bubble"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+      <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M1.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M27.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M10.5 43c.8-9.5 6.3-15 13.5-15s12.7 5.5 13.5 15z" fill="url(#nvBlue)"/><circle cx="11" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="37" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="24" cy="19.5" r="8.4" fill="url(#nvWhite)"/></svg></span>
       <span class="nl" id="frnav-friends-lbl">ملګري</span>
     </button>
     <button class="hm-navitem" id="frnav-clubs">
       <span class="nav-badge hidden" id="frnav-clubs-badge">0</span>
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M15 5h18v6.5a9 9 0 0 1-18 0z" fill="url(#nvGold)"/><path d="M15 8.5H8a7 7 0 0 0 7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M33 8.5h7a7 7 0 0 1-7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M22 20h4v13h-4z" fill="url(#nvGold)"/><path d="M15 33h18l2.6 6H12.4z" fill="url(#nvGold)"/><rect x="11.5" y="39" width="25" height="4.6" rx="2.3" fill="url(#nvGold)"/><path d="M24 7.6l1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5z" fill="#fff3c4"/></svg></span>
       <span class="nl" id="frnav-clubs-lbl">کلبونه</span>
     </button>
     <button class="hm-navitem" id="frnav-home">
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="frnav-home-lbl">کور</span>
     </button>
     <button class="hm-navitem" id="frnav-profile">
-      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
       <span class="nl" id="frnav-profile-lbl">پروفایل</span>
     </button>
     <button class="hm-navitem" id="frnav-chat">
       <span class="nav-badge hidden" id="frnav-chat-badge">0</span>
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="19" y="4" width="25" height="20" rx="7" fill="url(#nvGreen)"/><path d="M35 22.5 35 30l-7.5-6.5z" fill="#28b751"/><rect x="4" y="15" width="29" height="22" rx="8" fill="url(#nvPink)"/><path d="M11 35.5 11 43l8-6.6z" fill="#e84393"/><ellipse cx="29" cy="9" rx="7" ry="2.6" fill="#fff" opacity=".35"/><ellipse cx="13" cy="20" rx="8" ry="2.8" fill="#fff" opacity=".35"/><circle cx="12.5" cy="26" r="2.1" fill="#fff"/><circle cx="18.5" cy="26" r="2.1" fill="#fff"/><circle cx="24.5" cy="26" r="2.1" fill="#fff"/></svg></span>
       <span class="nl" id="frnav-chat-lbl">چت</span>
     </button>
   </nav>
@@ -1862,25 +2061,25 @@
   <nav class="hm-nav">
     <button class="hm-navitem" id="chnav-friends">
       <span class="nav-badge hidden" id="chnav-friends-badge">0</span>
-      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M1.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M27.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M10.5 43c.8-9.5 6.3-15 13.5-15s12.7 5.5 13.5 15z" fill="url(#nvBlue)"/><circle cx="11" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="37" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="24" cy="19.5" r="8.4" fill="url(#nvWhite)"/></svg></span>
       <span class="nl" id="chnav-friends-lbl">ملګري</span>
     </button>
     <button class="hm-navitem" id="chnav-clubs">
       <span class="nav-badge hidden" id="chnav-clubs-badge">0</span>
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M15 5h18v6.5a9 9 0 0 1-18 0z" fill="url(#nvGold)"/><path d="M15 8.5H8a7 7 0 0 0 7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M33 8.5h7a7 7 0 0 1-7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M22 20h4v13h-4z" fill="url(#nvGold)"/><path d="M15 33h18l2.6 6H12.4z" fill="url(#nvGold)"/><rect x="11.5" y="39" width="25" height="4.6" rx="2.3" fill="url(#nvGold)"/><path d="M24 7.6l1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5z" fill="#fff3c4"/></svg></span>
       <span class="nl" id="chnav-clubs-lbl">کلبونه</span>
     </button>
     <button class="hm-navitem" id="chnav-home">
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="chnav-home-lbl">کور</span>
     </button>
     <button class="hm-navitem" id="chnav-profile">
-      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
       <span class="nl" id="chnav-profile-lbl">پروفایل</span>
     </button>
     <button class="hm-navitem home" id="chnav-chat">
       <span class="nav-badge hidden" id="chnav-chat-badge">0</span>
-      <span class="bubble"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="19" y="4" width="25" height="20" rx="7" fill="url(#nvGreen)"/><path d="M35 22.5 35 30l-7.5-6.5z" fill="#28b751"/><rect x="4" y="15" width="29" height="22" rx="8" fill="url(#nvPink)"/><path d="M11 35.5 11 43l8-6.6z" fill="#e84393"/><ellipse cx="29" cy="9" rx="7" ry="2.6" fill="#fff" opacity=".35"/><ellipse cx="13" cy="20" rx="8" ry="2.8" fill="#fff" opacity=".35"/><circle cx="12.5" cy="26" r="2.1" fill="#fff"/><circle cx="18.5" cy="26" r="2.1" fill="#fff"/><circle cx="24.5" cy="26" r="2.1" fill="#fff"/></svg></span>
       <span class="nl" id="chnav-chat-lbl">چت</span>
     </button>
   </nav>
@@ -1890,51 +2089,67 @@
 <section id="scr-profile" class="hidden">
   <div class="fr-scroll">
     <div class="fr-inner">
-      <h2 id="pf-title">زما پروفایل</h2>
-      <div class="pf-pvwrap">
-        <div class="pf-preview" id="pf-preview"></div>
-        <button type="button" class="pf-editav" id="btn-pf-edit-av" aria-label="انځور بدلول">✏️</button>
-      </div>
-      <div class="pf-idrow">
-        <span class="pf-label" id="pf-id-lbl">زما ID</span>
-        <button type="button" class="pf-idnum" id="pf-id-num" dir="ltr">…</button>
-      </div>
-      <div id="pf-picker" class="hidden">
-        <span class="pf-label" id="pf-avatar-lbl">انځور</span>
-        <div class="pf-grid" id="pf-grid"></div>
-      </div>
-      <label class="pf-label" id="pf-name-lbl" for="pf-name">نوم</label>
-      <input id="pf-name" type="text" maxlength="20" placeholder="نوم دې — لکه احمد" autocomplete="name">
-      <label class="pf-label" id="pf-country-lbl" for="pf-country">هېواد</label>
-      <select id="pf-country"></select>
-      <div class="pf-btns">
-        <button id="btn-profile-save">ساتل</button>
-        <button id="btn-profile-close" class="ghost">بندول</button>
+      <div class="pf-card">
+        <button type="button" class="pf-x" id="btn-pf-home" aria-label="کور"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+        <div class="pf-headrow">
+          <span class="pf-headav" id="pf-head-av"></span>
+          <span class="pf-headname" id="pf-head-name">…</span>
+          <button type="button" class="pf-pencil" id="btn-pf-edit-name" aria-label="نوم بدلول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+        </div>
+        <div class="pf-flagrow">
+          <button type="button" class="pf-pencil sm" id="btn-pf-edit-country" aria-label="هېواد بدلول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          <span class="pf-flagname" id="pf-head-country">…</span>
+        </div>
+        <div class="pf-pvwrap">
+          <div class="pf-preview" id="pf-preview"></div>
+          <button type="button" class="pf-editav" id="btn-pf-edit-av" aria-label="انځور بدلول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+        </div>
+        <div id="pf-picker" class="hidden">
+          <span class="pf-label" id="pf-avatar-lbl">انځور</span>
+          <div class="pf-grid" id="pf-grid"></div>
+        </div>
+        <div id="pf-editbox" class="hidden">
+          <label class="pf-label" id="pf-name-lbl" for="pf-name">نوم</label>
+          <input id="pf-name" type="text" maxlength="20" placeholder="نوم دې — لکه احمد" autocomplete="name">
+          <label class="pf-label" id="pf-country-lbl" for="pf-country">هېواد</label>
+          <select id="pf-country"></select>
+          <div class="pf-btns">
+            <button id="btn-profile-save">ساتل</button>
+            <button id="btn-profile-close" class="ghost">بندول</button>
+          </div>
+        </div>
+        <div class="pf-stats">
+          <div class="pf-stats-title" id="pf-stats-title">شمېرې</div>
+          <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-id-lbl">د لوبغاړي پېژند</span><button type="button" class="pf-idnum" id="pf-id-num" dir="ltr">…</button></div>
+          <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-friends-lbl">ملګري</span><span class="pf-stat-val" id="pf-stat-friends">0</span></div>
+          <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-club-lbl">کلب</span><span class="pf-stat-val" id="pf-stat-club">هیڅ</span></div>
+          <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-country-lbl">هېواد</span><span class="pf-stat-val" id="pf-stat-country">…</span></div>
+        </div>
       </div>
     </div>
   </div>
   <nav class="hm-nav">
     <button class="hm-navitem" id="pfnav-friends">
       <span class="nav-badge hidden" id="pfnav-friends-badge">0</span>
-      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M1.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M27.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M10.5 43c.8-9.5 6.3-15 13.5-15s12.7 5.5 13.5 15z" fill="url(#nvBlue)"/><circle cx="11" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="37" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="24" cy="19.5" r="8.4" fill="url(#nvWhite)"/></svg></span>
       <span class="nl" id="pfnav-friends-lbl">ملګري</span>
     </button>
     <button class="hm-navitem" id="pfnav-clubs">
       <span class="nav-badge hidden" id="pfnav-clubs-badge">0</span>
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M15 5h18v6.5a9 9 0 0 1-18 0z" fill="url(#nvGold)"/><path d="M15 8.5H8a7 7 0 0 0 7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M33 8.5h7a7 7 0 0 1-7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M22 20h4v13h-4z" fill="url(#nvGold)"/><path d="M15 33h18l2.6 6H12.4z" fill="url(#nvGold)"/><rect x="11.5" y="39" width="25" height="4.6" rx="2.3" fill="url(#nvGold)"/><path d="M24 7.6l1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5z" fill="#fff3c4"/></svg></span>
       <span class="nl" id="pfnav-clubs-lbl">کلبونه</span>
     </button>
     <button class="hm-navitem" id="pfnav-home">
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="pfnav-home-lbl">کور</span>
     </button>
     <button class="hm-navitem home" id="pfnav-profile">
-      <span class="bubble"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+      <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
       <span class="nl" id="pfnav-profile-lbl">پروفایل</span>
     </button>
     <button class="hm-navitem" id="pfnav-chat">
       <span class="nav-badge hidden" id="pfnav-chat-badge">0</span>
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="19" y="4" width="25" height="20" rx="7" fill="url(#nvGreen)"/><path d="M35 22.5 35 30l-7.5-6.5z" fill="#28b751"/><rect x="4" y="15" width="29" height="22" rx="8" fill="url(#nvPink)"/><path d="M11 35.5 11 43l8-6.6z" fill="#e84393"/><ellipse cx="29" cy="9" rx="7" ry="2.6" fill="#fff" opacity=".35"/><ellipse cx="13" cy="20" rx="8" ry="2.8" fill="#fff" opacity=".35"/><circle cx="12.5" cy="26" r="2.1" fill="#fff"/><circle cx="18.5" cy="26" r="2.1" fill="#fff"/><circle cx="24.5" cy="26" r="2.1" fill="#fff"/></svg></span>
       <span class="nl" id="pfnav-chat-lbl">چت</span>
     </button>
   </nav>
@@ -1945,11 +2160,8 @@
   <!-- ======== DISCOVERY (Ludo-style clubs home) ======== -->
   <div class="fr-scroll" id="cl-disc-scroll">
     <div class="fr-inner">
-      <div class="cl-xrow">
-        <button type="button" class="cl-xbtn" id="btn-cl-home" aria-label="close"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
-      </div>
       <div class="cl-headrow">
-        <span class="cl-meav" id="cl-me-av"></span>
+        <button type="button" class="cl-xbtn" id="btn-cl-home" aria-label="close"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
         <button type="button" id="btn-cl-create" class="cl-createbtn"></button>
       </div>
       <div class="cl-topbar">
@@ -2056,25 +2268,25 @@
   <nav class="hm-nav">
     <button class="hm-navitem" id="clnav-friends">
       <span class="nav-badge hidden" id="clnav-friends-badge">0</span>
-      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M1.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M27.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M10.5 43c.8-9.5 6.3-15 13.5-15s12.7 5.5 13.5 15z" fill="url(#nvBlue)"/><circle cx="11" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="37" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="24" cy="19.5" r="8.4" fill="url(#nvWhite)"/></svg></span>
       <span class="nl" id="clnav-friends-lbl">ملګري</span>
     </button>
     <button class="hm-navitem home" id="clnav-clubs">
       <span class="nav-badge hidden" id="clnav-clubs-badge">0</span>
-      <span class="bubble"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+      <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M15 5h18v6.5a9 9 0 0 1-18 0z" fill="url(#nvGold)"/><path d="M15 8.5H8a7 7 0 0 0 7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M33 8.5h7a7 7 0 0 1-7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M22 20h4v13h-4z" fill="url(#nvGold)"/><path d="M15 33h18l2.6 6H12.4z" fill="url(#nvGold)"/><rect x="11.5" y="39" width="25" height="4.6" rx="2.3" fill="url(#nvGold)"/><path d="M24 7.6l1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5z" fill="#fff3c4"/></svg></span>
       <span class="nl" id="clnav-clubs-lbl">کلبونه</span>
     </button>
     <button class="hm-navitem" id="clnav-home">
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="clnav-home-lbl">کور</span>
     </button>
     <button class="hm-navitem" id="clnav-profile">
-      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
       <span class="nl" id="clnav-profile-lbl">پروفایل</span>
     </button>
     <button class="hm-navitem" id="clnav-chat">
       <span class="nav-badge hidden" id="clnav-chat-badge">0</span>
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="19" y="4" width="25" height="20" rx="7" fill="url(#nvGreen)"/><path d="M35 22.5 35 30l-7.5-6.5z" fill="#28b751"/><rect x="4" y="15" width="29" height="22" rx="8" fill="url(#nvPink)"/><path d="M11 35.5 11 43l8-6.6z" fill="#e84393"/><ellipse cx="29" cy="9" rx="7" ry="2.6" fill="#fff" opacity=".35"/><ellipse cx="13" cy="20" rx="8" ry="2.8" fill="#fff" opacity=".35"/><circle cx="12.5" cy="26" r="2.1" fill="#fff"/><circle cx="18.5" cy="26" r="2.1" fill="#fff"/><circle cx="24.5" cy="26" r="2.1" fill="#fff"/></svg></span>
       <span class="nl" id="clnav-chat-lbl">چت</span>
     </button>
   </nav>
@@ -2127,25 +2339,25 @@
   <nav class="hm-nav">
     <button class="hm-navitem" id="cpnav-friends">
       <span class="nav-badge hidden" id="cpnav-friends-badge">0</span>
-      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M1.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M27.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M10.5 43c.8-9.5 6.3-15 13.5-15s12.7 5.5 13.5 15z" fill="url(#nvBlue)"/><circle cx="11" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="37" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="24" cy="19.5" r="8.4" fill="url(#nvWhite)"/></svg></span>
       <span class="nl" id="cpnav-friends-lbl">ملګري</span>
     </button>
     <button class="hm-navitem home" id="cpnav-clubs">
       <span class="nav-badge hidden" id="cpnav-clubs-badge">0</span>
-      <span class="bubble"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+      <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M15 5h18v6.5a9 9 0 0 1-18 0z" fill="url(#nvGold)"/><path d="M15 8.5H8a7 7 0 0 0 7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M33 8.5h7a7 7 0 0 1-7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M22 20h4v13h-4z" fill="url(#nvGold)"/><path d="M15 33h18l2.6 6H12.4z" fill="url(#nvGold)"/><rect x="11.5" y="39" width="25" height="4.6" rx="2.3" fill="url(#nvGold)"/><path d="M24 7.6l1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5z" fill="#fff3c4"/></svg></span>
       <span class="nl" id="cpnav-clubs-lbl">کلبونه</span>
     </button>
     <button class="hm-navitem" id="cpnav-home">
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="cpnav-home-lbl">کور</span>
     </button>
     <button class="hm-navitem" id="cpnav-profile">
-      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
       <span class="nl" id="cpnav-profile-lbl">پروفایل</span>
     </button>
     <button class="hm-navitem" id="cpnav-chat">
       <span class="nav-badge hidden" id="cpnav-chat-badge">0</span>
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="19" y="4" width="25" height="20" rx="7" fill="url(#nvGreen)"/><path d="M35 22.5 35 30l-7.5-6.5z" fill="#28b751"/><rect x="4" y="15" width="29" height="22" rx="8" fill="url(#nvPink)"/><path d="M11 35.5 11 43l8-6.6z" fill="#e84393"/><ellipse cx="29" cy="9" rx="7" ry="2.6" fill="#fff" opacity=".35"/><ellipse cx="13" cy="20" rx="8" ry="2.8" fill="#fff" opacity=".35"/><circle cx="12.5" cy="26" r="2.1" fill="#fff"/><circle cx="18.5" cy="26" r="2.1" fill="#fff"/><circle cx="24.5" cy="26" r="2.1" fill="#fff"/></svg></span>
       <span class="nl" id="cpnav-chat-lbl">چت</span>
     </button>
   </nav>
@@ -2173,25 +2385,25 @@
   <nav class="hm-nav">
     <button class="hm-navitem" id="cmnav-friends">
       <span class="nav-badge hidden" id="cmnav-friends-badge">0</span>
-      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M1.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M27.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M10.5 43c.8-9.5 6.3-15 13.5-15s12.7 5.5 13.5 15z" fill="url(#nvBlue)"/><circle cx="11" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="37" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="24" cy="19.5" r="8.4" fill="url(#nvWhite)"/></svg></span>
       <span class="nl" id="cmnav-friends-lbl">ملګري</span>
     </button>
     <button class="hm-navitem home" id="cmnav-clubs">
       <span class="nav-badge hidden" id="cmnav-clubs-badge">0</span>
-      <span class="bubble"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+      <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M15 5h18v6.5a9 9 0 0 1-18 0z" fill="url(#nvGold)"/><path d="M15 8.5H8a7 7 0 0 0 7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M33 8.5h7a7 7 0 0 1-7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M22 20h4v13h-4z" fill="url(#nvGold)"/><path d="M15 33h18l2.6 6H12.4z" fill="url(#nvGold)"/><rect x="11.5" y="39" width="25" height="4.6" rx="2.3" fill="url(#nvGold)"/><path d="M24 7.6l1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5z" fill="#fff3c4"/></svg></span>
       <span class="nl" id="cmnav-clubs-lbl">کلبونه</span>
     </button>
     <button class="hm-navitem" id="cmnav-home">
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="cmnav-home-lbl">کور</span>
     </button>
     <button class="hm-navitem" id="cmnav-profile">
-      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
       <span class="nl" id="cmnav-profile-lbl">پروفایل</span>
     </button>
     <button class="hm-navitem" id="cmnav-chat">
       <span class="nav-badge hidden" id="cmnav-chat-badge">0</span>
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="19" y="4" width="25" height="20" rx="7" fill="url(#nvGreen)"/><path d="M35 22.5 35 30l-7.5-6.5z" fill="#28b751"/><rect x="4" y="15" width="29" height="22" rx="8" fill="url(#nvPink)"/><path d="M11 35.5 11 43l8-6.6z" fill="#e84393"/><ellipse cx="29" cy="9" rx="7" ry="2.6" fill="#fff" opacity=".35"/><ellipse cx="13" cy="20" rx="8" ry="2.8" fill="#fff" opacity=".35"/><circle cx="12.5" cy="26" r="2.1" fill="#fff"/><circle cx="18.5" cy="26" r="2.1" fill="#fff"/><circle cx="24.5" cy="26" r="2.1" fill="#fff"/></svg></span>
       <span class="nl" id="cmnav-chat-lbl">چت</span>
     </button>
   </nav>
@@ -2216,25 +2428,25 @@
   <nav class="hm-nav">
     <button class="hm-navitem" id="srqnav-friends">
       <span class="nav-badge hidden" id="srqnav-friends-badge">0</span>
-      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M1.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M27.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M10.5 43c.8-9.5 6.3-15 13.5-15s12.7 5.5 13.5 15z" fill="url(#nvBlue)"/><circle cx="11" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="37" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="24" cy="19.5" r="8.4" fill="url(#nvWhite)"/></svg></span>
       <span class="nl" id="srqnav-friends-lbl">ملګري</span>
     </button>
     <button class="hm-navitem home" id="srqnav-clubs">
       <span class="nav-badge hidden" id="srqnav-clubs-badge">0</span>
-      <span class="bubble"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+      <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M15 5h18v6.5a9 9 0 0 1-18 0z" fill="url(#nvGold)"/><path d="M15 8.5H8a7 7 0 0 0 7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M33 8.5h7a7 7 0 0 1-7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M22 20h4v13h-4z" fill="url(#nvGold)"/><path d="M15 33h18l2.6 6H12.4z" fill="url(#nvGold)"/><rect x="11.5" y="39" width="25" height="4.6" rx="2.3" fill="url(#nvGold)"/><path d="M24 7.6l1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5z" fill="#fff3c4"/></svg></span>
       <span class="nl" id="srqnav-clubs-lbl">کلبونه</span>
     </button>
     <button class="hm-navitem" id="srqnav-home">
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="srqnav-home-lbl">کور</span>
     </button>
     <button class="hm-navitem" id="srqnav-profile">
-      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
       <span class="nl" id="srqnav-profile-lbl">پروفایل</span>
     </button>
     <button class="hm-navitem" id="srqnav-chat">
       <span class="nav-badge hidden" id="srqnav-chat-badge">0</span>
-      <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="19" y="4" width="25" height="20" rx="7" fill="url(#nvGreen)"/><path d="M35 22.5 35 30l-7.5-6.5z" fill="#28b751"/><rect x="4" y="15" width="29" height="22" rx="8" fill="url(#nvPink)"/><path d="M11 35.5 11 43l8-6.6z" fill="#e84393"/><ellipse cx="29" cy="9" rx="7" ry="2.6" fill="#fff" opacity=".35"/><ellipse cx="13" cy="20" rx="8" ry="2.8" fill="#fff" opacity=".35"/><circle cx="12.5" cy="26" r="2.1" fill="#fff"/><circle cx="18.5" cy="26" r="2.1" fill="#fff"/><circle cx="24.5" cy="26" r="2.1" fill="#fff"/></svg></span>
       <span class="nl" id="srqnav-chat-lbl">چت</span>
     </button>
   </nav>
@@ -2424,26 +2636,44 @@
 
 <!-- ======== SETTINGS POPUP ======== -->
 <div class="overlay" id="ov-settings">
-  <div class="panel pf-panel">
+  <div class="panel st-panel">
+    <button type="button" class="st-ribbon" id="btn-settings-x" aria-label="بندول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
     <h2 id="st-title">امادګي</h2>
-    <span class="pf-label" id="st-lang-lbl">ژبه</span>
-    <div class="st-langs" id="st-langs">
+    <div class="st-langrow">
+      <span class="st-langpair"><span class="pf-label" id="st-lang-lbl">ژبه</span><span class="st-langcur" id="st-lang-cur">پښتو</span></span>
+      <button type="button" class="pf-pencil" id="btn-st-lang-edit" aria-label="ژبه بدلول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+    </div>
+    <div class="st-langs hidden" id="st-langs">
       <button type="button" class="st-lang" data-lang="ps">پښتو</button>
       <button type="button" class="st-lang" data-lang="fa">دری</button>
       <button type="button" class="st-lang" data-lang="en">English</button>
     </div>
-    <button id="btn-rules" class="st-rules" aria-label="د لوبې قوانین">
-      <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>
-      <span id="rules-txt">د لوبې قوانین</span>
-    </button>
-    <button id="btn-logout" class="st-logout" aria-label="له حسابه وتل">
-      <svg viewBox="0 0 24 24">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-        <path d="M16 17l5-5-5-5"/>
-        <path d="M21 12H9"/>
-      </svg>
-      <span id="st-logout-lbl">له حسابه وتل</span>
-    </button>
+    <div class="st-rows">
+      <button id="btn-rules" class="st-rules" aria-label="د لوبې قوانین">
+        <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>
+        <span id="rules-txt">د لوبې قوانین</span>
+      </button>
+      <div class="st-togrow" id="row-set-vibrate" role="switch" aria-checked="false" tabindex="0">
+        <span class="st-tog-lbl" id="st-vibrate-lbl">رېږدل</span>
+        <span class="st-check" id="st-vibrate-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
+      </div>
+      <div class="st-togrow" id="row-set-chat" role="switch" aria-checked="true" tabindex="0">
+        <span class="st-tog-lbl" id="st-chat-lbl">د لوبې چټ</span>
+        <span class="st-check on" id="st-chat-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
+      </div>
+      <button id="btn-logout" class="st-logout" aria-label="له حسابه وتل">
+        <svg viewBox="0 0 24 24">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <path d="M16 17l5-5-5-5"/>
+          <path d="M21 12H9"/>
+        </svg>
+        <span id="st-logout-lbl">له حسابه وتل</span>
+      </button>
+    </div>
+    <div class="st-follow">
+      <span id="st-follow-lbl">د نورو لپاره موږ تعقیب کړئ</span>
+      <a class="st-ig" href="https://www.instagram.com/shuaibanwari20" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.3" cy="6.7" r="1.15" fill="#fff" stroke="none"/></svg></a>
+    </div>
     <div class="pf-btns">
       <button id="btn-settings-close" class="ghost">بندول</button>
     </div>
@@ -2522,6 +2752,17 @@ const STR = {
     settingsTitle: 'امادګي',
     languageLbl: 'ژبه',
     logout: 'له حسابه وتل',
+    pfStatsTitle: 'شمېرې',
+    pfStatId: 'د لوبغاړي پېژند',
+    pfStatFriends: 'ملګري',
+    pfStatClub: 'کلب',
+    pfStatCountry: 'هېواد',
+    pfStatNone: 'هیڅ',
+    pfEditName: 'نوم بدلول',
+    pfEditCountry: 'هېواد بدلول',
+    stFollowUs: 'د نورو لپاره موږ تعقیب کړئ',
+    setVibrate: 'رېږدل',
+    setChat: 'د لوبې چټ',
     closeBtn: 'بندول',
     menuQuick: 'له روباتونو سره لوبه',
     menuQuickSub: 'سمدستي پیل — تمرین او تفریح',
@@ -2789,6 +3030,17 @@ const STR = {
     settingsTitle: 'تنظیمات',
     languageLbl: 'زبان',
     logout: 'خروج از حساب',
+    pfStatsTitle: 'آمار',
+    pfStatId: 'شناسهٔ بازیکن',
+    pfStatFriends: 'دوستان',
+    pfStatClub: 'باشگاه',
+    pfStatCountry: 'کشور',
+    pfStatNone: 'ندارد',
+    pfEditName: 'تغییر نام',
+    pfEditCountry: 'تغییر کشور',
+    stFollowUs: 'برای بیشتر، ما را دنبال کنید',
+    setVibrate: 'لرزش',
+    setChat: 'چت بازی',
     closeBtn: 'بستن',
     menuQuick: 'بازی با ربات‌ها',
     menuQuickSub: 'شروع فوری — تمرین و سرگرمی',
@@ -3056,6 +3308,17 @@ const STR = {
     settingsTitle: 'Settings',
     languageLbl: 'Language',
     logout: 'Log out',
+    pfStatsTitle: 'Stats',
+    pfStatId: 'Player ID',
+    pfStatFriends: 'Friends',
+    pfStatClub: 'Club',
+    pfStatCountry: 'Country',
+    pfStatNone: 'None',
+    pfEditName: 'Edit name',
+    pfEditCountry: 'Edit country',
+    stFollowUs: 'Follow us for more',
+    setVibrate: 'Vibration',
+    setChat: 'Game chat',
     closeBtn: 'Close',
     menuQuick: 'Play with Bots',
     menuQuickSub: 'Instant start — practice & fun',
@@ -3487,6 +3750,20 @@ function applyI18n() {
   set('#st-logout-lbl', 'logout');
   aria('#btn-logout', 'logout');
   set('#btn-settings-close', 'closeBtn');
+  set('#fr-sign-title', 'navFriends');
+  set('#pf-stats-title', 'pfStatsTitle');
+  set('#pf-stat-id-lbl', 'pfStatId');
+  set('#pf-stat-friends-lbl', 'pfStatFriends');
+  set('#pf-stat-club-lbl', 'pfStatClub');
+  set('#pf-stat-country-lbl', 'pfStatCountry');
+  set('#st-vibrate-lbl', 'setVibrate');
+  set('#st-chat-lbl', 'setChat');
+  set('#st-follow-lbl', 'stFollowUs');
+  aria('#btn-pf-home', 'navHome');
+  aria('#btn-pf-edit-name', 'pfEditName');
+  aria('#btn-pf-edit-country', 'pfEditCountry');
+  aria('#btn-st-lang-edit', 'languageLbl');
+  aria('#btn-settings-x', 'closeBtn');
   set('.chat-title', 'chatTitle');
   aria('#btn-chat-close', 'closeBtn');
   set('.stk-label', 'stickersLbl');
@@ -3505,6 +3782,7 @@ function setLang(code) {
   LANG = code;
   try { localStorage.setItem('tore.lang', code); } catch (e) { /* private mode */ }
   applyI18n();
+  if ($('#ov-settings').classList.contains('show')) paintSettings();
   renderProfileButton();
   refreshCountryOptions();
   if (state) render(state);
@@ -3983,6 +4261,7 @@ function sendChat(kind, value) {
   send({ type: 'chat', kind, value });
 }
 function toggleChatPanel() {
+  if (!toreSetting('chat', true)) { closeChatPanel(); return; }
   chatOpen = !chatOpen;
   $('#chatpanel').classList.toggle('open', chatOpen);
 }
@@ -6576,8 +6855,48 @@ $('#btn-rules').onclick = () => { closeSettings(); openRules(); };
 // Settings: the gear in the home top bar opens the settings popup —
 // language selector (پښتو / دری / English) plus the logout button,
 // which moved here from the top bar.
-function openSettings() { markLangRows(); $('#ov-settings').classList.add('show'); }
+function openSettings() { markLangRows(); paintSettings(); $('#st-langs').classList.add('hidden'); $('#ov-settings').classList.add('show'); }
 function closeSettings() { $('#ov-settings').classList.remove('show'); }
+// ----- settings switches (ludopages): two REAL toggles persisted in
+// localStorage — رېږدل vibration (tore.set.vibrate, default OFF) and
+// د لوبې چټ game chat (tore.set.chat, default ON). -----
+function toreSetting(key, dflt) {
+  try { const v = localStorage.getItem('tore.set.' + key); return v === null ? dflt : v === '1'; }
+  catch (e) { return dflt; }
+}
+function setToreSetting(key, on) {
+  try { localStorage.setItem('tore.set.' + key, on ? '1' : '0'); } catch (e) { /* private mode */ }
+}
+function buzz(pattern) {
+  if (!toreSetting('vibrate', false)) return;
+  if (navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) { /* unsupported (iOS) */ } }
+}
+function paintSettings() {
+  const cur = $('#st-lang-cur');
+  if (cur) cur.textContent = { ps: 'پښتو', fa: 'دری', en: 'English' }[LANG] || LANG;
+  const v = toreSetting('vibrate', false), c = toreSetting('chat', true);
+  const vc = $('#st-vibrate-check'); if (vc) vc.classList.toggle('on', v);
+  const cc = $('#st-chat-check'); if (cc) cc.classList.toggle('on', c);
+  const vr = $('#row-set-vibrate'); if (vr) vr.setAttribute('aria-checked', String(v));
+  const cr = $('#row-set-chat'); if (cr) cr.setAttribute('aria-checked', String(c));
+}
+function applyChatSetting() {
+  const on = toreSetting('chat', true);
+  const b = $('#btn-chat');
+  if (b) b.style.display = on ? '' : 'none';
+  if (!on) closeChatPanel();
+}
+$('#btn-settings-x').onclick = closeSettings;
+$('#btn-st-lang-edit').onclick = () => { $('#st-langs').classList.toggle('hidden'); };
+function bindToggleRow(id, key, dflt, after) {
+  const row = $(id);
+  if (!row) return;
+  const flip = () => { setToreSetting(key, !toreSetting(key, dflt)); paintSettings(); if (after) after(); };
+  row.onclick = flip;
+  row.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } };
+}
+bindToggleRow('#row-set-vibrate', 'vibrate', false, null);
+bindToggleRow('#row-set-chat', 'chat', true, applyChatSetting);
 $('#btn-settings').onclick = openSettings;
 $('#btn-settings-close').onclick = closeSettings;
 $('#ov-settings').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeSettings(); });
@@ -6639,6 +6958,29 @@ function pfRenderPreview() {
     ? T('googlePhoto')
     : avatarName((typeof pfAvatar === 'string' && AVATAR_ART[pfAvatar]) ? pfAvatar : 'av1');
   box.appendChild(cap);
+  pfRenderHead();
+}
+function pfRenderHead() {
+  const av = $('#pf-head-av');
+  if (av) { av.innerHTML = ''; av.appendChild(avatarEl('', pfAvatar, 54, pfAvatar === 'google' ? profile.photo : undefined)); }
+  const nm = $('#pf-head-name');
+  if (nm) nm.textContent = ($('#pf-name').value || '').trim() || profile.name || T('playerName');
+  const cn = $('#pf-head-country');
+  if (cn) {
+    const c = $('#pf-country').value || profile.country || '';
+    cn.textContent = (c && countryFlag(c) ? countryFlag(c) + ' ' : '') + (c ? dispCountry(c) : '');
+  }
+}
+// شمېرې panel: REAL data only — the server ID lives in its own row
+// (renderMyId); friends count from the social state, club name from
+// the club state, هیڅ when club-less, country as picked.
+function renderProfileStats() {
+  const f = $('#pf-stat-friends');
+  if (f) f.textContent = String(socialData && Array.isArray(socialData.friends) ? socialData.friends.length : 0);
+  const c = $('#pf-stat-club');
+  if (c) c.textContent = (clubData && clubData.club && clubData.club.name) || T('pfStatNone');
+  const cn = $('#pf-stat-country');
+  if (cn) cn.textContent = profile.country ? dispCountry(profile.country) : '';
 }
 function pfRenderGrid() {
   const grid = $('#pf-grid');
@@ -6696,6 +7038,8 @@ function openProfile() {
   // The avatar picker starts HIDDEN on the page — the ✏️ button on
   // the photo opens it (owner order 2026-11-08).
   $('#pf-picker').classList.add('hidden');
+  $('#pf-editbox').classList.add('hidden');
+  renderProfileStats();
   $('#scr-friends').classList.add('hidden');
   $('#scr-chats').classList.add('hidden');
   $('#scr-clubs').classList.add('hidden');
@@ -6707,6 +7051,11 @@ function closeProfile() { $('#scr-profile').classList.add('hidden'); }
 $('#btn-profile').onclick = openProfile;
 $('#btn-profile-close').onclick = closeProfile;
 $('#btn-pf-edit-av').onclick = () => { $('#pf-picker').classList.toggle('hidden'); };
+$('#btn-pf-home').onclick = closeProfile;
+$('#btn-pf-edit-name').onclick = () => { $('#pf-editbox').classList.remove('hidden'); $('#pf-name').focus(); };
+$('#btn-pf-edit-country').onclick = () => { $('#pf-editbox').classList.remove('hidden'); $('#pf-country').focus(); };
+$('#pf-name').addEventListener('input', pfRenderHead);
+$('#pf-country').addEventListener('change', pfRenderHead);
 $('#btn-profile-save').onclick = () => {
   profile = {
     name: $('#pf-name').value.trim().slice(0, 20),
@@ -6755,6 +7104,7 @@ async function initSessionUser() {
   if (window.__liftSplash) window.__liftSplash();
   renderProfileButton();
   updateContinue();
+  applyChatSetting();
   initSessionUser();
   // Prime the TURN-credentials fetch NOW (on hosts with sign-in
   // the session already exists on this page — the gate let us
@@ -6995,6 +7345,7 @@ function applySocialLists(lists) {
   renderFriends();
   renderChats();
   renderPlayerMenu();
+  renderProfileStats();
 }
 function onSocialMsg(m) {
   if (!m || typeof m.type !== 'string') return;
@@ -7058,6 +7409,7 @@ function onSocialMsg(m) {
       if (prevCid) { clRoomView = false; cv.leave(); }
     }
     clubInitDone = true;
+    renderProfileStats();
     if (Date.now() - clDiscAt > 4000) requestDiscover();
     if (cv.joined) cv.reconcile();
     renderClubs();
@@ -8837,11 +9189,6 @@ function renderClubs() {
   $('#cl-tab-hot').innerHTML = CL_TAB_ICON.flame + T('clTabHot');
   $('#cl-tab-mine').innerHTML = CL_TAB_ICON.heart + T('clTabMine');
   $('#cl-podium-title').textContent = T('clTopClubs');
-  const meAv = $('#cl-me-av');
-  if (meAv) {
-    const avKey = (profile.avatar || '') + '|' + (profile.photo || '');
-    if (meAv.dataset.k !== avKey) { meAv.dataset.k = avKey; meAv.innerHTML = ''; meAv.appendChild(avatarEl(profile.name, profile.avatar, 52, profile.photo)); }
-  }
   $('#cl-invites-title').textContent = T('clInvitesTitle');
   $('#cl-liked-title').textContent = T('clLikedTitle');
   $('#cl-search-title').textContent = T('clSearchTitle');
@@ -10365,6 +10712,7 @@ function seatFromRect(seat) {
 
 function playCard(code, fromRect) {
   flownKeys.add(mySeat + ':' + code);
+  buzz(25);
   const pid = ++pendingSeq;
   pendingPlay = { seat: mySeat, card: code, id: pid };
   setTimeout(() => { if (pendingPlay && pendingPlay.id === pid) pendingPlay = null; }, 6000);
@@ -10476,6 +10824,7 @@ function barAvatar(pos, s, seatIdx) {
   return barAvatars[pos].el;
 }
 
+let prevPhase = ''; // matchEnd edge for the vibration buzz
 function render(st) {
   if (st.phase === 'lobby') { renderLobby(st); show('scr-lobby'); return; }
   show('scr-game');
@@ -10692,6 +11041,8 @@ function render(st) {
       $('#ov-tie').textContent = T('tieLine', teamNames(r.qsTeam));
     }
   }
+  if (st.phase === 'matchEnd' && prevPhase !== 'matchEnd' && st.matchWinner === myTeam) buzz([45, 40, 45]);
+  prevPhase = st.phase;
   $('#ov-match').classList.toggle('show', st.phase === 'matchEnd');
   if (st.phase === 'matchEnd') {
     $('#ov-match-title').textContent = st.matchWinner === myTeam ? T('matchWinTitle') : T('matchLoseTitle');
