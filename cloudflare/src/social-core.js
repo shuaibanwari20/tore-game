@@ -180,7 +180,11 @@ const CLUB_EMBLEMS = ['trophy', 'shield', 'star', 'crown', 'gem', 'crescent', 'f
 // id, and coverV (bumped on every upload) busts its cache.
 const CLUB_COVERS = ['mountains', 'mosque', 'caravan', 'pomegranate', 'city', 'carpet', 'eagle', 'river', 'tent', 'trophy'];
 const CLUB_COVER_CUSTOM = 'custom';
-const CLUB_CATEGORIES = ['social', 'game', 'family'];
+const CLUB_CATEGORIES = ['social', 'game', 'family', 'fun'];
+// Clubs v7: a club carries a display LANGUAGE (the creator's UI
+// language at creation, editable in the profile popup) — one of
+// the three UI languages, defaulting to Pashto like the app.
+const CLUB_LANGS = ['ps', 'fa', 'en'];
 const CLUB_ANN_MAX = 200;
 const CLUB_SEATS = 8;
 // Seat requests (owner order 2026-11-09, reshaped the same day):
@@ -305,6 +309,7 @@ class SocialCore {
       if (typeof c.coverV !== 'number' || !(c.coverV >= 0)) c.coverV = 0;
       if (typeof c.country !== 'string') c.country = '';
       if (!CLUB_CATEGORIES.includes(c.category)) c.category = 'social';
+      if (!CLUB_LANGS.includes(c.lang)) c.lang = 'ps';
       if (!Array.isArray(c.likes)) c.likes = [];
       if (typeof c.announcement !== 'string') c.announcement = '';
       if (typeof c.desc !== 'string') c.desc = '';
@@ -772,6 +777,9 @@ class SocialCore {
   _cleanCategory(v) {
     return (typeof v === 'string' && CLUB_CATEGORIES.includes(v)) ? v : 'social';
   }
+  _cleanClubLang(v) {
+    return (typeof v === 'string' && CLUB_LANGS.includes(v)) ? v : 'ps';
+  }
   _cleanClubCountry(v) {
     return cleanCountry(typeof v === 'string' ? v : '');
   }
@@ -802,6 +810,7 @@ class SocialCore {
       coverV: (typeof club.coverV === 'number' && club.coverV > 0) ? club.coverV : 0,
       country: typeof club.country === 'string' ? club.country : '',
       category: CLUB_CATEGORIES.includes(club.category) ? club.category : 'social',
+      lang: CLUB_LANGS.includes(club.lang) ? club.lang : 'ps',
       level: clubLevel(club.members.length),
       likes: Array.isArray(club.likes) ? club.likes.length : 0,
       liked: forId ? (Array.isArray(club.likes) && club.likes.includes(forId)) : false,
@@ -895,7 +904,12 @@ class SocialCore {
 
   clubCreate(id, msg) {
     if (this.clubOf.has(id)) return this._error(id, 'clubInClub');
-    const name = this._cleanClubName(msg && msg.name);
+    // Clubs v7 (one-tap create): the client sends the player's
+    // own profile name, but a missing/short name is NOT an error
+    // any more — it falls back to the creator's directory name,
+    // so a one-tap create can never fail on the name.
+    let name = this._cleanClubName(msg && msg.name);
+    if (name.length < 2) name = this._cleanClubName((this.directory.get(id) || {}).name || '');
     if (name.length < 2) return this._error(id, 'clubBadName');
     const cid = this._newClubId();
     if (!cid) return this._error(id, 'clubFull');
@@ -912,6 +926,7 @@ class SocialCore {
         ? this._cleanClubCountry(msg.country)
         : ((this.directory.get(id) || {}).country || ''),
       category: this._cleanCategory(msg && msg.category),
+      lang: this._cleanClubLang(msg && msg.lang),
       likes: [],
       announcement: '',
       owner: id, created: Date.now(),
@@ -1078,7 +1093,14 @@ class SocialCore {
   clubEdit(id, msg) {
     const club = this._clubOf(id);
     if (!club) return;
-    if (this._clubRole(club, id) !== 'owner') return this._error(id, 'clubNoPerm');
+    // Clubs v7: the edit surface is the profile popup, and its
+    // permission is the MANAGER right (owner + deputy) — the
+    // same right the announcement has always carried
+    // (clubAnnounce). Plain members are still rejected. (The
+    // deleted settings-page form was owner-only; the popup spec
+    // names owner + deputies, so the endpoint follows the
+    // announcement rule it now shares a form with.)
+    if (!this._clubManager(club, id)) return this._error(id, 'clubNoPerm');
     if (!msg || typeof msg !== 'object') return;
     if (typeof msg.name === 'string') {
       const name = this._cleanClubName(msg.name);
@@ -1098,6 +1120,10 @@ class SocialCore {
     }
     if (typeof msg.country === 'string') club.country = this._cleanClubCountry(msg.country);
     if (typeof msg.category === 'string') club.category = this._cleanCategory(msg.category);
+    if (typeof msg.lang === 'string') club.lang = this._cleanClubLang(msg.lang);
+    // The popup's اعلان field rides the same save (cleaned with
+    // the announcement rule; the room box keeps s-club-announce).
+    if (typeof msg.announcement === 'string') club.announcement = this._cleanAnnouncement(msg.announcement);
     this._persistClubs();
     this.fanClub(club.cid);
     this._clubsChanged(); // name/cover/country/category are discovery fields
@@ -1487,4 +1513,4 @@ class SocialCore {
   }
 }
 
-export { SocialCore, INVITE_COOLDOWN_MS, INVITE_PENDING_MS, CLUB_CAP, CLUB_EMBLEMS, CLUB_COVERS, CLUB_COVER_CUSTOM, CLUB_CATEGORIES, CLUB_SEATS, clubLevel };
+export { SocialCore, INVITE_COOLDOWN_MS, INVITE_PENDING_MS, CLUB_CAP, CLUB_EMBLEMS, CLUB_COVERS, CLUB_COVER_CUSTOM, CLUB_CATEGORIES, CLUB_LANGS, CLUB_SEATS, clubLevel };
