@@ -347,6 +347,9 @@ function doPlay(room, seat, card) {
   if (room.trickHold) return false; // finished trick still on display — plays wait for the pause
   const tricksBefore = round.tricksPlayed;
   const trickBefore = round.trick.slice();
+  // BOT NO-REPEAT LAW: keep the engine's bot-seat flags current — a
+  // seat can convert to a bot mid-match (leave/disconnect takeover).
+  round.botSeats = room.seats.map((s) => s.kind === 'bot');
   try {
     round.play(seat, card);
   } catch (e) {
@@ -379,7 +382,8 @@ function doPlay(room, seat, card) {
 
 /**
  * Play a seat by bot logic. `mayDeclare` is true only for real bot seats:
- * bots always declare «13» on the final trick when it cancels a takan.
+ * a bot declares «13» ONLY for the forced final-trick REPEAT of a suit
+ * it already takan'd this round (BOT NO-REPEAT LAW — see bots.js).
  * A human seat auto-played by the turn timer plays WITHOUT declaring
  * (spec: on timeout the takan stands).
  */
@@ -388,8 +392,9 @@ function botPlay(room, seat, mayDeclare) {
   if (!round || round.finished || round.turn !== seat) return;
   if (room.trickHold) return;
   if (mayDeclare && bots.maybeDeclare13(round, seat)) {
-    broadcastState(room); // clients toast the declaration…
-    pumpTurn(room);       // …then the bot plays its card on the next tick
+    round.declare13(seat); // emits declared13 → clients toast it…
+    broadcastState(room);   // …the state shows the declaration…
+    pumpTurn(room);         // …then the bot plays its card on the next tick
     return;
   }
   let card;
@@ -426,6 +431,7 @@ function startMatch(room) {
     }
   });
   room.match = new G.Match(room.emit);
+  room.match.botSeats = room.seats.map((s) => s.kind === 'bot');
   room.phase = 'playing';
   room.match.startRound();
   broadcastState(room);
