@@ -565,7 +565,7 @@
      behind a dark emerald veil, its own scroll. Opened from the
      bottom nav (and from the lobby's friends button); it floats
      above home/lobby/table without disturbing the game screens. */
-  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-clubs {
+  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers {
     position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 30;
     overflow-x: hidden;
     /* The home screen's dark emerald veil, without the carpet photo:
@@ -586,9 +586,9 @@
   #scr-friends { display: flex; flex-direction: column; overflow-y: hidden; }
   /* Chat + profile pages (owner order 2026-11-08): same family as the
      friends screen — scrolling content, bottom nav pinned at the foot. */
-  #scr-chats, #scr-profile, #scr-clubs { display: flex; flex-direction: column; overflow-y: hidden; }
+  #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers { display: flex; flex-direction: column; overflow-y: hidden; }
   .fr-scroll { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; width: 100%; }
-  #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav { margin: 0; flex: none; width: 100%;
+  #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav, #scr-clubpage .hm-nav, #scr-clubmembers .hm-nav { margin: 0; flex: none; width: 100%;
     padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
   /* chat list rows: the whole row is the tap target into the DM view */
   .ch-row { cursor: pointer; border-radius: 8px; }
@@ -732,12 +732,54 @@
   .cl-em.sel { border-color: #ffd75e; background: rgba(255,215,94,.14); box-shadow: 0 0 0 1.5px #ffd75e inset; }
   .cl-note { font-size: 13px; line-height: 1.8; opacity: .85; margin: 8px 0 0; }
   #btn-cl-dissolve { background: rgba(125,34,49,.4); color: #ffb3ab; border-color: rgba(215,38,61,.6); }
+  /* ===== club details page (د کلب امادګي): the club settings form
+     as its OWN full screen (owner order 2026-11-09) — opened by
+     tapping the club cover in the room header; the room (mic
+     seats + chat + voice) stays alive underneath untouched. ===== */
+  .cp-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .cp-head h2 { flex: 1; text-align: center; color: #ffd75e; font-size: 20px; margin: 0; }
+  .cp-cov { border-radius: 14px; overflow: hidden; border: 1.5px solid rgba(255,215,94,.5);
+    aspect-ratio: 16/7; margin-bottom: 10px; background: #07271a; }
+  .cp-cov svg { display: block; width: 100%; height: 100%; }
+  .cp-name { margin-bottom: 8px; }
+  #scr-clubpage select option { background: #0d2c1d; color: #f8ecd0; }
+  #scr-clubpage.ro .cl-emgrid, #scr-clubpage.ro .cl-covgrid, #scr-clubpage.ro .cl-catrow { pointer-events: none; }
+  #scr-clubpage input:disabled, #scr-clubpage select:disabled { opacity: .8; }
+  /* members page: the invite button sits in the page head,
+     opposite the back button (managers only — JS hides it) */
+  .cm-invite-btn { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #d9b380;
+    background: linear-gradient(180deg, #14532d, #0b3d24); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .cm-invite-btn svg { width: 21px; height: 21px; fill: none; stroke: #ffd75e; stroke-width: 2; stroke-linecap: round; }
+  .cm-invite-btn:active { transform: scale(.93); }
+  .cm-invite-btn.hidden { display: none; }
+  .cp-head .cm-invite-btn { margin-inline-start: auto; }
+  .cp-head h2 { flex: 1; }
+  /* cover picker: the upload tile (dashed gold, gallery photo) */
+  .cl-covgrid .cl-cov.up { border: 2px dashed rgba(255, 215, 94, .65); background: rgba(255, 215, 94, .07);
+    color: #ffd75e; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    font-family: inherit; font-size: 11px; font-weight: 700; line-height: 1.25; padding: 4px; text-align: center; }
+  .cl-covgrid .cl-cov.up .up-ic { font-size: 19px; line-height: 1; }
+  .cl-covgrid .cl-cov img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  /* club invite popup: a friends list that stays open across sends */
+  .ci-panel { max-width: 360px; width: calc(100% - 32px); max-height: 78vh; display: flex; flex-direction: column; }
+  .ci-panel #ci-list { overflow-y: auto; min-height: 60px; }
+  /* seat-request pending bar (under the mic seats) */
+  .cl-seatreq { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 2px 0 8px;
+    color: #ffd75e; font-size: 13.5px; font-weight: 700; }
+  .cl-seatreq.hidden { display: none; }
+  .cl-seatreq button { font-family: inherit; font-size: 12.5px; font-weight: 700; color: #f8ecd0;
+    background: rgba(255,255,255,.06); border: 1.5px solid rgba(217,179,128,.55); border-radius: 999px;
+    padding: 4px 14px; cursor: pointer; }
+  .cl-seatreq button:active { transform: scale(.95); }
+  /* seat-request prompt (owner): who is asking */
+  .sr-who { display: flex; justify-content: center; margin: 2px 0 4px; }
+  #sr-msg { text-align: center; color: #f8ecd0; font-size: 15px; margin: 4px 0 10px; line-height: 1.7; }
   /* club member menu: the player menu's anchored card, rows built in JS */
-  #scr-clubs input {
+  #scr-clubs input, #scr-clubpage input, #scr-clubmembers input {
     background: rgba(6, 24, 16, .88); color: #f8ecd0; border: 1px solid rgba(255, 215, 94, .55);
   }
-  #scr-clubs input::placeholder { color: rgba(248, 236, 208, .45); }
-  #cl-owner-edit input { width: 100%; padding: 11px 12px; font-size: 16px; border-radius: 10px; font-family: inherit; margin-bottom: 10px; }
+  #scr-clubs input::placeholder, #scr-clubpage input::placeholder, #scr-clubmembers input::placeholder { color: rgba(248, 236, 208, .45); }
+  #cl-edit-form input { width: 100%; padding: 11px 12px; font-size: 16px; border-radius: 10px; font-family: inherit; margin-bottom: 10px; }
   #ov-clubmenu { position: fixed; z-index: 44; width: 234px; display: none;
     background: linear-gradient(165deg, #0f4026, #07271a);
     border: 1.5px solid #d9b380; border-radius: 14px; padding: 8px;
@@ -758,6 +800,8 @@
     display: flex; align-items: center; justify-content: center; }
   .cl-searchbtn svg { width: 22px; height: 22px; stroke: #ffd75e; fill: none; stroke-width: 2.2; stroke-linecap: round; }
   .cl-searchbtn:active { transform: scale(.94); }
+  .cl-searchbtn.on { background: linear-gradient(180deg, #ffd75e, #d9a83c); box-shadow: 0 0 0 2px rgba(255,215,94,.35), 0 4px 12px rgba(0,0,0,.35); }
+  .cl-searchbtn.on svg { stroke: #23180a; }
   #cl-searchrow { margin-bottom: 10px; }
   /* podium stage */
   .cl-podium-wrap { margin-bottom: 12px; }
@@ -798,7 +842,7 @@
     border-radius: 11px; cursor: pointer; }
   .cl-chip.sel { background: linear-gradient(165deg, #ffd75e, #d9a83f); color: #33270a; border-color: #ffd75e; }
   .cl-morewrap { margin: -4px 0 12px; }
-  .cl-morewrap select, #cl-owner-edit select, #ov-clubcreate select { width: 100%; padding: 11px 12px; font-size: 16px; border-radius: 10px;
+  .cl-morewrap select, #cl-edit-form select, #ov-clubcreate select { width: 100%; padding: 11px 12px; font-size: 16px; border-radius: 10px;
     font-family: inherit; background: rgba(6,24,16,.88); color: #f8ecd0; border: 1px solid rgba(255,215,94,.55); margin-bottom: 10px; }
   /* discovery grid cards */
   .cl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
@@ -840,7 +884,8 @@
   .cl-roomhead { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.35);
     border: 1.5px solid rgba(217,179,128,.5); border-radius: 14px; padding: 8px 10px; margin-bottom: 10px; }
   .cl-room-cov { flex: 0 0 52px; width: 52px; height: 52px; border-radius: 10px; overflow: hidden;
-    border: 1.5px solid #ffd75e; }
+    border: 1.5px solid #ffd75e; cursor: pointer; }
+  .cl-room-cov:active { transform: scale(.94); }
   .cl-room-cov svg { display: block; width: 100%; height: 100%; }
   .cl-room-meta { flex: 1; min-width: 0; }
   .cl-room-meta .cl-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1577,7 +1622,7 @@
         </div>
         <button type="button" class="cl-searchbtn" id="btn-cl-search-toggle" aria-label="search"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="M16 16l4.6 4.6"/></svg></button>
       </div>
-      <div class="fr-searchrow" id="cl-searchrow">
+      <div class="fr-searchrow hidden" id="cl-searchrow">
         <input id="cl-search-inp" type="text" maxlength="40">
         <button id="btn-cl-search"></button>
       </div>
@@ -1642,6 +1687,10 @@
           <div class="cl-seats" id="cl-seats"></div>
           <p class="cl-seats-hint" id="cl-seats-hint"></p>
         </div>
+        <div class="cl-seatreq hidden" id="cl-seatreq-bar">
+          <span id="cl-seatreq-txt"></span>
+          <button type="button" id="btn-cl-seatreq-cancel"></button>
+        </div>
         <div class="cl-annbar" id="cl-annbar">
           <span class="cl-ann-lbl" id="cl-ann-lbl"></span>
           <span class="cl-ann-text" id="cl-ann-text"></span>
@@ -1649,44 +1698,9 @@
         </div>
         <h3 class="fr-sec" id="cl-chat-title"></h3>
         <div id="cl-msgs"></div>
-        <div class="cardbox hidden" id="cl-req-box">
-          <h3 class="fr-sec" id="cl-req-title"></h3>
-          <div id="cl-requests"></div>
-        </div>
-        <div class="cardbox" id="cl-members-card">
-          <h3 class="fr-sec" id="cl-members-title"></h3>
-          <div id="cl-members"></div>
-        </div>
         <div class="cardbox hidden" id="cl-invitefriends-box">
           <h3 class="fr-sec" id="cl-invitefriends-title"></h3>
           <div id="cl-invitefriends"></div>
-        </div>
-        <div class="cardbox">
-          <h3 class="fr-sec" id="cl-settings-title"></h3>
-          <p class="cl-desc" id="cl-desc"></p>
-          <div class="cl-sub" id="cl-created"></div>
-          <div id="cl-owner-edit" class="hidden">
-            <label class="pf-label" id="cl-edit-name-lbl" for="cl-edit-name"></label>
-            <input id="cl-edit-name" type="text" maxlength="24">
-            <span class="pf-label" id="cl-edit-emb-lbl"></span>
-            <div class="cl-emgrid" id="cl-edit-emgrid"></div>
-            <span class="pf-label" id="cl-edit-cov-lbl"></span>
-            <div class="cl-covgrid" id="cl-edit-covgrid"></div>
-            <label class="pf-label" id="cl-edit-country-lbl" for="cl-edit-country"></label>
-            <select id="cl-edit-country"></select>
-            <span class="pf-label" id="cl-edit-cat-lbl"></span>
-            <div class="cl-catrow" id="cl-edit-catrow"></div>
-            <label class="pf-label" id="cl-edit-desc-lbl" for="cl-edit-desc"></label>
-            <input id="cl-edit-desc" type="text" maxlength="120">
-            <div class="pf-btns">
-              <button id="btn-cl-edit-save"></button>
-            </div>
-          </div>
-          <div class="pf-btns">
-            <button id="btn-cl-leave" class="ghost"></button>
-            <button id="btn-cl-dissolve" class="danger hidden"></button>
-          </div>
-          <p class="cl-note hidden" id="cl-leave-note"></p>
         </div>
       </div>
     </div>
@@ -1724,6 +1738,157 @@
     </button>
   </nav>
 </section>
+
+<!-- ======== CLUB DETAILS PAGE (د کلب امادګي): the club settings
+     form as its own full screen — opened by tapping the club
+     cover thumbnail in the room header; back returns to the
+     club room exactly as it was. ======== -->
+<section id="scr-clubpage" class="hidden">
+  <div class="fr-scroll">
+    <div class="fr-inner">
+      <div class="cp-head">
+        <button class="fr-back" id="btn-cp-back">→</button>
+        <h2 id="cl-settings-title"></h2>
+      </div>
+      <div class="cp-cov" id="cp-cov"></div>
+      <div class="cl-name cp-name" id="cp-name"></div>
+      <div class="pf-idrow">
+        <span class="pf-label" id="cp-id-lbl">ID</span>
+        <button type="button" class="pf-idnum" id="cp-id-num" dir="ltr">…</button>
+      </div>
+      <div class="cl-sub" id="cp-count"></div>
+      <p class="cl-desc" id="cl-desc"></p>
+      <div class="cl-sub" id="cl-created"></div>
+      <div id="cl-edit-form">
+        <label class="pf-label" id="cl-edit-name-lbl" for="cl-edit-name"></label>
+        <input id="cl-edit-name" type="text" maxlength="24">
+        <span class="pf-label" id="cl-edit-emb-lbl"></span>
+        <div class="cl-emgrid" id="cl-edit-emgrid"></div>
+        <span class="pf-label" id="cl-edit-cov-lbl"></span>
+        <div class="cl-covgrid" id="cl-edit-covgrid"></div>
+        <label class="pf-label" id="cl-edit-country-lbl" for="cl-edit-country"></label>
+        <select id="cl-edit-country"></select>
+        <span class="pf-label" id="cl-edit-cat-lbl"></span>
+        <div class="cl-catrow" id="cl-edit-catrow"></div>
+        <label class="pf-label" id="cl-edit-desc-lbl" for="cl-edit-desc"></label>
+        <input id="cl-edit-desc" type="text" maxlength="120">
+        <div class="pf-btns" id="cp-save-row">
+          <button id="btn-cl-edit-save"></button>
+        </div>
+      </div>
+      <div class="pf-btns">
+        <button id="btn-cl-leave" class="ghost"></button>
+        <button id="btn-cl-dissolve" class="danger hidden"></button>
+      </div>
+      <p class="cl-note hidden" id="cl-leave-note"></p>
+    </div>
+  </div>
+  <nav class="hm-nav">
+    <button class="hm-navitem" id="cpnav-friends">
+      <span class="nav-badge hidden" id="cpnav-friends-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+      <span class="nl" id="cpnav-friends-lbl">ملګري</span>
+    </button>
+    <button class="hm-navitem home" id="cpnav-clubs">
+      <span class="nav-badge hidden" id="cpnav-clubs-badge">0</span>
+      <span class="bubble"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+      <span class="nl" id="cpnav-clubs-lbl">کلبونه</span>
+    </button>
+    <button class="hm-navitem" id="cpnav-home">
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+      <span class="nl" id="cpnav-home-lbl">کور</span>
+    </button>
+    <button class="hm-navitem" id="cpnav-profile">
+      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+      <span class="nl" id="cpnav-profile-lbl">پروفایل</span>
+    </button>
+    <button class="hm-navitem" id="cpnav-chat">
+      <span class="nav-badge hidden" id="cpnav-chat-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="nl" id="cpnav-chat-lbl">چت</span>
+    </button>
+  </nav>
+</section>
+
+<!-- ======== CLUB MEMBERS PAGE (غړي) ========
+     The members list and the managers' join-requests card as
+     their OWN screen: opened from the room header's person+ ADD
+     button (or the member-count pill). The room behind it keeps
+     its mic seats / chat untouched; back returns to it as it was. -->
+<section id="scr-clubmembers" class="hidden">
+  <div class="fr-scroll">
+    <div class="fr-inner">
+      <div class="cp-head">
+        <button class="fr-back" id="btn-cm-back">→</button>
+        <h2 id="cm-title"></h2>
+        <button type="button" class="cm-invite-btn hidden" id="btn-cm-invite" aria-label="invite"><svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.6"/><path d="M4 20c.6-3.6 2.8-5.4 6-5.4 1.5 0 2.8.4 3.8 1.2M18 8v6M15 11h6"/></svg></button>
+      </div>
+      <div class="cardbox hidden" id="cl-req-box">
+        <h3 class="fr-sec" id="cl-req-title"></h3>
+        <div id="cl-requests"></div>
+      </div>
+      <div class="cardbox" id="cl-members-card">
+        <h3 class="fr-sec" id="cl-members-title"></h3>
+        <div id="cl-members"></div>
+      </div>
+    </div>
+  </div>
+  <nav class="hm-nav">
+    <button class="hm-navitem" id="cmnav-friends">
+      <span class="nav-badge hidden" id="cmnav-friends-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+      <span class="nl" id="cmnav-friends-lbl">ملګري</span>
+    </button>
+    <button class="hm-navitem home" id="cmnav-clubs">
+      <span class="nav-badge hidden" id="cmnav-clubs-badge">0</span>
+      <span class="bubble"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+      <span class="nl" id="cmnav-clubs-lbl">کلبونه</span>
+    </button>
+    <button class="hm-navitem" id="cmnav-home">
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+      <span class="nl" id="cmnav-home-lbl">کور</span>
+    </button>
+    <button class="hm-navitem" id="cmnav-profile">
+      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+      <span class="nl" id="cmnav-profile-lbl">پروفایل</span>
+    </button>
+    <button class="hm-navitem" id="cmnav-chat">
+      <span class="nav-badge hidden" id="cmnav-chat-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="nl" id="cmnav-chat-lbl">چت</span>
+    </button>
+  </nav>
+</section>
+
+<!-- ======== CLUB INVITE POPUP (from the members page) ========
+     The manager's friends with their invite state; sending keeps
+     the popup open so several friends can be invited in a row.
+     A tap on the dimmed backdrop closes it. -->
+<div class="overlay" id="ov-clubinvite">
+  <div class="panel ci-panel">
+    <h2 id="ci-title"></h2>
+    <div id="ci-list"></div>
+  </div>
+</div>
+
+<!-- ======== CLUB SEAT REQUEST PROMPT (the owner answers) ========
+     A member asked for a mic seat: the founder approves (تایید)
+     or rejects (رد). It stays until answered — no backdrop
+     dismiss, so a request is never lost by a stray tap. -->
+<div class="overlay" id="ov-seatreq">
+  <div class="panel ci-panel">
+    <h2 id="sr-title"></h2>
+    <div class="sr-who"><span id="sr-av"></span></div>
+    <p id="sr-msg"></p>
+    <div class="pf-btns">
+      <button type="button" id="btn-sr-yes"></button>
+      <button type="button" id="btn-sr-no" class="ghost"></button>
+    </div>
+  </div>
+</div>
+
+<!-- the one hidden file picker behind every cover-upload tile -->
+<input type="file" id="cover-file" accept="image/*" class="hidden">
 
 <!-- ======== FRIEND DM ======== -->
 <section id="scr-dm" class="hidden">
@@ -2102,6 +2267,11 @@ const STR = {
     clCancel: 'لغوه',
     clRequest: 'غوښتنه واستوه',
     clRequested: 'غوښتنه استول شوې',
+    clIsMember: 'غړی دی',
+    clCoverUpload: 'له ګالري اپلود',
+    clCoverSaved: 'پوښ بدل شو',
+    errCoverTooBig: 'انځور ډېر لوی دی — تر ۲۵۰ KB کم وي',
+    errCoverBadType: 'یوازې JPG، PNG یا WebP انځور',
     clMembers: 'غړي',
     clMemberCount: (n) => n + ' غړي',
     clRequestsTitle: 'د ورګډېدو غوښتنې',
@@ -2131,6 +2301,16 @@ const STR = {
     clConfirmTransferT: 'موسس بدلوې؟',
     clConfirmTransferB: (name) => name + ' به د کلب موسس شي او ته به معاون شې.',
     clLeaveOwnerNote: 'موسس لومړی باید موسس بل معاون ته وسپاري یا کلب ړنګ کړي.',
+    clExitTitle: 'له کلبه وځې؟',
+    clExitBody: 'ته به نور د دې کلب غړی نه یې او په کلب کې به نه ښکارېې؛ بیا راتګ نوې غوښتنې یا بلنې ته اړتیا لري.',
+    clExitYes: 'وتل',
+    clSeatWaiting: 'په تمه…',
+    clSeatReqTitle: 'د څوکۍ غوښتنه',
+    clSeatReqMsg: (n) => n + ' غواړي په څوکۍ خبرې وکړي',
+    clSeatRejected: 'ستا د څوکۍ غوښتنه رد شوه',
+    clSeatApproved: 'ستا د څوکۍ غوښتنه ومنل شوه',
+    errClubSeatsFull: 'څوکۍ ډکې دي',
+    errClubSeatReqNeeded: 'لومړی د څوکۍ غوښتنه واستوه',
     clNewInvite: (name) => name + ' تا خپل کلب ته بلي',
     clDissolved: 'کلب ړنګ شو',
     clJoined: (name) => 'ته اوس د «' + name + '» غړی یې',
@@ -2348,6 +2528,11 @@ const STR = {
     clCancel: 'لغو',
     clRequest: 'فرستادن درخواست',
     clRequested: 'درخواست فرستاده شد',
+    clIsMember: 'عضو است',
+    clCoverUpload: 'آپلود از گالری',
+    clCoverSaved: 'کاور تغییر کرد',
+    errCoverTooBig: 'عکس خیلی بزرگ است — کمتر از ۲۵۰ KB',
+    errCoverBadType: 'فقط عکس JPG، PNG یا WebP',
     clMembers: 'اعضا',
     clMemberCount: (n) => n + ' عضو',
     clRequestsTitle: 'درخواست‌های پیوستن',
@@ -2377,6 +2562,16 @@ const STR = {
     clConfirmTransferT: 'بنیان‌گذار عوض شود؟',
     clConfirmTransferB: (name) => name + ' بنیان‌گذار باشگاه می‌شود و تو معاون می‌شوی.',
     clLeaveOwnerNote: 'بنیان‌گذار اول باید بنیان‌گذاری را به یک معاون بسپارد یا باشگاه را منحل کند.',
+    clExitTitle: 'از باشگاه خارج می‌شوی؟',
+    clExitBody: 'دیگر عضو این باشگاه نخواهی بود و در باشگاه دیده نمی‌شوی؛ پیوستن دوباره به درخواست یا دعوت تازه نیاز دارد.',
+    clExitYes: 'خروج',
+    clSeatWaiting: 'در انتظار…',
+    clSeatReqTitle: 'درخواست صندلی',
+    clSeatReqMsg: (n) => n + ' می‌خواهد روی صندلی صحبت کند',
+    clSeatRejected: 'درخواست صندلی تو رد شد',
+    clSeatApproved: 'درخواست صندلی تو پذیرفته شد',
+    errClubSeatsFull: 'صندلی‌ها پر است',
+    errClubSeatReqNeeded: 'اول درخواست صندلی بفرست',
     clNewInvite: (name) => name + ' تو را به باشگاهش دعوت می‌کند',
     clDissolved: 'باشگاه منحل شد',
     clJoined: (name) => 'حالا عضو «' + name + '» هستی',
@@ -2594,6 +2789,11 @@ const STR = {
     clCancel: 'Cancel',
     clRequest: 'Send request',
     clRequested: 'Request sent',
+    clIsMember: 'Member',
+    clCoverUpload: 'Upload from gallery',
+    clCoverSaved: 'Cover updated',
+    errCoverTooBig: 'Image too big — must be under 250 KB',
+    errCoverBadType: 'Only JPG, PNG or WebP images',
     clMembers: 'Members',
     clMemberCount: (n) => n + ' members',
     clRequestsTitle: 'Join requests',
@@ -2623,6 +2823,16 @@ const STR = {
     clConfirmTransferT: 'Change the founder?',
     clConfirmTransferB: (name) => name + ' becomes the club founder and you become a deputy.',
     clLeaveOwnerNote: 'The founder must first hand over to a deputy or dissolve the club.',
+    clExitTitle: 'Leave this club?',
+    clExitBody: 'You will no longer be a member and will not appear in this club; joining again needs a new request or invite.',
+    clExitYes: 'Leave',
+    clSeatWaiting: 'Waiting…',
+    clSeatReqTitle: 'Seat request',
+    clSeatReqMsg: (n) => n + ' wants to talk in a seat',
+    clSeatRejected: 'Your seat request was rejected',
+    clSeatApproved: 'Your seat request was approved',
+    errClubSeatsFull: 'All seats are taken',
+    errClubSeatReqNeeded: 'Send a seat request first',
     clNewInvite: (name) => name + ' invites you to their club',
     clDissolved: 'The club was dissolved',
     clJoined: (name) => 'You are now a member of “' + name + '”',
@@ -2772,7 +2982,7 @@ function applyI18n() {
   document.title = T('docTitle');
   const ltr = LANG === 'en';
   ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-settings', 'ov-exit', 'ov-join',
-   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu']
+   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu']
     .forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.setAttribute('dir', ltr ? 'ltr' : 'rtl');
@@ -2845,6 +3055,19 @@ function applyI18n() {
   set('#clnav-home-lbl', 'navHome');
   set('#clnav-profile-lbl', 'navProfile');
   set('#clnav-chat-lbl', 'navChat');
+  set('#cpnav-friends-lbl', 'navFriends');
+  set('#cpnav-clubs-lbl', 'navClubs');
+  set('#cpnav-home-lbl', 'navHome');
+  set('#cpnav-profile-lbl', 'navProfile');
+  set('#cpnav-chat-lbl', 'navChat');
+  set('#cmnav-friends-lbl', 'navFriends');
+  set('#cmnav-clubs-lbl', 'navClubs');
+  set('#cmnav-home-lbl', 'navHome');
+  set('#cmnav-profile-lbl', 'navProfile');
+  set('#cmnav-chat-lbl', 'navChat');
+  aria('#btn-cp-back', 'frBack');
+  aria('#btn-cm-back', 'frBack');
+  aria('#btn-cm-invite', 'clInviteFriends');
   set('#ch-list-title', 'chatsTitle');
   aria('#btn-pf-edit-av', 'pfEditAvatar');
   set('#fm-unfriend-lbl', 'frUnfriend');
@@ -3864,6 +4087,7 @@ async function refreshIceServers() {
         // or a signal beat the fetch) is stuck with that list —
         // re-sync so those pairs re-form on this config.
         try { syncVoicePairs(); } catch (e) {}
+        try { if (cv.joined) cv.syncPeers(); } catch (e) {}
       } catch (e) { /* offline / route missing — fallback stays */ }
     })();
   }
@@ -6106,6 +6330,8 @@ function openProfile() {
   $('#scr-friends').classList.add('hidden');
   $('#scr-chats').classList.add('hidden');
   $('#scr-clubs').classList.add('hidden');
+  $('#scr-clubpage').classList.add('hidden');
+  $('#scr-clubmembers').classList.add('hidden');
   $('#scr-profile').classList.remove('hidden');
 }
 function closeProfile() { $('#scr-profile').classList.add('hidden'); }
@@ -6448,6 +6674,13 @@ function onSocialMsg(m) {
       }
       // friends who became members are no longer "invited-pending"
       clubData.club.members.forEach((mm) => clubInvitedSent.delete(mm.id));
+      // a cover photo staged in the create overlay uploads now
+      // that the club (and my ownership of it) exists
+      if (pendingClubCover && clubData.club.myRole === 'owner') {
+        const blob = pendingClubCover;
+        pendingClubCover = null;
+        uploadClubCover(blob);
+      }
     } else {
       clubMsgs = [];
       clubUnread = 0;
@@ -6456,6 +6689,7 @@ function onSocialMsg(m) {
     }
     clubInitDone = true;
     if (Date.now() - clDiscAt > 4000) requestDiscover();
+    if (cv.joined) cv.reconcile();
     renderClubs();
   } else if (m.type === 's-club-discover-result') {
     clDisc = m;
@@ -6477,6 +6711,36 @@ function onSocialMsg(m) {
     }
   } else if (m.type === 's-rtc') {
     cv.onSignal(m.from, m.data);
+  } else if (m.type === 's-club-seat-req-state') {
+    // My seat ask was answered / ended (the server's word is
+    // final; the seat state push right behind an approval does
+    // the seating itself).
+    if (m.pending) {
+      cv.seatReq = { seat: m.seat, ts: Date.now() };
+      armSeatReqTimer();
+    } else {
+      const was = !!cv.seatReq;
+      cv.seatReq = null;
+      if (seatReqTimer) { clearTimeout(seatReqTimer); seatReqTimer = null; }
+      if (was && m.reason === 'rejected') toast(T('clSeatRejected'));
+      else if (was && m.reason === 'approved') toast(T('clSeatApproved'));
+      else if (was && m.reason === 'full') toast(T('errClubSeatsFull'));
+      if (m.reason !== 'approved') cv.wantSeat = -1;
+    }
+    renderSeatReqBar();
+  } else if (m.type === 's-club-seat-req') {
+    // A member asks ME (the founder) for a seat: queue the
+    // prompt; it shows while I'm in the club room.
+    if (m.from) cachePerson(m.from);
+    seatReqQueue.push({ club: m.club, from: m.from, seat: m.seat });
+    showNextSeatReq();
+  } else if (m.type === 's-club-seat-req-gone') {
+    seatReqQueue = seatReqQueue.filter((r) => !r.from || r.from.id !== m.from);
+    if (seatReqCurrent && seatReqCurrent.from && seatReqCurrent.from.id === m.from) {
+      seatReqCurrent = null;
+      $('#ov-seatreq').classList.remove('show');
+      showNextSeatReq();
+    }
   } else if (m.type === 's-club-search-result') {
     clubSearchResults = m.results || [];
     clubSearched = true;
@@ -6577,11 +6841,11 @@ function updateFriendsBadge() {
   const req = socialData ? socialData.incoming.length : 0;
   let un = 0;
   dmUnread.forEach((c) => { un += c; });
-  ['#nav-friends-badge', '#frnav-friends-badge', '#chnav-friends-badge', '#pfnav-friends-badge', '#clnav-friends-badge'].forEach((sel) => {
+  ['#nav-friends-badge', '#frnav-friends-badge', '#chnav-friends-badge', '#pfnav-friends-badge', '#clnav-friends-badge', '#cpnav-friends-badge', '#cmnav-friends-badge'].forEach((sel) => {
     const b = $(sel);
     if (b) { b.textContent = faNum(req); b.classList.toggle('hidden', req === 0); }
   });
-  ['#nav-chat-badge', '#frnav-chat-badge', '#chnav-chat-badge', '#pfnav-chat-badge', '#clnav-chat-badge'].forEach((sel) => {
+  ['#nav-chat-badge', '#frnav-chat-badge', '#chnav-chat-badge', '#pfnav-chat-badge', '#clnav-chat-badge', '#cpnav-chat-badge', '#cmnav-chat-badge'].forEach((sel) => {
     const b = $(sel);
     if (b) { b.textContent = faNum(un); b.classList.toggle('hidden', un === 0); }
   });
@@ -6607,6 +6871,8 @@ function openFriends(origin) {
   $('#scr-chats').classList.add('hidden');
   $('#scr-profile').classList.add('hidden');
   $('#scr-clubs').classList.add('hidden');
+  $('#scr-clubpage').classList.add('hidden');
+  $('#scr-clubmembers').classList.add('hidden');
   $('#scr-friends').classList.remove('hidden');
   connectSocial();
   renderFriends();
@@ -6632,6 +6898,8 @@ function openChats() {
   $('#scr-friends').classList.add('hidden');
   $('#scr-profile').classList.add('hidden');
   $('#scr-clubs').classList.add('hidden');
+  $('#scr-clubpage').classList.add('hidden');
+  $('#scr-clubmembers').classList.add('hidden');
   $('#scr-chats').classList.remove('hidden');
   connectSocial();
   renderChats();
@@ -7305,27 +7573,26 @@ function clEmblemEl(emblem, size) {
     (CLUB_EMBLEM_SVGS[emblem] || CLUB_EMBLEM_SVGS.trophy) + '</svg>';
   return s;
 }
-// ---- cover gallery: 10 built-in SVG scenes in Tore's palette
-// (emerald / gold / carpet-red), ids only cross the wire. ----
-const CLUB_COVER_SVGS = {
-  mountains: '<defs><linearGradient id="mg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#79b8d8"/><stop offset=".55" stop-color="#f2c879"/><stop offset="1" stop-color="#0b3d24"/></linearGradient></defs><rect width="400" height="300" fill="url(#mg)"/><circle cx="322" cy="54" r="26" fill="#ffd75e"/><path d="M0 214 L92 96 L152 170 L216 76 L292 180 L342 128 L400 208 L400 300 L0 300 Z" fill="#0e4d2e"/><path d="M216 76 L250 124 L216 108 L188 128 Z" fill="#ffffff"/><path d="M92 96 L120 134 L92 120 L66 138 Z" fill="#ffffff"/><path d="M0 240 Q100 216 200 240 T400 240 L400 300 L0 300 Z" fill="#07331d"/>',
-  mosque: '<defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b1a4d"/><stop offset=".6" stop-color="#7d2240"/><stop offset="1" stop-color="#0b3d24"/></linearGradient></defs><rect width="400" height="300" fill="url(#sg)"/><circle cx="70" cy="52" r="17" fill="#ffeec2"/><circle cx="79" cy="47" r="15" fill="#2b1a4d"/><circle cx="330" cy="44" r="2.6" fill="#ffeec2"/><circle cx="356" cy="74" r="2" fill="#ffeec2"/><circle cx="300" cy="30" r="1.8" fill="#ffeec2"/><path d="M110 300 V190 H290 V300 Z" fill="#082416"/><path d="M200 96 C238 122 252 150 254 190 H146 C148 150 162 122 200 96 Z" fill="#0d3d24"/><rect x="195" y="66" width="10" height="34" fill="#082416"/><circle cx="200" cy="60" r="7" fill="#ffd75e"/><path d="M52 300 V120 h16 V300 Z M292 300 V120 h16 V300 Z" fill="#082416"/><path d="M60 120 l-8 -22 h32 Z M300 120 l-8 -22 h32 Z" fill="#0d3d24"/><path d="M0 300 H400 V282 H0 Z" fill="#051a10"/>',
-  caravan: '<defs><linearGradient id="dg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7b733"/><stop offset=".55" stop-color="#e2703a"/><stop offset="1" stop-color="#7d2240"/></linearGradient></defs><rect width="400" height="300" fill="url(#dg)"/><circle cx="200" cy="86" r="38" fill="#ffd75e"/><path d="M0 208 Q110 168 220 200 T400 192 L400 300 L0 300 Z" fill="#c98a3d"/><path d="M0 248 Q130 214 260 244 T400 238 L400 300 L0 300 Z" fill="#8a5a24"/><g fill="#33200a"><ellipse cx="128" cy="212" rx="26" ry="13"/><path d="M146 204 q16 -16 22 -4 q2 6 -6 8 l-14 2 Z"/><rect x="104" y="220" width="5" height="22"/><rect x="142" y="220" width="5" height="22"/><rect x="112" y="192" width="20" height="12" rx="3"/><ellipse cx="252" cy="228" rx="20" ry="10"/><path d="M266 221 q12 -12 17 -3 q1 5 -5 6 l-11 2 Z"/><rect x="234" y="234" width="4" height="17"/><rect x="260" y="234" width="4" height="17"/></g>',
-  pomegranate: '<rect width="400" height="300" fill="#0a3520"/><path d="M-10 40 Q140 90 240 30 T410 60" stroke="#5c451a" stroke-width="7" fill="none"/><path d="M40 190 Q180 150 300 200 T410 180" stroke="#5c451a" stroke-width="6" fill="none"/><g fill="#1d7a4a"><ellipse cx="90" cy="66" rx="26" ry="12" transform="rotate(-24 90 66)"/><ellipse cx="180" cy="96" rx="24" ry="11" transform="rotate(18 180 96)"/><ellipse cx="300" cy="60" rx="26" ry="12" transform="rotate(-12 300 60)"/><ellipse cx="120" cy="216" rx="24" ry="11" transform="rotate(14 120 216)"/><ellipse cx="262" cy="238" rx="26" ry="12" transform="rotate(-20 262 238)"/></g><g><circle cx="140" cy="120" r="30" fill="#c12740"/><path d="M140 88 l5 10 h-10 Z" fill="#8e1c2e"/><circle cx="128" cy="110" r="8" fill="#e5566e"/><circle cx="330" cy="128" r="24" fill="#c12740"/><path d="M330 102 l4 8 h-8 Z" fill="#8e1c2e"/><circle cx="320" cy="120" r="6" fill="#e5566e"/><circle cx="196" cy="238" r="26" fill="#c12740"/><path d="M196 210 l4 9 h-9 Z" fill="#8e1c2e"/><circle cx="185" cy="229" r="7" fill="#e5566e"/></g>',
-  city: '<defs><linearGradient id="ng" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1030"/><stop offset="1" stop-color="#123a2a"/></linearGradient></defs><rect width="400" height="300" fill="url(#ng)"/><circle cx="338" cy="48" r="20" fill="#ffeec2"/><circle cx="60" cy="36" r="2" fill="#fff"/><circle cx="130" cy="60" r="1.6" fill="#fff"/><circle cx="210" cy="30" r="2" fill="#fff"/><circle cx="280" cy="66" r="1.6" fill="#fff"/><g fill="#04150c"><rect x="18" y="130" width="52" height="170"/><rect x="82" y="96" width="62" height="204"/><rect x="156" y="150" width="46" height="150"/><rect x="214" y="76" width="58" height="224"/><rect x="284" y="120" width="50" height="180"/><rect x="344" y="160" width="44" height="140"/></g><g fill="#ffd75e"><rect x="92" y="112" width="9" height="12"/><rect x="112" y="112" width="9" height="12"/><rect x="92" y="140" width="9" height="12"/><rect x="122" y="168" width="9" height="12"/><rect x="226" y="96" width="9" height="12"/><rect x="246" y="124" width="9" height="12"/><rect x="226" y="152" width="9" height="12"/><rect x="246" y="196" width="9" height="12"/><rect x="296" y="140" width="9" height="12"/><rect x="30" y="150" width="8" height="11"/><rect x="48" y="182" width="8" height="11"/><rect x="166" y="172" width="8" height="11"/><rect x="354" y="182" width="8" height="11"/></g><rect y="292" width="400" height="8" fill="#ffd75e" opacity=".35"/>',
-  carpet: '<rect width="400" height="300" fill="#7d2231"/><rect x="14" y="14" width="372" height="272" fill="none" stroke="#ffd75e" stroke-width="4"/><rect x="30" y="30" width="340" height="240" fill="none" stroke="#d9b380" stroke-width="2"/><g fill="#0d3d24"><path d="M200 62 l34 44 -34 44 -34 -44 Z"/><path d="M92 118 l26 34 -26 34 -26 -34 Z"/><path d="M308 118 l26 34 -26 34 -26 -34 Z"/><path d="M200 196 l26 34 -26 34 -26 -34 Z"/></g><g fill="#ffd75e"><path d="M200 84 l18 22 -18 22 -18 -22 Z"/><circle cx="92" cy="152" r="9"/><circle cx="308" cy="152" r="9"/><circle cx="200" cy="230" r="9"/></g><g fill="#d9b380"><circle cx="60" cy="52" r="5"/><circle cx="340" cy="52" r="5"/><circle cx="60" cy="248" r="5"/><circle cx="340" cy="248" r="5"/></g>',
-  eagle: '<defs><linearGradient id="eg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ec9e8"/><stop offset=".7" stop-color="#f2c879"/><stop offset="1" stop-color="#e2703a"/></linearGradient></defs><rect width="400" height="300" fill="url(#eg)"/><circle cx="200" cy="238" r="34" fill="#ffd75e" opacity=".85"/><path d="M200 138 C168 100 108 78 34 92 C78 112 116 132 148 154 C112 156 76 168 46 190 C102 196 156 184 186 164 L200 186 L214 164 C244 184 298 196 354 190 C324 168 288 156 252 154 C284 132 322 112 366 92 C292 78 232 100 200 138 Z" fill="#2a1a0c"/><circle cx="200" cy="146" r="11" fill="#2a1a0c"/><path d="M200 132 l7 8 -7 6 -7 -6 Z" fill="#ffd75e"/><path d="M0 268 L70 224 L130 258 L196 218 L268 260 L330 230 L400 266 L400 300 L0 300 Z" fill="#0e4d2e"/>',
-  river: '<defs><linearGradient id="rg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a8d8ea"/><stop offset="1" stop-color="#dcefe0"/></linearGradient></defs><rect width="400" height="300" fill="url(#rg)"/><path d="M0 0 H170 C150 70 210 110 178 168 C150 220 190 260 176 300 H0 Z" fill="#1d7a4a"/><path d="M400 0 H238 C262 66 206 116 240 172 C268 220 226 262 244 300 H400 Z" fill="#146545"/><path d="M186 0 C168 66 224 112 192 170 C164 222 202 262 188 300 L232 300 C220 258 254 220 228 170 C200 114 252 68 230 0 Z" fill="#57a8d8"/><g fill="#0b3d24"><circle cx="80" cy="90" r="17"/><rect x="77" y="100" width="6" height="18"/><circle cx="316" cy="120" r="15"/><rect x="313" y="130" width="6" height="16"/><circle cx="96" cy="212" r="14"/><rect x="93" y="220" width="6" height="15"/><circle cx="330" cy="224" r="17"/><rect x="327" y="234" width="6" height="18"/></g><circle cx="52" cy="44" r="20" fill="#ffd75e"/>',
-  tent: '<defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1030"/><stop offset=".75" stop-color="#1d2a52"/><stop offset="1" stop-color="#0b3d24"/></linearGradient></defs><rect width="400" height="300" fill="url(#tg)"/><g fill="#ffeec2"><circle cx="44" cy="40" r="2"/><circle cx="110" cy="70" r="1.6"/><circle cx="180" cy="34" r="2"/><circle cx="250" cy="62" r="1.6"/><circle cx="318" cy="38" r="2"/><circle cx="360" cy="84" r="1.6"/><circle cx="84" cy="110" r="1.4"/><circle cx="300" cy="116" r="1.4"/></g><circle cx="348" cy="52" r="15" fill="#ffeec2"/><path d="M200 108 L96 258 H304 Z" fill="#7d2231"/><path d="M200 108 L158 258 H242 Z" fill="#5c1824"/><path d="M200 108 L242 258 H304 Z" fill="#932b3d"/><path d="M196 258 l4 -34 4 34 Z" fill="#ffd75e"/><rect y="258" width="400" height="42" fill="#07331d"/><g><path d="M88 268 q6 -14 0 -24 q12 8 8 24 q-3 10 -8 0 Z" fill="#ff9d3c"/><circle cx="312" cy="272" r="4" fill="#ff9d3c"/><circle cx="322" cy="278" r="3" fill="#e2703a"/></g>',
-  trophy: '<defs><radialGradient id="hg" cx=".5" cy=".34" r=".85"><stop offset="0" stop-color="#3d2c07"/><stop offset="1" stop-color="#120d02"/></radialGradient></defs><rect width="400" height="300" fill="url(#hg)"/><g stroke="#ffd75e" stroke-width="5" opacity=".5"><path d="M200 130 L60 20"/><path d="M200 130 L130 8"/><path d="M200 130 L270 8"/><path d="M200 130 L340 20"/></g><g fill="#0d3d24"><rect x="26" y="120" width="26" height="180"/><rect x="348" y="120" width="26" height="180"/></g><g fill="#ffd75e"><path d="M158 62 h84 v52 a42 42 0 0 1-84 0 Z"/><path d="M158 76 h-26 a8 8 0 0 0 6 30 l24 10 M242 76 h26 a8 8 0 0 1-6 30 l-24 10" fill="none" stroke="#ffd75e" stroke-width="9"/><rect x="190" y="150" width="20" height="30"/><path d="M164 196 h72 l8 22 H156 Z"/><rect x="146" y="218" width="108" height="12"/></g><circle cx="200" cy="88" r="11" fill="#d7263d"/>',
-};
-const CLUB_COVER_IDS = Object.keys(CLUB_COVER_SVGS);
-function clCoverEl(cover) {
+// ---- cover gallery: 10 REAL photo covers, served as static
+// files at /covers/<id>.jpg on every host (the stickers pattern —
+// never inlined into the bundle). A club whose owner uploaded a
+// photo carries cover 'custom' (+ a coverV version): its image
+// is the host-served /club-cover/<cid>?v=<coverV>. ----
+const CLUB_COVER_IDS = ['mountains', 'mosque', 'caravan', 'pomegranate', 'city', 'carpet', 'eagle', 'river', 'tent', 'trophy'];
+function coverURL(cover, cid, v) {
+  if (cover === 'custom' && cid) return '/club-cover/' + cid + '?v=' + (v || 1);
+  return '/covers/' + (CLUB_COVER_IDS.includes(cover) ? cover : 'mountains') + '.jpg';
+}
+function clCoverEl(cover, cid, v) {
   const d = document.createElement('div');
   d.style.width = '100%';
   d.style.height = '100%';
-  d.innerHTML = '<svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%">' +
-    (CLUB_COVER_SVGS[cover] || CLUB_COVER_SVGS.mountains) + '</svg>';
+  const img = document.createElement('img');
+  img.src = coverURL(cover, cid, v);
+  img.alt = '';
+  img.loading = 'lazy';
+  img.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover';
+  d.appendChild(img);
   return d;
 }
 function clLevelOf(count) { return Math.min(5, 1 + Math.floor(Math.max(1, count || 0) / 10)); }
@@ -7344,10 +7611,16 @@ let clubSearchResults = [];
 let clubSearched = false;
 let ccEmblem = 'trophy';         // create-overlay picks
 let ccCover = 'mountains';
+let ccCoverBlob = null;      // a staged gallery photo (resized blob) for the create submit
+let ccCoverURL = null;       // its object-URL preview in the picker
+let pendingClubCover = null; // staged blob waiting for the created club to exist
 let ccCategory = 'social';
 let clEditEmblem = 'trophy';     // settings picks
 let clEditCover = 'mountains';
 let clEditCategory = 'social';
+let clEditName = null;           // unsaved text edits survive
+let clEditDesc = null;           // re-renders (picking a cover
+let clEditCountry = null;        // re-renders the whole form)
 let clEditCid = null;            // club the settings form was filled for
 const clubInvitedSent = new Set(); // friends I club-invited this session (row state)
 // ---- discovery state ----
@@ -7367,6 +7640,8 @@ function openClubs() {
   $('#scr-friends').classList.add('hidden');
   $('#scr-chats').classList.add('hidden');
   $('#scr-profile').classList.add('hidden');
+  $('#scr-clubpage').classList.add('hidden');
+  $('#scr-clubmembers').classList.add('hidden');
   $('#scr-clubs').classList.remove('hidden');
   clubUnread = 0;
   connectSocial();
@@ -7377,6 +7652,8 @@ function closeClubs() {
   closeClubMenu();
   stopPodium();
   cv.leave();
+  $('#scr-clubpage').classList.add('hidden');
+  $('#scr-clubmembers').classList.add('hidden');
   $('#scr-clubs').classList.add('hidden');
 }
 function updateClubsBadge() {
@@ -7385,7 +7662,7 @@ function updateClubsBadge() {
     if (!clubData.club) n += (clubData.invites || []).length;
     else if (clubData.club.requests) n += clubData.club.requests.length;
   }
-  ['#nav-clubs-badge', '#frnav-clubs-badge', '#chnav-clubs-badge', '#pfnav-clubs-badge', '#clnav-clubs-badge'].forEach((sel) => {
+  ['#nav-clubs-badge', '#frnav-clubs-badge', '#chnav-clubs-badge', '#pfnav-clubs-badge', '#clnav-clubs-badge', '#cpnav-clubs-badge', '#cmnav-clubs-badge'].forEach((sel) => {
     const b = $(sel);
     if (b) { b.textContent = faNum(n); b.classList.toggle('hidden', n === 0); }
   });
@@ -7482,7 +7759,7 @@ function clubCardEl(s) {
   card.className = 'cl-card';
   const cov = document.createElement('div');
   cov.className = 'cl-card-cov';
-  cov.appendChild(clCoverEl(s.cover));
+  cov.appendChild(clCoverEl(s.cover, s.cid, s.coverV));
   const badge = document.createElement('div');
   badge.className = 'cl-card-badge';
   badge.innerHTML = '<span>👥 ' + faNum(s.count) + '</span>' + clActivityBars(s.count);
@@ -7546,7 +7823,7 @@ function renderPodium(top) {
     fr.innerHTML = CL_CROWN[rank] || '';
     const cvv = document.createElement('div');
     cvv.className = 'cl-pod-cov';
-    cvv.appendChild(clCoverEl(s.cover));
+    cvv.appendChild(clCoverEl(s.cover, s.cid, s.coverV));
     fr.appendChild(cvv);
     d.appendChild(fr);
     const nm = document.createElement('div');
@@ -7705,7 +7982,7 @@ function renderClubPublic() {
   if (!s) return;
   const cov = $('#cv-cov');
   cov.innerHTML = '';
-  cov.appendChild(clCoverEl(s.cover));
+  cov.appendChild(clCoverEl(s.cover, s.cid, s.coverV));
   $('#cv-name').textContent = s.name || '';
   const fl = s.country ? countryFlag(s.country) + ' ' + dispCountry(s.country) + ' · ' : '';
   $('#cv-meta').textContent = 'ID: ' + s.cid + ' · 👥 ' + faNum(s.count) + ' · ' + T('clLevel', s.level || clLevelOf(s.count)) + ' · ❤ ' + faNum(s.likes || 0);
@@ -7808,19 +8085,88 @@ function renderClubSeats(c) {
 async function onClubSeatTap(seat, occupantId) {
   if (!clubData || !clubData.club) return;
   if (occupantId) {
-    if (occupantId === socialMe) { socialSend({ type: 's-club-stand' }); cv.setMic(false); }
+    if (occupantId === socialMe) { socialSend({ type: 's-club-stand' }); cv.wantSeat = -1; cv.setMic(false); }
     return;
   }
   const ok = await cv.ensureMic();
   if (!ok) return;
   cv.wantMic = true;
-  socialSend({ type: 's-club-seat', seat });
+  cv.wantSeat = seat;
+  if (clubData.club.myRole === 'owner') {
+    // The founder sits freely — no request to himself.
+    socialSend({ type: 's-club-seat', seat });
+  } else if (!cv.seatReq) {
+    // Everyone else ASKS the founder (owner order 2026-11-09):
+    // the seat lands only when he approves. The pending bar
+    // shows «په تمه…» with a cancel until he answers, I leave,
+    // or 60 s pass.
+    cv.seatReq = { seat, ts: Date.now() };
+    socialSend({ type: 's-club-seat-request', seat });
+    armSeatReqTimer();
+    renderSeatReqBar();
+  }
 }
+// ---------- seat-request pending state (the requester's side) ----------
+let seatReqTimer = null;
+function armSeatReqTimer() {
+  if (seatReqTimer) clearTimeout(seatReqTimer);
+  seatReqTimer = setTimeout(() => {
+    seatReqTimer = null;
+    if (cv.seatReq) { cv.seatReq = null; cv.wantSeat = -1; renderSeatReqBar(); }
+  }, 60000);
+}
+function renderSeatReqBar() {
+  const bar = $('#cl-seatreq-bar');
+  if (!bar) return;
+  const pend = !!(cv.seatReq && clubData && clubData.club && cv.mySeat() < 0);
+  bar.classList.toggle('hidden', !pend);
+  if (pend) $('#cl-seatreq-txt').textContent = T('clSeatWaiting');
+}
+$('#btn-cl-seatreq-cancel').onclick = () => {
+  socialSend({ type: 's-club-seat-request-cancel' });
+  cv.seatReq = null;
+  cv.wantSeat = -1;
+  cv.wantMic = false;
+  if (seatReqTimer) { clearTimeout(seatReqTimer); seatReqTimer = null; }
+  renderSeatReqBar();
+};
+// ---------- seat-request prompt (the owner's side) ----------
+// A small queue behind one popup: the founder answers each ask
+// (تایید seats the member; رد tells him). Prompts show only
+// while the founder is in the club room.
+let seatReqQueue = [];
+let seatReqCurrent = null;
+function showNextSeatReq() {
+  if (seatReqCurrent) return;
+  if (!clubData || !clubData.club || !clRoomView) return;
+  if ($('#scr-clubs').classList.contains('hidden')) return;
+  const nxt = seatReqQueue.shift();
+  if (!nxt) return;
+  seatReqCurrent = nxt;
+  const p = nxt.from || {};
+  const av = $('#sr-av');
+  av.innerHTML = '';
+  av.appendChild(avatarEl(p.name, p.avatar, 46, p.photo));
+  $('#sr-title').textContent = T('clSeatReqTitle');
+  $('#sr-msg').textContent = T('clSeatReqMsg', p.name || '');
+  $('#btn-sr-yes').textContent = T('frAccept');
+  $('#btn-sr-no').textContent = T('frReject');
+  $('#ov-seatreq').classList.add('show');
+}
+function answerSeatReq(accept) {
+  const cur = seatReqCurrent;
+  seatReqCurrent = null;
+  $('#ov-seatreq').classList.remove('show');
+  if (cur && cur.from) socialSend({ type: 's-club-seat-respond', from: cur.from.id, accept });
+  showNextSeatReq();
+}
+$('#btn-sr-yes').onclick = () => answerSeatReq(true);
+$('#btn-sr-no').onclick = () => answerSeatReq(false);
 function renderClubRoom() {
   const c = clubData.club;
   const cov = $('#cl-room-cov');
   cov.innerHTML = '';
-  cov.appendChild(clCoverEl(c.cover));
+  cov.appendChild(clCoverEl(c.cover, c.cid, c.coverV));
   $('#cl-name').textContent = c.name || '';
   $('#cl-id-num').textContent = 'ID: ' + c.cid;
   const likeBtn = $('#btn-cl-like');
@@ -7834,6 +8180,21 @@ function renderClubRoom() {
   else { annText.textContent = T('clAnnounceEmpty'); annText.classList.add('dim'); }
   const isManager = c.myRole === 'owner' || c.myRole === 'deputy';
   $('#btn-cl-ann-edit').classList.toggle('hidden', !isManager);
+  renderClubMemberLists();
+  renderClubChat();
+  cv.enter();
+  cv.paintBtns();
+  renderSeatReqBar();
+  showNextSeatReq();
+}
+// The member-management lists: join requests (managers), the
+// members list, and the room's invite-friends card. The requests
+// + members cards live on the MEMBERS page now — this one
+// renderer feeds both screens, so the page is never stale.
+function renderClubMemberLists() {
+  if (!clubData || !clubData.club) return;
+  const c = clubData.club;
+  const isManager = c.myRole === 'owner' || c.myRole === 'deputy';
   // join requests (managers only; the server sends [] to members)
   const reqBox = $('#cl-req-box'), reqList = $('#cl-requests');
   reqList.innerHTML = '';
@@ -7849,7 +8210,6 @@ function renderClubRoom() {
   const memBox = $('#cl-members');
   memBox.innerHTML = '';
   c.members.forEach((m) => memBox.appendChild(clubMemberRow(m)));
-  renderClubChat();
   // invite friends (managers): my friends who are not in this club
   const ifBox = $('#cl-invitefriends-box'), ifList = $('#cl-invitefriends');
   ifList.innerHTML = '';
@@ -7869,36 +8229,162 @@ function renderClubRoom() {
           })]));
     });
   }
-  // settings: description + owner edit form + leave/dissolve
+}
+// ---------- club details page (د کلب امادګي) ----------
+// The club settings/details form as its OWN screen: opened by
+// tapping the cover thumbnail in the room header. The room is
+// only hidden, never torn down — mic seats, chat and the voice
+// mesh keep their state and the back button lands on them as
+// they were. The owner edits (the one s-club-edit path); every
+// other member sees the same page read-only.
+function openClubPage() {
+  if (!clubData || !clubData.club) return;
+  closeClubMenu();
+  $('#scr-clubs').classList.add('hidden');
+  $('#scr-clubpage').classList.remove('hidden');
+  renderClubPage();
+}
+function closeClubPage() {
+  $('#scr-clubpage').classList.add('hidden');
+  $('#scr-clubmembers').classList.add('hidden');
+  if (clubData && clubData.club && clRoomView) {
+    $('#scr-clubs').classList.remove('hidden');
+    renderClubs();
+  } else {
+    openClubs();
+  }
+}
+function renderClubPage() {
+  if (!clubData || !clubData.club) return;
+  const c = clubData.club;
+  const covBox = $('#cp-cov');
+  covBox.innerHTML = '';
+  covBox.appendChild(clCoverEl(c.cover, c.cid, c.coverV));
+  $('#cp-name').textContent = c.name || '';
+  $('#cp-id-num').textContent = c.cid;
+  $('#cp-count').textContent = T('clMemberCount', c.count);
   const cd = new Date(c.created);
   $('#cl-created').textContent = T('clCreated', cd.getFullYear() + '/' + (cd.getMonth() + 1) + '/' + cd.getDate());
   const desc = $('#cl-desc');
   desc.textContent = c.desc || '';
   desc.style.display = c.desc ? '' : 'none';
   const isOwner = c.myRole === 'owner';
-  $('#cl-owner-edit').classList.toggle('hidden', !isOwner);
+  $('#cp-save-row').classList.toggle('hidden', !isOwner);
   $('#btn-cl-dissolve').classList.toggle('hidden', !isOwner);
   $('#cl-leave-note').classList.toggle('hidden', !isOwner);
+  $('#scr-clubpage').classList.toggle('ro', !isOwner);
+  const nameInp = $('#cl-edit-name'), descInp = $('#cl-edit-desc');
+  const countrySel = $('#cl-edit-country');
+  nameInp.disabled = !isOwner;
+  descInp.disabled = !isOwner;
+  countrySel.disabled = !isOwner;
   if (isOwner) {
-    const nameInp = $('#cl-edit-name'), descInp = $('#cl-edit-desc');
     if (clEditCid !== c.cid) {
       clEditCid = c.cid;
       clEditEmblem = c.emblem;
       clEditCover = c.cover || 'mountains';
       clEditCategory = c.category || 'social';
+      clEditName = null; clEditDesc = null; clEditCountry = null;
       nameInp.value = c.name || '';
       descInp.value = c.desc || '';
-      fillCountrySelect($('#cl-edit-country'), c.country || '');
+      fillCountrySelect(countrySel, c.country || '');
     } else {
-      if (document.activeElement !== nameInp) nameInp.value = c.name || '';
-      if (document.activeElement !== descInp) descInp.value = c.desc || '';
+      nameInp.value = clEditName != null ? clEditName : (c.name || '');
+      descInp.value = clEditDesc != null ? clEditDesc : (c.desc || '');
+      fillCountrySelect(countrySel, clEditCountry != null ? clEditCountry : (c.country || ''));
     }
-    buildEmblemGrid($('#cl-edit-emgrid'), clEditEmblem, (e) => { clEditEmblem = e; renderClubs(); });
-    buildCoverGrid($('#cl-edit-covgrid'), clEditCover, (cvv) => { clEditCover = cvv; renderClubs(); });
-    buildCatRow($('#cl-edit-catrow'), clEditCategory, (cat) => { clEditCategory = cat; renderClubs(); });
+    buildEmblemGrid($('#cl-edit-emgrid'), clEditEmblem, (e) => { clEditEmblem = e; renderClubPage(); });
+    buildCoverGrid($('#cl-edit-covgrid'), clEditCover, (cvv) => { clEditCover = cvv; renderClubPage(); }, {
+      customURL: (c.cover === 'custom' || clEditCover === 'custom') ? coverURL('custom', c.cid, c.coverV) : null,
+      upload: true,
+      onUpload: () => pickCoverFile(async (file) => {
+        const blob = await coverFileToBlob(file);
+        if (blob && await uploadClubCover(blob)) clEditCover = 'custom';
+      }),
+    });
+    buildCatRow($('#cl-edit-catrow'), clEditCategory, (cat) => { clEditCategory = cat; renderClubPage(); });
+  } else {
+    // read-only mirror of the club's own values (pickers locked
+    // by the .ro class; the save row is hidden above)
+    if (document.activeElement !== nameInp) nameInp.value = c.name || '';
+    if (document.activeElement !== descInp) descInp.value = c.desc || '';
+    fillCountrySelect(countrySel, c.country || '');
+    buildEmblemGrid($('#cl-edit-emgrid'), c.emblem, () => {});
+    buildCoverGrid($('#cl-edit-covgrid'), c.cover || 'mountains', () => {}, {
+      customURL: c.cover === 'custom' ? coverURL('custom', c.cid, c.coverV) : null,
+    });
+    buildCatRow($('#cl-edit-catrow'), c.category || 'social', () => {});
   }
-  cv.enter();
-  cv.paintBtns();
+}
+// ---------- club members page (غړي) ----------
+// Its own screen: the managers' join-requests card and the
+// members list live here now (moved out of the room), opened
+// from the room header's person+ ADD button or the member-count
+// pill. The header carries an invite button for managers only.
+// The room behind the page is untouched — seats and chat keep
+// their state and the back button lands on them as they were.
+function openClubMembers() {
+  if (!clubData || !clubData.club) return;
+  closeClubMenu();
+  $('#scr-clubs').classList.add('hidden');
+  $('#scr-clubpage').classList.add('hidden');
+  $('#scr-clubmembers').classList.remove('hidden');
+  renderClubMembersBits();
+  renderClubMemberLists();
+}
+function closeClubMembers() {
+  $('#scr-clubmembers').classList.add('hidden');
+  $('#ov-clubinvite').classList.remove('show');
+  if (clubData && clubData.club && clRoomView) {
+    $('#scr-clubs').classList.remove('hidden');
+    renderClubs();
+  } else {
+    openClubs();
+  }
+}
+function renderClubMembersBits() {
+  if (!clubData || !clubData.club) return;
+  const c = clubData.club;
+  const isManager = c.myRole === 'owner' || c.myRole === 'deputy';
+  $('#btn-cm-invite').classList.toggle('hidden', !isManager);
+}
+// ---------- club invite popup ----------
+// The manager's friends with their per-friend state: already a
+// member (disabled «غړی دی»), invite already pending (disabled),
+// or invitable. Sending goes through the existing s-club-invite
+// and keeps the popup open — only the row states repaint, so
+// several friends can be invited in a row. A tap on the dimmed
+// backdrop closes it.
+function renderClubInvitePopup() {
+  const list = $('#ci-list');
+  if (!list) return;
+  list.innerHTML = '';
+  const c = clubData && clubData.club;
+  if (!c) return;
+  const memberIds = new Set(c.members.map((m) => m.id));
+  const friends = (socialData && socialData.friends) || [];
+  if (!friends.length) { list.appendChild(frEmpty(T('clNoInviteFriends'))); return; }
+  friends.forEach((f) => {
+    if (memberIds.has(f.id)) {
+      list.appendChild(personRow(f, [frBtn(T('clIsMember'), '', null)]));
+    } else if (clubInvitedSent.has(f.id)) {
+      list.appendChild(personRow(f, [frBtn(T('clRequested'), '', null)]));
+    } else {
+      list.appendChild(personRow(f, [frBtn(T('frInvite'), 'primary', () => {
+        clubInvitedSent.add(f.id);
+        socialSend({ type: 's-club-invite', to: f.id });
+        renderClubInvitePopup();
+        renderClubs();
+      })]));
+    }
+  });
+}
+function openClubInvitePopup() {
+  if (!clubData || !clubData.club) return;
+  const c = clubData.club;
+  if (!(c.myRole === 'owner' || c.myRole === 'deputy')) return;
+  renderClubInvitePopup();
+  $('#ov-clubinvite').classList.add('show');
 }
 function renderClubs() {
   updateClubsBadge();
@@ -7921,9 +8407,13 @@ function renderClubs() {
   $('#cl-inp').placeholder = T('clChatPh');
   $('#cl-invitefriends-title').textContent = T('clInviteFriends');
   $('#cl-settings-title').textContent = T('clSettings');
+  $('#cm-title').textContent = T('clMembers');
+  $('#ci-title').textContent = T('clInviteFriends');
+  $('#cp-id-lbl').textContent = T('frIdLabel');
   $('#cl-ann-lbl').textContent = '📢 ' + T('clAnnounce');
   $('#cl-seats-hint').textContent = T('clSeatsHint');
   $('#btn-cl-edit-save').textContent = T('clSave');
+  $('#btn-cl-seatreq-cancel').textContent = T('clCancel');
   $('#btn-cl-leave').textContent = T('clLeave');
   $('#btn-cl-dissolve').textContent = T('clDissolve');
   $('#cl-leave-note').textContent = T('clLeaveOwnerNote');
@@ -7948,6 +8438,18 @@ function renderClubs() {
   $('#ca-inp').placeholder = T('clAnnouncePh');
   $('#btn-ca-save').textContent = T('clSave');
   $('#btn-ca-cancel').textContent = T('clCancel');
+  // The club sub-pages (details / members) are the visible
+  // screen while the clubs screen itself is hidden — they
+  // re-render from this same state push, and close themselves
+  // when the club is gone (leave / dissolve / kick).
+  if (!$('#scr-clubpage').classList.contains('hidden')) {
+    if (clubData && clubData.club) renderClubPage(); else closeClubPage();
+  }
+  if (!$('#scr-clubmembers').classList.contains('hidden')) {
+    if (clubData && clubData.club) { renderClubMembersBits(); renderClubMemberLists(); }
+    else closeClubMembers();
+  }
+  if ($('#ov-clubinvite').classList.contains('show')) renderClubInvitePopup();
   if ($('#scr-clubs').classList.contains('hidden')) return;
   const inRoom = !!(clubData && clubData.club && clRoomView);
   $('#cl-disc-scroll').classList.toggle('hidden', inRoom);
@@ -7968,17 +8470,123 @@ function buildEmblemGrid(box, current, onPick) {
     box.appendChild(b);
   });
 }
-function buildCoverGrid(box, current, onPick) {
+function buildCoverGrid(box, current, onPick, opts) {
   if (!box) return;
+  opts = opts || {};
   box.innerHTML = '';
+  // The custom (uploaded) cover, when the club has one or one is
+  // staged: a photo tile like the gallery ones, value 'custom'.
+  if (opts.customURL) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cl-cov' + (current === 'custom' ? ' sel' : '');
+    b.dataset.cover = 'custom';
+    const img = document.createElement('img');
+    img.src = opts.customURL;
+    img.alt = '';
+    b.appendChild(img);
+    b.onclick = () => onPick('custom');
+    box.appendChild(b);
+  }
   CLUB_COVER_IDS.forEach((cvv) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'cl-cov' + (cvv === current ? ' sel' : '');
+    b.dataset.cover = cvv;
     b.appendChild(clCoverEl(cvv));
     b.onclick = () => onPick(cvv);
     box.appendChild(b);
   });
+  // The owner's «اپلود از گالری» tile: opens the phone gallery via
+  // the one hidden file input; the caller decides what the picked
+  // photo means (upload now, or stage it for the create submit).
+  if (opts.upload) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cl-cov up';
+    const ic = document.createElement('span');
+    ic.className = 'up-ic';
+    ic.textContent = '⬆';
+    const lb = document.createElement('span');
+    lb.textContent = T('clCoverUpload');
+    b.appendChild(ic);
+    b.appendChild(lb);
+    b.onclick = () => { if (opts.onUpload) opts.onUpload(); };
+    box.appendChild(b);
+  }
+}
+// ---------- cover upload (the owner's own photo) ----------
+// The picked photo is resized on a canvas (max 960×540, JPEG
+// ~0.82) and POSTed to the host's /club-cover route — never over
+// the social socket (message caps). The server stores the bytes,
+// flips the club record to 'custom' and fans the state out; the
+// picker simply follows the state.
+let coverPickCb = null;
+function pickCoverFile(cb) {
+  coverPickCb = cb;
+  const inp = $('#cover-file');
+  if (!inp) return;
+  inp.value = '';
+  inp.click();
+}
+$('#cover-file').addEventListener('change', (e) => {
+  const f = e.target.files && e.target.files[0];
+  const cb = coverPickCb;
+  coverPickCb = null;
+  if (f && cb) cb(f);
+});
+async function coverFileToBlob(file) {
+  if (!file) return null;
+  let bmp = null;
+  try { bmp = await createImageBitmap(file); } catch (e) { bmp = null; }
+  if (!bmp) {
+    bmp = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = URL.createObjectURL(file);
+    });
+    if (!bmp) return null;
+  }
+  const w = bmp.width || bmp.naturalWidth;
+  const h = bmp.height || bmp.naturalHeight;
+  if (!w || !h) return null;
+  const sc = Math.min(1, 960 / w, 540 / h);
+  const cw = Math.max(1, Math.round(w * sc));
+  const ch = Math.max(1, Math.round(h * sc));
+  const cnv = document.createElement('canvas');
+  cnv.width = cw;
+  cnv.height = ch;
+  cnv.getContext('2d').drawImage(bmp, 0, 0, cw, ch);
+  return new Promise((resolve) => {
+    if (cnv.toBlob) cnv.toBlob((b) => resolve(b), 'image/jpeg', 0.82);
+    else resolve(null);
+  });
+}
+async function uploadClubCover(blob) {
+  if (!blob) return false;
+  const headers = { 'Content-Type': 'image/jpeg' };
+  let pid = '';
+  try { pid = localStorage.getItem('tore.pid') || ''; } catch (e) { /* private mode */ }
+  // Node hosts take their identity from this header (the same pid
+  // the social hello uses); the Worker ignores it and derives the
+  // identity from the verified session cookie instead.
+  if (pid) headers['x-tore-pid'] = pid;
+  let res = null;
+  try {
+    res = await fetch('/club-cover', { method: 'POST', headers, body: blob, credentials: 'same-origin' });
+  } catch (e) { /* offline */ }
+  if (!res) { toast(T('errServerError')); return false; }
+  if (!res.ok) {
+    let code = '';
+    try { code = (await res.json()).error || ''; } catch (e) { /* not json */ }
+    toast(code === 'coverTooBig' ? T('errCoverTooBig')
+      : code === 'coverBadType' ? T('errCoverBadType')
+      : T('errClubNoPerm'));
+    return false;
+  }
+  toast(T('clCoverSaved'));
+  return true;
 }
 function buildCatRow(box, current, onPick) {
   if (!box) return;
@@ -8019,18 +8627,60 @@ function copyClubId() {
 $('#cl-id-num').onclick = copyClubId;
 $('#btn-cl-share').onclick = copyClubId;
 $('#btn-cl-like').onclick = () => { if (clubData && clubData.club) socialSend({ type: 's-club-like', club: clubData.club.cid }); };
-$('#btn-cl-exit').onclick = () => { clRoomView = false; closeClubMenu(); renderClubs(); };
-$('#btn-cl-add').onclick = () => {
-  const t = $('#cl-invitefriends-box');
-  const target = (t && !t.classList.contains('hidden')) ? t : $('#cl-members-card');
-  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+// The room header's EXIT (door) button: a confirmation popup
+// first (وتل / لغوه). وتل is the FULL membership leave — the
+// player disappears from the club entirely (member list, seats,
+// voice room, chat) and lands on the discovery page; rejoining
+// needs a fresh request or invite. The owner instead gets the
+// settled restriction (hand over to a deputy, or dissolve).
+$('#btn-cl-exit').onclick = () => {
+  if (!clubData || !clubData.club) return;
+  askConfirm(T('clExitTitle'), T('clExitBody'), T('clExitYes'), () => {
+    if (!clubData || !clubData.club) return;
+    if (clubData.club.myRole === 'owner') { toast(T('clLeaveOwnerNote')); return; }
+    socialSend({ type: 's-club-leave' });
+  });
 };
-$('#cl-countpill').onclick = () => { const t = $('#cl-members-card'); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+// The header's person+ ADD button and the member-count pill both
+// open the members page now (no direct invite UI here anymore).
+$('#btn-cl-add').onclick = () => openClubMembers();
+$('#cl-countpill').onclick = () => openClubMembers();
+// club details page: entry (cover tap), back, ID copy, nav
+$('#cl-room-cov').onclick = () => openClubPage();
+$('#btn-cp-back').onclick = () => closeClubPage();
+$('#cp-id-num').onclick = copyClubId;
+$('#cpnav-friends').onclick = () => openFriends();
+$('#cpnav-clubs').onclick = () => closeClubPage();
+$('#cpnav-home').onclick = () => { closeClubPage(); closeClubs(); };
+$('#cpnav-profile').onclick = () => openProfile();
+$('#cpnav-chat').onclick = () => openChats();
+// club members page: back, header invite button, popup, nav
+$('#btn-cm-back').onclick = () => closeClubMembers();
+$('#btn-cm-invite').onclick = () => openClubInvitePopup();
+$('#ov-clubinvite').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
+$('#cmnav-friends').onclick = () => openFriends();
+$('#cmnav-clubs').onclick = () => closeClubMembers();
+$('#cmnav-home').onclick = () => { closeClubMembers(); closeClubs(); };
+$('#cmnav-profile').onclick = () => openProfile();
+$('#cmnav-chat').onclick = () => openChats();
 // discovery tabs + search toggle
 $('#cl-tab-explore').onclick = () => { clTab = 'explore'; clPodIdx = 0; requestDiscover(); renderClubs(); };
 $('#cl-tab-hot').onclick = () => { clTab = 'hot'; clPodIdx = 0; requestDiscover(); renderClubs(); };
 $('#cl-tab-mine').onclick = () => { clTab = 'mine'; requestDiscover(); renderClubs(); };
-$('#btn-cl-search-toggle').onclick = () => { const inp = $('#cl-search-inp'); if (inp) inp.focus(); };
+// The discovery search row is HIDDEN until the magnifier is
+// tapped (owner order 2026-11-09, the friends-screen pattern):
+// tap → the row opens and the input takes focus; tap again →
+// it closes. The icon stays lit while the row is open.
+let clSearchOpen = false;
+function paintClSearchToggle() {
+  $('#cl-searchrow').classList.toggle('hidden', !clSearchOpen);
+  $('#btn-cl-search-toggle').classList.toggle('on', clSearchOpen);
+}
+$('#btn-cl-search-toggle').onclick = () => {
+  clSearchOpen = !clSearchOpen;
+  paintClSearchToggle();
+  if (clSearchOpen) { const inp = $('#cl-search-inp'); if (inp) inp.focus(); }
+};
 $('#cl-country-sel').addEventListener('change', (e) => {
   clCountryFilter = e.target.value || '';
   clCountryMore = false;
@@ -8060,14 +8710,35 @@ $('#btn-ca-save').onclick = () => {
   $('#ov-clubann').classList.remove('show');
 };
 // create overlay
+function paintCcCoverGrid() {
+  buildCoverGrid($('#cc-covgrid'), ccCover, function pickC(cvv) {
+    ccCover = cvv;
+    if (cvv !== 'custom') { ccCoverBlob = null; if (ccCoverURL) { URL.revokeObjectURL(ccCoverURL); ccCoverURL = null; } }
+    paintCcCoverGrid();
+  }, {
+    customURL: ccCoverURL,
+    upload: true,
+    onUpload: () => pickCoverFile(async (file) => {
+      const blob = await coverFileToBlob(file);
+      if (!blob) return;
+      ccCoverBlob = blob;
+      if (ccCoverURL) URL.revokeObjectURL(ccCoverURL);
+      ccCoverURL = URL.createObjectURL(blob);
+      ccCover = 'custom';
+      paintCcCoverGrid();
+    }),
+  });
+}
 $('#btn-cl-create').onclick = () => {
   ccEmblem = 'trophy';
   ccCover = 'mountains';
+  ccCoverBlob = null;
+  if (ccCoverURL) { URL.revokeObjectURL(ccCoverURL); ccCoverURL = null; }
   ccCategory = 'social';
   $('#cc-name').value = '';
   $('#cc-desc').value = '';
   buildEmblemGrid($('#cc-emgrid'), ccEmblem, function pick(e) { ccEmblem = e; buildEmblemGrid($('#cc-emgrid'), ccEmblem, pick); });
-  buildCoverGrid($('#cc-covgrid'), ccCover, function pickC(cvv) { ccCover = cvv; buildCoverGrid($('#cc-covgrid'), ccCover, pickC); });
+  paintCcCoverGrid();
   buildCatRow($('#cc-catrow'), ccCategory, function pickK(cat) { ccCategory = cat; buildCatRow($('#cc-catrow'), ccCategory, pickK); });
   fillCountrySelect($('#cc-country'), (profile && profile.country) || '');
   renderClubs();
@@ -8078,9 +8749,19 @@ $('#ov-clubcreate').addEventListener('click', (e) => { if (e.target === e.curren
 $('#btn-cc-create').onclick = () => {
   const name = $('#cc-name').value.trim();
   if (name.length < 2) { toast(T('errClubBadName')); return; }
-  socialSend({ type: 's-club-create', name, emblem: ccEmblem, desc: $('#cc-desc').value.trim(), cover: ccCover, country: $('#cc-country').value, category: ccCategory });
+  // A staged photo uploads AFTER the club exists (the endpoint
+  // keys the blob by the caller's own club): create with a
+  // gallery cover first, then swap it for the photo.
+  const staged = (ccCover === 'custom' && ccCoverBlob) ? ccCoverBlob : null;
+  socialSend({ type: 's-club-create', name, emblem: ccEmblem, desc: $('#cc-desc').value.trim(), cover: staged ? 'mountains' : ccCover, country: $('#cc-country').value, category: ccCategory });
+  if (staged) pendingClubCover = staged;
+  ccCoverBlob = null;
+  if (ccCoverURL) { URL.revokeObjectURL(ccCoverURL); ccCoverURL = null; }
   $('#ov-clubcreate').classList.remove('show');
 };
+$('#cl-edit-name').addEventListener('input', (e) => { clEditName = e.target.value; });
+$('#cl-edit-desc').addEventListener('input', (e) => { clEditDesc = e.target.value; });
+$('#cl-edit-country').addEventListener('change', (e) => { clEditCountry = e.target.value; });
 $('#btn-cl-edit-save').onclick = () => {
   socialSend({ type: 's-club-edit', name: $('#cl-edit-name').value.trim(), emblem: clEditEmblem, desc: $('#cl-edit-desc').value.trim(), cover: clEditCover, country: $('#cl-edit-country').value, category: clEditCategory });
   toast(T('clSave'));
@@ -8117,6 +8798,7 @@ $('#cl-inp').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendClu
 // perfect-negotiation lite resolves later glare.
 const cv = {
   cid: null, joined: false, speaker: true, wantMic: false, micOn: false,
+  seatReq: null, wantSeat: -1, lastReconcile: 0,
   stream: null, peers: new Map(), speaking: new Set(),
   actx: null, analysers: new Map(), levelTimer: null,
   mySeat() {
@@ -8132,9 +8814,21 @@ const cv = {
     this.cid = c.cid;
     this.joined = true;
     socialSend({ type: 's-club-voice', action: 'join' });
-    try { refreshIceServers(); } catch (e) { /* STUN fallback stays */ }
+    // Pairs are born with the CURRENT ICE config, and a pair born
+    // on the fallback list stays on it — so while the TURN
+    // credentials have not landed yet, pair formation WAITS for
+    // the fetch to settle (the table voice's priming rule: pairs
+    // never born on fallback ICE). A settled-but-failed fetch
+    // still syncs (fallback is better than no voice).
+    if (!iceFetchedAt) {
+      refreshIceServers()
+        .then(() => { if (this.joined) this.syncPeers(); })
+        .catch(() => { if (this.joined) this.syncPeers(); });
+    } else {
+      try { refreshIceServers(); } catch (e) { /* cached already */ }
+      this.syncPeers();
+    }
     this.startLevels();
-    this.syncPeers();
     this.paintBtns();
   },
   leave() {
@@ -8142,6 +8836,9 @@ const cv = {
     this.joined = false;
     this.cid = null;
     this.wantMic = false;
+    this.seatReq = null;
+    this.wantSeat = -1;
+    if (seatReqTimer) { clearTimeout(seatReqTimer); seatReqTimer = null; }
     this.setMic(false);
     for (const [, P] of this.peers) { try { P.pc.close(); } catch (e) { /* gone */ } }
     this.peers.clear();
@@ -8174,10 +8871,12 @@ const cv = {
   },
   attachTrack(P) {
     const track = (this.micOn && this.stream) ? (this.stream.getAudioTracks()[0] || null) : null;
-    const cur = P.tx && P.tx.sender ? P.tx.sender.track : null;
+    const tc = cvSessionTc(P) || P.tx;
+    if (tc) P.tx = tc;
+    const cur = tc && tc.sender ? tc.sender.track : null;
     if ((cur && cur.id) === (track && track.id)) return;
-    if (!P.tx || !P.tx.sender) return;
-    P.tx.sender.replaceTrack(track).then(() => { if (track) cvOffer(P); }).catch(() => { /* renegotiate below */ });
+    if (!tc || !tc.sender) return;
+    tc.sender.replaceTrack(track).then(() => { if (track) cvOffer(P); }).catch(() => { /* renegotiate below */ });
     if (track) cvOffer(P);
   },
   syncPeers() {
@@ -8185,6 +8884,15 @@ const cv = {
     const voice = new Set(clubData.club.voiceIds || []);
     for (const [id, P] of [...this.peers]) {
       if (!voice.has(id)) {
+        try { P.pc.close(); } catch (e) { /* gone */ }
+        this.peers.delete(id);
+        const a = document.getElementById('cl-aud-' + cssEsc(id));
+        if (a) a.remove();
+      } else if (P.usedFallback && iceFetchedAt
+        && P.pc.iceConnectionState !== 'connected' && P.pc.iceConnectionState !== 'completed') {
+        // Born on the fallback ICE list before the TURN
+        // credentials landed: re-form on the real config (a
+        // connected pair is never touched).
         try { P.pc.close(); } catch (e) { /* gone */ }
         this.peers.delete(id);
         const a = document.getElementById('cl-aud-' + cssEsc(id));
@@ -8204,14 +8912,52 @@ const cv = {
   onVoiceState() {
     if (!this.joined) return;
     const seated = this.mySeat() >= 0;
+    if (seated) {
+      this.wantSeat = this.mySeat();
+      if (this.seatReq) { // the founder approved — pending is over
+        this.seatReq = null;
+        if (seatReqTimer) { clearTimeout(seatReqTimer); seatReqTimer = null; }
+        renderSeatReqBar();
+      }
+    }
     if (seated && this.wantMic && !this.micOn) {
       this.ensureMic().then((ok) => { if (ok) this.setMic(true); else this.wantMic = false; });
     } else if (!seated && this.micOn) {
       this.wantMic = false;
       this.setMic(false);
     }
+    this.reconcile();
     this.syncPeers();
     this.paintBtns();
+  },
+  // Wake-heal: the host's seat/voice maps are runtime-only — a
+  // restart (DO hibernation) empties them while my screen still
+  // shows my seat. When a state push says I'm NOT in the voice
+  // room (or not in the seat I hold), re-join and re-claim:
+  // the founder re-sits directly; a member's approved seat is
+  // re-asked (one tap for the founder) unless someone else took
+  // it. Throttled so fanout loops can never storm.
+  reconcile() {
+    if (!this.joined || !clubData || !clubData.club) return;
+    const now = Date.now();
+    if (now - this.lastReconcile < 3000) return;
+    const c = clubData.club;
+    const voice = c.voiceIds || [];
+    const iAmSeated = this.mySeat() >= 0;
+    const seatWanted = this.wantSeat >= 0 && !iAmSeated
+      && !(c.seatMap || []).some((s) => s.seat === this.wantSeat);
+    if (voice.includes(socialMe) && !seatWanted) return;
+    this.lastReconcile = now;
+    if (!voice.includes(socialMe)) socialSend({ type: 's-club-voice', action: 'join' });
+    if (seatWanted) {
+      if (c.myRole === 'owner') socialSend({ type: 's-club-seat', seat: this.wantSeat });
+      else if (!this.seatReq) {
+        this.seatReq = { seat: this.wantSeat, ts: Date.now() };
+        socialSend({ type: 's-club-seat-request', seat: this.wantSeat });
+        armSeatReqTimer();
+        renderSeatReqBar();
+      }
+    }
   },
   onSignal(from, data) {
     if (!this.joined || !data || typeof data !== 'object') return;
@@ -8258,32 +9004,64 @@ const cv = {
       };
       check(socialMe, this.micOn ? this.stream : null);
       for (const [id, P] of this.peers) check(id, P.remoteStream || null);
+      // Playback watchdog: a play() blocked by the gesture rule
+      // is retried until it lands (any tap also unlocks it).
+      for (const [id, P] of this.peers) {
+        if (!P.playBlocked) continue;
+        const a = document.getElementById('cl-aud-' + cssEsc(id));
+        if (a && a.paused && Date.now() - (P.lastPlayTry || 0) > 1500) cvTryPlay(P, a);
+      }
+      // Direction repair: a pair whose NEGOTIATED direction came
+      // out one-way (sendonly/recvonly — live mics, total silence)
+      // gets ONE force-sendrecv renegotiation per episode.
+      for (const [, P] of this.peers) {
+        try {
+          if (!P.pc.remoteDescription || P.pc.signalingState !== 'stable') continue;
+          const tc = cvSessionTc(P);
+          if (!tc || !tc.currentDirection) continue;
+          if (tc.currentDirection === 'sendrecv') { P.dirRepaired = false; continue; }
+          if (!P.dirRepaired) { P.dirRepaired = true; cvForceSendrecv(P); cvOffer(P); }
+        } catch (e) { /* next tick */ }
+      }
       if (changed && clubData && clubData.club && clRoomView && !$('#scr-clubs').classList.contains('hidden')) renderClubSeats(clubData.club);
     }, 300);
   },
 };
 function cssEsc(s) { return String(s).replace(/[^A-Za-z0-9_-]/g, '_'); }
+// play() with the Android gesture rule, the table voice's way:
+// a rejection (NotAllowedError — no user gesture yet) is MARKED
+// playBlocked, never swallowed silently; the levels watchdog
+// retries it and any tap unlocks it (the pointerdown handler
+// below). A 'playing' event clears the mark.
+function cvTryPlay(P, a) {
+  if (!a) return;
+  P.lastPlayTry = Date.now();
+  try {
+    const pr = a.play();
+    if (pr && pr.catch) pr.catch(() => { P.playBlocked = true; });
+  } catch (e) { P.playBlocked = true; }
+}
 function cvSignal(to, data) { socialSend({ type: 's-rtc', to, data }); }
 function cvMakePeer(id) {
   const pc = new RTCPeerConnection({ iceServers: iceServersNow });
   const tx = pc.addTransceiver('audio', { direction: 'sendrecv' });
   pc.createDataChannel('ping'); // keeps the pair warm like the lobby's
-  const P = { id, pc, tx, gen: 0, makingOffer: false, remoteStream: null, polite: String(socialMe) > String(id) };
+  const P = { id, pc, tx, gen: 0, makingOffer: false, remoteStream: null, polite: String(socialMe) > String(id), usedFallback: !iceFetchedAt, playBlocked: false, lastPlayTry: 0 };
   pc.onicecandidate = (e) => { if (e.candidate) cvSignal(id, { ice: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }); };
   pc.ontrack = (ev) => {
-    P.remoteStream = (ev.streams && ev.streams[0]) || null;
+    P.remoteStream = (ev.streams && ev.streams[0]) || P.remoteStream || new MediaStream([ev.track]);
     let a = document.getElementById('cl-aud-' + cssEsc(id));
     if (!a) {
       a = document.createElement('audio');
       a.id = 'cl-aud-' + cssEsc(id);
       a.autoplay = true;
       a.playsInline = true;
+      a.addEventListener('playing', () => { P.playBlocked = false; });
       $('#cl-audios').appendChild(a);
     }
-    if (P.remoteStream) a.srcObject = P.remoteStream;
+    a.srcObject = P.remoteStream;
     a.muted = !cv.speaker;
-    const pr = a.play();
-    if (pr && pr.catch) pr.catch(() => { /* unlocked on the next tap */ });
+    cvTryPlay(P, a);
   };
   pc.onconnectionstatechange = () => {
     if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
@@ -8292,15 +9070,41 @@ function cvMakePeer(id) {
   };
   return P;
 }
+function cvSessionTc(P) {
+  // The transceiver actually bound to the negotiated m-section
+  // (it has a mid). A pre-created transceiver is NOT guaranteed
+  // to be that one: when the remote side offers first,
+  // setRemoteDescription can bind the m-line to a transceiver it
+  // created itself (direction recvonly) — flipping or feeding
+  // OUR stored transceiver then never reaches the wire and the
+  // pair settles sendonly/recvonly: live mics, total silence
+  // (probe-proven: offer sendrecv -> answer recvonly). Resolve
+  // the session transceiver every time, like the table voice.
+  try {
+    const list = (P.pc.getTransceivers ? P.pc.getTransceivers() : []).filter(
+      (t) => t && t.receiver && t.receiver.track && t.receiver.track.kind === 'audio' && !t.stopped);
+    if (!list.length) return P.tx || null;
+    if (P.tx && list.includes(P.tx) && P.tx.mid != null) return P.tx;
+    return list.find((t) => t.mid != null) || (P.tx && list.includes(P.tx) ? P.tx : list[0]);
+  } catch (e) { return P.tx || null; }
+}
+function cvForceSendrecv(P) {
+  const tc = cvSessionTc(P);
+  for (const t of [tc, P.tx]) {
+    if (t && t.direction !== 'sendrecv') { try { t.direction = 'sendrecv'; } catch (e) { /* older engines */ } }
+  }
+  if (tc) P.tx = tc;
+}
 async function cvOffer(P) {
   if (!P || P.makingOffer) return;
   if (P.pc.signalingState !== 'stable') return;
   P.makingOffer = true;
   try {
     P.gen++;
-    try { P.tx.direction = 'sendrecv'; } catch (e) { /* older engines */ }
+    cvForceSendrecv(P);
     const offer = await P.pc.createOffer();
     await P.pc.setLocalDescription(offer);
+    cvForceSendrecv(P);
     cvSignal(P.id, { sdp: P.pc.localDescription, gen: P.gen });
   } catch (e) { /* a later state change retries */ }
   P.makingOffer = false;
@@ -8314,10 +9118,11 @@ async function cvHandleSignal(P, data) {
         if (collision && !P.polite) return; // impolite side keeps its own offer
         if (collision) { try { await P.pc.setLocalDescription({ type: 'rollback' }); } catch (e) { /* proceed */ } }
         await P.pc.setRemoteDescription(desc);
-        try { P.tx.direction = 'sendrecv'; } catch (e) { /* older engines */ }
+        cvForceSendrecv(P);
         cv.attachTrack(P); // my sender track joins the answer's leg
         const ans = await P.pc.createAnswer();
         await P.pc.setLocalDescription(ans);
+        cvForceSendrecv(P);
         cvSignal(P.id, { sdp: P.pc.localDescription, gen: data.gen });
       } else if (desc.type === 'answer') {
         if (typeof data.gen === 'number' && data.gen !== P.gen) return; // stale answer
@@ -8335,7 +9140,7 @@ $('#btn-cl-speaker').onclick = () => {
 };
 $('#btn-cl-mic').onclick = async () => {
   if (!clubData || !clubData.club) return;
-  if (cv.mySeat() >= 0) { socialSend({ type: 's-club-stand' }); cv.setMic(false); return; }
+  if (cv.mySeat() >= 0) { socialSend({ type: 's-club-stand' }); cv.wantSeat = -1; cv.setMic(false); return; }
   const box = $('#cl-seats');
   if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
   toast(T('clSeatsHint'));
