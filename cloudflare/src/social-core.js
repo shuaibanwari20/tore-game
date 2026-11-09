@@ -100,6 +100,16 @@
  * s-club-view-result, s-club-liked, s-club-voice-state, s-rtc,
  * s-error (new code clubSeatTaken).
  *
+ * Live discovery sync (2026-11-09): discovery used to be a pure
+ * pull — a bystander's open page only re-queried on entry, tab or
+ * filter changes, so a club created on another phone stayed
+ * invisible until a refresh (Shuaib's live report: club "Hig"
+ * created, his discovery still showed «هیڅ کلب ونه موندل شو»).
+ * Now every catalogue mutation (create / edit / dissolve / like /
+ * join / leave / kick / transfer / custom cover) broadcasts the
+ * payload-free s-clubs-changed {v} to ALL online players through
+ * _clubsChanged(); clients re-run their current discover query.
+ *
  * Invite rules (2026-11-08, extended 2026-11-09): a target holding
  * ANY seat cannot be invited — a started match (host hook
  * inGameCheck) rejects socialInGame, a waiting lobby seat (host
@@ -227,6 +237,15 @@ class SocialCore {
     // playerId) -> {club, from, seat, ts}. Never persisted; a
     // restart simply drops pending asks.
     this.clubSeatReqs = new Map();
+    // Live discovery sync (2026-11-09): a runtime-only version
+    // counter for the club catalogue. Every mutation that changes
+    // what s-club-discover shows bumps it and broadcasts the
+    // payload-free s-clubs-changed {v} to every online player, so
+    // an already-open discovery page re-queries at once instead
+    // of going stale until a refresh / re-entry. Never persisted
+    // (a restart just restarts the counter; clients never compare
+    // across sessions — any signal means "re-query now").
+    this.clubsVersion = 0;
   }
 
   // ---------- persistence (DO host; Node ignores) ----------
@@ -284,6 +303,18 @@ class SocialCore {
     for (const c of this.clubs.values()) for (const m of (c.members || [])) this.clubOf.set(m.id, c.cid);
   }
   _persistClubs() { if (this.hooks.persistClubs) { try { this.hooks.persistClubs(this.serializeClubs()); } catch (e) { /* host logs */ } } }
+  // Live discovery sync: fan the payload-free change signal to
+  // EVERY online social client (the same sendTo plumbing presence
+  // uses — hosts deliver per identity, so Node and the DO behave
+  // identically). Callers are exactly the mutations that change
+  // what discovery shows: club create / edit / dissolve, a like
+  // landing, a member joining / leaving / being kicked, an
+  // ownership transfer, a custom cover landing.
+  _clubsChanged() {
+    this.clubsVersion++;
+    const msg = { type: 's-clubs-changed', v: this.clubsVersion };
+    for (const id of this.online.keys()) this._send(id, msg);
+  }
   _send(id, obj) { if (this.hooks.sendTo) this.hooks.sendTo(id, obj); }
   _error(id, code) { this._send(id, { type: 's-error', code }); }
 
@@ -855,6 +886,7 @@ class SocialCore {
     for (const cid of touched) this.fanClub(cid);
     this.fanClub(club.cid);
     this.refreshClub(id, true);
+    this._clubsChanged(); // member counts feed discovery + the podium
   }
   _removeMember(club, id) {
     club.members = club.members.filter((m) => m.id !== id);
@@ -893,6 +925,7 @@ class SocialCore {
     for (const [k, inv] of [...this.clubInvites]) if (inv.to === id) this.clubInvites.delete(k);
     this._persistClubs();
     this.refreshClub(id, true);
+    this._clubsChanged(); // a new club exists: discovery pages re-query live
   }
 
   clubSearch(id, q) {
@@ -1031,6 +1064,7 @@ class SocialCore {
     this._persistClubs();
     this.refreshClub(id, true);
     this.fanClub(club.cid);
+    this._clubsChanged(); // count dropped (and the owner may have just changed)
   }
 
   clubKick(id, other) {
@@ -1050,6 +1084,7 @@ class SocialCore {
     this._persistClubs();
     this.refreshClub(other, true);
     this.fanClub(club.cid);
+    this._clubsChanged(); // member counts feed discovery + the podium
   }
 
   clubRole(id, other, role) {
@@ -1080,6 +1115,7 @@ class SocialCore {
     club.owner = other;
     this._persistClubs();
     this.fanClub(club.cid);
+    this._clubsChanged(); // discovery cards carry the owner's name
   }
 
   clubEdit(id, msg) {
@@ -1107,6 +1143,7 @@ class SocialCore {
     if (typeof msg.category === 'string') club.category = this._cleanCategory(msg.category);
     this._persistClubs();
     this.fanClub(club.cid);
+    this._clubsChanged(); // name/cover/country/category are discovery fields
   }
 
   // The club this identity OWNS (role 'owner'), or null. The
@@ -1127,6 +1164,7 @@ class SocialCore {
     club.coverV = (typeof club.coverV === 'number' && club.coverV > 0 ? club.coverV : 0) + 1;
     this._persistClubs();
     this.fanClub(club.cid);
+    this._clubsChanged(); // the uploaded cover shows on discovery cards too
     return { cid: club.cid, v: club.coverV };
   }
   // The uploaded bytes live in host storage; the host's hook
@@ -1164,6 +1202,7 @@ class SocialCore {
       if (this.isOnline(mid)) this._send(mid, { type: 's-club-voice-state', club: club.cid, members: [], seats: [] });
       this.refreshClub(mid, true);
     }
+    this._clubsChanged(); // the club is gone: open discovery pages drop it live
   }
 
   clubChatSend(id, text) {
@@ -1254,6 +1293,7 @@ class SocialCore {
       club.likes.push(id);
       this._persistClubs();
       this.fanClub(cid); // members' room headers show the new count
+      this._clubsChanged(); // like counts feed discovery + hot ranking
     }
     this._send(id, { type: 's-club-liked', club: this.clubSummary(club, id) });
   }
