@@ -59,6 +59,18 @@
  * (the slot is per-target, not per-pair); the pending window
  * lapsing clears it too. Cooldowns, pendings and the known busy
  * map are runtime-only — never persisted.
+ *
+ * Stale-busy verification (2026-11-09): the busy hooks answer from
+ * the host's seat table, and a seat can outlive its player — lobby
+ * seats never expire on disconnect (they stay reserved for a
+ * reconnect), so a player who closed the app without leaving kept
+ * a dead seat and was reported "busy" forever. On every invite the
+ * core asks the host's verifyBusy hook to re-check the claim
+ * against live room state: the host reaps a seat whose player is
+ * demonstrably gone, pushes the corrected presence, and answers
+ * with the verified state ('match' | 'lobby' | ''). A genuinely
+ * seated player verifies unchanged, so the rejections above are
+ * identical for them.
  */
 'use strict';
 
@@ -423,9 +435,22 @@ class SocialCore {
     // A player holding ANY seat cannot be invited — the server
     // decides (the client's disabled button is cosmetic). A started
     // match reports socialInGame; a seat in a waiting lobby reports
-    // socialBusy (owner order 2026-11-09: lobby-sitters too).
-    if (this.isInGame(to)) return this._error(id, 'socialInGame');
-    if (this.isInLobby(to)) return this._error(id, 'socialBusy');
+    // socialBusy (owner order 2026-11-09: lobby-sitters too). The
+    // claim is verified live first (see the header note): the host
+    // re-checks its room table, reaps any seat whose player is
+    // demonstrably gone, and answers with the verified state — a
+    // stale seat must never strand its owner as busy. Hosts
+    // without the hook fall back to the plain flag hooks.
+    let busy = null;
+    if (this.hooks.verifyBusy) {
+      try {
+        const v = this.hooks.verifyBusy(to);
+        if (v === 'match' || v === 'lobby' || v === '') busy = v;
+      } catch (e) { /* fall through to the flag hooks */ }
+    }
+    if (busy === null) busy = this.isInGame(to) ? 'match' : (this.isInLobby(to) ? 'lobby' : '');
+    if (busy === 'match') return this._error(id, 'socialInGame');
+    if (busy === 'lobby') return this._error(id, 'socialBusy');
     const now = Date.now();
     const key = reqKey(id, to);
     // ONE popup per pair: while my earlier invite to this target is
