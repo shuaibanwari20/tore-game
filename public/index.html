@@ -680,9 +680,19 @@
   .fr-act:disabled { opacity: .45; }
   /* icon-only DM button (owner order 2026-11-08): a proper inline
      SVG chat bubble fills the button — no emoji, no text label; the
-     glyph is sized to sit level with the neighbouring 🎮/🔔 icons. */
+     glyph is sized to sit level with the neighbouring gamepad/🔔 icons. */
   .fr-act.fr-chatbtn { display: inline-flex; align-items: center; justify-content: center; padding: 6px 10px; }
   .fr-act.fr-chatbtn svg { width: 20px; height: 20px; display: block; }
+  /* icon-only BUSY button (owner order 2026-11-09): the 🎮 emoji
+     rendered muddy-dark on the dark button (and the generic
+     :disabled dimming made it worse) — a bright pale-gold inline
+     SVG gamepad replaces it, sized like the chat bubble, with the
+     disabled dimming lifted so the glyph stays clearly visible.
+     It still reads as inactive: no primary fill, muted border. */
+  .fr-act.fr-busybtn { display: inline-flex; align-items: center; justify-content: center;
+    padding: 6px 10px; color: #ffd75e; }
+  .fr-act.fr-busybtn:disabled { opacity: .92; }
+  .fr-act.fr-busybtn svg { width: 21px; height: 21px; display: block; }
   .fr-unread { position: absolute; top: -6px; inset-inline-end: -6px; min-width: 18px; height: 18px;
     border-radius: 9px; background: #d7263d; color: #fff; font-size: 11px; font-weight: 800;
     display: flex; align-items: center; justify-content: center; padding: 0 5px; border: 1.5px solid #fff0b3; }
@@ -5800,8 +5810,8 @@ function onSocialMsg(m) {
       renderFriends();
       toast(T('errSocialInGame'));
     } else if (m.code === 'socialBusy' && lastInviteTo) {
-      // Seated in a waiting lobby: same disabled 🎮 treatment, the
-      // lobby wording in the toast (and the button's title/aria).
+      // Seated in a waiting lobby: same disabled gamepad treatment,
+      // the lobby wording in the toast (and the button's title/aria).
       if (socialData) socialData.friends.forEach((f) => { if (f.id === lastInviteTo) { f.inlobby = true; f.ingame = false; } });
       const cp = socialPeople.get(lastInviteTo); if (cp) { cp.inlobby = true; cp.ingame = false; }
       inviteCd.delete(lastInviteTo);
@@ -6166,9 +6176,10 @@ function frBtn(label, cls, fn, badge) {
 // The friend-row DM button is ICON-ONLY (owner order 2026-11-08):
 // the 💬 emoji and the «ګپ» text both go — one properly drawn
 // inline-SVG speech bubble (pale gold, deep-green dots) stays, like
-// the icon-only 🎮 in-game button. The «ګپ» wording lives on as the
-// button's title/aria-label, and the unread badge rides in the
-// corner exactly as with any frBtn (frBtn builds it for us).
+// the icon-only gamepad busy button beside it. The «ګپ» wording
+// lives on as the button's title/aria-label, and the unread badge
+// rides in the corner exactly as with any frBtn (frBtn builds it
+// for us).
 const CHAT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
   '<path d="M12 3.5c-5.2 0-9.5 3.6-9.5 8.1 0 2.6 1.4 4.9 3.7 6.4-.3 1.3-.9 2.6-1.7 3.7-.1.2 0 .4.2.4 2.2-.1 4.3-.8 6-2 .5.1 1 .1 1.5.1 5.2 0 9.5-3.6 9.5-8.1S17.2 3.5 12 3.5Z"/>' +
   '<circle cx="7.4" cy="11.6" r="1.45" fill="#0e2a1c"/><circle cx="12" cy="11.6" r="1.45" fill="#0e2a1c"/>' +
@@ -6179,6 +6190,27 @@ function frChatBtn(p) {
   b.insertAdjacentHTML('afterbegin', CHAT_ICON_SVG);
   b.title = T('frChat');
   b.setAttribute('aria-label', T('frChat'));
+  return b;
+}
+// The BUSY invite button is ICON-ONLY too — and since 2026-11-09
+// the icon is a drawn SVG gamepad, not the 🎮 emoji: the emoji
+// rendered too dark to see on the dark button (the owner's crop
+// proved it). The shape is filled with the button's color (bright
+// pale gold via .fr-busybtn), the d-pad and buttons knocked out in
+// deep green like the chat bubble's dots. Disabled, as before; the
+// state wording (in a match / in a lobby) lives only in the
+// title/aria-label.
+const GAMEPAD_ICON_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+  '<path d="M16.6 5.6h-9.2C4.3 5.6 1.9 8.7 1.9 12.3c0 3 1.9 5.3 4.3 5.3 1.6 0 2.9-.9 4-2.3l.8-1h3.9l.8 1c1.1 1.4 2.4 2.3 4 2.3 2.4 0 4.3-2.3 4.3-5.3 0-3.6-2.4-6.7-5.4-6.7Z"/>' +
+  '<path d="M6.3 9.2h1.5v1.6h1.6v1.5H7.8v1.6H6.3v-1.6H4.7v-1.5h1.6Z" fill="#0e2a1c"/>' +
+  '<circle cx="16.7" cy="10.3" r="1.15" fill="#0e2a1c"/><circle cx="18.7" cy="12.9" r="1.15" fill="#0e2a1c"/></svg>';
+function frBusyBtn(p) {
+  const b = frBtn('', 'fr-busybtn', null); // no handler -> disabled
+  b.dataset.act = 'busy';
+  b.insertAdjacentHTML('afterbegin', GAMEPAD_ICON_SVG);
+  const busyLbl = p.ingame ? T('frInGame') : T('frInLobby');
+  b.title = busyLbl;
+  b.setAttribute('aria-label', busyLbl);
   return b;
 }
 function personRow(p, actions) {
@@ -6291,15 +6323,12 @@ function renderFriends() {
     if (code) {
       if (p.ingame || p.inlobby) {
         // Holding ANY seat: disabled (greyed, never hidden). The
-        // game icon ALONE is the visible label (owner order
-        // 2026-11-08); the matching wording — in a match, or in a
-        // lobby (owner order 2026-11-09) — lives on as the button's
-        // title/aria-label. The server rejects such invites too.
-        const igBtn = frBtn('🎮', '', null);
-        const busyLbl = p.ingame ? T('frInGame') : T('frInLobby');
-        igBtn.title = busyLbl;
-        igBtn.setAttribute('aria-label', busyLbl);
-        actions.push(igBtn);
+        // bright SVG gamepad ALONE is the visible label (owner
+        // orders 2026-11-08 + 2026-11-09); the matching wording —
+        // in a match, or in a lobby (owner order 2026-11-09) —
+        // lives on as the button's title/aria-label. The server
+        // rejects such invites too.
+        actions.push(frBusyBtn(p));
       } else {
         const rem = inviteCdRemaining(p.id);
         if (rem > 0) {
