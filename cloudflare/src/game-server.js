@@ -149,12 +149,16 @@ function snapshotRound(r) {
     hands: r.hands, leader: r.leader, turn: r.turn, trick: r.trick,
     captured: r.captured, tricksPlayed: r.tricksPlayed, wonTricks: r.wonTricks,
     takanCount: r.takanCount, takanBy: r.takanBy, declared13: r.declared13,
+    takanSuits: r.takanSuits, botSeats: r.botSeats,
     finished: r.finished, result: r.result,
   };
 }
 function reviveRound(snap, match) {
   const r = Object.create(G.Round.prototype);
   Object.assign(r, snap);
+  // Legacy snapshots (pre BOT NO-REPEAT LAW) lack these — default them.
+  if (!r.takanSuits) r.takanSuits = [[], [], [], []];
+  if (!r.botSeats) r.botSeats = [false, false, false, false];
   r.emit = (evt) => {
     match.emit(evt);
     if (evt.type === 'roundFinished') match.onRoundFinished(r);
@@ -166,7 +170,8 @@ function snapshotMatch(m) {
   return {
     bankedTawan: m.bankedTawan, pendingTakan: m.pendingTakan,
     roundNo: m.roundNo, history: m.history, finished: m.finished,
-    winner: m.winner, loser: m.loser, round: snapshotRound(m.round),
+    winner: m.winner, loser: m.loser, botSeats: m.botSeats,
+    round: snapshotRound(m.round),
   };
 }
 function reviveMatch(snap, emit) {
@@ -180,6 +185,7 @@ function reviveMatch(snap, emit) {
   m.finished = snap.finished;
   m.winner = snap.winner;
   m.loser = snap.loser;
+  m.botSeats = snap.botSeats || [false, false, false, false]; // legacy snapshots lack it
   m.round = snap.round ? reviveRound(snap.round, m) : null;
   return m;
 }
@@ -946,6 +952,9 @@ export class GameServer {
     if (room.trickHold) return false; // finished trick still on display — plays wait for the pause
     const tricksBefore = round.tricksPlayed;
     const trickBefore = round.trick.slice();
+    // BOT NO-REPEAT LAW: keep the engine's bot-seat flags current — a
+    // seat can convert to a bot mid-match (leave/disconnect takeover).
+    round.botSeats = room.seats.map((s) => s.kind === 'bot');
     try {
       round.play(seat, card);
     } catch {
@@ -973,7 +982,8 @@ export class GameServer {
 
   /**
    * Play a seat by bot logic. `mayDeclare` is true only for real bot seats:
-   * bots always declare «13» on the final trick when it cancels a takan.
+   * a bot declares «13» ONLY for the forced final-trick REPEAT of a suit
+   * it already takan'd this round (BOT NO-REPEAT LAW — see bots.js).
    * A human seat auto-played by the turn timer plays WITHOUT declaring
    * (spec: on timeout the takan stands).
    */
@@ -982,8 +992,9 @@ export class GameServer {
     if (!round || round.finished || round.turn !== seat) return;
     if (room.trickHold) return;
     if (mayDeclare && maybeDeclare13(round, seat)) {
-      this._broadcastState(room); // clients toast the declaration…
-      this._pumpTurn(room);       // …then the bot plays its card on the next tick
+      round.declare13(seat);        // emits declared13 → clients toast it…
+      this._broadcastState(room);    // …the state shows the declaration…
+      this._pumpTurn(room);          // …then the bot plays its card on the next tick
       return;
     }
     let card;
@@ -1020,6 +1031,7 @@ export class GameServer {
       }
     });
     room.match = new G.Match(room.emit);
+    room.match.botSeats = room.seats.map((s) => s.kind === 'bot');
     room.phase = 'playing';
     room.match.startRound();
     this._broadcastState(room);
