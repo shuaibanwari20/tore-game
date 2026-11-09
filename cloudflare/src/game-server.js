@@ -493,6 +493,7 @@ export class GameServer {
     const core = new SocialCore({
       sendTo: (id, obj) => this._socialSend(id, obj),
       persist: (data) => { this.state.storage.put('social:v1', data).catch(() => {}); },
+      persistClubs: (data) => { this.state.storage.put('clubs:v1', data).catch(() => {}); },
       inviteRoomCheck: (id, code) => this._socialRoomCheck(id, code),
       inGameCheck: (id) => this._isInGame(id),
       inLobbyCheck: (id) => this._isInLobby(id),
@@ -500,6 +501,8 @@ export class GameServer {
     });
     const saved = await this.state.storage.get('social:v1').catch(() => null);
     if (saved) core.load(saved);
+    const savedClubs = await this.state.storage.get('clubs:v1').catch(() => null);
+    if (savedClubs) core.loadClubs(savedClubs);
     // Presence is rebuilt from the live (possibly hibernated)
     // sockets — their attachments kept the resolved identities.
     const ids = [];
