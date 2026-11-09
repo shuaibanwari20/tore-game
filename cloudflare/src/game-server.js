@@ -454,6 +454,12 @@ export class GameServer {
 
   // ------------------------------------------------------------- fetch
   async fetch(request) {
+    // Uploaded club covers are plain HTTP, not sockets: POST
+    // /club-cover stores the owner's photo; GET /club-cover/<cid>
+    // serves it back publicly. Everything else is a socket.
+    const reqPath = new URL(request.url).pathname;
+    if (reqPath === '/club-cover' && request.method === 'POST') return this._coverUpload(request);
+    if (reqPath.startsWith('/club-cover/') && request.method === 'GET') return this._coverGet(reqPath.slice('/club-cover/'.length));
     if (request.headers.get('Upgrade') !== 'websocket') {
       return new Response('expected a websocket upgrade', { status: 426 });
     }
@@ -498,6 +504,7 @@ export class GameServer {
       inGameCheck: (id) => this._isInGame(id),
       inLobbyCheck: (id) => this._isInLobby(id),
       verifyBusy: (id) => this._verifyBusy(id),
+      coverBlobDelete: (cid) => { this._deleteCoverBlob(cid); },
     });
     const saved = await this.state.storage.get('social:v1').catch(() => null);
     if (saved) core.load(saved);
@@ -521,6 +528,100 @@ export class GameServer {
       const att = this._attachment(ws);
       if (att && att.sid === id) { try { ws.send(data); } catch { /* gone */ } }
     }
+  }
+
+  // ------------------------------------------ uploaded club covers
+  // An owner's cover photo lives in THIS object's storage under
+  // coverimg:<cid> (a small meta record) + coverimg:<cid>:<i>
+  // chunks of 96 KB — one storage value stays far under the size
+  // limit while the upload cap is 250 KB (at most 3 chunks).
+  // Nothing else references the chunks, so dissolve / gallery
+  // switch cleanup is just deleting the key family (the social
+  // core calls the coverBlobDelete hook at exactly those moments;
+  // a re-upload overwrites in place and drops stale tail chunks).
+  async _putCoverBlob(cid, type, buf) {
+    const CH = 96 * 1024;
+    const u8 = new Uint8Array(buf);
+    const chunks = Math.max(1, Math.ceil(u8.byteLength / CH));
+    const old = await this.state.storage.get('coverimg:' + cid).catch(() => null);
+    const puts = {};
+    for (let i = 0; i < chunks; i++) puts['coverimg:' + cid + ':' + i] = u8.slice(i * CH, (i + 1) * CH).buffer;
+    puts['coverimg:' + cid] = { type, len: u8.byteLength, chunks };
+    await this.state.storage.put(puts);
+    if (old && old.chunks > chunks) {
+      const stale = [];
+      for (let i = chunks; i < old.chunks; i++) stale.push('coverimg:' + cid + ':' + i);
+      if (stale.length) await this.state.storage.delete(stale).catch(() => {});
+    }
+  }
+  async _getCoverBlob(cid) {
+    const meta = await this.state.storage.get('coverimg:' + cid).catch(() => null);
+    if (!meta || !meta.chunks) return null;
+    const keys = [];
+    for (let i = 0; i < meta.chunks; i++) keys.push('coverimg:' + cid + ':' + i);
+    const got = await this.state.storage.get(keys).catch(() => null);
+    if (!got) return null;
+    const out = new Uint8Array(meta.len);
+    let off = 0;
+    for (const k of keys) {
+      const part = got.get(k);
+      if (!part) return null;
+      out.set(new Uint8Array(part), off);
+      off += part.byteLength;
+    }
+    return { type: meta.type || 'image/jpeg', body: out };
+  }
+  async _deleteCoverBlob(cid) {
+    try {
+      const meta = await this.state.storage.get('coverimg:' + cid).catch(() => null);
+      const keys = ['coverimg:' + cid];
+      if (meta && meta.chunks) for (let i = 0; i < meta.chunks; i++) keys.push('coverimg:' + cid + ':' + i);
+      await this.state.storage.delete(keys);
+    } catch { /* already gone */ }
+  }
+  // POST /club-cover: the Worker verified the session (gate on)
+  // and forwarded the user; with the gate off the client's player
+  // id header is the identity, exactly like the social hello.
+  // Rules: owner-only for the caller's own club, image/jpeg|png|
+  // webp, at most 250 KB. The record flips through the core, so
+  // every member's client re-renders with the new ?v= URL at once.
+  async _coverUpload(request) {
+    const json = (status, obj) => new Response(JSON.stringify(obj), {
+      status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
+    });
+    let user = null;
+    const userHeader = request.headers.get('x-tore-user');
+    if (userHeader) { try { user = JSON.parse(userHeader); } catch { user = null; } }
+    if (this.authEnabled && !user) return json(401, { error: 'unauthorized' });
+    let identity = null;
+    if (user && user.sub) identity = 'g:' + user.sub;
+    else {
+      const pid = request.headers.get('x-tore-pid');
+      if (typeof pid === 'string' && /^[A-Za-z0-9_-]{6,64}$/.test(pid)) identity = 'p:' + pid;
+    }
+    if (!identity) return json(401, { error: 'unauthorized' });
+    const type = String(request.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(type)) return json(415, { error: 'coverBadType' });
+    const buf = await request.arrayBuffer();
+    if (!buf.byteLength) return json(400, { error: 'coverEmpty' });
+    if (buf.byteLength > 250 * 1024) return json(413, { error: 'coverTooBig' });
+    const core = await this._ensureSocial();
+    const club = core.ownedClub(identity);
+    if (!club) return json(403, { error: 'clubNoPerm' });
+    await this._putCoverBlob(club.cid, type, buf);
+    const out = core.setCustomCover(identity);
+    if (!out) { await this._deleteCoverBlob(club.cid); return json(403, { error: 'clubNoPerm' }); }
+    return json(200, { ok: true, cid: out.cid, v: out.v });
+  }
+  // GET /club-cover/<cid>: public read, versioned by the client's
+  // ?v=<coverV> — immutable caching is safe.
+  async _coverGet(cid) {
+    if (!/^\d{6}$/.test(cid)) return new Response('not found', { status: 404 });
+    const blob = await this._getCoverBlob(cid);
+    if (!blob) return new Response('not found', { status: 404 });
+    return new Response(blob.body, {
+      headers: { 'Content-Type': blob.type, 'Cache-Control': 'public, max-age=31536000, immutable' },
+    });
   }
 
   // Busy-flag liveness (stale-busy fix, 2026-11-09): a seat counts
