@@ -42,6 +42,9 @@ function createNodeSocial(opts) {
     inLobbyCheck(id) {
       return opts.inLobbyCheck ? !!opts.inLobbyCheck(id) : false;
     },
+    verifyBusy(id) {
+      return opts.verifyBusy ? opts.verifyBusy(id) : undefined;
+    },
     inviteCooldownMs: (typeof opts.inviteCooldownMs === 'number') ? opts.inviteCooldownMs : undefined,
   });
 
