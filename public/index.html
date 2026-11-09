@@ -896,7 +896,10 @@
   .cl-room-cov:active { transform: scale(.94); }
   .cl-room-cov svg { display: block; width: 100%; height: 100%; }
   .cl-room-meta { flex: 1; min-width: 0; }
-  .cl-room-meta .cl-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* room header name runs a quarter smaller (20px -> 15px) so
+     typical club names fit on one line; the ellipsis remains
+     only for exceptionally long names (owner order 2026-11-09) */
+  .cl-room-meta .cl-name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cl-room-id { background: none; border: none; margin: 0; padding: 0; width: auto; cursor: pointer;
     color: #ffd75e; font-size: 14px; font-weight: 800; font-family: inherit; letter-spacing: .4px; }
   .cl-room-btns { display: flex; gap: 6px; flex: 0 0 auto; }
@@ -928,15 +931,6 @@
   .cl-seat-n { font-size: 11px; font-weight: 700; color: #e8f2e4; max-width: 62px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cl-seats-hint { font-size: 12.5px; opacity: .75; text-align: center; margin: 8px 0 0; }
-  /* announcement bar */
-  .cl-annbar { display: flex; align-items: flex-start; gap: 8px; background: rgba(255,215,94,.09);
-    border: 1.5px solid rgba(217,179,128,.45); border-radius: 12px; padding: 9px 11px; margin-bottom: 12px; }
-  .cl-ann-lbl { flex: 0 0 auto; font-size: 11px; font-weight: 900; color: #33270a; background: #ffd75e;
-    border-radius: 7px; padding: 1px 7px; margin-top: 2px; }
-  .cl-ann-text { flex: 1; font-size: 14px; line-height: 1.8; word-break: break-word; }
-  .cl-ann-text.dim { opacity: .6; }
-  .cl-ann-edit { flex: 0 0 auto; margin: 0; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
-    background: rgba(255,255,255,.07); border: 1px solid rgba(217,179,128,.5); color: #ffd75e; font-size: 14px; }
   /* chat feed bars */
   #cl-msgs { display: flex; flex-direction: column; gap: 7px; padding: 2px 0 10px; }
   .cl-feed-item { display: flex; align-items: flex-start; gap: 9px; background: rgba(255,255,255,.055);
@@ -1674,13 +1668,12 @@
           <div class="cl-room-btns">
             <button type="button" class="cl-icobtn" id="btn-cl-like" aria-label="like"><svg viewBox="0 0 24 24"><path d="M12 20.6C6.4 16.9 3 13.7 3 9.9 3 7.2 5 5 7.6 5c1.7 0 3.4.9 4.4 2.4C13 5.9 14.7 5 16.4 5 19 5 21 7.2 21 9.9c0 3.8-3.4 7-9 10.7z"/></svg><span class="cl-like-n" id="cl-like-n">0</span></button>
             <button type="button" class="cl-icobtn" id="btn-cl-add" aria-label="invite"><svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.6"/><path d="M4 20c.6-3.6 2.8-5.4 6-5.4 1.5 0 2.8.4 3.8 1.2M18 8v6M15 11h6"/></svg></button>
-            <button type="button" class="cl-icobtn" id="btn-cl-share" aria-label="share"><svg viewBox="0 0 24 24"><circle cx="6.5" cy="12" r="2.6"/><circle cx="17" cy="5.8" r="2.6"/><circle cx="17" cy="18.2" r="2.6"/><path d="M9 10.8l5.5-3.6M9 13.2l5.5 3.6"/></svg></button>
+            <button type="button" class="cl-icobtn hidden" id="btn-cl-seatreqs" aria-label="seat requests"><svg viewBox="0 0 24 24"><path d="M7 11V6a3 3 0 0 1 6 0v1"/><path d="M5 21v-6.5A2.5 2.5 0 0 1 7.5 12H13a2 2 0 0 1 2 2v7"/><path d="M3.5 21h17"/></svg><span class="cl-like-n hidden" id="cl-seatreqs-badge">0</span></button>
             <button type="button" class="cl-icobtn" id="btn-cl-exit" aria-label="exit"><svg viewBox="0 0 24 24"><path d="M14 4h5a1.5 1.5 0 0 1 1.5 1.5v13A1.5 1.5 0 0 1 19 20h-5M10 8l-4 4 4 4M6 12h11"/></svg></button>
           </div>
         </div>
         <div class="cl-pillrow">
           <button type="button" class="cl-countpill" id="cl-countpill"><span class="cl-count-ic">👥</span><span id="cl-count"></span></button>
-          <button type="button" class="cl-icobtn hidden" id="btn-cl-seatreqs" aria-label="seat requests"><svg viewBox="0 0 24 24"><path d="M7 11V6a3 3 0 0 1 6 0v1"/><path d="M5 21v-6.5A2.5 2.5 0 0 1 7.5 12H13a2 2 0 0 1 2 2v7"/><path d="M3.5 21h17"/></svg><span class="cl-like-n hidden" id="cl-seatreqs-badge">0</span></button>
         </div>
         <div class="cl-seats-wrap">
           <div class="cl-seats" id="cl-seats"></div>
@@ -1690,17 +1683,8 @@
           <span id="cl-seatreq-txt"></span>
           <button type="button" id="btn-cl-seatreq-cancel"></button>
         </div>
-        <div class="cl-annbar" id="cl-annbar">
-          <span class="cl-ann-lbl" id="cl-ann-lbl"></span>
-          <span class="cl-ann-text" id="cl-ann-text"></span>
-          <button type="button" class="cl-ann-edit hidden" id="btn-cl-ann-edit" aria-label="edit">✎</button>
-        </div>
         <h3 class="fr-sec" id="cl-chat-title"></h3>
         <div id="cl-msgs"></div>
-        <div class="cardbox hidden" id="cl-invitefriends-box">
-          <h3 class="fr-sec" id="cl-invitefriends-title"></h3>
-          <div id="cl-invitefriends"></div>
-        </div>
       </div>
     </div>
     <div class="cl-inputbar">
@@ -1987,18 +1971,6 @@
     <div class="pf-btns">
       <button id="btn-cc-create"></button>
       <button id="btn-cc-cancel" class="ghost"></button>
-    </div>
-  </div>
-</div>
-
-<!-- ======== CLUB ANNOUNCEMENT EDITOR (managers) ======== -->
-<div class="overlay" id="ov-clubann">
-  <div class="panel" style="max-width:340px">
-    <h2 id="ca-title"></h2>
-    <input id="ca-inp" type="text" maxlength="200">
-    <div class="pf-btns">
-      <button type="button" id="btn-ca-save"></button>
-      <button type="button" id="btn-ca-cancel" class="ghost"></button>
     </div>
   </div>
 </div>
@@ -2329,8 +2301,7 @@ const STR = {
     clCover: 'پوښ وټاکئ', clCountry: 'هېواد', clCategory: 'ډول',
     clCatSocial: 'ملګري', clCatGame: 'لوبه', clCatFamily: 'کورنۍ',
     clLevel: (n) => 'کچه ' + n,
-    clAnnounce: 'اعلان', clAnnouncePh: 'د کلب لپاره اعلان ولیکئ…',
-    clAnnounceEmpty: 'تر اوسه اعلان نشته',
+
     clEnterClub: 'کلب ته ننوتل', clMyClubTitle: 'زما کلب',
     clLikedTitle: 'خوښ شوي کلبونه', clSeatsHint: 'په خالي څوکۍ کېنئ او خبرې وکړئ',
     clLike: 'خوښول',
@@ -2593,8 +2564,7 @@ const STR = {
     clCover: 'پوشش را انتخاب کنید', clCountry: 'کشور', clCategory: 'دسته',
     clCatSocial: 'دوستان', clCatGame: 'بازی', clCatFamily: 'خانواده',
     clLevel: (n) => 'سطح ' + n,
-    clAnnounce: 'اعلان', clAnnouncePh: 'برای باشگاه اعلان بنویسید…',
-    clAnnounceEmpty: 'هنوز اعلانی نیست',
+
     clEnterClub: 'ورود به باشگاه', clMyClubTitle: 'باشگاه من',
     clLikedTitle: 'باشگاه‌های پسندیده', clSeatsHint: 'روی صندلی خالی بنشینید و صحبت کنید',
     clLike: 'پسندیدن',
@@ -2857,8 +2827,7 @@ const STR = {
     clCover: 'Choose a cover', clCountry: 'Country', clCategory: 'Category',
     clCatSocial: 'Social', clCatGame: 'Game', clCatFamily: 'Family',
     clLevel: (n) => 'Level ' + n,
-    clAnnounce: 'Announcement', clAnnouncePh: 'Write an announcement for the club…',
-    clAnnounceEmpty: 'No announcement yet',
+
     clEnterClub: 'Enter club', clMyClubTitle: 'My club',
     clLikedTitle: 'Liked clubs', clSeatsHint: 'Tap an empty seat to sit and talk',
     clLike: 'Like',
@@ -7560,9 +7529,9 @@ $('#btn-inv-reject').onclick = () => dismissInvite(true, false);
 // The clubs page rides the same /social socket and the same
 // patterns as friends. Two views: DISCOVERY (tabs + Top-Clubs
 // podium + country chips + a 2-column cover-card grid + public
-// club pages) and the CLUB ROOM (header with like/invite/share,
-// 8 mic seats on the club voice room, the announcement bar, the
-// chat feed and the members/management sections). The server
+// club pages) and the CLUB ROOM (header with like/invite/chair/exit,
+// 8 mic seats on the club voice room, the chat feed and the
+// members/management sections). The server
 // pushes one full state (s-club) plus discovery / public-view /
 // like / voice-state messages; the page repaints from them.
 const CLUB_EMBLEM_SVGS = {
@@ -8226,12 +8195,6 @@ function renderClubRoom() {
   $('#cl-like-n').textContent = faNum(c.likes || 0);
   $('#cl-count').textContent = T('clMemberCount', c.count);
   renderClubSeats(c);
-  // announcement
-  const annText = $('#cl-ann-text');
-  if (c.announcement) { annText.textContent = c.announcement; annText.classList.remove('dim'); }
-  else { annText.textContent = T('clAnnounceEmpty'); annText.classList.add('dim'); }
-  const isManager = c.myRole === 'owner' || c.myRole === 'deputy';
-  $('#btn-cl-ann-edit').classList.toggle('hidden', !isManager);
   // the seat-requests button: the OWNER only (he approves), with
   // the pending count badged on it
   const srqN = (c.seatReqs || []).length;
@@ -8245,37 +8208,17 @@ function renderClubRoom() {
   cv.paintBtns();
   renderSeatReqBar();
 }
-// The member-management lists: the members list and the room's
-// invite-friends card. The members card lives on the MEMBERS
-// page now — this one renderer feeds both screens, so the page
-// is never stale.
+// The members list on the MEMBERS page. (Manager invites live
+// in the members-page popup, renderClubInvitePopup — the room
+// itself carries no invite card since the 2026-11-09 cleanup:
+// the room is the messages section.)
 function renderClubMemberLists() {
   const c = roomClub();
   if (!c) return;
-  const isManager = c.myRole === 'owner' || c.myRole === 'deputy';
   // members
   const memBox = $('#cl-members');
   memBox.innerHTML = '';
   c.members.forEach((m) => memBox.appendChild(clubMemberRow(m)));
-  // invite friends (managers): my friends who are not in this club
-  const ifBox = $('#cl-invitefriends-box'), ifList = $('#cl-invitefriends');
-  ifList.innerHTML = '';
-  ifBox.classList.toggle('hidden', !isManager);
-  if (isManager && socialData) {
-    const memberIds = new Set(c.members.map((m) => m.id));
-    const cands = socialData.friends.filter((f) => !memberIds.has(f.id));
-    if (!cands.length) ifList.appendChild(frEmpty(T('clNoInviteFriends')));
-    cands.forEach((f) => {
-      const sent = clubInvitedSent.has(f.id);
-      ifList.appendChild(personRow(f, [sent
-        ? frBtn(T('clRequested'), '', null)
-        : frBtn(T('frInvite'), 'primary', () => {
-            clubInvitedSent.add(f.id);
-            socialSend({ type: 's-club-invite', to: f.id });
-            renderClubs();
-          })]));
-    });
-  }
 }
 // ---------- club details page (د کلب امادګي) ----------
 // The club settings/details form as its OWN screen: opened by
@@ -8450,12 +8393,10 @@ function renderClubs() {
   $('#cl-members-title').textContent = T('clMembers');
   $('#cl-chat-title').textContent = T('clChatTitle');
   $('#cl-inp').placeholder = T('clChatPh');
-  $('#cl-invitefriends-title').textContent = T('clInviteFriends');
   $('#cl-settings-title').textContent = T('clSettings');
   $('#cm-title').textContent = T('clMembers');
   $('#ci-title').textContent = T('clInviteFriends');
   $('#cp-id-lbl').textContent = T('frIdLabel');
-  $('#cl-ann-lbl').textContent = '📢 ' + T('clAnnounce');
   $('#cl-seats-hint').textContent = T('clSeatsHint');
   $('#btn-cl-edit-save').textContent = T('clSave');
   $('#btn-cl-seatreq-cancel').textContent = T('clCancel');
@@ -8479,10 +8420,6 @@ function renderClubs() {
   $('#cl-edit-country-lbl').textContent = T('clCountry');
   $('#cl-edit-cat-lbl').textContent = T('clCategory');
   $('#cl-edit-desc-lbl').textContent = T('clDescPh');
-  $('#ca-title').textContent = '📢 ' + T('clAnnounce');
-  $('#ca-inp').placeholder = T('clAnnouncePh');
-  $('#btn-ca-save').textContent = T('clSave');
-  $('#btn-ca-cancel').textContent = T('clCancel');
   // The club sub-pages (details / members) are the visible
   // screen while the clubs screen itself is hidden — they
   // re-render from this same state push, and close themselves
@@ -8680,7 +8617,6 @@ function copyClubId() {
   } else done(fallbackCopyText(cid));
 }
 $('#cl-id-num').onclick = copyClubId;
-$('#btn-cl-share').onclick = copyClubId;
 $('#btn-cl-like').onclick = () => { const rc = roomClub(); if (rc) socialSend({ type: 's-club-like', club: rc.cid }); };
 // The room header's EXIT (door) button. For a GUEST (open
 // entry): simply walk out — no confirm, no membership effects;
@@ -8769,19 +8705,6 @@ function doClubSearch() {
 }
 $('#btn-cl-search').onclick = doClubSearch;
 $('#cl-search-inp').addEventListener('keydown', (e) => { if (e.key === 'Enter') doClubSearch(); });
-// announcement editor
-$('#btn-cl-ann-edit').onclick = () => {
-  const rc = roomClub();
-  if (!rc) return;
-  $('#ca-inp').value = rc.announcement || '';
-  $('#ov-clubann').classList.add('show');
-};
-$('#btn-ca-cancel').onclick = () => $('#ov-clubann').classList.remove('show');
-$('#ov-clubann').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
-$('#btn-ca-save').onclick = () => {
-  socialSend({ type: 's-club-announce', text: $('#ca-inp').value });
-  $('#ov-clubann').classList.remove('show');
-};
 // create overlay
 function paintCcCoverGrid() {
   buildCoverGrid($('#cc-covgrid'), ccCover, function pickC(cvv) {
