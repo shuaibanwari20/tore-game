@@ -27,8 +27,16 @@
  *    AGAINST our own bank for the opponents, so avoid dead suits; lead
  *    a cheap non-scoring card from a live suit. Only when every lead is
  *    a dead suit (or every card scores) take the cheapest way out.
- *  - On the final trick bots do NOT declare «13» (unchanged — the
- *    declaration mechanic remains available to humans only).
+ *  - NO-REPEAT TAKAN LAW (owner order, 2026-11-09 — ABSOLUTE, not a
+ *    preference): a bot NEVER leads a suit it has already takan'd this
+ *    round while it still holds ANY card of another suit — the other
+ *    suits are played to exhaustion first. Only when nothing but the
+ *    already-takan'd suit remains may it be led again, and that repeat
+ *    creates NO claim (the engine counts only a bot's FIRST takan of
+ *    each suit per round — see game.js). On the final trick that
+ *    forced repeat lead declares «13» (maybeDeclare13) — the ONE
+ *    exception to the human-only declaration; a FRESH final-trick
+ *    takan is never declared, its claim stands.
  */
 const G = require('./game');
 
@@ -57,11 +65,22 @@ function biggestScoring(cards) {
 }
 
 function pickLead(round, seat, legal) {
+  // NO-REPEAT TAKAN LAW (absolute): suits this bot has already takan'd
+  // this round are BANNED as leads while any card of another suit
+  // remains in hand — no exceptions, no weighing. Only when the hand
+  // holds nothing but banned suits does the ban lift (the forced
+  // re-lead; it creates no claim — game.js counts first takans only).
+  const banned = (round.takanSuits && round.takanSuits[seat]) || [];
+  let base = legal;
+  if (banned.length) {
+    const other = legal.filter((c) => !banned.includes(G.suitOf(c)));
+    if (other.length) base = other;
+  }
   // A takan lead happens when nobody else holds the suit — AVOID those
   // suits now; a takan hands the opponents a pending claim on our bank,
   // and the uncontested trick comes back to us with everyone's dumps in it.
-  const live = legal.filter((c) => !round.othersVoidIn(G.suitOf(c), seat));
-  const pool = live.length ? live : legal;
+  const live = base.filter((c) => !round.othersVoidIn(G.suitOf(c), seat));
+  const pool = live.length ? live : base;
   // Live suit: cheap non-scoring probe — scoring cards stay in hand,
   // waiting to be fed to the opponents.
   const nonScoring = pool.filter((c) => G.cardPoints(c) === 0);
@@ -70,12 +89,20 @@ function pickLead(round, seat, legal) {
 }
 
 /**
- * Bots never declare «13» — unchanged under the flipped rules: the
- * declaration mechanic remains a human-only play. Returns false always.
- * (The server calls this before asking for a card.)
+ * «13» declaration — human-only EXCEPT for the one forced case in the
+ * NO-REPEAT TAKAN LAW: on the FINAL trick, when the bot's last card is
+ * a lead of a suit the bot ALREADY takan'd this round, the bot must
+ * declare «13» (the declaration cancels the repeat through the normal
+ * mechanic; the repeat would create no claim anyway — the declaration
+ * is the visible act the owner ordered). A FRESH final-trick takan
+ * (suit not takan'd before) is NEVER declared: its claim stands,
+ * exactly as before. (The server calls this before asking for a card,
+ * and applies round.declare13 when it returns true.)
  */
 function maybeDeclare13(round, seat) {
-  return false;
+  if (!round.canDeclare13(seat)) return false;
+  const banned = (round.takanSuits && round.takanSuits[seat]) || [];
+  return banned.includes(G.suitOf(round.hands[seat][0]));
 }
 
 /**
