@@ -8813,6 +8813,18 @@ function enterMyClubRoom() {
   closeClubMenu();
   renderClubs();
 }
+// The plain ROOM EXIT (clubs v7.1): close the room view and land
+// back on discovery. Membership, ownership and the club itself
+// are untouched — only the voice room is left, exactly like
+// closing the clubs section; the room reopens through
+// enterMyClubRoom. (The owner's exit menu «له کلب ووځي» row is
+// this and nothing more, since v7.1.)
+function exitClubRoomView() {
+  clRoomView = false;
+  closeClubMenu();
+  cv.leave();
+  renderClubs();
+}
 function renderDiscovery() {
   ['explore', 'hot', 'mine'].forEach((t) => $('#cl-tab-' + t).classList.toggle('sel', clTab === t));
   $('#cl-pane-explore').classList.toggle('hidden', clTab === 'mine');
@@ -9541,9 +9553,9 @@ $('#btn-ca-save').onclick = () => {
 // list, seats, voice room, chat) and lands on the discovery
 // page; rejoining is just entering again (auto-join) or an
 // invite. For the OWNER (his order 2026-11-09): the small
-// anchored menu instead — «له کلب ووځي» leaves (ownership
-// auto-transfers to the longest-serving deputy, else member;
-// alone → the club is dissolved) and «کلب ړنګول» runs the
+// anchored menu instead — «له کلب ووځي» is a plain ROOM EXIT
+// (v7.1: the club, his ownership and his membership all stay;
+// he lands back on discovery) and «کلب ړنګول» runs the
 // dissolve confirm.
 $('#btn-cl-exit').onclick = (e) => {
   const rc = roomClub();
@@ -10076,7 +10088,7 @@ let cmAnchor = null;
 // The same anchored card also serves two small menus (2026-11-09):
 // popCtx.kind 'seat' — a manager tapped a seated player (remove
 // from seat / profile); 'exit' — the owner tapped the room EXIT
-// button (leave the club / dissolve the club). A member menu
+// button (room exit / dissolve the club). A member menu
 // leaves popCtx null.
 let popCtx = null;
 function cmRow(icon, label, fn, disabled) {
@@ -10140,8 +10152,8 @@ function openClubSeatMenu(p, anchor) {
   renderClubMenu();
   placeAnchoredCard(pop, cmAnchor);
 }
-// The OWNER tapped the room EXIT button: leave (ownership
-// auto-transfers) or dissolve — anchored to the button.
+// The OWNER tapped the room EXIT button: room exit (v7.1 —
+// the club is NOT left) or dissolve — anchored to the button.
 function openClubExitMenu(anchor) {
   const pop = $('#ov-clubmenu');
   if (pop.classList.contains('show') && popCtx && popCtx.kind === 'exit') { closeClubMenu(); return; }
@@ -10303,15 +10315,21 @@ function renderClubExitMenu() {
   if (!c) return;
   const av = $('#cm-av');
   av.innerHTML = '';
-  av.appendChild(clEmblemEl(c.emblem, 40));
-  $('#cm-name').textContent = c.name || '';
+  // v7.1 (his order): the header wears the FOUNDER's profile —
+  // his avatar/photo and his name — not the club's emblem and
+  // name. The payload's owner* fields are directory-sourced, so
+  // they stay fresh and a club rename never touches them.
+  av.appendChild(avatarEl(c.ownerName || '', c.ownerAvatar, 40, c.ownerPhoto));
+  $('#cm-name').textContent = c.ownerName || c.name || '';
   const rows = $('#cm-rows');
   rows.innerHTML = '';
-  // leave: no extra confirm — the menu tap IS the choice; the
-  // server auto-transfers ownership (or dissolves when alone)
+  // leave = a plain ROOM EXIT (v7.1, his order): no confirm and
+  // NO s-club-leave — he walks out of the room view back to
+  // discovery while the club, his ownership and his membership
+  // all stay exactly as they are (and he can walk back in).
   rows.appendChild(cmRow('🚪', T('clLeaveMenu'), () => {
     closeClubMenu();
-    socialSend({ type: 's-club-leave' });
+    exitClubRoomView();
   }));
   rows.appendChild(cmRow('🗑', T('clDissolve'), () => {
     closeClubMenu();
