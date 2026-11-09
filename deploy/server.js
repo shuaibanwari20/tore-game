@@ -26,9 +26,15 @@ const RECONNECT_GRACE_MS = 120000; // seat+hand kept for a reconnecting player
 
 const INDEX_HTML = fs.readFileSync(path.join(__dirname, 'index.html'));
 const STICKERS_DIR = path.join(__dirname, 'stickers');
+const COVERS_DIR = path.join(__dirname, 'covers');
 
 const httpServer = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
+  // Uploaded club covers ride their own routes (handlers below):
+  // POST /club-cover is the club owner's photo upload; GET
+  // /club-cover/<cid> serves that club's photo publicly.
+  if (url === '/club-cover' && req.method === 'POST') return handleCoverUpload(req, res);
+  if (url.startsWith('/club-cover/') && req.method === 'GET') return handleCoverGet(req, res, url.slice('/club-cover/'.length));
   if (url === '/' || url === '/index.html') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     return res.end(INDEX_HTML);
@@ -43,6 +49,20 @@ const httpServer = http.createServer((req, res) => {
       const full = path.join(STICKERS_DIR, name);
       if (fs.existsSync(full)) {
         res.writeHead(200, { 'Content-Type': 'image/gif', 'Cache-Control': 'public, max-age=86400' });
+        return fs.createReadStream(full).pipe(res);
+      }
+    }
+    res.writeHead(404); return res.end('not found');
+  }
+  // The built-in cover gallery photos are static files like the
+  // stickers: /covers/<id>.jpg from ./covers, pinned to the
+  // known gallery ids.
+  if (url.startsWith('/covers/')) {
+    const name = url.slice('/covers/'.length);
+    if (/^(mountains|mosque|caravan|pomegranate|city|carpet|eagle|river|tent|trophy)\.jpg$/.test(name)) {
+      const full = path.join(COVERS_DIR, name);
+      if (fs.existsSync(full)) {
+        res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400' });
         return fs.createReadStream(full).pipe(res);
       }
     }
@@ -161,7 +181,60 @@ const social = createNodeSocial({
   inGameCheck: sidInGame,
   inLobbyCheck: sidInLobby,
   verifyBusy: verifyBusySid,
+  seatReqTimeoutMs: Number(process.env.TORE_SEAT_REQ_MS) || undefined,
 });
+
+// ------------------------------------------------ uploaded club covers
+// POST /club-cover — a club owner uploads his club's cover photo.
+// Node hosts have no sign-in: identity is the same persistent
+// player id the /social hello uses, sent as the x-tore-pid header
+// (the production Worker instead derives it from the verified
+// session cookie and never trusts this header). The image never
+// rides the social socket (message caps) — it lands in the social
+// layer's cover store and the club record flips to 'custom'.
+// Hard rules: owner-only, image/jpeg|png|webp, at most 250 KB.
+const COVER_MAX_BYTES = 250 * 1024;
+const COVER_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+function coverJson(res, status, obj) {
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify(obj));
+}
+function handleCoverUpload(req, res) {
+  const pid = req.headers['x-tore-pid'];
+  if (typeof pid !== 'string' || !/^[A-Za-z0-9_-]{6,64}$/.test(pid)) return coverJson(res, 401, { error: 'unauthorized' });
+  const type = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+  if (!COVER_TYPES.includes(type)) return coverJson(res, 415, { error: 'coverBadType' });
+  const chunks = [];
+  let size = 0;
+  let tooBig = false;
+  req.on('data', (ch) => {
+    size += ch.length;
+    if (size > COVER_MAX_BYTES) { tooBig = true; return; }
+    chunks.push(ch);
+  });
+  req.on('end', () => {
+    if (tooBig) return coverJson(res, 413, { error: 'coverTooBig' });
+    const buf = Buffer.concat(chunks);
+    if (!buf.length) return coverJson(res, 400, { error: 'coverEmpty' });
+    const out = social.uploadCover('p:' + pid, type, buf);
+    if (!out) return coverJson(res, 403, { error: 'clubNoPerm' });
+    return coverJson(res, 200, { ok: true, cid: out.cid, v: out.v });
+  });
+  req.on('error', () => { try { res.writeHead(400); res.end(); } catch (e) { /* gone */ } });
+}
+function handleCoverGet(req, res, cid) {
+  if (!/^\d{6}$/.test(cid)) { res.writeHead(404); return res.end('not found'); }
+  const entry = social.getCover(cid);
+  if (!entry) { res.writeHead(404); return res.end('not found'); }
+  // The ?v=<coverV> query is the cache key: a new upload bumps it,
+  // so a year-long immutable cache is safe.
+  res.writeHead(200, {
+    'Content-Type': entry.type,
+    'Content-Length': entry.buf.length,
+    'Cache-Control': 'public, max-age=31536000, immutable',
+  });
+  res.end(entry.buf);
+}
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 function newCode() {
