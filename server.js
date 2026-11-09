@@ -152,7 +152,6 @@ const social = createNodeSocial({
   inGameCheck: sidInGame,
   inLobbyCheck: sidInLobby,
   verifyBusy: verifyBusySid,
-  seatReqTimeoutMs: Number(process.env.TORE_SEAT_REQ_MS) || undefined,
 });
 
 // ------------------------------------------------ uploaded club covers
