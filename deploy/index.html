@@ -913,6 +913,15 @@
   .cl-countpill { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 10px; padding: 5px 13px;
     background: rgba(0,0,0,.4); border: 1.5px solid rgba(217,179,128,.5); border-radius: 20px;
     color: #ffeec2; font-size: 14px; font-weight: 800; font-family: inherit; cursor: pointer; width: auto; }
+  /* the guest mark (open entry): shown in the room only while
+     the player is a VISITOR here, not a member */
+  .cl-vischip { display: inline-flex; align-items: center; padding: 4px 12px; margin: 0 0 10px;
+    background: rgba(255,215,94,.13); border: 1.5px dashed rgba(255,215,94,.8); border-radius: 20px;
+    color: #ffd75e; font-size: 12.5px; font-weight: 800; }
+  /* the «میلمه» chip on a guest's row in the owner's seat-request list */
+  .cl-visrow { display: inline-block; padding: 1px 8px; margin-inline-start: 6px; border-radius: 10px;
+    background: rgba(255,215,94,.15); border: 1px dashed rgba(255,215,94,.8); color: #ffd75e;
+    font-size: 11px; font-weight: 800; vertical-align: middle; }
   /* mic seats */
   .cl-seats-wrap { margin-bottom: 10px; }
   .cl-seats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px 6px; }
@@ -1692,6 +1701,7 @@
         </div>
         <div class="cl-pillrow">
           <button type="button" class="cl-countpill" id="cl-countpill"><span class="cl-count-ic">👥</span><span id="cl-count"></span></button>
+          <span class="cl-vischip hidden" id="cl-visitor-chip"></span>
           <button type="button" class="cl-icobtn hidden" id="btn-cl-seatreqs" aria-label="seat requests"><svg viewBox="0 0 24 24"><path d="M7 11V6a3 3 0 0 1 6 0v1"/><path d="M5 21v-6.5A2.5 2.5 0 0 1 7.5 12H13a2 2 0 0 1 2 2v7"/><path d="M3.5 21h17"/></svg><span class="cl-like-n hidden" id="cl-seatreqs-badge">0</span></button>
         </div>
         <div class="cl-seats-wrap">
@@ -2374,6 +2384,7 @@ const STR = {
     clAnnounce: 'اعلان', clAnnouncePh: 'د کلب لپاره اعلان ولیکئ…',
     clAnnounceEmpty: 'تر اوسه اعلان نشته',
     clEnterClub: 'کلب ته ننوتل', clMyClubTitle: 'زما کلب',
+    clVisitEnter: 'ننوتل', clVisitor: 'میلمه',
     clLikedTitle: 'خوښ شوي کلبونه', clSeatsHint: 'په خالي څوکۍ کېنئ او خبرې وکړئ',
     clLike: 'خوښول',
     errClubSeatTaken: 'دا څوکۍ ډکه ده ✓', clMicDenied: 'مایک ته اجازه ورنکړل شوه',
@@ -2640,6 +2651,7 @@ const STR = {
     clAnnounce: 'اعلان', clAnnouncePh: 'برای باشگاه اعلان بنویسید…',
     clAnnounceEmpty: 'هنوز اعلانی نیست',
     clEnterClub: 'ورود به باشگاه', clMyClubTitle: 'باشگاه من',
+    clVisitEnter: 'وارد شدن', clVisitor: 'مهمان',
     clLikedTitle: 'باشگاه‌های پسندیده', clSeatsHint: 'روی صندلی خالی بنشینید و صحبت کنید',
     clLike: 'پسندیدن',
     errClubSeatTaken: 'این صندلی پر است ✓', clMicDenied: 'اجازهٔ میکروفون داده نشد',
@@ -2906,6 +2918,7 @@ const STR = {
     clAnnounce: 'Announcement', clAnnouncePh: 'Write an announcement for the club…',
     clAnnounceEmpty: 'No announcement yet',
     clEnterClub: 'Enter club', clMyClubTitle: 'My club',
+    clVisitEnter: 'Enter', clVisitor: 'Guest',
     clLikedTitle: 'Liked clubs', clSeatsHint: 'Tap an empty seat to sit and talk',
     clLike: 'Like',
     errClubSeatTaken: 'That seat is taken ✓', clMicDenied: 'Microphone permission was denied',
@@ -6699,6 +6712,7 @@ function onSocialMsg(m) {
     if (p) applyPresence(p);
     if (socialData) socialData.friends.forEach((f) => { if (f.id === m.id) applyPresence(f); });
     if (clubData && clubData.club) clubData.club.members.forEach((f) => { if (f.id === m.id) applyPresence(f); });
+    if (clVisit) (clVisit.members || []).forEach((f) => { if (f.id === m.id) applyPresence(f); });
     frSearchResults.forEach((r) => { if (r.id === m.id) applyPresence(r); });
     renderFriends();
     renderClubs();
@@ -6708,10 +6722,16 @@ function onSocialMsg(m) {
     const prevCid = clubData && clubData.club ? clubData.club.cid : null;
     clubData = { club: m.club || null, invites: m.invites || [], outgoing: m.outgoing || [] };
     if (clubData.club) {
+      // OPEN ENTRY: a membership that just CHANGED (joined /
+      // created — including a guest whose visit was upgraded in
+      // place) ends any visit: this room is my own club's now.
+      // Plain refreshes of the same membership keep the visit.
+      if (clVisit && prevCid !== clubData.club.cid) clVisit = null;
       clubData.club.members.forEach(cachePerson);
       // v2: normalize the room's voice shape (seat persons → the
       // bare {seat,id} map the state pushes use from here on)
       if (Array.isArray(clubData.club.seats)) {
+        clubData.club.seats.forEach((s) => { if (s.person) cachePerson(s.person); });
         clubData.club.seatMap = clubData.club.seats.map((s) => ({ seat: s.seat, id: s.person && s.person.id, mic: s.mic !== false })).filter((s) => s.id);
         delete clubData.club.seats;
       }
@@ -6744,6 +6764,36 @@ function onSocialMsg(m) {
     if (Date.now() - clDiscAt > 4000) requestDiscover();
     if (cv.joined) cv.reconcile();
     renderClubs();
+  } else if (m.type === 's-club-visit') {
+    // OPEN ENTRY: the guest room state. A club object opens (or
+    // refreshes) the visited room; null ends the visit from the
+    // server side (club dissolved under me, or my own unvisit
+    // answered) and drops me back to discovery.
+    if (m.club) {
+      const prevVid = clVisit ? clVisit.cid : null;
+      clVisit = m.club;
+      clVisit.members.forEach(cachePerson);
+      if (Array.isArray(clVisit.seats)) {
+        clVisit.seats.forEach((s) => { if (s.person) cachePerson(s.person); });
+        clVisit.seatMap = clVisit.seats.map((s) => ({ seat: s.seat, id: s.person && s.person.id, mic: s.mic !== false })).filter((s) => s.id);
+        delete clVisit.seats;
+      }
+      if (Array.isArray(clVisit.voice)) clVisit.voiceIds = clVisit.voice;
+      if (clVisit.cid !== prevVid) {
+        clubMsgs = clVisit.chat || [];
+        clubUnread = 0;
+        clRoomView = true; // walking in opens the room
+      } else if (Array.isArray(clVisit.chat)) {
+        clubMsgs = clVisit.chat;
+      }
+    } else if (clVisit) {
+      clVisit = null;
+      clRoomView = false;
+      clubMsgs = [];
+      cv.leave();
+    }
+    if (cv.joined) cv.reconcile();
+    renderClubs();
   } else if (m.type === 's-club-discover-result') {
     clDisc = m;
     clDiscAt = Date.now();
@@ -6766,11 +6816,15 @@ function onSocialMsg(m) {
     requestDiscover();
     renderClubs();
   } else if (m.type === 's-club-voice-state') {
-    if (clubData && clubData.club && m.club === clubData.club.cid) {
-      clubData.club.voiceIds = m.members || [];
-      clubData.club.seatMap = m.seats || [];
+    const rc = roomClub();
+    if (rc && m.club === rc.cid) {
+      // seat entries carry the holder's person (a seated GUEST
+      // is in no member list — his name/avatar rides here)
+      (m.seats || []).forEach((s) => { if (s.person) cachePerson(s.person); });
+      rc.voiceIds = m.members || [];
+      rc.seatMap = m.seats || [];
       cv.onVoiceState();
-      if (clRoomView && !$('#scr-clubs').classList.contains('hidden')) renderClubSeats(clubData.club);
+      if (clRoomView && !$('#scr-clubs').classList.contains('hidden')) renderClubSeats(rc);
     }
   } else if (m.type === 's-rtc') {
     cv.onSignal(m.from, m.data);
@@ -6806,7 +6860,8 @@ function onSocialMsg(m) {
     toast(T('clNewInvite', (m.from && m.from.name) || ''));
     // the s-club push right behind it repaints the invites + badge
   } else if (m.type === 's-club-chat') {
-    if (clubData && clubData.club && m.club === clubData.club.cid) {
+    const rc = roomClub();
+    if (rc && m.club === rc.cid) {
       clubMsgs.push({ from: m.from, name: m.name, avatar: m.avatar, photo: m.photo, text: m.text, ts: m.ts });
       while (clubMsgs.length > 50) clubMsgs.shift();
       if (!$('#scr-clubs').classList.contains('hidden')) { clubUnread = 0; renderClubChat(); }
@@ -7660,6 +7715,15 @@ const CL_CROWN = {
   2: '<svg class="cl-crown" viewBox="0 0 40 28"><path d="M3 24 L5 8 L14 16 L20 4 L26 16 L35 8 L37 24 Z" fill="#e0a266" stroke="#96602e" stroke-width="1.6"/><circle cx="20" cy="20" r="2.4" fill="#7d2231"/></svg>',
 };
 let clubData = null;             // {club, invites, outgoing} from s-club
+let clVisit = null;              // OPEN ENTRY: the club view I am a GUEST in (from s-club-visit), or null
+// The club whose room is on screen: while I am a guest somewhere
+// that room is the visited club; otherwise it is my own club.
+// (I can never be a guest in my own club — the server refuses
+// that visit and ships the member state instead.)
+function roomClub() {
+  if (clVisit && !(clubData && clubData.club && clubData.club.cid === clVisit.cid)) return clVisit;
+  return (clubData && clubData.club) || clVisit || null;
+}
 let clubMsgs = [];               // chat tail of my club (client-kept)
 let clubUnread = 0;              // unread club chat while the page is away
 let clubInitDone = false;        // first s-club is the hello state (no join toast)
@@ -7712,6 +7776,11 @@ function openClubs() {
 function closeClubs() {
   closeClubMenu();
   stopPodium();
+  // a guest's presence ends with the page, exactly like his
+  // voice-room place does (cv.leave below covers the joined
+  // case server-side too; the explicit unvisit covers a visit
+  // whose voice join never completed)
+  if (clVisit) { socialSend({ type: 's-club-unvisit' }); clVisit = null; clRoomView = false; }
   cv.leave();
   $('#scr-clubpage').classList.add('hidden');
   $('#scr-clubmembers').classList.add('hidden');
@@ -8099,10 +8168,17 @@ function renderClubPublic() {
   });
   const act = $('#cv-actions');
   act.innerHTML = '';
+  // OPEN ENTRY: entering the room is free for everyone — «ننوتل»
+  // is the primary action and needs no approval. Membership
+  // (the join request below it) stays for those who want their
+  // name on the member list; it no longer gates the door.
+  if (!(clubData && clubData.club && clubData.club.cid === s.cid)) {
+    act.appendChild(frBtn('🚪 ' + T('clVisitEnter'), 'primary', () => enterClubVisit(s.cid)));
+  }
   if (s.relation === 'requested') act.appendChild(frBtn(T('clRequested'), '', null));
   else if (s.relation === 'invited') act.appendChild(frBtn(T('frAccept'), 'primary', () => { socialSend({ type: 's-club-invite-reply', club: s.cid, accept: true }); $('#ov-clubview').classList.remove('show'); }));
   else if (s.relation === 'none' && !(clubData && clubData.club)) {
-    act.appendChild(frBtn(T('clRequest'), 'primary', () => { socialSend({ type: 's-club-request', club: s.cid }); toast(T('clRequested')); $('#ov-clubview').classList.remove('show'); }));
+    act.appendChild(frBtn(T('clRequest'), '', () => { socialSend({ type: 's-club-request', club: s.cid }); toast(T('clRequested')); $('#ov-clubview').classList.remove('show'); }));
   }
   const likeBtn = $('#btn-cv-like');
   likeBtn.textContent = '❤ ' + T('clLike') + ' · ' + faNum(s.likes || 0);
@@ -8114,6 +8190,18 @@ $('#btn-cv-close').onclick = () => $('#ov-clubview').classList.remove('show');
 $('#ov-clubview').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
 $('#btn-cv-like').onclick = () => { if (clPublic) socialSend({ type: 's-club-like', club: clPublic.cid }); };
 
+// OPEN ENTRY: walk into a club's room as a guest. The server
+// answers with s-club-visit carrying the whole visitor room
+// state — that push is what opens the room here. Any voice room
+// I am currently in (my own club's, or another visit) is left
+// first; the server ends that presence the same moment.
+function enterClubVisit(cid) {
+  connectSocial();
+  $('#ov-clubview').classList.remove('show');
+  if (cv.joined) cv.leave();
+  socialSend({ type: 's-club-visit', club: cid });
+}
+
 // ---------- club room ----------
 function renderClubChat() {
   const box = $('#cl-msgs');
@@ -8124,8 +8212,9 @@ function renderClubChat() {
   if (!clubMsgs.length) { box.appendChild(frEmpty(T('clChatEmpty'))); return; }
   clubMsgs.forEach((m) => {
     let name = m.name, avatar = m.avatar, photo = m.photo;
-    if (!name && clubData && clubData.club) {
-      const p = clubData.club.members.find((x) => x.id === m.from) || socialPeople.get(m.from);
+    if (!name) {
+      const rc = roomClub();
+      const p = (rc && (rc.members || []).find((x) => x.id === m.from)) || socialPeople.get(m.from);
       if (p) { name = p.name; avatar = p.avatar; photo = p.photo; }
     }
     const item = document.createElement('div');
@@ -8187,19 +8276,23 @@ function canSeatKick(c, targetId) {
   if (!c || targetId === socialMe) return false;
   const rank = { owner: 0, deputy: 1, member: 2 };
   const mine = rank[c.myRole];
+  if (mine === undefined || mine === 2) return false;
   const mem = (c.members || []).find((m) => m.id === targetId);
-  if (mine === undefined || !mem || mine === 2) return false;
+  // a seated GUEST (open entry) is in no member list: only the
+  // owner — who personally approved his seat — may lift him
+  if (!mem) return mine === 0;
   return mine < rank[mem.role];
 }
 async function onClubSeatTap(seat, occupantId, anchorEl) {
-  if (!clubData || !clubData.club) return;
+  const c = roomClub();
+  if (!c) return;
   if (occupantId) {
     if (occupantId === socialMe) { socialSend({ type: 's-club-stand' }); cv.wantSeat = -1; cv.setMic(false); }
-    else if (canSeatKick(clubData.club, occupantId)) {
+    else if (canSeatKick(c, occupantId)) {
       // A manager tapping another player's seat opens the small
       // anchored menu (remove from seat / profile). Plain
       // members tapping a seat get nothing.
-      openClubSeatMenu(clubSeatPerson(clubData.club, occupantId), anchorEl);
+      openClubSeatMenu(clubSeatPerson(c, occupantId), anchorEl);
     }
     return;
   }
@@ -8207,7 +8300,7 @@ async function onClubSeatTap(seat, occupantId, anchorEl) {
   if (!ok) return;
   cv.wantMic = true;
   cv.wantSeat = seat;
-  if (clubData.club.myRole === 'owner') {
+  if (c.myRole === 'owner') {
     // The founder sits freely — no request to himself.
     socialSend({ type: 's-club-seat', seat });
   } else if (!cv.seatReq) {
@@ -8224,7 +8317,7 @@ async function onClubSeatTap(seat, occupantId, anchorEl) {
 function renderSeatReqBar() {
   const bar = $('#cl-seatreq-bar');
   if (!bar) return;
-  const pend = !!(cv.seatReq && clubData && clubData.club && cv.mySeat() < 0);
+  const pend = !!(cv.seatReq && roomClub() && cv.mySeat() < 0);
   bar.classList.toggle('hidden', !pend);
   if (pend) $('#cl-seatreq-txt').textContent = T('clSeatWaiting');
 }
@@ -8241,7 +8334,8 @@ $('#btn-cl-seatreq-cancel').onclick = () => {
 // count pill; the button carries the pending count as a badge.
 let srqTick = null;
 function openClubSeatReqs() {
-  if (!clubData || !clubData.club || clubData.club.myRole !== 'owner') return;
+  const rc = roomClub();
+  if (!rc || rc.myRole !== 'owner') return;
   $('#scr-clubseatreqs').classList.remove('hidden');
   renderSeatReqsPage();
   if (srqTick) clearInterval(srqTick);
@@ -8260,7 +8354,7 @@ function renderSeatReqsPage() {
   const box = $('#cl-seatreqs-list');
   if (!box) return;
   box.innerHTML = '';
-  const c = clubData && clubData.club;
+  const c = roomClub();
   const reqs = (c && c.seatReqs) || [];
   if (!c || !reqs.length) {
     const e = document.createElement('div');
@@ -8283,6 +8377,15 @@ function renderSeatReqsPage() {
     const row = personRow(r, [ok, no]);
     const meta = row.querySelector('.fr-meta');
     if (meta) {
+      // a GUEST's ask (open entry) is marked, so the founder
+      // knows this name is not on his member list
+      if (r.visitor) {
+        const chip = document.createElement('span');
+        chip.className = 'cl-visrow';
+        chip.textContent = '🧍 ' + T('clVisitor');
+        const nm = meta.querySelector('.fr-name');
+        if (nm) nm.appendChild(chip); else meta.appendChild(chip);
+      }
       const w = document.createElement('span');
       w.className = 'srq-wait';
       w.textContent = clWaitText(r.ts);
@@ -8292,7 +8395,8 @@ function renderSeatReqsPage() {
   }
 }
 function renderClubRoom() {
-  const c = clubData.club;
+  const c = roomClub();
+  if (!c) return;
   const cov = $('#cl-room-cov');
   cov.innerHTML = '';
   cov.appendChild(clCoverEl(c.cover, c.cid, c.coverV));
@@ -8302,6 +8406,8 @@ function renderClubRoom() {
   likeBtn.classList.toggle('on', !!c.liked);
   $('#cl-like-n').textContent = faNum(c.likes || 0);
   $('#cl-count').textContent = T('clMemberCount', c.count);
+  // the guest mark: I am a visitor in this room, not a member
+  $('#cl-visitor-chip').classList.toggle('hidden', !c.visitor);
   renderClubSeats(c);
   // announcement
   const annText = $('#cl-ann-text');
@@ -8327,8 +8433,8 @@ function renderClubRoom() {
 // + members cards live on the MEMBERS page now — this one
 // renderer feeds both screens, so the page is never stale.
 function renderClubMemberLists() {
-  if (!clubData || !clubData.club) return;
-  const c = clubData.club;
+  const c = roomClub();
+  if (!c) return;
   const isManager = c.myRole === 'owner' || c.myRole === 'deputy';
   // join requests (managers only; the server sends [] to members)
   const reqBox = $('#cl-req-box'), reqList = $('#cl-requests');
@@ -8373,7 +8479,7 @@ function renderClubMemberLists() {
 // they were. The owner edits (the one s-club-edit path); every
 // other member sees the same page read-only.
 function openClubPage() {
-  if (!clubData || !clubData.club) return;
+  if (!roomClub()) return;
   closeClubMenu();
   $('#scr-clubs').classList.add('hidden');
   $('#scr-clubpage').classList.remove('hidden');
@@ -8382,7 +8488,7 @@ function openClubPage() {
 function closeClubPage() {
   $('#scr-clubpage').classList.add('hidden');
   $('#scr-clubmembers').classList.add('hidden');
-  if (clubData && clubData.club && clRoomView) {
+  if (roomClub() && clRoomView) {
     $('#scr-clubs').classList.remove('hidden');
     renderClubs();
   } else {
@@ -8390,8 +8496,8 @@ function closeClubPage() {
   }
 }
 function renderClubPage() {
-  if (!clubData || !clubData.club) return;
-  const c = clubData.club;
+  const c = roomClub();
+  if (!c) return;
   const covBox = $('#cp-cov');
   covBox.innerHTML = '';
   covBox.appendChild(clCoverEl(c.cover, c.cid, c.coverV));
@@ -8406,6 +8512,10 @@ function renderClubPage() {
   const isOwner = c.myRole === 'owner';
   $('#cp-save-row').classList.toggle('hidden', !isOwner);
   $('#btn-cl-dissolve').classList.toggle('hidden', !isOwner);
+  // a GUEST has no membership to leave: the leave button (a
+  // full club-leave on the server) is hidden for visitors —
+  // his exit is the room's door, nothing else
+  $('#btn-cl-leave').classList.toggle('hidden', !!c.visitor);
   $('#cl-leave-note').classList.toggle('hidden', !isOwner);
   $('#scr-clubpage').classList.toggle('ro', !isOwner);
   const nameInp = $('#cl-edit-name'), descInp = $('#cl-edit-desc');
@@ -8459,7 +8569,7 @@ function renderClubPage() {
 // The room behind the page is untouched — seats and chat keep
 // their state and the back button lands on them as they were.
 function openClubMembers() {
-  if (!clubData || !clubData.club) return;
+  if (!roomClub()) return;
   closeClubMenu();
   $('#scr-clubs').classList.add('hidden');
   $('#scr-clubpage').classList.add('hidden');
@@ -8470,7 +8580,7 @@ function openClubMembers() {
 function closeClubMembers() {
   $('#scr-clubmembers').classList.add('hidden');
   $('#ov-clubinvite').classList.remove('show');
-  if (clubData && clubData.club && clRoomView) {
+  if (roomClub() && clRoomView) {
     $('#scr-clubs').classList.remove('hidden');
     renderClubs();
   } else {
@@ -8478,8 +8588,8 @@ function closeClubMembers() {
   }
 }
 function renderClubMembersBits() {
-  if (!clubData || !clubData.club) return;
-  const c = clubData.club;
+  const c = roomClub();
+  if (!c) return;
   const isManager = c.myRole === 'owner' || c.myRole === 'deputy';
   $('#btn-cm-invite').classList.toggle('hidden', !isManager);
 }
@@ -8494,7 +8604,7 @@ function renderClubInvitePopup() {
   const list = $('#ci-list');
   if (!list) return;
   list.innerHTML = '';
-  const c = clubData && clubData.club;
+  const c = roomClub();
   if (!c) return;
   const memberIds = new Set(c.members.map((m) => m.id));
   const friends = (socialData && socialData.friends) || [];
@@ -8515,8 +8625,8 @@ function renderClubInvitePopup() {
   });
 }
 function openClubInvitePopup() {
-  if (!clubData || !clubData.club) return;
-  const c = clubData.club;
+  const c = roomClub();
+  if (!c) return;
   if (!(c.myRole === 'owner' || c.myRole === 'deputy')) return;
   renderClubInvitePopup();
   $('#ov-clubinvite').classList.add('show');
@@ -8546,6 +8656,7 @@ function renderClubs() {
   $('#ci-title').textContent = T('clInviteFriends');
   $('#cp-id-lbl').textContent = T('frIdLabel');
   $('#cl-ann-lbl').textContent = '📢 ' + T('clAnnounce');
+  $('#cl-visitor-chip').textContent = '🧍 ' + T('clVisitor');
   $('#cl-seats-hint').textContent = T('clSeatsHint');
   $('#btn-cl-edit-save').textContent = T('clSave');
   $('#btn-cl-seatreq-cancel').textContent = T('clCancel');
@@ -8576,24 +8687,26 @@ function renderClubs() {
   // The club sub-pages (details / members) are the visible
   // screen while the clubs screen itself is hidden — they
   // re-render from this same state push, and close themselves
-  // when the club is gone (leave / dissolve / kick).
+  // when the club is gone (leave / dissolve / kick). They read
+  // the ROOM club, so a guest's read-only views ride along.
   if (!$('#scr-clubpage').classList.contains('hidden')) {
-    if (clubData && clubData.club) renderClubPage(); else closeClubPage();
+    if (roomClub()) renderClubPage(); else closeClubPage();
   }
   if (!$('#scr-clubmembers').classList.contains('hidden')) {
-    if (clubData && clubData.club) { renderClubMembersBits(); renderClubMemberLists(); }
+    if (roomClub()) { renderClubMembersBits(); renderClubMemberLists(); }
     else closeClubMembers();
   }
   if (!$('#scr-clubseatreqs').classList.contains('hidden')) {
     // the owner's waiting list repaints with the same push — and
     // closes for a non-owner (e.g. right after an ownership
     // transfer moved the founder out)
-    if (clubData && clubData.club && clubData.club.myRole === 'owner') renderSeatReqsPage();
+    const rc0 = roomClub();
+    if (rc0 && rc0.myRole === 'owner') renderSeatReqsPage();
     else closeClubSeatReqs();
   }
   if ($('#ov-clubinvite').classList.contains('show')) renderClubInvitePopup();
   if ($('#scr-clubs').classList.contains('hidden')) return;
-  const inRoom = !!(clubData && clubData.club && clRoomView);
+  const inRoom = !!(roomClub() && clRoomView);
   $('#cl-disc-scroll').classList.toggle('hidden', inRoom);
   $('#cl-room').classList.toggle('hidden', !inRoom);
   if (inRoom) { stopPodium(); renderClubRoom(); }
@@ -8759,8 +8872,9 @@ function fillCountrySelect(sel, current) {
 }
 // club ID tap-to-copy (room header + share button share this)
 function copyClubId() {
-  if (!clubData || !clubData.club) return;
-  const cid = clubData.club.cid;
+  const rc = roomClub();
+  if (!rc) return;
+  const cid = rc.cid;
   const done = (ok) => toast(ok ? T('frIdCopied') : cid);
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(cid).then(() => done(true), () => done(fallbackCopyText(cid)));
@@ -8768,8 +8882,10 @@ function copyClubId() {
 }
 $('#cl-id-num').onclick = copyClubId;
 $('#btn-cl-share').onclick = copyClubId;
-$('#btn-cl-like').onclick = () => { if (clubData && clubData.club) socialSend({ type: 's-club-like', club: clubData.club.cid }); };
-// The room header's EXIT (door) button. For a NON-owner: the
+$('#btn-cl-like').onclick = () => { const rc = roomClub(); if (rc) socialSend({ type: 's-club-like', club: rc.cid }); };
+// The room header's EXIT (door) button. For a GUEST (open
+// entry): simply walk out — no confirm, no membership effects;
+// he was never a member. For a NON-owner MEMBER: the
 // confirmation popup (وتل / لغوه); وتل is the FULL membership
 // leave — the player disappears from the club entirely (member
 // list, seats, voice room, chat) and lands on the discovery
@@ -8779,6 +8895,16 @@ $('#btn-cl-like').onclick = () => { if (clubData && clubData.club) socialSend({ 
 // longest-serving deputy, else member; alone → the club is
 // dissolved) and «کلب ړنګول» runs the dissolve confirm.
 $('#btn-cl-exit').onclick = (e) => {
+  const rc = roomClub();
+  if (!rc) return;
+  if (rc.visitor) {
+    socialSend({ type: 's-club-unvisit' });
+    clVisit = null;
+    clRoomView = false;
+    cv.leave();
+    renderClubs();
+    return;
+  }
   if (!clubData || !clubData.club) return;
   if (clubData.club.myRole === 'owner') { openClubExitMenu(e.currentTarget); return; }
   askConfirm(T('clExitTitle'), T('clExitBody'), T('clExitYes'), () => {
@@ -8853,8 +8979,9 @@ $('#btn-cl-search').onclick = doClubSearch;
 $('#cl-search-inp').addEventListener('keydown', (e) => { if (e.key === 'Enter') doClubSearch(); });
 // announcement editor
 $('#btn-cl-ann-edit').onclick = () => {
-  if (!clubData || !clubData.club) return;
-  $('#ca-inp').value = clubData.club.announcement || '';
+  const rc = roomClub();
+  if (!rc) return;
+  $('#ca-inp').value = rc.announcement || '';
   $('#ov-clubann').classList.add('show');
 };
 $('#btn-ca-cancel').onclick = () => $('#ov-clubann').classList.remove('show');
@@ -8957,12 +9084,13 @@ const cv = {
   stream: null, peers: new Map(), speaking: new Set(),
   actx: null, analysers: new Map(), levelTimer: null,
   mySeat() {
-    if (!clubData || !clubData.club) return -1;
-    const s = (clubData.club.seatMap || []).find((x) => x.id === socialMe);
+    const c = roomClub();
+    if (!c) return -1;
+    const s = (c.seatMap || []).find((x) => x.id === socialMe);
     return s ? s.seat : -1;
   },
   enter() {
-    const c = clubData && clubData.club;
+    const c = roomClub();
     if (!c) return;
     if (this.cid === c.cid && this.joined) { this.syncPeers(); return; }
     this.leave();
@@ -9025,7 +9153,8 @@ const cv = {
     // itself: muting keeps the seat, unmuting resumes it.
     if (this.joined) socialSend({ type: 's-club-mic', on: this.micOn });
     this.paintBtns();
-    if (clubData && clubData.club && clRoomView && !$('#scr-clubs').classList.contains('hidden')) renderClubSeats(clubData.club);
+    const rc = roomClub();
+    if (rc && clRoomView && !$('#scr-clubs').classList.contains('hidden')) renderClubSeats(rc);
   },
   attachTrack(P) {
     const track = (this.micOn && this.stream) ? (this.stream.getAudioTracks()[0] || null) : null;
@@ -9038,8 +9167,9 @@ const cv = {
     if (track) cvOffer(P);
   },
   syncPeers() {
-    if (!this.joined || !clubData || !clubData.club) return;
-    const voice = new Set(clubData.club.voiceIds || []);
+    const c = roomClub();
+    if (!this.joined || !c) return;
+    const voice = new Set(c.voiceIds || []);
     for (const [id, P] of [...this.peers]) {
       if (!voice.has(id)) {
         try { P.pc.close(); } catch (e) { /* gone */ }
@@ -9099,17 +9229,23 @@ const cv = {
   // re-asked (one tap for the founder) unless someone else took
   // it. Throttled so fanout loops can never storm.
   reconcile() {
-    if (!this.joined || !clubData || !clubData.club) return;
+    const c = roomClub();
+    if (!this.joined || !c) return;
     const now = Date.now();
     if (now - this.lastReconcile < 3000) return;
-    const c = clubData.club;
     const voice = c.voiceIds || [];
     const iAmSeated = this.mySeat() >= 0;
     const seatWanted = this.wantSeat >= 0 && !iAmSeated
       && !(c.seatMap || []).some((s) => s.seat === this.wantSeat);
     if (voice.includes(socialMe) && !seatWanted) return;
     this.lastReconcile = now;
-    if (!voice.includes(socialMe)) socialSend({ type: 's-club-voice', action: 'join' });
+    if (!voice.includes(socialMe)) {
+      // A GUEST whose presence died with a host wake re-visits
+      // first (the visit is what admits his voice join at all);
+      // the join right behind it lands on the fresh presence.
+      if (clVisit && c === clVisit) socialSend({ type: 's-club-visit', club: c.cid });
+      socialSend({ type: 's-club-voice', action: 'join' });
+    }
     if (seatWanted) {
       if (c.myRole === 'owner') socialSend({ type: 's-club-seat', seat: this.wantSeat });
       else if (!this.seatReq) {
@@ -9183,7 +9319,8 @@ const cv = {
           if (!P.dirRepaired) { P.dirRepaired = true; cvForceSendrecv(P); cvOffer(P); }
         } catch (e) { /* next tick */ }
       }
-      if (changed && clubData && clubData.club && clRoomView && !$('#scr-clubs').classList.contains('hidden')) renderClubSeats(clubData.club);
+      const rc = roomClub();
+      if (changed && rc && clRoomView && !$('#scr-clubs').classList.contains('hidden')) renderClubSeats(rc);
     }, 300);
   },
 };
@@ -9299,7 +9436,7 @@ $('#btn-cl-speaker').onclick = () => {
   cv.paintBtns();
 };
 $('#btn-cl-mic').onclick = async () => {
-  if (!clubData || !clubData.club) return;
+  if (!roomClub()) return;
   if (cv.mySeat() >= 0) {
     // Seated: the mic button toggles the MIC ONLY — muting keeps
     // the seat (a muted badge shows on it), unmuting resumes.
@@ -9416,8 +9553,9 @@ function renderClubMenu() {
   if (!pop.classList.contains('show')) return;
   if (popCtx && popCtx.kind === 'seat') { renderClubSeatMenu(); return; }
   if (popCtx && popCtx.kind === 'exit') { renderClubExitMenu(); return; }
-  if (!cmMember || !clubData || !clubData.club) return;
-  const m = clubData.club.members.find((x) => x.id === cmMember.id) || cmMember;
+  const cc = roomClub();
+  if (!cmMember || !cc) return;
+  const m = (cc.members || []).find((x) => x.id === cmMember.id) || cmMember;
   cmMember = m;
   const av = $('#cm-av');
   av.innerHTML = '';
@@ -9460,7 +9598,7 @@ function renderClubMenu() {
     }
   }
   // manage section (rank-bounded, mirroring the server rules)
-  const myRole = clubData.club.myRole;
+  const myRole = cc.myRole;
   const canKick = (myRole === 'owner' && m.role !== 'owner') || (myRole === 'deputy' && m.role === 'member');
   const manage = [];
   if (myRole === 'owner' && m.role === 'member') {
@@ -9490,8 +9628,8 @@ function renderClubMenu() {
 }
 function renderClubSeatMenu() {
   const pop = $('#ov-clubmenu');
-  if (!clubData || !clubData.club || !popCtx) return;
-  const c = clubData.club;
+  const c = roomClub();
+  if (!c || !popCtx) return;
   const p = clubSeatPerson(c, popCtx.id);
   const av = $('#cm-av');
   av.innerHTML = '';
@@ -9512,8 +9650,8 @@ function renderClubSeatMenu() {
 }
 function renderClubExitMenu() {
   const pop = $('#ov-clubmenu');
-  if (!clubData || !clubData.club) return;
-  const c = clubData.club;
+  const c = roomClub();
+  if (!c) return;
   const av = $('#cm-av');
   av.innerHTML = '';
   av.appendChild(clEmblemEl(c.emblem, 40));
@@ -9539,19 +9677,21 @@ function validateClubMenu() {
   if (popCtx && popCtx.kind === 'seat') {
     // the seat menu lives only while its target still sits and I
     // can still lift him
-    const c = clubData && clubData.club;
+    const c = roomClub();
     if (!c || !canSeatKick(c, popCtx.id)
       || !(c.seatMap || []).some((s) => s.id === popCtx.id)) closeClubMenu();
     else renderClubMenu();
     return;
   }
   if (popCtx && popCtx.kind === 'exit') {
-    if (!clubData || !clubData.club || clubData.club.myRole !== 'owner') closeClubMenu();
+    const c = roomClub();
+    if (!c || c.myRole !== 'owner') closeClubMenu();
     else renderClubMenu();
     return;
   }
   if (!cmMember) return;
-  if (!clubData || !clubData.club || !clubData.club.members.some((x) => x.id === cmMember.id)) { closeClubMenu(); return; }
+  const rc = roomClub();
+  if (!rc || !(rc.members || []).some((x) => x.id === cmMember.id)) { closeClubMenu(); return; }
   if (cmAnchor && cmAnchor.isConnected) { renderClubMenu(); return; }
   const row = document.querySelector('#cl-members .fr-row[data-cmid="' + cmMember.id + '"]');
   if (!row) { closeClubMenu(); return; }
