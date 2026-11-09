@@ -751,7 +751,7 @@
   .cl-role.member { background: rgba(255,255,255,.06); color: #cfe8d8; border-color: rgba(255,255,255,.18); }
   .cl-mrow { cursor: pointer; border-radius: 8px; }
   .cl-mrow:active { background: rgba(255,215,94,.08); }
-  #cl-msgs { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column;
+  #cl-msgs { display: flex; flex-direction: column;
     gap: 7px; padding: 4px 2px 8px; }
   #cl-msgs .dm-bub { max-width: 82%; }
   .cl-bub-name { display: block; font-size: 11px; font-weight: 800; opacity: .85; margin-bottom: 1px; }
@@ -762,7 +762,6 @@
     border-radius: 12px; cursor: pointer; margin: 0; width: auto; }
   .cl-em.sel { border-color: #ffd75e; background: rgba(255,215,94,.14); box-shadow: 0 0 0 1.5px #ffd75e inset; }
   .cl-note { font-size: 13px; line-height: 1.8; opacity: .85; margin: 8px 0 0; }
-  #btn-cl-dissolve { background: rgba(125,34,49,.4); color: #ffb3ab; border-color: rgba(215,38,61,.6); }
   /* ===== club details page (د کلب امادګي): the club settings form
      as its OWN full screen (owner order 2026-11-09) — opened by
      tapping the club cover in the room header; the room (mic
@@ -773,9 +772,6 @@
     aspect-ratio: 16/7; margin-bottom: 10px; background: #07271a; }
   .cp-cov svg { display: block; width: 100%; height: 100%; }
   .cp-name { margin-bottom: 8px; }
-  #scr-clubpage select option { background: #0d2c1d; color: #f8ecd0; }
-  #scr-clubpage.ro .cl-emgrid, #scr-clubpage.ro .cl-covgrid, #scr-clubpage.ro .cl-catrow { pointer-events: none; }
-  #scr-clubpage input:disabled, #scr-clubpage select:disabled { opacity: .8; }
   /* members page: the invite button sits in the page head,
      opposite the back button (managers only — JS hides it) */
   .cm-invite-btn { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #d9b380;
@@ -818,7 +814,6 @@
     background: rgba(6, 24, 16, .88); color: #f8ecd0; border: 1px solid rgba(255, 215, 94, .55);
   }
   #scr-clubs input::placeholder, #scr-clubpage input::placeholder, #scr-clubmembers input::placeholder { color: rgba(248, 236, 208, .45); }
-  #cl-edit-form input { width: 100%; padding: 11px 12px; font-size: 16px; border-radius: 10px; font-family: inherit; margin-bottom: 10px; }
   #ov-clubmenu { position: fixed; z-index: 44; width: 234px; display: none;
     background: linear-gradient(165deg, #0f4026, #07271a);
     border: 1.5px solid #d9b380; border-radius: 14px; padding: 8px;
@@ -881,7 +876,7 @@
     border-radius: 11px; cursor: pointer; }
   .cl-chip.sel { background: linear-gradient(165deg, #ffd75e, #d9a83f); color: #33270a; border-color: #ffd75e; }
   .cl-morewrap { margin: -4px 0 12px; }
-  .cl-morewrap select, #cl-edit-form select, #ov-clubcreate select { width: 100%; padding: 11px 12px; font-size: 16px; border-radius: 10px;
+  .cl-morewrap select { width: 100%; padding: 11px 12px; font-size: 16px; border-radius: 10px;
     font-family: inherit; background: rgba(6,24,16,.88); color: #f8ecd0; border: 1px solid rgba(255,215,94,.55); margin-bottom: 10px; }
   /* discovery grid cards */
   .cl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
@@ -964,6 +959,18 @@
   .cl-seats-hint { font-size: 12.5px; opacity: .75; text-align: center; margin: 8px 0 0; }
   /* chat feed bars */
   #cl-msgs { display: flex; flex-direction: column; gap: 7px; padding: 2px 0 10px; }
+  /* clubs v7 (owner order 2026-11-09): in the club room ONLY
+     the messages scroll — #cl-room is a non-scrolling flex
+     column (header bar, members pill, seats + hint,
+     announcement + trophy all sit in the fixed block), the
+     feed takes the leftover height and scrolls alone, and
+     the chat bar stays pinned on the bottom edge. The old
+     300px feed cap is gone with the .fr-scroll wrapper. */
+  #cl-room { overflow: hidden; }
+  #cl-room .cl-room-fixed { flex: none; }
+  #cl-room .fr-inner { padding-bottom: 4px; }
+  #cl-room > .cl-feed { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
+    width: 100%; max-width: 520px; margin: 0 auto; padding: 6px 14px 12px; box-sizing: border-box; }
   .cl-feed-item { display: flex; align-items: flex-start; gap: 9px; background: rgba(255,255,255,.055);
     border: 1px solid rgba(217,179,128,.22); border-radius: 12px; padding: 7px 10px; }
   .cl-feed-item.mine { background: rgba(255,215,94,.1); border-color: rgba(255,215,94,.35); }
@@ -1070,13 +1077,13 @@
   #scr-clubs input, #scr-clubpage input, #scr-clubmembers input, #scr-clubseatreqs input {
     background: rgba(18,5,36,.85); color: #fff; border-color: rgba(216,178,255,.45); }
   #scr-clubs input::placeholder, #scr-clubpage input::placeholder, #scr-clubmembers input::placeholder { color: rgba(230,220,255,.45); }
-  #scr-clubs .cl-morewrap select, #scr-clubpage #cl-edit-form select, #scr-clubpage select option, #scr-clubs select option {
+  #scr-clubs .cl-morewrap select, #scr-clubs select option {
     background: #2a0a45; color: #f6efff; }
-  #scr-clubpage #cl-edit-form select, #scr-clubs .cl-morewrap select { border-color: rgba(216,178,255,.45); }
+  #scr-clubs .cl-morewrap select { border-color: rgba(216,178,255,.45); }
   /* club popups wear the same night */
-  #ov-clubcreate .panel, #ov-clubann .panel, #ov-clubinvite .panel {
+  #ov-clubann .panel, #ov-clubinvite .panel {
     background: linear-gradient(165deg, #3d1163, #1e0636); border: 1.5px solid rgba(216,178,255,.5); color: #f6efff; }
-  #ov-clubcreate select, #ov-clubann input, #ov-clubcreate input {
+  #ov-clubann input {
     background: rgba(16,4,32,.85); color: #fff; border: 1px solid rgba(216,178,255,.45); }
   #ov-clubmenu { background: linear-gradient(165deg, #3d1163, #1e0636); border-color: rgba(216,178,255,.55); color: #f6efff; }
   /* --- discovery in purple --- */
@@ -1201,16 +1208,16 @@
   /* --- details / members / seat-requests pages --- */
   .cm-invite-btn { background: radial-gradient(circle at 35% 30%, #6d28a8, #2a0a45 80%); border-color: #c9a6ff; }
   .cm-invite-btn svg { stroke: #fff; }
-  #scr-clubpage .cl-em, #scr-clubpage .cl-catbtn, #ov-clubcreate .cl-em, #ov-clubcreate .cl-catbtn {
-    border-color: rgba(216,178,255,.35); color: #e9defc; }
-  #scr-clubpage .cl-em.sel, #scr-clubpage .cl-catbtn.sel, #ov-clubcreate .cl-em.sel, #ov-clubcreate .cl-catbtn.sel {
-    border-color: #ffd75e; background: rgba(255,215,94,.14); color: #ffd75e; }
-  #scr-clubpage .cl-cov, #ov-clubcreate .cl-cov { border-color: rgba(216,178,255,.35); }
-  #scr-clubpage .cl-cov.sel, #ov-clubcreate .cl-cov.sel { border-color: #ffd75e; box-shadow: 0 0 0 1.5px #ffd75e; }
-  #scr-clubpage .cl-covgrid .cl-cov.up, #ov-clubcreate .cl-covgrid .cl-cov.up {
+  /* clubs v7: the pickers live in the profile-edit popup now */
+  #ov-clubedit .cl-cov { border-color: rgba(216,178,255,.35); }
+  #ov-clubedit .cl-cov.sel { border-color: #ffd75e; box-shadow: 0 0 0 1.5px #ffd75e; }
+  #ov-clubedit .cl-covgrid .cl-cov.up {
     border-color: rgba(255,215,94,.65); background: rgba(255,215,94,.07); color: #ffd75e; }
   /* --- the room: header bar + separate exit (the reference) --- */
-  .cl-roomtop { display: flex; align-items: flex-start; gap: 5px; direction: ltr; margin-bottom: 10px; }
+  /* align-items:center — the light exit square is vertically
+     CENTRED on the header bar (owner fix 2026-11-09: it sat too
+     high under flex-start); size and glyph unchanged */
+  .cl-roomtop { display: flex; align-items: center; gap: 5px; direction: ltr; margin-bottom: 10px; }
   #cl-room .cl-roomhead { flex: 1; min-width: 0; margin-bottom: 0; gap: 6px; background: rgba(10,2,20,.90);
     border: 1px solid rgba(255,255,255,.09); border-radius: 18px; padding: 9px 8px;
     box-shadow: 0 4px 14px rgba(0,0,0,.35); }
@@ -1679,6 +1686,82 @@
   .st-ig svg { width: 26px; height: 26px; stroke: #fff; stroke-width: 2; fill: none; display: block; }
   .st-ig:active { transform: scale(.94); }
   #ov-settings .ghost { color: #fff; border-color: rgba(255,255,255,.5); background: rgba(255,255,255,.08); }
+  /* --- club profile edit (clubs v7): the Ludo «پروفایل سمول»
+     card — magenta body, glossy red ✖ on the corner, the cover
+     large with its purple pencil, dark fields, country/language
+     pills, the category tray and the big green save.
+     Owner order 2026-11-09 (late): the popup reads SMALLER —
+     the card is ~86% of its old width and the internals are
+     tightened proportionally; the ✖ keeps its 54px. --- */
+  #ov-clubedit .panel { position: relative; border: 2px solid rgba(255,183,224,.4); border-radius: 22px; color: #fff;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
+    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
+    padding: 12px 13px 10px; text-align: center; max-height: 97dvh; overflow-y: auto; }
+  #ov-clubedit .panel h2 { color: #fff; font-size: 21px; margin: 0 0 5px; text-shadow: 0 2px 4px rgba(0,0,0,.45); }
+  /* the ✖ hangs on the card's top corner from a NON-clipping
+     wrapper: inside the scrolling panel (overflow-y:auto) its
+     overhang was sliced off — owner report 2026-11-09, the
+     corner ✖ rendered half-cut. The wrapper is the flex item;
+     the panel keeps its own internal scroll untouched. */
+  #ov-clubedit .ce-wrap { position: relative; width: 86%; max-width: 360px; }
+  .ce-x { position: absolute; top: -18px; right: -10px; width: 54px; height: 54px; margin: 0; padding: 0;
+    border-radius: 50%; cursor: pointer; z-index: 3;
+    background: radial-gradient(circle at 35% 27%, #ff9a86, #f03434 52%, #b30d0d 88%);
+    border: 2px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 3px rgba(255,255,255,.6), inset 0 -4px 7px rgba(90,0,0,.5), 0 4px 10px rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center; }
+  .ce-x svg { width: 25px; height: 25px; stroke: #fff; fill: none; stroke-width: 3.2; stroke-linecap: round;
+    filter: drop-shadow(0 1px 1px rgba(90,0,0,.6)); }
+  .ce-x:active { transform: scale(.92); }
+  .ce-covwrap { position: relative; width: 134px; height: 134px; margin: 3px auto 2px; }
+  .ce-cov { width: 100%; height: 100%; border-radius: 14px; overflow: hidden; border: 2.5px solid #e9c46a;
+    box-shadow: 0 6px 16px rgba(0,0,0,.45); background: #2a0a45; }
+  .ce-pencil { position: absolute; right: -12px; bottom: -10px; width: 40px; height: 40px; margin: 0; padding: 0;
+    border-radius: 50%; cursor: pointer; z-index: 2;
+    background: radial-gradient(circle at 32% 26%, #cda6f9, #7d30e8 58%, #5c17c4);
+    border: 2px solid rgba(255,255,255,.55);
+    box-shadow: 0 3px 8px rgba(0,0,0,.45), inset 0 2px 3px rgba(255,255,255,.45);
+    display: flex; align-items: center; justify-content: center; }
+  .ce-pencil svg { width: 17px; height: 17px; fill: #fff; display: block; }
+  .ce-pencil:active { transform: scale(.93); }
+  .ce-covwrap2 { margin-top: 11px; background: rgba(43,6,54,.55); border-radius: 14px; padding: 9px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,.35); }
+  .ce-lbl { display: block; font-size: 15px; font-weight: 700; color: #ffb1e3; margin: 8px 0 4px;
+    text-shadow: 0 1px 3px rgba(0,0,0,.45); }
+  #ov-clubedit input, #ov-clubedit textarea { width: 100%; box-sizing: border-box; font-family: inherit;
+    background: rgba(43,6,54,.55); color: #fff; border: 1.5px solid rgba(255,255,255,.22); border-radius: 13px;
+    padding: 10px 12px; font-size: 16px; box-shadow: inset 0 2px 9px rgba(0,0,0,.45); }
+  #ce-name { text-align: center; font-weight: 800; color: #ffe9a3; }
+  #ce-ann { text-align: start; resize: none; line-height: 1.55; }
+  .ce-split { display: flex; align-items: stretch; gap: 10px; margin-top: 2px; }
+  .ce-half { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ce-half .ce-lbl { margin-top: 8px; }
+  .ce-div { flex: 0 0 2px; background: rgba(255,255,255,.18); border-radius: 2px; margin: 36px 0 5px; }
+  .ce-pill { width: 100%; margin: 0; padding: 11px 8px; border-radius: 13px; cursor: pointer; font-family: inherit;
+    font-size: 16px; font-weight: 800; color: #fff;
+    background: linear-gradient(180deg, #b06bf7, #7d30e8 55%, #5c17c4);
+    border: 1.5px solid rgba(255,255,255,.45);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -3px 6px rgba(40,0,90,.45), 0 4px 10px rgba(20,2,50,.45);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ce-pill:active { transform: scale(.97); }
+  #ce-country { width: 100%; margin-top: 8px; padding: 10px; font-family: inherit; font-size: 15px;
+    background: rgba(20,4,30,.9); color: #fff; border: 1.5px solid rgba(255,255,255,.4); border-radius: 11px; }
+  .ce-tray { background: rgba(43,6,54,.55); border-radius: 14px; padding: 7px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,.35); }
+  #ov-clubedit .cl-catrow { display: flex; gap: 7px; }
+  #ov-clubedit .cl-catbtn { flex: 1; margin: 0; padding: 9px 2px; border-radius: 11px; cursor: pointer;
+    font-family: inherit; font-size: 15px; font-weight: 800; color: #ffd9f3;
+    background: linear-gradient(180deg, #8a2ea6, #571271); border: 1.5px solid rgba(255,255,255,.22);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 3px 7px rgba(30,2,30,.35); }
+  #ov-clubedit .cl-catbtn.sel { background: linear-gradient(180deg, #ff8ade, #f452b8 45%, #dd379b); color: #fff;
+    border-color: #ffc2e8; box-shadow: inset 0 1px 0 rgba(255,255,255,.6), inset 0 -3px 6px rgba(140,10,90,.35), 0 5px 12px rgba(221,55,155,.5); }
+  #btn-ce-save { margin: 9px auto 2px; padding: 10px 34px; border-radius: 14px; cursor: pointer; display: block;
+    font-family: inherit; font-size: 19px; font-weight: 900; color: #fff;
+    background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
+    border: 2px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -5px 9px rgba(10,80,0,.4), 0 7px 16px rgba(20,90,0,.5);
+    text-shadow: 0 1px 3px rgba(0,60,0,.5); }
+  #btn-ce-save:active { transform: scale(.96); }
   /* --- friends: wood sign + magenta tiles + lavender cards --- */
   #scr-friends { background-color: #6d0d3f;
     background-image:
@@ -2214,7 +2297,7 @@
   </div>
   <!-- ======== CLUB ROOM ======== -->
   <div id="cl-room" class="hidden">
-    <div class="fr-scroll">
+    <div class="cl-room-fixed">
       <div class="fr-inner">
         <div class="cl-roomtop">
           <div class="cl-roomhead">
@@ -2254,9 +2337,9 @@
           </div>
         </div>
         <h3 class="fr-sec" id="cl-chat-title"></h3>
-        <div id="cl-msgs"></div>
       </div>
     </div>
+    <div id="cl-msgs" class="cl-feed"></div>
     <div class="cl-inputbar">
       <button type="button" class="cl-roundbtn on" id="btn-cl-speaker" aria-label="speaker"><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path class="wv" d="M15 9.5a3.6 3.6 0 0 1 0 5M17.5 7a7 7 0 0 1 0 10"/></svg></button>
       <button type="button" class="cl-roundbtn" id="btn-cl-mic" aria-label="mic"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.2M9 20.5h6"/></svg></button>
@@ -2292,10 +2375,12 @@
   </nav>
 </section>
 
-<!-- ======== CLUB DETAILS PAGE (د کلب امادګي): the club settings
-     form as its own full screen — opened by tapping the club
-     cover thumbnail in the room header; back returns to the
-     club room exactly as it was. ======== -->
+<!-- ======== CLUB DETAILS PAGE (د کلب امادګي): READ-ONLY club
+     display as its own full screen (clubs v7 — the edit form
+     that lived here is deleted; managers edit via the profile
+     popup) — opened by tapping the club cover thumbnail in the
+     room header as a plain member; back returns to the club
+     room exactly as it was. ======== -->
 <section id="scr-clubpage" class="hidden">
   <div class="fr-scroll">
     <div class="fr-inner">
@@ -2312,28 +2397,10 @@
       <div class="cl-sub" id="cp-count"></div>
       <p class="cl-desc" id="cl-desc"></p>
       <div class="cl-sub" id="cl-created"></div>
-      <div id="cl-edit-form">
-        <label class="pf-label" id="cl-edit-name-lbl" for="cl-edit-name"></label>
-        <input id="cl-edit-name" type="text" maxlength="24">
-        <span class="pf-label" id="cl-edit-emb-lbl"></span>
-        <div class="cl-emgrid" id="cl-edit-emgrid"></div>
-        <span class="pf-label" id="cl-edit-cov-lbl"></span>
-        <div class="cl-covgrid" id="cl-edit-covgrid"></div>
-        <label class="pf-label" id="cl-edit-country-lbl" for="cl-edit-country"></label>
-        <select id="cl-edit-country"></select>
-        <span class="pf-label" id="cl-edit-cat-lbl"></span>
-        <div class="cl-catrow" id="cl-edit-catrow"></div>
-        <label class="pf-label" id="cl-edit-desc-lbl" for="cl-edit-desc"></label>
-        <input id="cl-edit-desc" type="text" maxlength="120">
-        <div class="pf-btns" id="cp-save-row">
-          <button id="btn-cl-edit-save"></button>
-        </div>
-      </div>
-      <div class="pf-btns">
-        <button id="btn-cl-leave" class="ghost"></button>
-        <button id="btn-cl-dissolve" class="danger hidden"></button>
-      </div>
-      <p class="cl-note hidden" id="cl-leave-note"></p>
+      <!-- clubs v7: the settings/edit FORM is deleted — this
+           page is read-only display only. Editing lives in the
+           profile popup (#ov-clubedit); leaving / dissolving
+           lives on the room's exit button, as before. -->
     </div>
   </div>
   <nav class="hm-nav">
@@ -2475,6 +2542,49 @@
   </div>
 </div>
 
+<!-- ======== CLUB PROFILE EDIT (clubs v7, managers) ========
+     The Ludo «پروفایل سمول» card: opened by tapping the club's
+     profile image (room header thumb / clubpage hero) as a
+     manager. Cover + pencil (gallery/upload chooser in-flow),
+     name, announcement, country + language pills, the category
+     tray and the green save. One s-club-edit carries it all. -->
+<div class="overlay" id="ov-clubedit">
+ <div class="ce-wrap">
+  <div class="panel ce-panel">
+    <h2 id="ce-title"></h2>
+    <div class="ce-covwrap">
+      <div class="ce-cov" id="ce-cov"></div>
+      <button type="button" class="ce-pencil" id="btn-ce-covpick" aria-label="cover"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+    </div>
+    <div class="ce-covwrap2 hidden" id="ce-covgrid-wrap">
+      <div class="cl-covgrid" id="ce-covgrid"></div>
+    </div>
+    <label class="ce-lbl" id="ce-name-lbl" for="ce-name"></label>
+    <input id="ce-name" type="text" maxlength="24">
+    <label class="ce-lbl" id="ce-ann-lbl" for="ce-ann"></label>
+    <textarea id="ce-ann" maxlength="200" rows="3"></textarea>
+    <div class="ce-split">
+      <div class="ce-half">
+        <span class="ce-lbl" id="ce-country-lbl"></span>
+        <button type="button" class="ce-pill" id="btn-ce-country"></button>
+        <select id="ce-country" class="hidden"></select>
+      </div>
+      <div class="ce-div"></div>
+      <div class="ce-half">
+        <span class="ce-lbl" id="ce-lang-lbl"></span>
+        <button type="button" class="ce-pill" id="btn-ce-lang"></button>
+      </div>
+    </div>
+    <span class="ce-lbl" id="ce-cat-lbl"></span>
+    <div class="ce-tray">
+      <div class="cl-catrow" id="ce-catrow"></div>
+    </div>
+    <button type="button" id="btn-ce-save"></button>
+  </div>
+  <button type="button" class="ce-x" id="btn-ce-close" aria-label="close"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+ </div>
+</div>
+
 <!-- the one hidden file picker behind every cover-upload tile -->
 <input type="file" id="cover-file" accept="image/*" class="hidden">
 
@@ -2532,29 +2642,6 @@
   <div class="pmpop-head"><span id="fm-av"></span><span class="inv-name" id="fm-name"></span></div>
   <button class="pmpop-row" id="btn-fm-unfriend"><span class="pmpop-ic">💔</span><span class="pmpop-lbl" id="fm-unfriend-lbl">دوستي لرې کول</span><span class="pmpop-ch">›</span></button>
   <button class="pmpop-row" id="btn-fm-block"><span class="pmpop-ic">🚫</span><span class="pmpop-lbl" id="fm-block-lbl">بلاک</span><span class="pmpop-ch">›</span></button>
-</div>
-
-<!-- ======== CREATE CLUB ======== -->
-<div class="overlay" id="ov-clubcreate">
-  <div class="panel pf-panel">
-    <h2 id="cc-title"></h2>
-    <label class="pf-label" id="cc-name-lbl" for="cc-name"></label>
-    <input id="cc-name" type="text" maxlength="24">
-    <span class="pf-label" id="cc-emb-lbl"></span>
-    <div class="cl-emgrid" id="cc-emgrid"></div>
-    <span class="pf-label" id="cc-cov-lbl"></span>
-    <div class="cl-covgrid" id="cc-covgrid"></div>
-    <label class="pf-label" id="cc-country-lbl" for="cc-country"></label>
-    <select id="cc-country"></select>
-    <span class="pf-label" id="cc-cat-lbl"></span>
-    <div class="cl-catrow" id="cc-catrow"></div>
-    <label class="pf-label" id="cc-desc-lbl" for="cc-desc"></label>
-    <input id="cc-desc" type="text" maxlength="120">
-    <div class="pf-btns">
-      <button id="btn-cc-create"></button>
-      <button id="btn-cc-cancel" class="ghost"></button>
-    </div>
-  </div>
 </div>
 
 <!-- ======== CLUB MEMBER MENU — anchored popover in the player
@@ -2840,7 +2927,7 @@ const STR = {
     errSocialGeneric: 'عملیات ونه شول',
     clCreate: 'کلب جوړول',
     clCreateTitle: 'نوی کلب جوړ کړه',
-    clNamePh: 'د کلب نوم — لکه د قندهار پاچاهان',
+    clNamePh: 'د کلب نوم — لکه د قندهار پاچاهان', clNameLbl: 'د کلب نوم',
     clDescPh: 'لنډ تعریف (اختیاري)',
     clEmblem: 'نښان',
     clHomeText: 'خپل کلب جوړ کړه یا یوه کلب ته ورګډ شه — له ملګرو سره ګپ ووهه او لوبې ته یې وبله.',
@@ -2915,7 +3002,8 @@ const STR = {
     clTabExplore: 'پلټنه', clTabHot: 'ګرم', clTabMine: 'زما',
     clTopClubs: 'غوره کلبونه', clGlobal: 'نړیوال', clMore: 'نور',
     clCover: 'پوښ وټاکئ', clCountry: 'هېواد', clCategory: 'ډول',
-    clCatSocial: 'ملګري', clCatGame: 'لوبه', clCatFamily: 'کورنۍ',
+    clCatSocial: 'ملګري', clCatGame: 'لوبه', clCatFamily: 'کورنۍ', clCatFun: 'خوند',
+    editClubProfile: 'پروفایل سمول', clubLang: 'ژبه', saveChanges: 'خوندي کول', clTopic: 'موضوع',
     clLevel: (n) => 'کچه ' + n,
 
     clEnterClub: 'کلب ته ننوتل', clMyClubTitle: 'زما کلب',
@@ -3118,7 +3206,7 @@ const STR = {
     errSocialGeneric: 'عملیات انجام نشد',
     clCreate: 'ساختن باشگاه',
     clCreateTitle: 'باشگاه جدید بساز',
-    clNamePh: 'نام باشگاه — مثلاً پادشاهان قندهار',
+    clNamePh: 'نام باشگاه — مثلاً پادشاهان قندهار', clNameLbl: 'نام باشگاه',
     clDescPh: 'توضیح کوتاه (اختیاری)',
     clEmblem: 'نشان',
     clHomeText: 'باشگاه خودت را بساز یا به یک باشگاه بپیوند — با دوستانت گپ بزن و به بازی دعوت‌شان کن.',
@@ -3193,7 +3281,8 @@ const STR = {
     clTabExplore: 'کاوش', clTabHot: 'داغ', clTabMine: 'من',
     clTopClubs: 'باشگاه‌های برتر', clGlobal: 'جهانی', clMore: 'بیشتر',
     clCover: 'پوشش را انتخاب کنید', clCountry: 'کشور', clCategory: 'دسته',
-    clCatSocial: 'دوستان', clCatGame: 'بازی', clCatFamily: 'خانواده',
+    clCatSocial: 'دوستان', clCatGame: 'بازی', clCatFamily: 'خانواده', clCatFun: 'سرگرمی',
+    editClubProfile: 'ویرایش پروفایل', clubLang: 'زبان', saveChanges: 'ذخیره کردن', clTopic: 'موضوع',
     clLevel: (n) => 'سطح ' + n,
 
     clEnterClub: 'ورود به باشگاه', clMyClubTitle: 'باشگاه من',
@@ -3396,7 +3485,7 @@ const STR = {
     errSocialGeneric: 'That did not work',
     clCreate: 'Create a Club',
     clCreateTitle: 'Create a new club',
-    clNamePh: 'Club name — e.g. Kandahar Kings',
+    clNamePh: 'Club name — e.g. Kandahar Kings', clNameLbl: 'Club name',
     clDescPh: 'Short description (optional)',
     clEmblem: 'Emblem',
     clHomeText: 'Create your own club or join one — chat with your clubmates and invite them to play.',
@@ -3471,7 +3560,8 @@ const STR = {
     clTabExplore: 'Explore', clTabHot: 'Hot', clTabMine: 'Mine',
     clTopClubs: 'Top Clubs', clGlobal: 'Global', clMore: 'More',
     clCover: 'Choose a cover', clCountry: 'Country', clCategory: 'Category',
-    clCatSocial: 'Social', clCatGame: 'Game', clCatFamily: 'Family',
+    clCatSocial: 'Social', clCatGame: 'Game', clCatFamily: 'Family', clCatFun: 'Fun',
+    editClubProfile: 'Edit Profile', clubLang: 'Language', saveChanges: 'Save', clTopic: 'Topic',
     clLevel: (n) => 'Level ' + n,
 
     clEnterClub: 'Enter club', clMyClubTitle: 'My club',
@@ -7395,17 +7485,9 @@ function onSocialMsg(m) {
       }
       // friends who became members are no longer "invited-pending"
       clubData.club.members.forEach((mm) => clubInvitedSent.delete(mm.id));
-      // a cover photo staged in the create overlay uploads now
-      // that the club (and my ownership of it) exists
-      if (pendingClubCover && clubData.club.myRole === 'owner') {
-        const blob = pendingClubCover;
-        pendingClubCover = null;
-        uploadClubCover(blob);
-      }
     } else {
       clubMsgs = [];
       clubUnread = 0;
-      clEditCid = null;
       if (prevCid) { clRoomView = false; cv.leave(); }
     }
     clubInitDone = true;
@@ -8322,7 +8404,7 @@ function clCoverEl(cover, cid, v) {
   return d;
 }
 function clLevelOf(count) { return Math.min(5, 1 + Math.floor(Math.max(1, count || 0) / 10)); }
-function clCatLabel(cat) { return T(cat === 'game' ? 'clCatGame' : cat === 'family' ? 'clCatFamily' : 'clCatSocial'); }
+function clCatLabel(cat) { return T(cat === 'game' ? 'clCatGame' : cat === 'family' ? 'clCatFamily' : cat === 'fun' ? 'clCatFun' : 'clCatSocial'); }
 const CL_CHIP_COUNTRIES = ['افغانستان', 'پاکستان', 'هند', 'عربستان سعودی', 'آمریکا', 'بریتانیا'];
 const CL_CROWN = {
   0: '<svg class="cl-crown" viewBox="0 0 40 28"><path d="M3 24 L5 8 L14 16 L20 4 L26 16 L35 8 L37 24 Z" fill="#ffd75e" stroke="#a67c1a" stroke-width="1.6"/><circle cx="20" cy="20" r="2.4" fill="#d7263d"/><circle cx="33.5" cy="6.5" r="6.8" fill="#ffe98a" stroke="#a67c1a" stroke-width="1.2"/><text x="33.5" y="10" text-anchor="middle" font-size="9.5" font-weight="900" fill="#7a5410">1</text></svg>',
@@ -8373,19 +8455,13 @@ let clubUnread = 0;              // unread club chat while the page is away
 let clubInitDone = false;        // first s-club is the hello state (no join toast)
 let clubSearchResults = [];
 let clubSearched = false;
-let ccEmblem = 'trophy';         // create-overlay picks
-let ccCover = 'mountains';
-let ccCoverBlob = null;      // a staged gallery photo (resized blob) for the create submit
-let ccCoverURL = null;       // its object-URL preview in the picker
-let pendingClubCover = null; // staged blob waiting for the created club to exist
-let ccCategory = 'social';
-let clEditEmblem = 'trophy';     // settings picks
-let clEditCover = 'mountains';
-let clEditCategory = 'social';
-let clEditName = null;           // unsaved text edits survive
-let clEditDesc = null;           // re-renders (picking a cover
-let clEditCountry = null;        // re-renders the whole form)
-let clEditCid = null;            // club the settings form was filled for
+// clubs v7: the profile-edit popup's working picks (seeded
+// from the club on open; the create form and the settings-page
+// form that used to keep their own state are both deleted)
+let ceCover = 'mountains';
+let ceCategory = 'social';
+let ceLang = 'ps';
+let ceCountry = '';
 const clubInvitedSent = new Set(); // friends I club-invited this session (row state)
 // ---- discovery state ----
 let clTab = 'explore';           // explore | hot | mine
@@ -9025,12 +9101,12 @@ function renderClubMemberLists() {
   c.members.forEach((m) => memBox.appendChild(clubMemberRow(m)));
 }
 // ---------- club details page (د کلب امادګي) ----------
-// The club settings/details form as its OWN screen: opened by
-// tapping the cover thumbnail in the room header. The room is
-// only hidden, never torn down — mic seats, chat and the voice
-// mesh keep their state and the back button lands on them as
-// they were. The owner edits (the one s-club-edit path); every
-// other member sees the same page read-only.
+// The club details as its OWN screen, READ-ONLY (clubs v7):
+// a plain member lands here by tapping the cover thumbnail in
+// the room header (managers get the profile-edit popup
+// instead). The room is only hidden, never torn down — mic
+// seats, chat and the voice mesh keep their state and the
+// back button lands on them as they were.
 function openClubPage() {
   if (!roomClub()) return;
   closeClubMenu();
@@ -9049,6 +9125,9 @@ function closeClubPage() {
   }
 }
 function renderClubPage() {
+  // clubs v7: READ-ONLY display only — hero, name, ID, member
+  // count, created date, description. (The edit form that lived
+  // here is deleted; managers edit in the profile popup.)
   const c = roomClub();
   if (!c) return;
   const covBox = $('#cp-cov');
@@ -9062,53 +9141,78 @@ function renderClubPage() {
   const desc = $('#cl-desc');
   desc.textContent = c.desc || '';
   desc.style.display = c.desc ? '' : 'none';
-  const isOwner = c.myRole === 'owner';
-  $('#cp-save-row').classList.toggle('hidden', !isOwner);
-  $('#btn-cl-dissolve').classList.toggle('hidden', !isOwner);
-  $('#cl-leave-note').classList.toggle('hidden', !isOwner);
-  $('#scr-clubpage').classList.toggle('ro', !isOwner);
-  const nameInp = $('#cl-edit-name'), descInp = $('#cl-edit-desc');
-  const countrySel = $('#cl-edit-country');
-  nameInp.disabled = !isOwner;
-  descInp.disabled = !isOwner;
-  countrySel.disabled = !isOwner;
-  if (isOwner) {
-    if (clEditCid !== c.cid) {
-      clEditCid = c.cid;
-      clEditEmblem = c.emblem;
-      clEditCover = c.cover || 'mountains';
-      clEditCategory = c.category || 'social';
-      clEditName = null; clEditDesc = null; clEditCountry = null;
-      nameInp.value = c.name || '';
-      descInp.value = c.desc || '';
-      fillCountrySelect(countrySel, c.country || '');
-    } else {
-      nameInp.value = clEditName != null ? clEditName : (c.name || '');
-      descInp.value = clEditDesc != null ? clEditDesc : (c.desc || '');
-      fillCountrySelect(countrySel, clEditCountry != null ? clEditCountry : (c.country || ''));
-    }
-    buildEmblemGrid($('#cl-edit-emgrid'), clEditEmblem, (e) => { clEditEmblem = e; renderClubPage(); });
-    buildCoverGrid($('#cl-edit-covgrid'), clEditCover, (cvv) => { clEditCover = cvv; renderClubPage(); }, {
-      customURL: (c.cover === 'custom' || clEditCover === 'custom') ? coverURL('custom', c.cid, c.coverV) : null,
-      upload: true,
-      onUpload: () => pickCoverFile(async (file) => {
-        const blob = await coverFileToBlob(file);
-        if (blob && await uploadClubCover(blob)) clEditCover = 'custom';
-      }),
-    });
-    buildCatRow($('#cl-edit-catrow'), clEditCategory, (cat) => { clEditCategory = cat; renderClubPage(); });
-  } else {
-    // read-only mirror of the club's own values (pickers locked
-    // by the .ro class; the save row is hidden above)
-    if (document.activeElement !== nameInp) nameInp.value = c.name || '';
-    if (document.activeElement !== descInp) descInp.value = c.desc || '';
-    fillCountrySelect(countrySel, c.country || '');
-    buildEmblemGrid($('#cl-edit-emgrid'), c.emblem, () => {});
-    buildCoverGrid($('#cl-edit-covgrid'), c.cover || 'mountains', () => {}, {
-      customURL: c.cover === 'custom' ? coverURL('custom', c.cid, c.coverV) : null,
-    });
-    buildCatRow($('#cl-edit-catrow'), c.category || 'social', () => {});
-  }
+}
+// ---------- club profile edit popup (پروفایل سمول) ----------
+// Clubs v7 (owner order 2026-11-09, his Ludo reference): the
+// managers' editor is this magenta card — opened by tapping the
+// club's profile image. Everything saves in ONE s-club-edit
+// (name / cover / country / category / lang / announcement);
+// the server fans the new state out and the room + discovery
+// repaint from the push. A plain member never sees it: his
+// image tap opens the read-only details page instead.
+const CE_LANGS = ['ps', 'fa', 'en'];
+const CE_LANG_NAMES = { ps: 'پښتو', fa: 'دری', en: 'English' };
+function clubIsManager(c) { return !!c && (c.myRole === 'owner' || c.myRole === 'deputy'); }
+function openClubEdit() {
+  const c = roomClub();
+  if (!clubIsManager(c)) return;
+  closeClubMenu();
+  ceCover = c.cover || 'mountains';
+  ceCategory = c.category || 'social';
+  ceLang = CE_LANGS.includes(c.lang) ? c.lang : 'ps';
+  ceCountry = c.country || '';
+  $('#ce-name').value = c.name || '';
+  $('#ce-ann').value = c.announcement || '';
+  $('#ce-covgrid-wrap').classList.add('hidden');
+  $('#ce-country').classList.add('hidden');
+  fillCountrySelect($('#ce-country'), ceCountry);
+  paintClubEdit();
+  $('#ov-clubedit').classList.add('show');
+}
+function closeClubEdit() {
+  $('#ov-clubedit').classList.remove('show');
+}
+function paintClubEdit() {
+  const c = roomClub();
+  if (!c) return;
+  $('#ce-title').textContent = T('editClubProfile');
+  $('#ce-name-lbl').textContent = T('clNameLbl');
+  $('#ce-ann-lbl').textContent = T('clAnnounce');
+  $('#ce-country-lbl').textContent = T('clCountry');
+  $('#ce-lang-lbl').textContent = T('clubLang');
+  $('#ce-cat-lbl').textContent = T('clTopic');
+  $('#btn-ce-save').textContent = T('saveChanges');
+  // the cover preview follows the WORKING pick; a custom cover
+  // reads through the versioned host URL like everywhere else
+  const covBox = $('#ce-cov');
+  covBox.innerHTML = '';
+  covBox.appendChild(clCoverEl(ceCover, c.cid, c.coverV));
+  // country pill: flag + display name ('—' while unset)
+  $('#btn-ce-country').textContent = ceCountry
+    ? ((countryFlag(ceCountry) ? countryFlag(ceCountry) + ' ' : '') + dispCountry(ceCountry))
+    : '—';
+  $('#btn-ce-lang').textContent = CE_LANG_NAMES[ceLang] || ceLang;
+  buildCatRow($('#ce-catrow'), ceCategory, (cat) => { ceCategory = cat; paintClubEdit(); });
+  buildCoverGrid($('#ce-covgrid'), ceCover, (cvv) => { ceCover = cvv; paintClubEdit(); }, {
+    customURL: (c.cover === 'custom' || ceCover === 'custom') ? coverURL('custom', c.cid, c.coverV) : null,
+    upload: true,
+    onUpload: () => pickCoverFile(async (file) => {
+      const blob = await coverFileToBlob(file);
+      // The upload endpoint flips the record itself; the push
+      // that follows re-syncs the popup's cover (renderClubs).
+      if (blob) await uploadClubCover(blob);
+    }),
+  });
+}
+// A state push while the popup is open: an uploaded photo flips
+// the club cover to 'custom' server-side — the working pick and
+// the preview follow it. Typed text is never clobbered.
+function syncClubEditFromPush() {
+  if (!$('#ov-clubedit').classList.contains('show')) return;
+  const c = roomClub();
+  if (!clubIsManager(c)) { closeClubEdit(); return; }
+  if (c.cover === 'custom' && ceCover !== 'custom') ceCover = 'custom';
+  paintClubEdit();
 }
 // ---------- club members page (غړي) ----------
 // Its own screen: the managers' join-requests card and the
@@ -9202,33 +9306,14 @@ function renderClubs() {
   $('#ci-title').textContent = T('clInviteFriends');
   $('#cp-id-lbl').textContent = T('frIdLabel');
   $('#cl-seats-hint').textContent = T('clSeatsHint');
-  $('#btn-cl-edit-save').textContent = T('clSave');
   $('#btn-cl-seatreq-cancel').textContent = T('clCancel');
   $('#cl-ann-lbl').textContent = T('clAnnounce');
   $('#ca-title').textContent = T('clAnnounce');
   $('#ca-inp').placeholder = T('clAnnouncePh');
   $('#btn-ca-save').textContent = T('clSave');
   $('#btn-ca-cancel').textContent = T('clCancel');
-  $('#btn-cl-leave').textContent = T('clLeave');
-  $('#btn-cl-dissolve').textContent = T('clDissolve');
-  $('#cl-leave-note').textContent = T('clLeaveOwnerNote');
-  $('#cc-title').textContent = T('clCreateTitle');
-  $('#cc-name-lbl').textContent = T('navClubs');
-  $('#cc-name').placeholder = T('clNamePh');
-  $('#cc-emb-lbl').textContent = T('clEmblem');
-  $('#cc-cov-lbl').textContent = T('clCover');
-  $('#cc-country-lbl').textContent = T('clCountry');
-  $('#cc-cat-lbl').textContent = T('clCategory');
-  $('#cc-desc-lbl').textContent = T('clDescPh');
-  $('#cc-desc').placeholder = T('clDescPh');
-  $('#btn-cc-create').textContent = T('clCreate');
-  $('#btn-cc-cancel').textContent = T('clCancel');
-  $('#cl-edit-name-lbl').textContent = T('navClubs');
-  $('#cl-edit-emb-lbl').textContent = T('clEmblem');
-  $('#cl-edit-cov-lbl').textContent = T('clCover');
-  $('#cl-edit-country-lbl').textContent = T('clCountry');
-  $('#cl-edit-cat-lbl').textContent = T('clCategory');
-  $('#cl-edit-desc-lbl').textContent = T('clDescPh');
+  // (clubs v7: the create form and the clubpage edit form are
+  // deleted — no labels remain to paint for them.)
   // The club sub-pages (details / members) are the visible
   // screen while the clubs screen itself is hidden — they
   // re-render from this same state push, and close themselves
@@ -9249,6 +9334,10 @@ function renderClubs() {
     if (rc0 && rc0.myRole === 'owner') renderSeatReqsPage();
     else closeClubSeatReqs();
   }
+  // clubs v7: an open profile-edit popup rides the same push —
+  // it closes if the club vanished or the role dropped, and an
+  // uploaded photo flips its working cover to 'custom'
+  if ($('#ov-clubedit').classList.contains('show')) syncClubEditFromPush();
   if ($('#ov-clubinvite').classList.contains('show')) renderClubInvitePopup();
   if ($('#scr-clubs').classList.contains('hidden')) return;
   const inRoom = !!(roomClub() && clRoomView);
@@ -9391,7 +9480,9 @@ async function uploadClubCover(blob) {
 function buildCatRow(box, current, onPick) {
   if (!box) return;
   box.innerHTML = '';
-  ['social', 'game', 'family'].forEach((cat) => {
+  // DOM order chosen so the RTL tray reads لوبه ، کورنۍ ، خوند ،
+  // ملګري — the reference popup's order (clubs v7 adds 'fun')
+  ['game', 'family', 'fun', 'social'].forEach((cat) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'cl-catbtn' + (cat === current ? ' sel' : '');
@@ -9469,7 +9560,13 @@ $('#btn-cl-exit').onclick = (e) => {
 $('#btn-cl-add').onclick = () => openClubMembers();
 $('#cl-countpill').onclick = () => openClubMembers();
 // club details page: entry (cover tap), back, ID copy, nav
-$('#cl-room-cov').onclick = () => openClubPage();
+$('#cl-room-cov').onclick = () => {
+  // clubs v7: managers get the profile-edit popup; a plain
+  // member gets the read-only details page
+  if (clubIsManager(roomClub())) openClubEdit();
+  else openClubPage();
+};
+$('#cp-cov').onclick = () => { if (clubIsManager(roomClub())) openClubEdit(); };
 $('#btn-cp-back').onclick = () => closeClubPage();
 $('#cp-id-num').onclick = copyClubId;
 $('#cpnav-friends').onclick = () => openFriends();
@@ -9529,73 +9626,45 @@ function doClubSearch() {
 }
 $('#btn-cl-search').onclick = doClubSearch;
 $('#cl-search-inp').addEventListener('keydown', (e) => { if (e.key === 'Enter') doClubSearch(); });
-// create overlay
-function paintCcCoverGrid() {
-  buildCoverGrid($('#cc-covgrid'), ccCover, function pickC(cvv) {
-    ccCover = cvv;
-    if (cvv !== 'custom') { ccCoverBlob = null; if (ccCoverURL) { URL.revokeObjectURL(ccCoverURL); ccCoverURL = null; } }
-    paintCcCoverGrid();
-  }, {
-    customURL: ccCoverURL,
-    upload: true,
-    onUpload: () => pickCoverFile(async (file) => {
-      const blob = await coverFileToBlob(file);
-      if (!blob) return;
-      ccCoverBlob = blob;
-      if (ccCoverURL) URL.revokeObjectURL(ccCoverURL);
-      ccCoverURL = URL.createObjectURL(blob);
-      ccCover = 'custom';
-      paintCcCoverGrid();
-    }),
-  });
-}
+// create — clubs v7: ONE TAP, no form. The club is born with
+// the player's own profile name (verbatim), a RANDOM gallery
+// cover and badge, the 'social' category, his profile country
+// and his current UI language; everything is editable
+// afterwards in the club profile popup. The server still
+// enforces one-club-per-player (its error toasts as before),
+// and a missing name falls back to his directory name there.
 $('#btn-cl-create').onclick = () => {
-  ccEmblem = 'trophy';
-  ccCover = 'mountains';
-  ccCoverBlob = null;
-  if (ccCoverURL) { URL.revokeObjectURL(ccCoverURL); ccCoverURL = null; }
-  ccCategory = 'social';
-  $('#cc-name').value = '';
-  $('#cc-desc').value = '';
-  buildEmblemGrid($('#cc-emgrid'), ccEmblem, function pick(e) { ccEmblem = e; buildEmblemGrid($('#cc-emgrid'), ccEmblem, pick); });
-  paintCcCoverGrid();
-  buildCatRow($('#cc-catrow'), ccCategory, function pickK(cat) { ccCategory = cat; buildCatRow($('#cc-catrow'), ccCategory, pickK); });
-  fillCountrySelect($('#cc-country'), (profile && profile.country) || '');
-  renderClubs();
-  $('#ov-clubcreate').classList.add('show');
+  connectSocial();
+  socialSend({
+    type: 's-club-create',
+    name: (profile && profile.name) || '',
+    emblem: CLUB_EMBLEM_IDS[Math.floor(Math.random() * CLUB_EMBLEM_IDS.length)],
+    cover: CLUB_COVER_IDS[Math.floor(Math.random() * CLUB_COVER_IDS.length)],
+    category: 'social',
+    country: (profile && profile.country) || '',
+    lang: LANG,
+  });
 };
-$('#btn-cc-cancel').onclick = () => $('#ov-clubcreate').classList.remove('show');
-$('#ov-clubcreate').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
-$('#btn-cc-create').onclick = () => {
-  const name = $('#cc-name').value.trim();
+// ---------- club profile popup wiring (clubs v7) ----------
+$('#btn-ce-close').onclick = () => closeClubEdit();
+$('#ov-clubedit').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeClubEdit(); });
+$('#btn-ce-covpick').onclick = () => $('#ce-covgrid-wrap').classList.toggle('hidden');
+$('#btn-ce-country').onclick = () => $('#ce-country').classList.toggle('hidden');
+$('#ce-country').addEventListener('change', (e) => {
+  ceCountry = e.target.value || '';
+  e.target.classList.add('hidden');
+  paintClubEdit();
+});
+$('#btn-ce-lang').onclick = () => {
+  ceLang = CE_LANGS[(CE_LANGS.indexOf(ceLang) + 1) % CE_LANGS.length];
+  paintClubEdit();
+};
+$('#btn-ce-save').onclick = () => {
+  const name = $('#ce-name').value.trim();
   if (name.length < 2) { toast(T('errClubBadName')); return; }
-  // A staged photo uploads AFTER the club exists (the endpoint
-  // keys the blob by the caller's own club): create with a
-  // gallery cover first, then swap it for the photo.
-  const staged = (ccCover === 'custom' && ccCoverBlob) ? ccCoverBlob : null;
-  socialSend({ type: 's-club-create', name, emblem: ccEmblem, desc: $('#cc-desc').value.trim(), cover: staged ? 'mountains' : ccCover, country: $('#cc-country').value, category: ccCategory });
-  if (staged) pendingClubCover = staged;
-  ccCoverBlob = null;
-  if (ccCoverURL) { URL.revokeObjectURL(ccCoverURL); ccCoverURL = null; }
-  $('#ov-clubcreate').classList.remove('show');
-};
-$('#cl-edit-name').addEventListener('input', (e) => { clEditName = e.target.value; });
-$('#cl-edit-desc').addEventListener('input', (e) => { clEditDesc = e.target.value; });
-$('#cl-edit-country').addEventListener('change', (e) => { clEditCountry = e.target.value; });
-$('#btn-cl-edit-save').onclick = () => {
-  socialSend({ type: 's-club-edit', name: $('#cl-edit-name').value.trim(), emblem: clEditEmblem, desc: $('#cl-edit-desc').value.trim(), cover: clEditCover, country: $('#cl-edit-country').value, category: clEditCategory });
-  toast(T('clSave'));
-};
-$('#btn-cl-leave').onclick = () => {
-  if (!clubData || !clubData.club) return;
-  // Every role can leave now: the founder's leave auto-transfers
-  // ownership (the note above the button explains it).
-  askConfirm(T('clConfirmLeaveT'), T('clConfirmLeaveB'), T('frConfirmYes'),
-    () => socialSend({ type: 's-club-leave' }));
-};
-$('#btn-cl-dissolve').onclick = () => {
-  askConfirm(T('clConfirmDissolveT'), T('clConfirmDissolveB'), T('frConfirmYes'),
-    () => socialSend({ type: 's-club-dissolve' }));
+  socialSend({ type: 's-club-edit', name, cover: ceCover, country: ceCountry, category: ceCategory, lang: ceLang, announcement: $('#ce-ann').value });
+  closeClubEdit();
+  toast(T('saveChanges'));
 };
 // club chat composer
 function sendClubChat() {
