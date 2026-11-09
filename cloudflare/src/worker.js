@@ -50,13 +50,16 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261109-roomclean';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261109-roomcache';
 const STICKER_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/stickers/';
 const COVER_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/covers/';
 const CLIENT_MIN_BYTES = 3_000_000; // the real bundle is ~3.1 MB
-const CLIENT_CACHE_TTL = 86400; // seconds the edge keeps the client copy
+const CLIENT_CACHE_TTL = 86400; // seconds the EDGE keeps the client copy —
+// the browser never gets this TTL: serveClient hands the browser
+// `Cache-Control: no-cache` so it revalidates `/` on every load and
+// picks up a new build immediately (the edge copy makes that cheap).
 
 function updatingPage(note) {
   return `<!doctype html>
@@ -118,7 +121,21 @@ async function serveClient(env) {
   try {
     cache = caches.default;
     const hit = await cache.match(cacheKey);
-    if (hit) return hit;
+    if (hit) {
+      // Re-head the edge copy for the browser: same body/status and
+      // Content-Type, but `Cache-Control: no-cache` — the browser must
+      // revalidate `/` on every load, so a freshly deployed build is
+      // picked up at once instead of being served from the browser's
+      // own day-long cache. (The ?v= in the source URL only ever
+      // busted THIS edge copy, never the browser's.)
+      const headers = new Headers(hit.headers);
+      headers.set('Cache-Control', 'no-cache');
+      return new Response(hit.body, {
+        status: hit.status,
+        statusText: hit.statusText,
+        headers,
+      });
+    }
   } catch { cache = null; }
 
   let note = '';
@@ -129,14 +146,22 @@ async function serveClient(env) {
       const buf = await res.arrayBuffer();
       const tail = new TextDecoder().decode(buf.slice(-64)).trim();
       if (buf.byteLength > CLIENT_MIN_BYTES && tail.endsWith('</html>')) {
-        const page = new Response(buf, {
+        // The copy stored in the edge cache keeps the long TTL (fast,
+        // cheap upstream fetches)…
+        const edgePage = new Response(buf, {
           headers: {
             'Content-Type': 'text/html; charset=utf-8',
             'Cache-Control': 'public, max-age=' + CLIENT_CACHE_TTL,
           },
         });
-        if (cache) { try { await cache.put(cacheKey, page.clone()); } catch { /* serve anyway */ } }
-        return page;
+        if (cache) { try { await cache.put(cacheKey, edgePage); } catch { /* serve anyway */ } }
+        // …but the response handed to the browser revalidates always.
+        return new Response(buf, {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-cache',
+          },
+        });
       }
       note += ' — فایل ناقص بود (' + buf.byteLength + ' بایت)';
     }
