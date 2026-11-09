@@ -155,6 +155,8 @@ class Round {
     this.wonTricks = [0, 0, 0, 0];         // won-trick pile size per seat
     this.takanCount = [0, 0];              // تکان events per team this round
     this.takanBy = [[], []];               // seats that gave each تکان, per team
+    this.takanSuits = [[], [], [], []];    // suits each SEAT has takan'd this round (BOT NO-REPEAT LAW reads this)
+    this.botSeats = [false, false, false, false]; // seats held by bots (hosts set this; Match copies its own in startRound) — a BOT seat's repeat takan of a suit creates no claim
     this.declared13 = false;               // leader declared «13» for the current trick
     this.finished = false;
     this.result = null;                    // see finish()
@@ -214,13 +216,28 @@ class Round {
       const declared = this.declared13;
       this.declared13 = false; // the flag belongs to this one lead only
       if (!declared && this.othersVoidIn(suitOf(card), seat)) {
-        const team = teamOf(seat);
-        this.takanCount[team]++;
-        this.takanBy[team].push(seat);
-        this.emit({
-          type: 'takan', seat, team, card,
-          count: this.takanCount[team],
-        });
+        const suit = suitOf(card);
+        // Per-seat takan history (BOT NO-REPEAT LAW, owner order
+        // 2026-11-09: «فقط دفعهٔ اول تکان حساب می‌شود»): every takan
+        // lead is remembered per seat+suit. For a BOT seat only the
+        // FIRST takan of a suit ever counts — a repeat lead of the
+        // same suit by the same bot creates NO claim (suppressed
+        // silently here; the partner's first lead of the same suit is
+        // the partner's own first and still counts). Human seats are
+        // untouched: every human takan counts, exactly as before.
+        if (!this.takanSuits) this.takanSuits = [[], [], [], []]; // revived legacy state
+        const repeat = this.takanSuits[seat].includes(suit);
+        if (!repeat) this.takanSuits[seat].push(suit);
+        const suppressed = repeat && !!(this.botSeats && this.botSeats[seat]);
+        if (!suppressed) {
+          const team = teamOf(seat);
+          this.takanCount[team]++;
+          this.takanBy[team].push(seat);
+          this.emit({
+            type: 'takan', seat, team, card,
+            count: this.takanCount[team],
+          });
+        }
       }
     }
 
@@ -279,6 +296,7 @@ class Match {
     this.rng = rng;
     this.bankedTawan = [0, 0];   // match-long tawan bank: each round's final tawan banks by the ten-bands (see bankAmount)
     this.pendingTakan = [0, 0];  // تکان معلق: pending claims per team — each claim takes TAKAN_CLAIM_AMOUNT from the OTHER team's bank once it reaches TAKAN_CLAIM_MIN_BANK
+    this.botSeats = [false, false, false, false]; // seats held by bots — hosts set this; copied into every new Round (BOT NO-REPEAT LAW)
     this.roundNo = 0;
     this.history = [];   // per-round: {roundNo, cardTawan, takanCount, takanBy, tawan, banked, qsTieBoost, takanCancelled, claimsCreated, claimsExecuted, pendingTakan, bankedTawan, qsTeam}
     this.finished = false;
@@ -298,6 +316,7 @@ class Match {
       this.emit(evt);
       if (evt.type === 'roundFinished') this.onRoundFinished(round);
     }, this.rng);
+    round.botSeats = this.botSeats.slice();
     this.round = round;
     return round;
   }
