@@ -51,7 +51,6 @@ function createNodeSocial(opts) {
       return opts.verifyBusy ? opts.verifyBusy(id) : undefined;
     },
     inviteCooldownMs: (typeof opts.inviteCooldownMs === 'number') ? opts.inviteCooldownMs : undefined,
-    seatReqTimeoutMs: (typeof opts.seatReqTimeoutMs === 'number') ? opts.seatReqTimeoutMs : undefined,
   });
 
   function handleConnection(ws) {
