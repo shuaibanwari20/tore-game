@@ -27,7 +27,13 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.svg': 'image/svg+xml', '.webp': 'image/webp' };
 
 const httpServer = http.createServer((req, res) => {
-  let file = req.url === '/' ? 'index.html' : req.url.split('?')[0].replace(/^\/+/, '');
+  const pathOnly = req.url.split('?')[0];
+  // Uploaded club covers ride their own routes (handlers below):
+  // POST /club-cover is the club owner's photo upload; GET
+  // /club-cover/<cid> serves that club's photo publicly.
+  if (pathOnly === '/club-cover' && req.method === 'POST') return handleCoverUpload(req, res);
+  if (pathOnly.startsWith('/club-cover/') && req.method === 'GET') return handleCoverGet(req, res, pathOnly.slice('/club-cover/'.length));
+  let file = req.url === '/' ? 'index.html' : pathOnly.replace(/^\/+/, '');
   const full = path.join(PUBLIC_DIR, file);
   if (!full.startsWith(PUBLIC_DIR) || !fs.existsSync(full) || fs.statSync(full).isDirectory()) {
     res.writeHead(404); return res.end('not found');
@@ -146,7 +152,60 @@ const social = createNodeSocial({
   inGameCheck: sidInGame,
   inLobbyCheck: sidInLobby,
   verifyBusy: verifyBusySid,
+  seatReqTimeoutMs: Number(process.env.TORE_SEAT_REQ_MS) || undefined,
 });
+
+// ------------------------------------------------ uploaded club covers
+// POST /club-cover — a club owner uploads his club's cover photo.
+// Node hosts have no sign-in: identity is the same persistent
+// player id the /social hello uses, sent as the x-tore-pid header
+// (the production Worker instead derives it from the verified
+// session cookie and never trusts this header). The image never
+// rides the social socket (message caps) — it lands in the social
+// layer's cover store and the club record flips to 'custom'.
+// Hard rules: owner-only, image/jpeg|png|webp, at most 250 KB.
+const COVER_MAX_BYTES = 250 * 1024;
+const COVER_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+function coverJson(res, status, obj) {
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify(obj));
+}
+function handleCoverUpload(req, res) {
+  const pid = req.headers['x-tore-pid'];
+  if (typeof pid !== 'string' || !/^[A-Za-z0-9_-]{6,64}$/.test(pid)) return coverJson(res, 401, { error: 'unauthorized' });
+  const type = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+  if (!COVER_TYPES.includes(type)) return coverJson(res, 415, { error: 'coverBadType' });
+  const chunks = [];
+  let size = 0;
+  let tooBig = false;
+  req.on('data', (ch) => {
+    size += ch.length;
+    if (size > COVER_MAX_BYTES) { tooBig = true; return; }
+    chunks.push(ch);
+  });
+  req.on('end', () => {
+    if (tooBig) return coverJson(res, 413, { error: 'coverTooBig' });
+    const buf = Buffer.concat(chunks);
+    if (!buf.length) return coverJson(res, 400, { error: 'coverEmpty' });
+    const out = social.uploadCover('p:' + pid, type, buf);
+    if (!out) return coverJson(res, 403, { error: 'clubNoPerm' });
+    return coverJson(res, 200, { ok: true, cid: out.cid, v: out.v });
+  });
+  req.on('error', () => { try { res.writeHead(400); res.end(); } catch (e) { /* gone */ } });
+}
+function handleCoverGet(req, res, cid) {
+  if (!/^\d{6}$/.test(cid)) { res.writeHead(404); return res.end('not found'); }
+  const entry = social.getCover(cid);
+  if (!entry) { res.writeHead(404); return res.end('not found'); }
+  // The ?v=<coverV> query is the cache key: a new upload bumps it,
+  // so a year-long immutable cache is safe.
+  res.writeHead(200, {
+    'Content-Type': entry.type,
+    'Content-Length': entry.buf.length,
+    'Cache-Control': 'public, max-age=31536000, immutable',
+  });
+  res.end(entry.buf);
+}
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 function newCode() {
