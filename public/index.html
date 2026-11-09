@@ -565,7 +565,7 @@
      behind a dark emerald veil, its own scroll. Opened from the
      bottom nav (and from the lobby's friends button); it floats
      above home/lobby/table without disturbing the game screens. */
-  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers {
+  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs {
     position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 30;
     overflow-x: hidden;
     /* The home screen's dark emerald veil, without the carpet photo:
@@ -586,9 +586,9 @@
   #scr-friends { display: flex; flex-direction: column; overflow-y: hidden; }
   /* Chat + profile pages (owner order 2026-11-08): same family as the
      friends screen — scrolling content, bottom nav pinned at the foot. */
-  #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers { display: flex; flex-direction: column; overflow-y: hidden; }
+  #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs { display: flex; flex-direction: column; overflow-y: hidden; }
   .fr-scroll { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; width: 100%; }
-  #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav, #scr-clubpage .hm-nav, #scr-clubmembers .hm-nav { margin: 0; flex: none; width: 100%;
+  #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav, #scr-clubpage .hm-nav, #scr-clubmembers .hm-nav, #scr-clubseatreqs .hm-nav { margin: 0; flex: none; width: 100%;
     padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
   /* chat list rows: the whole row is the tap target into the DM view */
   .ch-row { cursor: pointer; border-radius: 8px; }
@@ -771,9 +771,17 @@
     background: rgba(255,255,255,.06); border: 1.5px solid rgba(217,179,128,.55); border-radius: 999px;
     padding: 4px 14px; cursor: pointer; }
   .cl-seatreq button:active { transform: scale(.95); }
-  /* seat-request prompt (owner): who is asking */
-  .sr-who { display: flex; justify-content: center; margin: 2px 0 4px; }
-  #sr-msg { text-align: center; color: #f8ecd0; font-size: 15px; margin: 4px 0 10px; line-height: 1.7; }
+  /* member-count pill row: pill at one end, the owner's
+     seat-requests button (pending-count badge) at the other */
+  .cl-pillrow { display: flex; align-items: flex-start; justify-content: space-between; }
+  /* a seated player with his mic OFF keeps the seat — this small
+     badge on the seat circle is the only sign */
+  .cl-seat-mute { position: absolute; bottom: -3px; inset-inline-end: -3px; width: 19px; height: 19px;
+    border-radius: 50%; background: #8c2434; border: 1.5px solid #ffd7dd; z-index: 2;
+    display: flex; align-items: center; justify-content: center; }
+  .cl-seat-mute svg { width: 11px; height: 11px; stroke: #fff; fill: none; stroke-width: 2.4; stroke-linecap: round; }
+  /* seat-requests page: how long a row has been waiting */
+  .srq-wait { color: #ffd75e; font-weight: 800; }
   /* club member menu: the player menu's anchored card, rows built in JS */
   #scr-clubs input, #scr-clubpage input, #scr-clubmembers input {
     background: rgba(6, 24, 16, .88); color: #f8ecd0; border: 1px solid rgba(255, 215, 94, .55);
@@ -1682,7 +1690,10 @@
             <button type="button" class="cl-icobtn" id="btn-cl-exit" aria-label="exit"><svg viewBox="0 0 24 24"><path d="M14 4h5a1.5 1.5 0 0 1 1.5 1.5v13A1.5 1.5 0 0 1 19 20h-5M10 8l-4 4 4 4M6 12h11"/></svg></button>
           </div>
         </div>
-        <button type="button" class="cl-countpill" id="cl-countpill"><span class="cl-count-ic">👥</span><span id="cl-count"></span></button>
+        <div class="cl-pillrow">
+          <button type="button" class="cl-countpill" id="cl-countpill"><span class="cl-count-ic">👥</span><span id="cl-count"></span></button>
+          <button type="button" class="cl-icobtn hidden" id="btn-cl-seatreqs" aria-label="seat requests"><svg viewBox="0 0 24 24"><path d="M7 11V6a3 3 0 0 1 6 0v1"/><path d="M5 21v-6.5A2.5 2.5 0 0 1 7.5 12H13a2 2 0 0 1 2 2v7"/><path d="M3.5 21h17"/></svg><span class="cl-like-n hidden" id="cl-seatreqs-badge">0</span></button>
+        </div>
         <div class="cl-seats-wrap">
           <div class="cl-seats" id="cl-seats"></div>
           <p class="cl-seats-hint" id="cl-seats-hint"></p>
@@ -1860,6 +1871,49 @@
   </nav>
 </section>
 
+<!-- ======== CLUB SEAT REQUESTS PAGE (د څوکۍ غوښتنې) ========
+     The owner's waiting list: every member who asked for a mic
+     seat waits here — no popup, no timeout — until the founder
+     approves (تایید) or rejects (رد) the row, the requester
+     leaves, or the club ends. Opened from the chair button beside
+     the member-count pill in the club room (owner only). -->
+<section id="scr-clubseatreqs" class="hidden">
+  <div class="fr-scroll">
+    <div class="fr-inner">
+      <div class="cp-head">
+        <button class="fr-back" id="btn-srq-back">→</button>
+        <h2 id="srq-title"></h2>
+      </div>
+      <div id="cl-seatreqs-list"></div>
+    </div>
+  </div>
+  <nav class="hm-nav">
+    <button class="hm-navitem" id="srqnav-friends">
+      <span class="nav-badge hidden" id="srqnav-friends-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+      <span class="nl" id="srqnav-friends-lbl">ملګري</span>
+    </button>
+    <button class="hm-navitem home" id="srqnav-clubs">
+      <span class="nav-badge hidden" id="srqnav-clubs-badge">0</span>
+      <span class="bubble"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+      <span class="nl" id="srqnav-clubs-lbl">کلبونه</span>
+    </button>
+    <button class="hm-navitem" id="srqnav-home">
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+      <span class="nl" id="srqnav-home-lbl">کور</span>
+    </button>
+    <button class="hm-navitem" id="srqnav-profile">
+      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+      <span class="nl" id="srqnav-profile-lbl">پروفایل</span>
+    </button>
+    <button class="hm-navitem" id="srqnav-chat">
+      <span class="nav-badge hidden" id="srqnav-chat-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="nl" id="srqnav-chat-lbl">چت</span>
+    </button>
+  </nav>
+</section>
+
 <!-- ======== CLUB INVITE POPUP (from the members page) ========
      The manager's friends with their invite state; sending keeps
      the popup open so several friends can be invited in a row.
@@ -1868,22 +1922,6 @@
   <div class="panel ci-panel">
     <h2 id="ci-title"></h2>
     <div id="ci-list"></div>
-  </div>
-</div>
-
-<!-- ======== CLUB SEAT REQUEST PROMPT (the owner answers) ========
-     A member asked for a mic seat: the founder approves (تایید)
-     or rejects (رد). It stays until answered — no backdrop
-     dismiss, so a request is never lost by a stray tap. -->
-<div class="overlay" id="ov-seatreq">
-  <div class="panel ci-panel">
-    <h2 id="sr-title"></h2>
-    <div class="sr-who"><span id="sr-av"></span></div>
-    <p id="sr-msg"></p>
-    <div class="pf-btns">
-      <button type="button" id="btn-sr-yes"></button>
-      <button type="button" id="btn-sr-no" class="ghost"></button>
-    </div>
   </div>
 </div>
 
@@ -2296,11 +2334,16 @@ const STR = {
     clConfirmLeaveB: 'ته به نور د دې کلب غړی نه یې.',
     clConfirmTransferT: 'موسس بدلوې؟',
     clConfirmTransferB: (name) => name + ' به د کلب موسس شي او ته به معاون شې.',
-    clLeaveOwnerNote: 'موسس لومړی باید موسس بل معاون ته وسپاري یا کلب ړنګ کړي.',
+    clLeaveOwnerNote: 'که موسس له کلبه ووځي، موسسي لومړي معاون ته — که نه وي، تر ټولو پخواني غړي ته — سپارل کېږي او کلب په خپل ځای پاتې کېږي.',
     clExitTitle: 'له کلبه وځې؟',
     clExitBody: 'ته به نور د دې کلب غړی نه یې او په کلب کې به نه ښکارېې؛ بیا راتګ نوې غوښتنې یا بلنې ته اړتیا لري.',
     clExitYes: 'وتل',
     clSeatWaiting: 'په تمه…',
+    clSeatReqsTitle: 'د څوکۍ غوښتنې',
+    clSeatReqsEmpty: 'هېڅ غوښتنه په تمه نشته',
+    clSeatKickOut: 'له څوکۍ ایستل',
+    clSeatKickedOut: 'ته له څوکۍ وایستل شوې',
+    clLeaveMenu: 'له کلب ووځي',
     clSeatReqTitle: 'د څوکۍ غوښتنه',
     clSeatReqMsg: (n) => n + ' غواړي په څوکۍ خبرې وکړي',
     clSeatRejected: 'ستا د څوکۍ غوښتنه رد شوه',
@@ -2557,11 +2600,16 @@ const STR = {
     clConfirmLeaveB: 'دیگر عضو این باشگاه نخواهی بود.',
     clConfirmTransferT: 'بنیان‌گذار عوض شود؟',
     clConfirmTransferB: (name) => name + ' بنیان‌گذار باشگاه می‌شود و تو معاون می‌شوی.',
-    clLeaveOwnerNote: 'بنیان‌گذار اول باید بنیان‌گذاری را به یک معاون بسپارد یا باشگاه را منحل کند.',
+    clLeaveOwnerNote: 'اگر بنیان‌گذار از باشگاه برود، بنیان‌گذاری به قدیمی‌ترین معاون — و اگر نباشد، به قدیمی‌ترین عضو — می‌رسد و باشگاه سر جایش می‌ماند.',
     clExitTitle: 'از باشگاه خارج می‌شوی؟',
     clExitBody: 'دیگر عضو این باشگاه نخواهی بود و در باشگاه دیده نمی‌شوی؛ پیوستن دوباره به درخواست یا دعوت تازه نیاز دارد.',
     clExitYes: 'خروج',
     clSeatWaiting: 'در انتظار…',
+    clSeatReqsTitle: 'درخواست‌های صندلی',
+    clSeatReqsEmpty: 'درخواستی در انتظار نیست',
+    clSeatKickOut: 'خارج کردن',
+    clSeatKickedOut: 'از صندلی خارج شدی',
+    clLeaveMenu: 'خروج از کلب',
     clSeatReqTitle: 'درخواست صندلی',
     clSeatReqMsg: (n) => n + ' می‌خواهد روی صندلی صحبت کند',
     clSeatRejected: 'درخواست صندلی تو رد شد',
@@ -2818,11 +2866,16 @@ const STR = {
     clConfirmLeaveB: 'You will no longer be a member of this club.',
     clConfirmTransferT: 'Change the founder?',
     clConfirmTransferB: (name) => name + ' becomes the club founder and you become a deputy.',
-    clLeaveOwnerNote: 'The founder must first hand over to a deputy or dissolve the club.',
+    clLeaveOwnerNote: 'If the founder leaves, ownership passes to the longest-serving deputy — or member — and the club lives on.',
     clExitTitle: 'Leave this club?',
     clExitBody: 'You will no longer be a member and will not appear in this club; joining again needs a new request or invite.',
     clExitYes: 'Leave',
     clSeatWaiting: 'Waiting…',
+    clSeatReqsTitle: 'Seat requests',
+    clSeatReqsEmpty: 'No requests waiting',
+    clSeatKickOut: 'Remove from seat',
+    clSeatKickedOut: 'You were removed from the seat',
+    clLeaveMenu: 'Leave the club',
     clSeatReqTitle: 'Seat request',
     clSeatReqMsg: (n) => n + ' wants to talk in a seat',
     clSeatRejected: 'Your seat request was rejected',
@@ -2978,7 +3031,7 @@ function applyI18n() {
   document.title = T('docTitle');
   const ltr = LANG === 'en';
   ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-settings', 'ov-exit', 'ov-join',
-   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu']
+   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-clubseatreqs', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu']
     .forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.setAttribute('dir', ltr ? 'ltr' : 'rtl');
@@ -6655,7 +6708,7 @@ function onSocialMsg(m) {
       // v2: normalize the room's voice shape (seat persons → the
       // bare {seat,id} map the state pushes use from here on)
       if (Array.isArray(clubData.club.seats)) {
-        clubData.club.seatMap = clubData.club.seats.map((s) => ({ seat: s.seat, id: s.person && s.person.id })).filter((s) => s.id);
+        clubData.club.seatMap = clubData.club.seats.map((s) => ({ seat: s.seat, id: s.person && s.person.id, mic: s.mic !== false })).filter((s) => s.id);
         delete clubData.club.seats;
       }
       if (Array.isArray(clubData.club.voice)) clubData.club.voiceIds = clubData.club.voice;
@@ -6710,33 +6763,26 @@ function onSocialMsg(m) {
   } else if (m.type === 's-club-seat-req-state') {
     // My seat ask was answered / ended (the server's word is
     // final; the seat state push right behind an approval does
-    // the seating itself).
+    // the seating itself). There is no timeout: an ask waits in
+    // the owner's list until he answers or it is invalidated.
     if (m.pending) {
       cv.seatReq = { seat: m.seat, ts: Date.now() };
-      armSeatReqTimer();
     } else {
       const was = !!cv.seatReq;
       cv.seatReq = null;
-      if (seatReqTimer) { clearTimeout(seatReqTimer); seatReqTimer = null; }
       if (was && m.reason === 'rejected') toast(T('clSeatRejected'));
       else if (was && m.reason === 'approved') toast(T('clSeatApproved'));
       else if (was && m.reason === 'full') toast(T('errClubSeatsFull'));
       if (m.reason !== 'approved') cv.wantSeat = -1;
     }
     renderSeatReqBar();
-  } else if (m.type === 's-club-seat-req') {
-    // A member asks ME (the founder) for a seat: queue the
-    // prompt; it shows while I'm in the club room.
-    if (m.from) cachePerson(m.from);
-    seatReqQueue.push({ club: m.club, from: m.from, seat: m.seat });
-    showNextSeatReq();
-  } else if (m.type === 's-club-seat-req-gone') {
-    seatReqQueue = seatReqQueue.filter((r) => !r.from || r.from.id !== m.from);
-    if (seatReqCurrent && seatReqCurrent.from && seatReqCurrent.from.id === m.from) {
-      seatReqCurrent = null;
-      $('#ov-seatreq').classList.remove('show');
-      showNextSeatReq();
-    }
+  } else if (m.type === 's-club-seat-kicked') {
+    // A manager lifted me out of my mic seat (the room's seat
+    // state push behind it already freed the seat).
+    cv.wantSeat = -1;
+    cv.wantMic = false;
+    if (cv.micOn) cv.setMic(false);
+    toast(T('clSeatKickedOut'));
   } else if (m.type === 's-club-search-result') {
     clubSearchResults = m.results || [];
     clubSearched = true;
@@ -6837,11 +6883,11 @@ function updateFriendsBadge() {
   const req = socialData ? socialData.incoming.length : 0;
   let un = 0;
   dmUnread.forEach((c) => { un += c; });
-  ['#nav-friends-badge', '#frnav-friends-badge', '#chnav-friends-badge', '#pfnav-friends-badge', '#clnav-friends-badge', '#cpnav-friends-badge', '#cmnav-friends-badge'].forEach((sel) => {
+  ['#nav-friends-badge', '#frnav-friends-badge', '#chnav-friends-badge', '#pfnav-friends-badge', '#clnav-friends-badge', '#cpnav-friends-badge', '#cmnav-friends-badge', '#srqnav-friends-badge'].forEach((sel) => {
     const b = $(sel);
     if (b) { b.textContent = faNum(req); b.classList.toggle('hidden', req === 0); }
   });
-  ['#nav-chat-badge', '#frnav-chat-badge', '#chnav-chat-badge', '#pfnav-chat-badge', '#clnav-chat-badge', '#cpnav-chat-badge', '#cmnav-chat-badge'].forEach((sel) => {
+  ['#nav-chat-badge', '#frnav-chat-badge', '#chnav-chat-badge', '#pfnav-chat-badge', '#clnav-chat-badge', '#cpnav-chat-badge', '#cmnav-chat-badge', '#srqnav-chat-badge'].forEach((sel) => {
     const b = $(sel);
     if (b) { b.textContent = faNum(un); b.classList.toggle('hidden', un === 0); }
   });
@@ -7638,6 +7684,7 @@ function openClubs() {
   $('#scr-profile').classList.add('hidden');
   $('#scr-clubpage').classList.add('hidden');
   $('#scr-clubmembers').classList.add('hidden');
+  $('#scr-clubseatreqs').classList.add('hidden');
   $('#scr-clubs').classList.remove('hidden');
   clubUnread = 0;
   connectSocial();
@@ -7650,6 +7697,7 @@ function closeClubs() {
   cv.leave();
   $('#scr-clubpage').classList.add('hidden');
   $('#scr-clubmembers').classList.add('hidden');
+  $('#scr-clubseatreqs').classList.add('hidden');
   $('#scr-clubs').classList.add('hidden');
 }
 function updateClubsBadge() {
@@ -7658,7 +7706,7 @@ function updateClubsBadge() {
     if (!clubData.club) n += (clubData.invites || []).length;
     else if (clubData.club.requests) n += clubData.club.requests.length;
   }
-  ['#nav-clubs-badge', '#frnav-clubs-badge', '#chnav-clubs-badge', '#pfnav-clubs-badge', '#clnav-clubs-badge', '#cpnav-clubs-badge', '#cmnav-clubs-badge'].forEach((sel) => {
+  ['#nav-clubs-badge', '#frnav-clubs-badge', '#chnav-clubs-badge', '#pfnav-clubs-badge', '#clnav-clubs-badge', '#cpnav-clubs-badge', '#cmnav-clubs-badge', '#srqnav-clubs-badge'].forEach((sel) => {
     const b = $(sel);
     if (b) { b.textContent = faNum(n); b.classList.toggle('hidden', n === 0); }
   });
@@ -8055,21 +8103,28 @@ const CL_MIC_SVG = '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height=
 function clubSeatPerson(c, id) {
   return (c.members || []).find((x) => x.id === id) || socialPeople.get(id) || { id, name: '', avatar: null, photo: null };
 }
+const CL_MUTE_BADGE = '<span class="cl-seat-mute"><svg viewBox="0 0 24 24"><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 10.34V6a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23M12 19v4M8 23h8M3 3l18 18"/></svg></span>';
 function renderClubSeats(c) {
   const box = $('#cl-seats');
   if (!box) return;
   box.innerHTML = '';
-  const seatMap = new Map((c.seatMap || []).map((s) => [s.seat, s.id]));
+  const seatMap = new Map((c.seatMap || []).map((s) => [s.seat, s]));
   for (let i = 0; i < 8; i++) {
-    const pid = seatMap.get(i);
+    const ent = seatMap.get(i);
+    const pid = ent && ent.id;
     const p = pid ? clubSeatPerson(c, pid) : null;
     const d = document.createElement('div');
     d.className = 'cl-seat' + (p ? ' occ' : '') + (p && pid === socialMe ? ' me' : '') + (p && cv.speaking.has(pid) ? ' speaking' : '');
     const cc = document.createElement('div');
     cc.className = 'cl-seat-c';
-    if (p) cc.appendChild(avatarEl(p.name, p.avatar, 52, p.photo));
+    if (p) {
+      cc.appendChild(avatarEl(p.name, p.avatar, 52, p.photo));
+      // A seated player with his mic OFF keeps the seat — the
+      // muted badge is the only sign (owner order 2026-11-09).
+      if (ent.mic === false) cc.insertAdjacentHTML('beforeend', CL_MUTE_BADGE);
+    }
     else cc.innerHTML = CL_MIC_SVG;
-    cc.onclick = () => onClubSeatTap(i, pid);
+    cc.onclick = () => onClubSeatTap(i, pid, cc);
     d.appendChild(cc);
     const nm = document.createElement('div');
     nm.className = 'cl-seat-n';
@@ -8078,10 +8133,26 @@ function renderClubSeats(c) {
     box.appendChild(d);
   }
 }
-async function onClubSeatTap(seat, occupantId) {
+// May I lift this player out of his seat? (mirrors the server's
+// clubSeatKick rank rule: manager role, strictly above his)
+function canSeatKick(c, targetId) {
+  if (!c || targetId === socialMe) return false;
+  const rank = { owner: 0, deputy: 1, member: 2 };
+  const mine = rank[c.myRole];
+  const mem = (c.members || []).find((m) => m.id === targetId);
+  if (mine === undefined || !mem || mine === 2) return false;
+  return mine < rank[mem.role];
+}
+async function onClubSeatTap(seat, occupantId, anchorEl) {
   if (!clubData || !clubData.club) return;
   if (occupantId) {
     if (occupantId === socialMe) { socialSend({ type: 's-club-stand' }); cv.wantSeat = -1; cv.setMic(false); }
+    else if (canSeatKick(clubData.club, occupantId)) {
+      // A manager tapping another player's seat opens the small
+      // anchored menu (remove from seat / profile). Plain
+      // members tapping a seat get nothing.
+      openClubSeatMenu(clubSeatPerson(clubData.club, occupantId), anchorEl);
+    }
     return;
   }
   const ok = await cv.ensureMic();
@@ -8093,24 +8164,15 @@ async function onClubSeatTap(seat, occupantId) {
     socialSend({ type: 's-club-seat', seat });
   } else if (!cv.seatReq) {
     // Everyone else ASKS the founder (owner order 2026-11-09):
-    // the seat lands only when he approves. The pending bar
-    // shows «په تمه…» with a cancel until he answers, I leave,
-    // or 60 s pass.
+    // the ask WAITS in his requests list — no popup, no timeout —
+    // until he answers it or it is invalidated. The pending bar
+    // shows «په تمه…» with a cancel.
     cv.seatReq = { seat, ts: Date.now() };
     socialSend({ type: 's-club-seat-request', seat });
-    armSeatReqTimer();
     renderSeatReqBar();
   }
 }
 // ---------- seat-request pending state (the requester's side) ----------
-let seatReqTimer = null;
-function armSeatReqTimer() {
-  if (seatReqTimer) clearTimeout(seatReqTimer);
-  seatReqTimer = setTimeout(() => {
-    seatReqTimer = null;
-    if (cv.seatReq) { cv.seatReq = null; cv.wantSeat = -1; renderSeatReqBar(); }
-  }, 60000);
-}
 function renderSeatReqBar() {
   const bar = $('#cl-seatreq-bar');
   if (!bar) return;
@@ -8123,41 +8185,64 @@ $('#btn-cl-seatreq-cancel').onclick = () => {
   cv.seatReq = null;
   cv.wantSeat = -1;
   cv.wantMic = false;
-  if (seatReqTimer) { clearTimeout(seatReqTimer); seatReqTimer = null; }
   renderSeatReqBar();
 };
-// ---------- seat-request prompt (the owner's side) ----------
-// A small queue behind one popup: the founder answers each ask
-// (تایید seats the member; رد tells him). Prompts show only
-// while the founder is in the club room.
-let seatReqQueue = [];
-let seatReqCurrent = null;
-function showNextSeatReq() {
-  if (seatReqCurrent) return;
-  if (!clubData || !clubData.club || !clRoomView) return;
-  if ($('#scr-clubs').classList.contains('hidden')) return;
-  const nxt = seatReqQueue.shift();
-  if (!nxt) return;
-  seatReqCurrent = nxt;
-  const p = nxt.from || {};
-  const av = $('#sr-av');
-  av.innerHTML = '';
-  av.appendChild(avatarEl(p.name, p.avatar, 46, p.photo));
-  $('#sr-title').textContent = T('clSeatReqTitle');
-  $('#sr-msg').textContent = T('clSeatReqMsg', p.name || '');
-  $('#btn-sr-yes').textContent = T('frAccept');
-  $('#btn-sr-no').textContent = T('frReject');
-  $('#ov-seatreq').classList.add('show');
+// ---------- seat requests page (the owner's waiting list) ----------
+// Every pending ask as a row: who, which seat, how long waiting,
+// تایید / رد. Opened from the chair button beside the member
+// count pill; the button carries the pending count as a badge.
+let srqTick = null;
+function openClubSeatReqs() {
+  if (!clubData || !clubData.club || clubData.club.myRole !== 'owner') return;
+  $('#scr-clubseatreqs').classList.remove('hidden');
+  renderSeatReqsPage();
+  if (srqTick) clearInterval(srqTick);
+  srqTick = setInterval(renderSeatReqsPage, 5000); // the wait times tick over
 }
-function answerSeatReq(accept) {
-  const cur = seatReqCurrent;
-  seatReqCurrent = null;
-  $('#ov-seatreq').classList.remove('show');
-  if (cur && cur.from) socialSend({ type: 's-club-seat-respond', from: cur.from.id, accept });
-  showNextSeatReq();
+function closeClubSeatReqs() {
+  $('#scr-clubseatreqs').classList.add('hidden');
+  if (srqTick) { clearInterval(srqTick); srqTick = null; }
 }
-$('#btn-sr-yes').onclick = () => answerSeatReq(true);
-$('#btn-sr-no').onclick = () => answerSeatReq(false);
+function clWaitText(ts) {
+  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  return '⏱ ' + faNum(Math.floor(s / 60)) + ':' + faNum(String(s % 60).padStart(2, '0'));
+}
+function renderSeatReqsPage() {
+  $('#srq-title').textContent = T('clSeatReqsTitle');
+  const box = $('#cl-seatreqs-list');
+  if (!box) return;
+  box.innerHTML = '';
+  const c = clubData && clubData.club;
+  const reqs = (c && c.seatReqs) || [];
+  if (!c || !reqs.length) {
+    const e = document.createElement('div');
+    e.className = 'cl-empty';
+    e.textContent = T('clSeatReqsEmpty');
+    box.appendChild(e);
+    return;
+  }
+  for (const r of reqs) {
+    const ok = document.createElement('button');
+    ok.type = 'button';
+    ok.className = 'fr-chipbtn';
+    ok.textContent = T('frAccept');
+    ok.onclick = () => socialSend({ type: 's-club-seat-respond', from: r.id, accept: true });
+    const no = document.createElement('button');
+    no.type = 'button';
+    no.className = 'fr-chipbtn danger';
+    no.textContent = T('frReject');
+    no.onclick = () => socialSend({ type: 's-club-seat-respond', from: r.id, accept: false });
+    const row = personRow(r, [ok, no]);
+    const meta = row.querySelector('.fr-meta');
+    if (meta) {
+      const w = document.createElement('span');
+      w.className = 'srq-wait';
+      w.textContent = clWaitText(r.ts);
+      meta.appendChild(w);
+    }
+    box.appendChild(row);
+  }
+}
 function renderClubRoom() {
   const c = clubData.club;
   const cov = $('#cl-room-cov');
@@ -8176,12 +8261,18 @@ function renderClubRoom() {
   else { annText.textContent = T('clAnnounceEmpty'); annText.classList.add('dim'); }
   const isManager = c.myRole === 'owner' || c.myRole === 'deputy';
   $('#btn-cl-ann-edit').classList.toggle('hidden', !isManager);
+  // the seat-requests button: the OWNER only (he approves), with
+  // the pending count badged on it
+  const srqN = (c.seatReqs || []).length;
+  $('#btn-cl-seatreqs').classList.toggle('hidden', c.myRole !== 'owner');
+  const srqBadge = $('#cl-seatreqs-badge');
+  srqBadge.textContent = faNum(srqN);
+  srqBadge.classList.toggle('hidden', srqN === 0);
   renderClubMemberLists();
   renderClubChat();
   cv.enter();
   cv.paintBtns();
   renderSeatReqBar();
-  showNextSeatReq();
 }
 // The member-management lists: join requests (managers), the
 // members list, and the room's invite-friends card. The requests
@@ -8445,6 +8536,13 @@ function renderClubs() {
     if (clubData && clubData.club) { renderClubMembersBits(); renderClubMemberLists(); }
     else closeClubMembers();
   }
+  if (!$('#scr-clubseatreqs').classList.contains('hidden')) {
+    // the owner's waiting list repaints with the same push — and
+    // closes for a non-owner (e.g. right after an ownership
+    // transfer moved the founder out)
+    if (clubData && clubData.club && clubData.club.myRole === 'owner') renderSeatReqsPage();
+    else closeClubSeatReqs();
+  }
   if ($('#ov-clubinvite').classList.contains('show')) renderClubInvitePopup();
   if ($('#scr-clubs').classList.contains('hidden')) return;
   const inRoom = !!(clubData && clubData.club && clRoomView);
@@ -8623,17 +8721,20 @@ function copyClubId() {
 $('#cl-id-num').onclick = copyClubId;
 $('#btn-cl-share').onclick = copyClubId;
 $('#btn-cl-like').onclick = () => { if (clubData && clubData.club) socialSend({ type: 's-club-like', club: clubData.club.cid }); };
-// The room header's EXIT (door) button: a confirmation popup
-// first (وتل / لغوه). وتل is the FULL membership leave — the
-// player disappears from the club entirely (member list, seats,
-// voice room, chat) and lands on the discovery page; rejoining
-// needs a fresh request or invite. The owner instead gets the
-// settled restriction (hand over to a deputy, or dissolve).
-$('#btn-cl-exit').onclick = () => {
+// The room header's EXIT (door) button. For a NON-owner: the
+// confirmation popup (وتل / لغوه); وتل is the FULL membership
+// leave — the player disappears from the club entirely (member
+// list, seats, voice room, chat) and lands on the discovery
+// page; rejoining needs a fresh request or invite. For the
+// OWNER (his order 2026-11-09): the small anchored menu instead
+// — «له کلب ووځي» leaves (ownership auto-transfers to the
+// longest-serving deputy, else member; alone → the club is
+// dissolved) and «کلب ړنګول» runs the dissolve confirm.
+$('#btn-cl-exit').onclick = (e) => {
   if (!clubData || !clubData.club) return;
+  if (clubData.club.myRole === 'owner') { openClubExitMenu(e.currentTarget); return; }
   askConfirm(T('clExitTitle'), T('clExitBody'), T('clExitYes'), () => {
     if (!clubData || !clubData.club) return;
-    if (clubData.club.myRole === 'owner') { toast(T('clLeaveOwnerNote')); return; }
     socialSend({ type: 's-club-leave' });
   });
 };
@@ -8659,6 +8760,15 @@ $('#cmnav-clubs').onclick = () => closeClubMembers();
 $('#cmnav-home').onclick = () => { closeClubMembers(); closeClubs(); };
 $('#cmnav-profile').onclick = () => openProfile();
 $('#cmnav-chat').onclick = () => openChats();
+// seat-requests page: back + nav
+$('#btn-srq-back').onclick = () => closeClubSeatReqs();
+$('#srqnav-friends').onclick = () => openFriends();
+$('#srqnav-clubs').onclick = () => closeClubSeatReqs();
+$('#srqnav-home').onclick = () => { closeClubSeatReqs(); closeClubs(); };
+$('#srqnav-profile').onclick = () => openProfile();
+$('#srqnav-chat').onclick = () => openChats();
+// the owner's requests button beside the member-count pill
+$('#btn-cl-seatreqs').onclick = () => openClubSeatReqs();
 // discovery tabs + search toggle
 $('#cl-tab-explore').onclick = () => { clTab = 'explore'; clPodIdx = 0; requestDiscover(); renderClubs(); };
 $('#cl-tab-hot').onclick = () => { clTab = 'hot'; clPodIdx = 0; requestDiscover(); renderClubs(); };
@@ -8764,7 +8874,8 @@ $('#btn-cl-edit-save').onclick = () => {
 };
 $('#btn-cl-leave').onclick = () => {
   if (!clubData || !clubData.club) return;
-  if (clubData.club.myRole === 'owner') { toast(T('clLeaveOwnerNote')); return; }
+  // Every role can leave now: the founder's leave auto-transfers
+  // ownership (the note above the button explains it).
   askConfirm(T('clConfirmLeaveT'), T('clConfirmLeaveB'), T('frConfirmYes'),
     () => socialSend({ type: 's-club-leave' }));
 };
@@ -8834,7 +8945,6 @@ const cv = {
     this.wantMic = false;
     this.seatReq = null;
     this.wantSeat = -1;
-    if (seatReqTimer) { clearTimeout(seatReqTimer); seatReqTimer = null; }
     this.setMic(false);
     for (const [, P] of this.peers) { try { P.pc.close(); } catch (e) { /* gone */ } }
     this.peers.clear();
@@ -8862,6 +8972,10 @@ const cv = {
       this.speaking.delete(socialMe);
     }
     for (const [, P] of this.peers) this.attachTrack(P);
+    // The server's word on my mic state drives my seat's muted
+    // badge for everyone else — it never touches the seat
+    // itself: muting keeps the seat, unmuting resumes it.
+    if (this.joined) socialSend({ type: 's-club-mic', on: this.micOn });
     this.paintBtns();
     if (clubData && clubData.club && clRoomView && !$('#scr-clubs').classList.contains('hidden')) renderClubSeats(clubData.club);
   },
@@ -8907,12 +9021,15 @@ const cv = {
   },
   onVoiceState() {
     if (!this.joined) return;
+    // Wake-heal for my mic flag: the server's runtime mic map can
+    // be emptier than my screen (a host restart) — re-announce;
+    // the server fans out only on a real change.
+    if (this.micOn) socialSend({ type: 's-club-mic', on: true });
     const seated = this.mySeat() >= 0;
     if (seated) {
       this.wantSeat = this.mySeat();
       if (this.seatReq) { // the founder approved — pending is over
         this.seatReq = null;
-        if (seatReqTimer) { clearTimeout(seatReqTimer); seatReqTimer = null; }
         renderSeatReqBar();
       }
     }
@@ -8950,7 +9067,6 @@ const cv = {
       else if (!this.seatReq) {
         this.seatReq = { seat: this.wantSeat, ts: Date.now() };
         socialSend({ type: 's-club-seat-request', seat: this.wantSeat });
-        armSeatReqTimer();
         renderSeatReqBar();
       }
     }
@@ -9136,7 +9252,20 @@ $('#btn-cl-speaker').onclick = () => {
 };
 $('#btn-cl-mic').onclick = async () => {
   if (!clubData || !clubData.club) return;
-  if (cv.mySeat() >= 0) { socialSend({ type: 's-club-stand' }); cv.wantSeat = -1; cv.setMic(false); return; }
+  if (cv.mySeat() >= 0) {
+    // Seated: the mic button toggles the MIC ONLY — muting keeps
+    // the seat (a muted badge shows on it), unmuting resumes.
+    // Leaving the seat is the seat tap's job (owner order
+    // 2026-11-09; before this the button stood you up).
+    if (cv.micOn) { cv.wantMic = false; cv.setMic(false); }
+    else {
+      const ok = await cv.ensureMic();
+      if (!ok) return;
+      cv.wantMic = true;
+      cv.setMic(true);
+    }
+    return;
+  }
   const box = $('#cl-seats');
   if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
   toast(T('clSeatsHint'));
@@ -9155,6 +9284,12 @@ document.addEventListener('pointerdown', () => {
 // rows behind the generic confirm.
 let cmMember = null;
 let cmAnchor = null;
+// The same anchored card also serves two small menus (2026-11-09):
+// popCtx.kind 'seat' — a manager tapped a seated player (remove
+// from seat / profile); 'exit' — the owner tapped the room EXIT
+// button (leave the club / dissolve the club). A member menu
+// leaves popCtx null.
+let popCtx = null;
 function cmRow(icon, label, fn, disabled) {
   const b = document.createElement('button');
   b.className = 'pmpop-row';
@@ -9177,9 +9312,52 @@ function cmRow(icon, label, fn, disabled) {
 }
 function openClubMenu(m, anchor) {
   const pop = $('#ov-clubmenu');
-  if (pop.classList.contains('show') && cmMember && cmMember.id === m.id) { closeClubMenu(); return; }
+  if (pop.classList.contains('show') && !popCtx && cmMember && cmMember.id === m.id) { closeClubMenu(); return; }
   if (document.querySelector('.overlay.show')) return;
+  popCtx = null;
   cmMember = m;
+  cmAnchor = anchor || null;
+  pop.classList.add('show');
+  renderClubMenu();
+  placeAnchoredCard(pop, cmAnchor);
+}
+// Feeds the shared profile-view popup with a person (the member
+// menu's row and the seat menu's row both land here).
+function fillProfileView(m) {
+  const pv = $('#pv-av');
+  pv.innerHTML = '';
+  pv.appendChild(avatarEl(m.name, m.avatar, 84, m.photo));
+  $('#pv-name').textContent = m.name || '';
+  const fl = m.country ? countryFlag(m.country) : '';
+  $('#pv-country').textContent = m.country ? (fl ? fl + ' ' : '') + dispCountry(m.country) : '—';
+  const pvId = $('#pv-id');
+  pvId.textContent = m.uid ? (T('frIdLabel') + ': ' + m.uid) : '';
+  pvId.style.display = m.uid ? '' : 'none';
+  const rel = seatRelation(m.id);
+  $('#pv-rel').textContent = rel === 'friend' ? T('frIsFriend')
+    : rel === 'outgoing' ? T('frPending') : rel === 'incoming' ? T('frRespond') : '—';
+}
+// A manager tapped another player's OCCUPIED seat: exactly two
+// rows — remove him from the seat, or open his profile.
+function openClubSeatMenu(p, anchor) {
+  const pop = $('#ov-clubmenu');
+  if (pop.classList.contains('show') && popCtx && popCtx.kind === 'seat' && popCtx.id === p.id) { closeClubMenu(); return; }
+  if (document.querySelector('.overlay.show')) return;
+  popCtx = { kind: 'seat', id: p.id };
+  cmMember = null;
+  cmAnchor = anchor || null;
+  pop.classList.add('show');
+  renderClubMenu();
+  placeAnchoredCard(pop, cmAnchor);
+}
+// The OWNER tapped the room EXIT button: leave (ownership
+// auto-transfers) or dissolve — anchored to the button.
+function openClubExitMenu(anchor) {
+  const pop = $('#ov-clubmenu');
+  if (pop.classList.contains('show') && popCtx && popCtx.kind === 'exit') { closeClubMenu(); return; }
+  if (document.querySelector('.overlay.show')) return;
+  popCtx = { kind: 'exit' };
+  cmMember = null;
   cmAnchor = anchor || null;
   pop.classList.add('show');
   renderClubMenu();
@@ -9187,7 +9365,10 @@ function openClubMenu(m, anchor) {
 }
 function renderClubMenu() {
   const pop = $('#ov-clubmenu');
-  if (!cmMember || !pop.classList.contains('show') || !clubData || !clubData.club) return;
+  if (!pop.classList.contains('show')) return;
+  if (popCtx && popCtx.kind === 'seat') { renderClubSeatMenu(); return; }
+  if (popCtx && popCtx.kind === 'exit') { renderClubExitMenu(); return; }
+  if (!cmMember || !clubData || !clubData.club) return;
   const m = clubData.club.members.find((x) => x.id === cmMember.id) || cmMember;
   cmMember = m;
   const av = $('#cm-av');
@@ -9198,18 +9379,7 @@ function renderClubMenu() {
   rows.innerHTML = '';
   // profile view (the existing popup, fed like the player menu's)
   rows.appendChild(cmRow('👤', T('navProfile'), () => {
-    const pv = $('#pv-av');
-    pv.innerHTML = '';
-    pv.appendChild(avatarEl(m.name, m.avatar, 84, m.photo));
-    $('#pv-name').textContent = m.name || '';
-    const fl = m.country ? countryFlag(m.country) : '';
-    $('#pv-country').textContent = m.country ? (fl ? fl + ' ' : '') + dispCountry(m.country) : '—';
-    const pvId = $('#pv-id');
-    pvId.textContent = m.uid ? (T('frIdLabel') + ': ' + m.uid) : '';
-    pvId.style.display = m.uid ? '' : 'none';
-    const rel = seatRelation(m.id);
-    $('#pv-rel').textContent = rel === 'friend' ? T('frIsFriend')
-      : rel === 'outgoing' ? T('frPending') : rel === 'incoming' ? T('frRespond') : '—';
+    fillProfileView(m);
     closeClubMenu();
     $('#ov-playerview').classList.add('show');
   }));
@@ -9270,10 +9440,69 @@ function renderClubMenu() {
     manage.forEach((r) => rows.appendChild(r));
   }
 }
+function renderClubSeatMenu() {
+  const pop = $('#ov-clubmenu');
+  if (!clubData || !clubData.club || !popCtx) return;
+  const c = clubData.club;
+  const p = clubSeatPerson(c, popCtx.id);
+  const av = $('#cm-av');
+  av.innerHTML = '';
+  av.appendChild(avatarEl(p.name, p.avatar, 40, p.photo));
+  $('#cm-name').textContent = p.name || '';
+  const rows = $('#cm-rows');
+  rows.innerHTML = '';
+  rows.appendChild(cmRow('🚪', T('clSeatKickOut'), () => {
+    const target = popCtx.id;
+    closeClubMenu();
+    socialSend({ type: 's-club-seat-kick', id: target });
+  }));
+  rows.appendChild(cmRow('👤', T('navProfile'), () => {
+    fillProfileView(p);
+    closeClubMenu();
+    $('#ov-playerview').classList.add('show');
+  }));
+}
+function renderClubExitMenu() {
+  const pop = $('#ov-clubmenu');
+  if (!clubData || !clubData.club) return;
+  const c = clubData.club;
+  const av = $('#cm-av');
+  av.innerHTML = '';
+  av.appendChild(clEmblemEl(c.emblem, 40));
+  $('#cm-name').textContent = c.name || '';
+  const rows = $('#cm-rows');
+  rows.innerHTML = '';
+  // leave: no extra confirm — the menu tap IS the choice; the
+  // server auto-transfers ownership (or dissolves when alone)
+  rows.appendChild(cmRow('🚪', T('clLeaveMenu'), () => {
+    closeClubMenu();
+    socialSend({ type: 's-club-leave' });
+  }));
+  rows.appendChild(cmRow('🗑', T('clDissolve'), () => {
+    closeClubMenu();
+    askConfirm(T('clConfirmDissolveT'), T('clConfirmDissolveB'), T('frConfirmYes'),
+      () => socialSend({ type: 's-club-dissolve' }));
+  }));
+}
 function placeClubMenu() { placeAnchoredCard($('#ov-clubmenu'), cmAnchor); }
 function validateClubMenu() {
   const pop = $('#ov-clubmenu');
-  if (!cmMember || !pop.classList.contains('show')) return;
+  if (!pop.classList.contains('show')) return;
+  if (popCtx && popCtx.kind === 'seat') {
+    // the seat menu lives only while its target still sits and I
+    // can still lift him
+    const c = clubData && clubData.club;
+    if (!c || !canSeatKick(c, popCtx.id)
+      || !(c.seatMap || []).some((s) => s.id === popCtx.id)) closeClubMenu();
+    else renderClubMenu();
+    return;
+  }
+  if (popCtx && popCtx.kind === 'exit') {
+    if (!clubData || !clubData.club || clubData.club.myRole !== 'owner') closeClubMenu();
+    else renderClubMenu();
+    return;
+  }
+  if (!cmMember) return;
   if (!clubData || !clubData.club || !clubData.club.members.some((x) => x.id === cmMember.id)) { closeClubMenu(); return; }
   if (cmAnchor && cmAnchor.isConnected) { renderClubMenu(); return; }
   const row = document.querySelector('#cl-members .fr-row[data-cmid="' + cmMember.id + '"]');
@@ -9282,12 +9511,16 @@ function validateClubMenu() {
   renderClubMenu();
   placeClubMenu();
 }
-function closeClubMenu() { $('#ov-clubmenu').classList.remove('show'); cmMember = null; cmAnchor = null; }
+function closeClubMenu() { $('#ov-clubmenu').classList.remove('show'); cmMember = null; cmAnchor = null; popCtx = null; }
 document.addEventListener('pointerdown', (e) => {
   const pop = $('#ov-clubmenu');
   if (!pop.classList.contains('show')) return;
   if (pop.contains(e.target)) return;
   if (e.target.closest && e.target.closest('.cl-mrow')) return;
+  // the seat circles and the exit button toggle their own menus
+  // through their click handlers — the closer must not eat them
+  if (e.target.closest && e.target.closest('.cl-seat-c')) return;
+  if (e.target.closest && e.target.closest('#btn-cl-exit')) return;
   closeClubMenu();
 }, true);
 
