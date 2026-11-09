@@ -522,9 +522,9 @@
      2026-11-08) — the old inline .hm-join expansion is gone. */
 
   /* Bottom nav — home screen only, pinned to the foot of the column.
-     Friends / clubs have no backend yet: their tap answers with the
-     comingSoon toast. Profile / settings open the real popups; home
-     is the raised gold centre bubble (the active tab). */
+     Friends and clubs open their real pages (the social layer);
+     profile opens the profile page; home is the raised gold centre
+     bubble (the active tab). */
   .hm-nav { margin: auto -16px -14px; min-height: 86px; flex: none;
     background: linear-gradient(180deg, rgba(9,48,31,.97), rgba(3,22,14,.99));
     border-top: 2px solid rgba(238,201,95,.55); display: flex; align-items: flex-start;
@@ -565,7 +565,7 @@
      behind a dark emerald veil, its own scroll. Opened from the
      bottom nav (and from the lobby's friends button); it floats
      above home/lobby/table without disturbing the game screens. */
-  #scr-friends, #scr-dm, #scr-chats, #scr-profile {
+  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-clubs {
     position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 30;
     overflow-x: hidden;
     /* The home screen's dark emerald veil, without the carpet photo:
@@ -586,9 +586,9 @@
   #scr-friends { display: flex; flex-direction: column; overflow-y: hidden; }
   /* Chat + profile pages (owner order 2026-11-08): same family as the
      friends screen — scrolling content, bottom nav pinned at the foot. */
-  #scr-chats, #scr-profile { display: flex; flex-direction: column; overflow-y: hidden; }
+  #scr-chats, #scr-profile, #scr-clubs { display: flex; flex-direction: column; overflow-y: hidden; }
   .fr-scroll { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; width: 100%; }
-  #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav { margin: 0; flex: none; width: 100%;
+  #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav { margin: 0; flex: none; width: 100%;
     padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
   /* chat list rows: the whole row is the tap target into the DM view */
   .ch-row { cursor: pointer; border-radius: 8px; }
@@ -693,6 +693,230 @@
     padding: 6px 10px; color: #ffd75e; }
   .fr-act.fr-busybtn:disabled { opacity: .92; }
   .fr-act.fr-busybtn svg { width: 21px; height: 21px; display: block; }
+  /* clubs (کلبونه): screens reuse .cardbox/.fr-row/.fr-act; the
+     club-specific pieces are the emblem medallion, the role chip,
+     the chat card and the emblem picker. */
+  #scr-clubs .hm-nav { margin: 0; flex: none; width: 100%; }
+  .cl-emblem { display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%; flex: 0 0 auto;
+    background: radial-gradient(circle at 35% 30%, #146545, #07271a 75%);
+    border: 2px solid #d9b380; box-shadow: inset 0 0 10px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.4); }
+  .cl-emblem svg { display: block; stroke: #ffd75e; fill: none; stroke-width: 1.9;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .cl-hero { text-align: center; padding: 18px 14px; }
+  .cl-hero-emb { display: flex; justify-content: center; margin-bottom: 8px; }
+  .cl-hero-text { font-size: 14.5px; line-height: 1.9; opacity: .92; margin: 0 0 12px; }
+  .cl-bigbtn { width: auto; margin: 0; padding: 11px 26px; font-size: 16px; font-weight: 800;
+    background: #ffd75e; color: #33270a; border: 1.5px solid #ffd75e; border-radius: 12px; cursor: pointer; }
+  .cl-bigbtn:active { transform: scale(.96); }
+  .cl-head-top { display: flex; align-items: center; gap: 12px; }
+  .cl-name { font-size: 20px; font-weight: 800; color: #ffeec2; line-height: 1.4; }
+  .cl-sub { font-size: 13px; opacity: .85; margin-top: 1px; }
+  .cl-desc { font-size: 14px; line-height: 1.8; opacity: .92; margin: 10px 0 2px; white-space: pre-wrap; word-break: break-word; }
+  .cl-role { display: inline-block; font-size: 11px; font-weight: 800; border-radius: 8px;
+    padding: 1px 7px; margin-inline-start: 6px; vertical-align: 2px;
+    background: rgba(255,215,94,.16); color: #ffd75e; border: 1px solid rgba(217,179,128,.55); }
+  .cl-role.deputy { background: rgba(120,220,170,.13); color: #a9e8c8; border-color: rgba(120,220,170,.4); }
+  .cl-role.member { background: rgba(255,255,255,.06); color: #cfe8d8; border-color: rgba(255,255,255,.18); }
+  .cl-mrow { cursor: pointer; border-radius: 8px; }
+  .cl-mrow:active { background: rgba(255,215,94,.08); }
+  #cl-msgs { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column;
+    gap: 7px; padding: 4px 2px 8px; }
+  #cl-msgs .dm-bub { max-width: 82%; }
+  .cl-bub-name { display: block; font-size: 11px; font-weight: 800; opacity: .85; margin-bottom: 1px; }
+  .cl-inputrow { padding: 4px 0 0; margin: 0; width: 100%; max-width: none; }
+  .cl-emgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 6px 0 10px; }
+  .cl-em { display: flex; align-items: center; justify-content: center; padding: 8px 0;
+    background: rgba(255,255,255,.04); border: 1.5px solid rgba(217,179,128,.35);
+    border-radius: 12px; cursor: pointer; margin: 0; width: auto; }
+  .cl-em.sel { border-color: #ffd75e; background: rgba(255,215,94,.14); box-shadow: 0 0 0 1.5px #ffd75e inset; }
+  .cl-note { font-size: 13px; line-height: 1.8; opacity: .85; margin: 8px 0 0; }
+  #btn-cl-dissolve { background: rgba(125,34,49,.4); color: #ffb3ab; border-color: rgba(215,38,61,.6); }
+  /* club member menu: the player menu's anchored card, rows built in JS */
+  #scr-clubs input {
+    background: rgba(6, 24, 16, .88); color: #f8ecd0; border: 1px solid rgba(255, 215, 94, .55);
+  }
+  #scr-clubs input::placeholder { color: rgba(248, 236, 208, .45); }
+  #cl-owner-edit input { width: 100%; padding: 11px 12px; font-size: 16px; border-radius: 10px; font-family: inherit; margin-bottom: 10px; }
+  #ov-clubmenu { position: fixed; z-index: 44; width: 234px; display: none;
+    background: linear-gradient(165deg, #0f4026, #07271a);
+    border: 1.5px solid #d9b380; border-radius: 14px; padding: 8px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.6), inset 0 0 22px rgba(0,0,0,.35); color: #f5e7c6; }
+  #ov-clubmenu.show { display: block; }
+  .pmpop-sep { border-top: 1px solid rgba(217,179,128,.35); margin: 6px 0; }
+  /* ===== clubs v2 (Ludo-style discovery + club room) ===== */
+  .cl-create-wide { width: 100%; margin: 2px 0 10px; }
+  .cl-topbar { display: flex; align-items: stretch; gap: 8px; margin-bottom: 10px; }
+  .cl-tabs { display: flex; flex: 1; gap: 6px; }
+  .cl-tab { flex: 1; margin: 0; padding: 10px 4px; font-size: 15px; font-weight: 800; font-family: inherit;
+    background: rgba(255,255,255,.05); color: #cfe8d8; border: 1.5px solid rgba(217,179,128,.35);
+    border-radius: 12px; cursor: pointer; }
+  .cl-tab.sel { background: linear-gradient(165deg, #146545, #0a3520); color: #ffd75e;
+    border-color: #ffd75e; box-shadow: 0 0 0 1px rgba(255,215,94,.35), 0 4px 12px rgba(0,0,0,.35); }
+  .cl-searchbtn { flex: 0 0 46px; margin: 0; border-radius: 50%; border: 1.5px solid #ffd75e;
+    background: linear-gradient(165deg, #146545, #07271a); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; }
+  .cl-searchbtn svg { width: 22px; height: 22px; stroke: #ffd75e; fill: none; stroke-width: 2.2; stroke-linecap: round; }
+  .cl-searchbtn:active { transform: scale(.94); }
+  #cl-searchrow { margin-bottom: 10px; }
+  /* podium stage */
+  .cl-podium-wrap { margin-bottom: 12px; }
+  .cl-podium-stage { border: 2px solid #d9b380; border-radius: 16px; padding: 10px 8px 8px; position: relative;
+    background:
+      radial-gradient(ellipse 90% 60% at 50% 0%, rgba(255,215,94,.20), transparent 60%),
+      linear-gradient(180deg, #0d3d24 0%, #08241655 55%, #051a10 100%),
+      radial-gradient(circle at 12% 50%, rgba(125,34,49,.5), transparent 26%),
+      radial-gradient(circle at 88% 50%, rgba(125,34,49,.5), transparent 26%),
+      #07271a;
+    box-shadow: inset 0 0 26px rgba(0,0,0,.5); }
+  .cl-podium-title { text-align: center; font-size: 15px; font-weight: 800; color: #33270a;
+    background: linear-gradient(180deg, #ffe98a, #e9bd4f); border-radius: 0 0 10px 10px;
+    padding: 2px 14px 4px; width: fit-content; margin: -10px auto 10px; }
+  .cl-podium { display: flex; align-items: flex-end; justify-content: center; gap: 10px; min-height: 118px; }
+  .cl-pod { display: flex; flex-direction: column; align-items: center; width: 31%; cursor: pointer; }
+  .cl-pod.first { width: 36%; }
+  .cl-pod-frame { position: relative; width: 100%; border-radius: 12px; padding: 3px;
+    background: linear-gradient(180deg, #8a6a2f, #5c451a); }
+  .cl-pod.first .cl-pod-frame { background: linear-gradient(180deg, #ffe98a, #b98a2e); box-shadow: 0 6px 18px rgba(255,215,94,.35); }
+  .cl-pod.second .cl-pod-frame { background: linear-gradient(180deg, #e8eef0, #8d9aa0); }
+  .cl-pod.third .cl-pod-frame { background: linear-gradient(180deg, #e0a266, #96602e); }
+  .cl-pod-cov { border-radius: 9px; overflow: hidden; aspect-ratio: 4/3; }
+  .cl-pod-cov svg, .cl-card-cov svg, .cv-cov svg { display: block; width: 100%; height: 100%; }
+  .cl-crown { position: absolute; top: -17px; inset-inline-end: -7px; width: 30px; height: 24px; z-index: 2;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+  .cl-pod.first .cl-crown { width: 36px; height: 29px; top: -21px; }
+  .cl-pod-name { margin-top: 7px; max-width: 100%; font-size: 12.5px; font-weight: 800; color: #ffeec2;
+    background: rgba(0,0,0,.45); border: 1px solid rgba(217,179,128,.55); border-radius: 8px;
+    padding: 2px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cl-dots { display: flex; justify-content: center; gap: 6px; margin-top: 9px; }
+  .cl-dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.28); }
+  .cl-dots i.on { background: #ffd75e; }
+  /* country chips */
+  .cl-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+  .cl-chip { margin: 0; width: auto; flex: 0 1 auto; padding: 8px 12px; font-size: 13.5px; font-weight: 700; font-family: inherit;
+    background: rgba(255,255,255,.05); color: #e8f2e4; border: 1.5px solid rgba(217,179,128,.35);
+    border-radius: 11px; cursor: pointer; }
+  .cl-chip.sel { background: linear-gradient(165deg, #ffd75e, #d9a83f); color: #33270a; border-color: #ffd75e; }
+  .cl-morewrap { margin: -4px 0 12px; }
+  .cl-morewrap select, #cl-owner-edit select, #ov-clubcreate select { width: 100%; padding: 11px 12px; font-size: 16px; border-radius: 10px;
+    font-family: inherit; background: rgba(6,24,16,.88); color: #f8ecd0; border: 1px solid rgba(255,215,94,.55); margin-bottom: 10px; }
+  /* discovery grid cards */
+  .cl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+  .cl-card { background: linear-gradient(180deg, rgba(20,101,69,.35), rgba(7,39,26,.65));
+    border: 1.5px solid rgba(217,179,128,.5); border-radius: 14px; padding: 7px 7px 9px; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,.35); }
+  .cl-card:active { transform: scale(.98); }
+  .cl-card-cov { position: relative; border-radius: 10px; overflow: hidden; aspect-ratio: 4/3;
+    border: 1.5px solid rgba(255,215,94,.45); }
+  .cl-card-badge { position: absolute; top: 5px; inset-inline-end: 5px; display: flex; align-items: center; gap: 4px;
+    background: rgba(0,0,0,.6); color: #fff; font-size: 12px; font-weight: 800; border-radius: 8px; padding: 2px 6px; }
+  .cl-card-badge .bars { display: inline-flex; align-items: flex-end; gap: 1.5px; height: 11px; }
+  .cl-card-badge .bars i { width: 3px; background: #57c8ff; border-radius: 1px; display: block; }
+  .cl-card-lvl { position: absolute; bottom: 5px; inset-inline-start: 5px; width: 32px; height: 36px;
+    display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,.7); }
+  .cl-card-lvl svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .cl-card-lvl span { position: relative; z-index: 1; }
+  .cl-card-name { font-size: 14.5px; font-weight: 800; color: #ffeec2; margin-top: 7px; line-height: 1.5;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cl-card-row { display: flex; align-items: center; gap: 7px; margin-top: 4px; }
+  .cl-cat { font-size: 11.5px; font-weight: 800; background: rgba(255,215,94,.18); color: #ffd75e;
+    border: 1px solid rgba(217,179,128,.5); border-radius: 8px; padding: 1px 9px; }
+  .cl-card-flag { font-size: 16px; }
+  /* cover + category pickers */
+  .cl-covgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin: 6px 0 10px; }
+  .cl-cov { border: 1.5px solid rgba(217,179,128,.35); border-radius: 9px; overflow: hidden; cursor: pointer;
+    padding: 0; margin: 0; width: auto; aspect-ratio: 4/3; background: none; }
+  .cl-cov svg { display: block; width: 100%; height: 100%; }
+  .cl-cov.sel { border-color: #ffd75e; box-shadow: 0 0 0 1.5px #ffd75e; }
+  .cl-catrow { display: flex; gap: 7px; margin: 6px 0 10px; }
+  .cl-catbtn { flex: 1; margin: 0; padding: 9px 4px; font-size: 14px; font-weight: 800; font-family: inherit;
+    background: rgba(255,255,255,.05); color: #cfe8d8; border: 1.5px solid rgba(217,179,128,.35);
+    border-radius: 10px; cursor: pointer; }
+  .cl-catbtn.sel { background: rgba(255,215,94,.16); color: #ffd75e; border-color: #ffd75e; }
+  /* ===== club room ===== */
+  #cl-room { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  #cl-room.hidden { display: none; }
+  .cl-roomhead { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.35);
+    border: 1.5px solid rgba(217,179,128,.5); border-radius: 14px; padding: 8px 10px; margin-bottom: 10px; }
+  .cl-room-cov { flex: 0 0 52px; width: 52px; height: 52px; border-radius: 10px; overflow: hidden;
+    border: 1.5px solid #ffd75e; }
+  .cl-room-cov svg { display: block; width: 100%; height: 100%; }
+  .cl-room-meta { flex: 1; min-width: 0; }
+  .cl-room-meta .cl-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cl-room-id { background: none; border: none; margin: 0; padding: 0; width: auto; cursor: pointer;
+    color: #ffd75e; font-size: 14px; font-weight: 800; font-family: inherit; letter-spacing: .4px; }
+  .cl-room-btns { display: flex; gap: 6px; flex: 0 0 auto; }
+  .cl-icobtn { position: relative; width: 40px; height: 40px; margin: 0; border-radius: 50%; cursor: pointer;
+    background: radial-gradient(circle at 35% 30%, #17573a, #07271a 78%); border: 1.5px solid rgba(217,179,128,.6);
+    display: flex; align-items: center; justify-content: center; }
+  .cl-icobtn svg { width: 21px; height: 21px; stroke: #cfe8d8; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .cl-icobtn:active { transform: scale(.93); }
+  #btn-cl-like svg { fill: rgba(255,255,255,.14); }
+  #btn-cl-like.on svg { fill: #ff5b74; stroke: #ffb3c0; }
+  .cl-like-n { position: absolute; bottom: -5px; inset-inline-end: -5px; min-width: 17px; height: 17px; padding: 0 4px;
+    border-radius: 9px; background: #d7263d; color: #fff; font-size: 10.5px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; border: 1px solid #fff0b3; }
+  .cl-countpill { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 10px; padding: 5px 13px;
+    background: rgba(0,0,0,.4); border: 1.5px solid rgba(217,179,128,.5); border-radius: 20px;
+    color: #ffeec2; font-size: 14px; font-weight: 800; font-family: inherit; cursor: pointer; width: auto; }
+  /* mic seats */
+  .cl-seats-wrap { margin-bottom: 10px; }
+  .cl-seats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px 6px; }
+  .cl-seat { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .cl-seat-c { width: 54px; height: 54px; border-radius: 50%; position: relative; cursor: pointer;
+    background: radial-gradient(circle at 38% 32%, rgba(255,255,255,.13), rgba(0,0,0,.4) 75%);
+    border: 1.5px solid rgba(217,179,128,.4); display: flex; align-items: center; justify-content: center; }
+  .cl-seat-c > svg { width: 24px; height: 24px; stroke: rgba(248,236,208,.5); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .cl-seat.occ .cl-seat-c { border-color: #ffd75e; padding: 0; background: #07271a; }
+  .cl-seat.occ .cl-seat-c .pavatar { width: 100% !important; height: 100% !important; border-radius: 50%; overflow: hidden; }
+  .cl-seat.me .cl-seat-c { box-shadow: 0 0 0 2px #ffd75e, 0 0 14px rgba(255,215,94,.5); }
+  .cl-seat.speaking .cl-seat-c { box-shadow: 0 0 0 2.5px #57ff9a, 0 0 18px rgba(87,255,154,.75); }
+  .cl-seat-n { font-size: 11px; font-weight: 700; color: #e8f2e4; max-width: 62px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cl-seats-hint { font-size: 12.5px; opacity: .75; text-align: center; margin: 8px 0 0; }
+  /* announcement bar */
+  .cl-annbar { display: flex; align-items: flex-start; gap: 8px; background: rgba(255,215,94,.09);
+    border: 1.5px solid rgba(217,179,128,.45); border-radius: 12px; padding: 9px 11px; margin-bottom: 12px; }
+  .cl-ann-lbl { flex: 0 0 auto; font-size: 11px; font-weight: 900; color: #33270a; background: #ffd75e;
+    border-radius: 7px; padding: 1px 7px; margin-top: 2px; }
+  .cl-ann-text { flex: 1; font-size: 14px; line-height: 1.8; word-break: break-word; }
+  .cl-ann-text.dim { opacity: .6; }
+  .cl-ann-edit { flex: 0 0 auto; margin: 0; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+    background: rgba(255,255,255,.07); border: 1px solid rgba(217,179,128,.5); color: #ffd75e; font-size: 14px; }
+  /* chat feed bars */
+  #cl-msgs { display: flex; flex-direction: column; gap: 7px; padding: 2px 0 10px; }
+  .cl-feed-item { display: flex; align-items: flex-start; gap: 9px; background: rgba(255,255,255,.055);
+    border: 1px solid rgba(217,179,128,.22); border-radius: 12px; padding: 7px 10px; }
+  .cl-feed-item.mine { background: rgba(255,215,94,.1); border-color: rgba(255,215,94,.35); }
+  .cl-feed-item .pavatar { flex: 0 0 auto; }
+  .cl-feed-main { flex: 1; min-width: 0; font-size: 14.5px; line-height: 1.65; word-break: break-word; }
+  .cl-feed-name { font-weight: 800; color: #ffd75e; margin-inline-end: 6px; }
+  .cl-feed-ts { display: block; font-size: 10.5px; opacity: .55; margin-top: 1px; }
+  /* bottom input bar */
+  .cl-inputbar { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    background: rgba(3,17,10,.92); border-top: 1.5px solid rgba(217,179,128,.4); }
+  .cl-inputbar input { flex: 1; min-width: 0; padding: 11px 13px; font-size: 16px; border-radius: 22px; font-family: inherit; }
+  .cl-roundbtn { flex: 0 0 44px; width: 44px; height: 44px; margin: 0; border-radius: 50%; cursor: pointer;
+    background: radial-gradient(circle at 35% 30%, #17573a, #07271a 78%); border: 1.5px solid rgba(217,179,128,.55);
+    display: flex; align-items: center; justify-content: center; }
+  .cl-roundbtn svg { width: 22px; height: 22px; stroke: #cfe8d8; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .cl-roundbtn.on { border-color: #ffd75e; box-shadow: 0 0 10px rgba(255,215,94,.35); }
+  .cl-roundbtn.on svg { stroke: #ffd75e; }
+  .cl-roundbtn.live { background: radial-gradient(circle at 35% 30%, #b3374a, #5c1420 78%); border-color: #ff8fa0; }
+  .cl-roundbtn.live svg { stroke: #ffe3e8; }
+  #btn-cl-send { flex: 0 0 44px; width: 44px; height: 44px; margin: 0; border-radius: 50%; border: 1.5px solid #ffd75e;
+    background: #ffd75e; color: #33270a; font-size: 17px; cursor: pointer; }
+  /* public club page */
+  .cv-panel { max-width: 380px; }
+  .cv-cov { border-radius: 12px; overflow: hidden; aspect-ratio: 16/8; border: 1.5px solid rgba(255,215,94,.5); margin-bottom: 10px; }
+  .cv-name { font-size: 20px; font-weight: 800; color: #ffeec2; text-align: center; }
+  .cv-meta { text-align: center; font-size: 13.5px; opacity: .9; margin: 3px 0 6px; }
+  .cv-desc { font-size: 14px; line-height: 1.8; opacity: .92; text-align: center; margin: 0 0 8px; white-space: pre-wrap; word-break: break-word; }
+  .cv-ann { margin-bottom: 10px; }
+  .cv-mems { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 12px; }
+  .cv-mem { display: flex; flex-direction: column; align-items: center; width: 52px; }
+  .cv-mem-n { font-size: 10px; max-width: 52px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .85; }
   .fr-unread { position: absolute; top: -6px; inset-inline-end: -6px; min-width: 18px; height: 18px;
     border-radius: 9px; background: #d7263d; color: #fff; font-size: 11px; font-weight: 800;
     display: flex; align-items: center; justify-content: center; padding: 0 5px; border: 1.5px solid #fff0b3; }
@@ -757,6 +981,7 @@
   .pmpop-row:active { background: rgba(255,215,94,.13); }
   .pmpop-row:disabled { opacity: .55; cursor: default; }
   .pmpop-ic { font-size: 17px; width: 22px; text-align: center; flex: 0 0 auto; }
+  .pmpop-ic svg { width: 20px; height: 20px; display: block; color: #ffd75e; }
   .pmpop-lbl { flex: 1 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pmpop-ch { color: #ffd75e; font-size: 20px; line-height: 1; flex: 0 0 auto; }
   #ov-playerview { z-index: 47; }
@@ -990,6 +1215,7 @@
           <span class="nl" id="nav-friends-lbl">ملګري</span>
         </button>
         <button class="hm-navitem" id="nav-clubs">
+          <span class="nav-badge hidden" id="nav-clubs-badge">0</span>
           <span class="ni"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
           <span class="nl" id="nav-clubs-lbl">کلبونه</span>
         </button>
@@ -1227,6 +1453,7 @@
       <span class="nl" id="frnav-friends-lbl">ملګري</span>
     </button>
     <button class="hm-navitem" id="frnav-clubs">
+      <span class="nav-badge hidden" id="frnav-clubs-badge">0</span>
       <span class="ni"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
       <span class="nl" id="frnav-clubs-lbl">کلبونه</span>
     </button>
@@ -1263,6 +1490,7 @@
       <span class="nl" id="chnav-friends-lbl">ملګري</span>
     </button>
     <button class="hm-navitem" id="chnav-clubs">
+      <span class="nav-badge hidden" id="chnav-clubs-badge">0</span>
       <span class="ni"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
       <span class="nl" id="chnav-clubs-lbl">کلبونه</span>
     </button>
@@ -1316,6 +1544,7 @@
       <span class="nl" id="pfnav-friends-lbl">ملګري</span>
     </button>
     <button class="hm-navitem" id="pfnav-clubs">
+      <span class="nav-badge hidden" id="pfnav-clubs-badge">0</span>
       <span class="ni"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
       <span class="nl" id="pfnav-clubs-lbl">کلبونه</span>
     </button>
@@ -1331,6 +1560,167 @@
       <span class="nav-badge hidden" id="pfnav-chat-badge">0</span>
       <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
       <span class="nl" id="pfnav-chat-lbl">چت</span>
+    </button>
+  </nav>
+</section>
+
+<!-- ======== CLUBS (کلبونه) ======== -->
+<section id="scr-clubs" class="hidden">
+  <!-- ======== DISCOVERY (Ludo-style clubs home) ======== -->
+  <div class="fr-scroll" id="cl-disc-scroll">
+    <div class="fr-inner">
+      <div class="cl-topbar">
+        <div class="cl-tabs">
+          <button type="button" class="cl-tab sel" id="cl-tab-explore"></button>
+          <button type="button" class="cl-tab" id="cl-tab-hot"></button>
+          <button type="button" class="cl-tab" id="cl-tab-mine"></button>
+        </div>
+        <button type="button" class="cl-searchbtn" id="btn-cl-search-toggle" aria-label="search"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="M16 16l4.6 4.6"/></svg></button>
+      </div>
+      <div class="fr-searchrow" id="cl-searchrow">
+        <input id="cl-search-inp" type="text" maxlength="40">
+        <button id="btn-cl-search"></button>
+      </div>
+      <button type="button" id="btn-cl-create" class="cl-bigbtn cl-create-wide"></button>
+      <div id="cl-pane-explore">
+        <div class="cl-podium-wrap" id="cl-podium-wrap">
+          <div class="cl-podium-stage">
+            <div class="cl-podium-title" id="cl-podium-title"></div>
+            <div class="cl-podium" id="cl-podium"></div>
+            <div class="cl-dots" id="cl-podium-dots"></div>
+          </div>
+        </div>
+        <div class="cl-chips" id="cl-chips"></div>
+        <div class="cl-morewrap hidden" id="cl-morewrap">
+          <select id="cl-country-sel"></select>
+        </div>
+        <div class="cardbox hidden" id="cl-results-box">
+          <h3 class="fr-sec" id="cl-search-title"></h3>
+          <div id="cl-results"></div>
+        </div>
+        <div class="cl-grid" id="cl-grid"></div>
+        <div class="fr-empty hidden" id="cl-grid-empty"></div>
+      </div>
+      <div id="cl-pane-mine" class="hidden">
+        <div class="cardbox cl-hero" id="cl-create-card">
+          <div class="cl-hero-emb" id="cl-hero-emb"></div>
+          <p class="cl-hero-text" id="cl-home-text"></p>
+        </div>
+        <div id="cl-myclub-slot"></div>
+        <div class="cardbox hidden" id="cl-invites-box">
+          <h3 class="fr-sec" id="cl-invites-title"></h3>
+          <div id="cl-invites"></div>
+        </div>
+        <div class="cardbox hidden" id="cl-outgoing-box">
+          <h3 class="fr-sec" id="cl-outgoing-title"></h3>
+          <div id="cl-outgoing"></div>
+        </div>
+        <h3 class="fr-sec hidden" id="cl-liked-title"></h3>
+        <div class="cl-grid" id="cl-liked-grid"></div>
+      </div>
+    </div>
+  </div>
+  <!-- ======== CLUB ROOM ======== -->
+  <div id="cl-room" class="hidden">
+    <div class="fr-scroll">
+      <div class="fr-inner">
+        <div class="cl-roomhead">
+          <span class="cl-room-cov" id="cl-room-cov"></span>
+          <div class="cl-room-meta">
+            <div class="cl-name" id="cl-name"></div>
+            <button type="button" class="cl-room-id" id="cl-id-num" dir="ltr">…</button>
+          </div>
+          <div class="cl-room-btns">
+            <button type="button" class="cl-icobtn" id="btn-cl-like" aria-label="like"><svg viewBox="0 0 24 24"><path d="M12 20.6C6.4 16.9 3 13.7 3 9.9 3 7.2 5 5 7.6 5c1.7 0 3.4.9 4.4 2.4C13 5.9 14.7 5 16.4 5 19 5 21 7.2 21 9.9c0 3.8-3.4 7-9 10.7z"/></svg><span class="cl-like-n" id="cl-like-n">0</span></button>
+            <button type="button" class="cl-icobtn" id="btn-cl-add" aria-label="invite"><svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.6"/><path d="M4 20c.6-3.6 2.8-5.4 6-5.4 1.5 0 2.8.4 3.8 1.2M18 8v6M15 11h6"/></svg></button>
+            <button type="button" class="cl-icobtn" id="btn-cl-share" aria-label="share"><svg viewBox="0 0 24 24"><circle cx="6.5" cy="12" r="2.6"/><circle cx="17" cy="5.8" r="2.6"/><circle cx="17" cy="18.2" r="2.6"/><path d="M9 10.8l5.5-3.6M9 13.2l5.5 3.6"/></svg></button>
+            <button type="button" class="cl-icobtn" id="btn-cl-exit" aria-label="exit"><svg viewBox="0 0 24 24"><path d="M14 4h5a1.5 1.5 0 0 1 1.5 1.5v13A1.5 1.5 0 0 1 19 20h-5M10 8l-4 4 4 4M6 12h11"/></svg></button>
+          </div>
+        </div>
+        <button type="button" class="cl-countpill" id="cl-countpill"><span class="cl-count-ic">👥</span><span id="cl-count"></span></button>
+        <div class="cl-seats-wrap">
+          <div class="cl-seats" id="cl-seats"></div>
+          <p class="cl-seats-hint" id="cl-seats-hint"></p>
+        </div>
+        <div class="cl-annbar" id="cl-annbar">
+          <span class="cl-ann-lbl" id="cl-ann-lbl"></span>
+          <span class="cl-ann-text" id="cl-ann-text"></span>
+          <button type="button" class="cl-ann-edit hidden" id="btn-cl-ann-edit" aria-label="edit">✎</button>
+        </div>
+        <h3 class="fr-sec" id="cl-chat-title"></h3>
+        <div id="cl-msgs"></div>
+        <div class="cardbox hidden" id="cl-req-box">
+          <h3 class="fr-sec" id="cl-req-title"></h3>
+          <div id="cl-requests"></div>
+        </div>
+        <div class="cardbox" id="cl-members-card">
+          <h3 class="fr-sec" id="cl-members-title"></h3>
+          <div id="cl-members"></div>
+        </div>
+        <div class="cardbox hidden" id="cl-invitefriends-box">
+          <h3 class="fr-sec" id="cl-invitefriends-title"></h3>
+          <div id="cl-invitefriends"></div>
+        </div>
+        <div class="cardbox">
+          <h3 class="fr-sec" id="cl-settings-title"></h3>
+          <p class="cl-desc" id="cl-desc"></p>
+          <div class="cl-sub" id="cl-created"></div>
+          <div id="cl-owner-edit" class="hidden">
+            <label class="pf-label" id="cl-edit-name-lbl" for="cl-edit-name"></label>
+            <input id="cl-edit-name" type="text" maxlength="24">
+            <span class="pf-label" id="cl-edit-emb-lbl"></span>
+            <div class="cl-emgrid" id="cl-edit-emgrid"></div>
+            <span class="pf-label" id="cl-edit-cov-lbl"></span>
+            <div class="cl-covgrid" id="cl-edit-covgrid"></div>
+            <label class="pf-label" id="cl-edit-country-lbl" for="cl-edit-country"></label>
+            <select id="cl-edit-country"></select>
+            <span class="pf-label" id="cl-edit-cat-lbl"></span>
+            <div class="cl-catrow" id="cl-edit-catrow"></div>
+            <label class="pf-label" id="cl-edit-desc-lbl" for="cl-edit-desc"></label>
+            <input id="cl-edit-desc" type="text" maxlength="120">
+            <div class="pf-btns">
+              <button id="btn-cl-edit-save"></button>
+            </div>
+          </div>
+          <div class="pf-btns">
+            <button id="btn-cl-leave" class="ghost"></button>
+            <button id="btn-cl-dissolve" class="danger hidden"></button>
+          </div>
+          <p class="cl-note hidden" id="cl-leave-note"></p>
+        </div>
+      </div>
+    </div>
+    <div class="cl-inputbar">
+      <button type="button" class="cl-roundbtn on" id="btn-cl-speaker" aria-label="speaker"><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path class="wv" d="M15 9.5a3.6 3.6 0 0 1 0 5M17.5 7a7 7 0 0 1 0 10"/></svg></button>
+      <button type="button" class="cl-roundbtn" id="btn-cl-mic" aria-label="mic"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.2M9 20.5h6"/></svg></button>
+      <input id="cl-inp" type="text" maxlength="500">
+      <button type="button" id="btn-cl-send" aria-label="send">➤</button>
+    </div>
+    <div id="cl-audios" class="hidden"></div>
+  </div>
+  <nav class="hm-nav">
+    <button class="hm-navitem" id="clnav-friends">
+      <span class="nav-badge hidden" id="clnav-friends-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c.7-3.4 3-5 6-5s5.3 1.6 6 5"/><circle cx="17.2" cy="9.2" r="2.7"/><path d="M16 15.2c2.2.3 3.9 1.8 4.5 4.3"/></svg></span>
+      <span class="nl" id="clnav-friends-lbl">ملګري</span>
+    </button>
+    <button class="hm-navitem home" id="clnav-clubs">
+      <span class="nav-badge hidden" id="clnav-clubs-badge">0</span>
+      <span class="bubble"><svg viewBox="0 0 24 24"><path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/></svg></span>
+      <span class="nl" id="clnav-clubs-lbl">کلبونه</span>
+    </button>
+    <button class="hm-navitem" id="clnav-home">
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9v11h13V9"/><path d="M9.5 20v-6h5v6"/></svg></span>
+      <span class="nl" id="clnav-home-lbl">کور</span>
+    </button>
+    <button class="hm-navitem" id="clnav-profile">
+      <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span>
+      <span class="nl" id="clnav-profile-lbl">پروفایل</span>
+    </button>
+    <button class="hm-navitem" id="clnav-chat">
+      <span class="nav-badge hidden" id="clnav-chat-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+      <span class="nl" id="clnav-chat-lbl">چت</span>
     </button>
   </nav>
 </section>
@@ -1389,6 +1779,68 @@
   <div class="pmpop-head"><span id="fm-av"></span><span class="inv-name" id="fm-name"></span></div>
   <button class="pmpop-row" id="btn-fm-unfriend"><span class="pmpop-ic">💔</span><span class="pmpop-lbl" id="fm-unfriend-lbl">دوستي لرې کول</span><span class="pmpop-ch">›</span></button>
   <button class="pmpop-row" id="btn-fm-block"><span class="pmpop-ic">🚫</span><span class="pmpop-lbl" id="fm-block-lbl">بلاک</span><span class="pmpop-ch">›</span></button>
+</div>
+
+<!-- ======== CREATE CLUB ======== -->
+<div class="overlay" id="ov-clubcreate">
+  <div class="panel pf-panel">
+    <h2 id="cc-title"></h2>
+    <label class="pf-label" id="cc-name-lbl" for="cc-name"></label>
+    <input id="cc-name" type="text" maxlength="24">
+    <span class="pf-label" id="cc-emb-lbl"></span>
+    <div class="cl-emgrid" id="cc-emgrid"></div>
+    <span class="pf-label" id="cc-cov-lbl"></span>
+    <div class="cl-covgrid" id="cc-covgrid"></div>
+    <label class="pf-label" id="cc-country-lbl" for="cc-country"></label>
+    <select id="cc-country"></select>
+    <span class="pf-label" id="cc-cat-lbl"></span>
+    <div class="cl-catrow" id="cc-catrow"></div>
+    <label class="pf-label" id="cc-desc-lbl" for="cc-desc"></label>
+    <input id="cc-desc" type="text" maxlength="120">
+    <div class="pf-btns">
+      <button id="btn-cc-create"></button>
+      <button id="btn-cc-cancel" class="ghost"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== CLUB PUBLIC PAGE (from a discovery card) ======== -->
+<div class="overlay" id="ov-clubview">
+  <div class="panel cv-panel">
+    <div class="cv-cov" id="cv-cov"></div>
+    <div class="cv-name" id="cv-name"></div>
+    <div class="cv-meta" id="cv-meta" dir="ltr"></div>
+    <p class="cv-desc" id="cv-desc"></p>
+    <div class="cl-annbar cv-ann hidden" id="cv-annbar">
+      <span class="cl-ann-lbl" id="cv-ann-lbl"></span>
+      <span class="cl-ann-text" id="cv-ann-text"></span>
+    </div>
+    <div class="cv-mems" id="cv-mems"></div>
+    <div class="pf-btns" id="cv-actions"></div>
+    <div class="pf-btns">
+      <button type="button" id="btn-cv-like"></button>
+      <button type="button" id="btn-cv-close" class="ghost"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== CLUB ANNOUNCEMENT EDITOR (managers) ======== -->
+<div class="overlay" id="ov-clubann">
+  <div class="panel" style="max-width:340px">
+    <h2 id="ca-title"></h2>
+    <input id="ca-inp" type="text" maxlength="200">
+    <div class="pf-btns">
+      <button type="button" id="btn-ca-save"></button>
+      <button type="button" id="btn-ca-cancel" class="ghost"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== CLUB MEMBER MENU — anchored popover in the player
+     menu's card: header + profile/friend/invite rows + manage ======== -->
+<div id="ov-clubmenu">
+  <div class="pmpop-head"><span id="cm-av"></span><span class="inv-name" id="cm-name"></span></div>
+  <div id="cm-rows"></div>
 </div>
 
 <!-- ======== PLAYER PROFILE VIEW ======== -->
@@ -1631,6 +2083,73 @@ const STR = {
     errSocialCooldown: 'لږ صبر وکړه',
     errSocialNotFound: 'لوبغاړی ونه موندل شو',
     errSocialGeneric: 'عملیات ونه شول',
+    clCreate: 'کلب جوړول',
+    clCreateTitle: 'نوی کلب جوړ کړه',
+    clNamePh: 'د کلب نوم — لکه د قندهار پاچاهان',
+    clDescPh: 'لنډ تعریف (اختیاري)',
+    clEmblem: 'نښان',
+    clHomeText: 'خپل کلب جوړ کړه یا یوه کلب ته ورګډ شه — له ملګرو سره ګپ ووهه او لوبې ته یې وبله.',
+    clSearchTitle: 'کلب ولټوه',
+    clSearchPh: 'د کلب نوم یا ID…',
+    clSearchBtn: 'لټون',
+    clNoResults: 'هېڅ کلب ونه موندل شو',
+    clInvitesTitle: 'د کلب بلنې',
+    clOutgoingTitle: 'زما غوښتنې',
+    clCancel: 'لغوه',
+    clRequest: 'غوښتنه واستوه',
+    clRequested: 'غوښتنه استول شوې',
+    clMembers: 'غړي',
+    clMemberCount: (n) => n + ' غړي',
+    clRequestsTitle: 'د ورګډېدو غوښتنې',
+    clChatTitle: 'د کلب ګپ',
+    clChatPh: 'پیغام ولیکه…',
+    clChatEmpty: 'تر اوسه پیغام نشته — لومړی پیغام واستوه',
+    clInviteFriends: 'ملګري وبله',
+    clNoInviteFriends: 'هېڅ ملګری د بلنې لپاره نشته',
+    clSettings: 'د کلب امادګي',
+    clSave: 'ساتل',
+    clLeave: 'له کلبه وتل',
+    clDissolve: 'کلب ړنګول',
+    clRoleOwner: 'موسس',
+    clRoleDeputy: 'معاون',
+    clRoleMember: 'غړی',
+    clCreated: (d) => 'جوړ شو: ' + d,
+    clPromote: 'معاون کول',
+    clDemote: 'غړی کول',
+    clKick: 'له کلبه ایستل',
+    clTransfer: 'موسس کول',
+    clConfirmKickT: 'دا غړی باسې؟',
+    clConfirmKickB: (name) => name + ' به له کلب څخه وایستل شي.',
+    clConfirmDissolveT: 'کلب ړنګوې؟',
+    clConfirmDissolveB: 'کلب به ړنګ شي او ټول غړي به ترې ووځي. دا کار بېرته نه راګرځي.',
+    clConfirmLeaveT: 'له کلبه وځې؟',
+    clConfirmLeaveB: 'ته به نور د دې کلب غړی نه یې.',
+    clConfirmTransferT: 'موسس بدلوې؟',
+    clConfirmTransferB: (name) => name + ' به د کلب موسس شي او ته به معاون شې.',
+    clLeaveOwnerNote: 'موسس لومړی باید موسس بل معاون ته وسپاري یا کلب ړنګ کړي.',
+    clNewInvite: (name) => name + ' تا خپل کلب ته بلي',
+    clDissolved: 'کلب ړنګ شو',
+    clJoined: (name) => 'ته اوس د «' + name + '» غړی یې',
+    errClubInClub: 'ته مخکې په یوه کلب کې یې',
+    errClubNotFound: 'کلب ونه موندل شو',
+    errClubFull: 'کلب ډک دی',
+    errClubDuplicate: 'دا کار مخکې شوی دی',
+    errClubNoPerm: 'ته دا اجازه نه لرې',
+    errClubOwner: 'موسس باید لومړی موسس وسپاري یا کلب ړنګ کړي',
+    errClubSelf: 'دا کار پر ځان نه شې کولی',
+    errClubBlocked: 'دا کار نه کېږي',
+    errClubBadName: 'د کلب نوم باید لږ تر لږه ۲ توري وي',
+    clTabExplore: 'پلټنه', clTabHot: 'ګرم', clTabMine: 'زما',
+    clTopClubs: 'غوره کلبونه', clGlobal: 'نړیوال', clMore: 'نور',
+    clCover: 'پوښ وټاکئ', clCountry: 'هېواد', clCategory: 'ډول',
+    clCatSocial: 'ملګري', clCatGame: 'لوبه', clCatFamily: 'کورنۍ',
+    clLevel: (n) => 'کچه ' + n,
+    clAnnounce: 'اعلان', clAnnouncePh: 'د کلب لپاره اعلان ولیکئ…',
+    clAnnounceEmpty: 'تر اوسه اعلان نشته',
+    clEnterClub: 'کلب ته ننوتل', clMyClubTitle: 'زما کلب',
+    clLikedTitle: 'خوښ شوي کلبونه', clSeatsHint: 'په خالي څوکۍ کېنئ او خبرې وکړئ',
+    clLike: 'خوښول',
+    errClubSeatTaken: 'دا څوکۍ ډکه ده ✓', clMicDenied: 'مایک ته اجازه ورنکړل شوه',
     roomCodeLabel: 'د کوټې کوډ',
     joinRoom: 'کوټې ته ننوځه',
     continueGame: 'لوبې ته دوام ورکړه',
@@ -1810,6 +2329,73 @@ const STR = {
     errSocialCooldown: 'کمی صبر کن',
     errSocialNotFound: 'بازیکن پیدا نشد',
     errSocialGeneric: 'عملیات انجام نشد',
+    clCreate: 'ساختن باشگاه',
+    clCreateTitle: 'باشگاه جدید بساز',
+    clNamePh: 'نام باشگاه — مثلاً پادشاهان قندهار',
+    clDescPh: 'توضیح کوتاه (اختیاری)',
+    clEmblem: 'نشان',
+    clHomeText: 'باشگاه خودت را بساز یا به یک باشگاه بپیوند — با دوستانت گپ بزن و به بازی دعوت‌شان کن.',
+    clSearchTitle: 'جست‌وجوی باشگاه',
+    clSearchPh: 'نام باشگاه یا ID…',
+    clSearchBtn: 'جست‌وجو',
+    clNoResults: 'هیچ باشگاهی پیدا نشد',
+    clInvitesTitle: 'دعوت‌های باشگاه',
+    clOutgoingTitle: 'درخواست‌های من',
+    clCancel: 'لغو',
+    clRequest: 'فرستادن درخواست',
+    clRequested: 'درخواست فرستاده شد',
+    clMembers: 'اعضا',
+    clMemberCount: (n) => n + ' عضو',
+    clRequestsTitle: 'درخواست‌های پیوستن',
+    clChatTitle: 'گپ باشگاه',
+    clChatPh: 'پیام بنویس…',
+    clChatEmpty: 'هنوز پیامی نیست — اولین پیام را بفرست',
+    clInviteFriends: 'دعوت دوستان',
+    clNoInviteFriends: 'دوستی برای دعوت نیست',
+    clSettings: 'تنظیمات باشگاه',
+    clSave: 'ذخیره',
+    clLeave: 'ترک باشگاه',
+    clDissolve: 'منحل کردن باشگاه',
+    clRoleOwner: 'بنیان‌گذار',
+    clRoleDeputy: 'معاون',
+    clRoleMember: 'عضو',
+    clCreated: (d) => 'ساخته شد: ' + d,
+    clPromote: 'معاون کردن',
+    clDemote: 'عضو کردن',
+    clKick: 'اخراج از باشگاه',
+    clTransfer: 'بنیان‌گذار کردن',
+    clConfirmKickT: 'این عضو اخراج شود؟',
+    clConfirmKickB: (name) => name + ' از باشگاه اخراج می‌شود.',
+    clConfirmDissolveT: 'باشگاه منحل شود؟',
+    clConfirmDissolveB: 'باشگاه منحل می‌شود و همهٔ اعضا بیرون می‌شوند. این کار برگشت ندارد.',
+    clConfirmLeaveT: 'از باشگاه می‌روی؟',
+    clConfirmLeaveB: 'دیگر عضو این باشگاه نخواهی بود.',
+    clConfirmTransferT: 'بنیان‌گذار عوض شود؟',
+    clConfirmTransferB: (name) => name + ' بنیان‌گذار باشگاه می‌شود و تو معاون می‌شوی.',
+    clLeaveOwnerNote: 'بنیان‌گذار اول باید بنیان‌گذاری را به یک معاون بسپارد یا باشگاه را منحل کند.',
+    clNewInvite: (name) => name + ' تو را به باشگاهش دعوت می‌کند',
+    clDissolved: 'باشگاه منحل شد',
+    clJoined: (name) => 'حالا عضو «' + name + '» هستی',
+    errClubInClub: 'تو قبلاً در یک باشگاه هستی',
+    errClubNotFound: 'باشگاه پیدا نشد',
+    errClubFull: 'باشگاه پر است',
+    errClubDuplicate: 'این کار قبلاً انجام شده',
+    errClubNoPerm: 'این اجازه را نداری',
+    errClubOwner: 'بنیان‌گذار اول باید بنیان‌گذاری را بسپارد یا باشگاه را منحل کند',
+    errClubSelf: 'این کار را روی خودت نمی‌توانی انجام دهی',
+    errClubBlocked: 'این کار ممکن نیست',
+    errClubBadName: 'نام باشگاه باید دست‌کم ۲ حرف باشد',
+    clTabExplore: 'کاوش', clTabHot: 'داغ', clTabMine: 'من',
+    clTopClubs: 'باشگاه‌های برتر', clGlobal: 'جهانی', clMore: 'بیشتر',
+    clCover: 'پوشش را انتخاب کنید', clCountry: 'کشور', clCategory: 'دسته',
+    clCatSocial: 'دوستان', clCatGame: 'بازی', clCatFamily: 'خانواده',
+    clLevel: (n) => 'سطح ' + n,
+    clAnnounce: 'اعلان', clAnnouncePh: 'برای باشگاه اعلان بنویسید…',
+    clAnnounceEmpty: 'هنوز اعلانی نیست',
+    clEnterClub: 'ورود به باشگاه', clMyClubTitle: 'باشگاه من',
+    clLikedTitle: 'باشگاه‌های پسندیده', clSeatsHint: 'روی صندلی خالی بنشینید و صحبت کنید',
+    clLike: 'پسندیدن',
+    errClubSeatTaken: 'این صندلی پر است ✓', clMicDenied: 'اجازهٔ میکروفون داده نشد',
     roomCodeLabel: 'کد اتاق',
     joinRoom: 'ورود به اتاق',
     continueGame: 'ادامهٔ بازی',
@@ -1989,6 +2575,73 @@ const STR = {
     errSocialCooldown: 'Please wait',
     errSocialNotFound: 'Player not found',
     errSocialGeneric: 'That did not work',
+    clCreate: 'Create a Club',
+    clCreateTitle: 'Create a new club',
+    clNamePh: 'Club name — e.g. Kandahar Kings',
+    clDescPh: 'Short description (optional)',
+    clEmblem: 'Emblem',
+    clHomeText: 'Create your own club or join one — chat with your clubmates and invite them to play.',
+    clSearchTitle: 'Search clubs',
+    clSearchPh: 'Club name or ID…',
+    clSearchBtn: 'Search',
+    clNoResults: 'No club found',
+    clInvitesTitle: 'Club invites',
+    clOutgoingTitle: 'My requests',
+    clCancel: 'Cancel',
+    clRequest: 'Send request',
+    clRequested: 'Request sent',
+    clMembers: 'Members',
+    clMemberCount: (n) => n + ' members',
+    clRequestsTitle: 'Join requests',
+    clChatTitle: 'Club chat',
+    clChatPh: 'Write a message…',
+    clChatEmpty: 'No messages yet — send the first one',
+    clInviteFriends: 'Invite friends',
+    clNoInviteFriends: 'No friends to invite',
+    clSettings: 'Club settings',
+    clSave: 'Save',
+    clLeave: 'Leave club',
+    clDissolve: 'Dissolve club',
+    clRoleOwner: 'Founder',
+    clRoleDeputy: 'Deputy',
+    clRoleMember: 'Member',
+    clCreated: (d) => 'Created: ' + d,
+    clPromote: 'Make deputy',
+    clDemote: 'Make member',
+    clKick: 'Kick from club',
+    clTransfer: 'Make founder',
+    clConfirmKickT: 'Kick this member?',
+    clConfirmKickB: (name) => name + ' will be kicked from the club.',
+    clConfirmDissolveT: 'Dissolve the club?',
+    clConfirmDissolveB: 'The club will be dissolved and every member removed. This cannot be undone.',
+    clConfirmLeaveT: 'Leave the club?',
+    clConfirmLeaveB: 'You will no longer be a member of this club.',
+    clConfirmTransferT: 'Change the founder?',
+    clConfirmTransferB: (name) => name + ' becomes the club founder and you become a deputy.',
+    clLeaveOwnerNote: 'The founder must first hand over to a deputy or dissolve the club.',
+    clNewInvite: (name) => name + ' invites you to their club',
+    clDissolved: 'The club was dissolved',
+    clJoined: (name) => 'You are now a member of “' + name + '”',
+    errClubInClub: 'You are already in a club',
+    errClubNotFound: 'Club not found',
+    errClubFull: 'The club is full',
+    errClubDuplicate: 'That was already done',
+    errClubNoPerm: 'You do not have permission',
+    errClubOwner: 'The founder must hand over or dissolve first',
+    errClubSelf: 'You cannot do that to yourself',
+    errClubBlocked: 'That is not possible',
+    errClubBadName: 'The club name needs at least 2 characters',
+    clTabExplore: 'Explore', clTabHot: 'Hot', clTabMine: 'Mine',
+    clTopClubs: 'Top Clubs', clGlobal: 'Global', clMore: 'More',
+    clCover: 'Choose a cover', clCountry: 'Country', clCategory: 'Category',
+    clCatSocial: 'Social', clCatGame: 'Game', clCatFamily: 'Family',
+    clLevel: (n) => 'Level ' + n,
+    clAnnounce: 'Announcement', clAnnouncePh: 'Write an announcement for the club…',
+    clAnnounceEmpty: 'No announcement yet',
+    clEnterClub: 'Enter club', clMyClubTitle: 'My club',
+    clLikedTitle: 'Liked clubs', clSeatsHint: 'Tap an empty seat to sit and talk',
+    clLike: 'Like',
+    errClubSeatTaken: 'That seat is taken ✓', clMicDenied: 'Microphone permission was denied',
     roomCodeLabel: 'Room code',
     joinRoom: 'Enter Room',
     continueGame: 'Continue Game',
@@ -2183,6 +2836,11 @@ function applyI18n() {
   set('#pfnav-home-lbl', 'navHome');
   set('#pfnav-profile-lbl', 'navProfile');
   set('#pfnav-chat-lbl', 'navChat');
+  set('#clnav-friends-lbl', 'navFriends');
+  set('#clnav-clubs-lbl', 'navClubs');
+  set('#clnav-home-lbl', 'navHome');
+  set('#clnav-profile-lbl', 'navProfile');
+  set('#clnav-chat-lbl', 'navChat');
   set('#ch-list-title', 'chatsTitle');
   aria('#btn-pf-edit-av', 'pfEditAvatar');
   set('#fm-unfriend-lbl', 'frUnfriend');
@@ -5356,13 +6014,13 @@ $('#btn-continue').onclick = () => {
   connect(() => send({ type: 'reconnect', code: s.code, token: s.token, ...profileMsg() }));
 };
 // ---------- bottom nav (home screen) ----------
-// ملګري opens the friends page, کلبونه answers with the coming-soon
-// toast, پروفایل opens the profile PAGE, چت opens the chat page;
+// ملګري opens the friends page, کلبونه opens the clubs page,
+// پروفایل opens the profile PAGE, چت opens the chat page;
 // home (the active tab) just returns the menu to the top. Settings
 // lives on the top-bar gear button only (owner order 2026-11-08:
 // the nav's fifth slot is چت now, on every page).
 $('#nav-friends').onclick = () => openFriends();
-$('#nav-clubs').onclick = () => toast(T('comingSoon'));
+$('#nav-clubs').onclick = () => openClubs();
 $('#nav-home').onclick = () => { $('#scr-home').scrollTop = 0; };
 $('#nav-profile').onclick = openProfile;
 $('#nav-chat').onclick = () => openChats();
@@ -5443,6 +6101,7 @@ function openProfile() {
   $('#pf-picker').classList.add('hidden');
   $('#scr-friends').classList.add('hidden');
   $('#scr-chats').classList.add('hidden');
+  $('#scr-clubs').classList.add('hidden');
   $('#scr-profile').classList.remove('hidden');
 }
 function closeProfile() { $('#scr-profile').classList.add('hidden'); }
@@ -5674,6 +6333,7 @@ function ensureInviteCdTicker() {
     const now = Date.now();
     for (const [k, u] of inviteCd) if (u <= now) inviteCd.delete(k);
     renderFriends(); // repaints the ticking ⏳ seconds (and the re-enabled button at zero)
+    renderClubs();   // club member rows + the open club menu share the same countdown
     if (!inviteCd.size) { clearInterval(inviteCdTimer); inviteCdTimer = null; }
   }, 500);
 }
@@ -5755,10 +6415,79 @@ function onSocialMsg(m) {
     const p = socialPeople.get(m.id);
     if (p) applyPresence(p);
     if (socialData) socialData.friends.forEach((f) => { if (f.id === m.id) applyPresence(f); });
+    if (clubData && clubData.club) clubData.club.members.forEach((f) => { if (f.id === m.id) applyPresence(f); });
     frSearchResults.forEach((r) => { if (r.id === m.id) applyPresence(r); });
     renderFriends();
+    renderClubs();
     renderChats();
     if (dmPeer && dmPeer.id === m.id) paintDmPeer();
+  } else if (m.type === 's-club') {
+    const prevCid = clubData && clubData.club ? clubData.club.cid : null;
+    clubData = { club: m.club || null, invites: m.invites || [], outgoing: m.outgoing || [] };
+    if (clubData.club) {
+      clubData.club.members.forEach(cachePerson);
+      // v2: normalize the room's voice shape (seat persons → the
+      // bare {seat,id} map the state pushes use from here on)
+      if (Array.isArray(clubData.club.seats)) {
+        clubData.club.seatMap = clubData.club.seats.map((s) => ({ seat: s.seat, id: s.person && s.person.id })).filter((s) => s.id);
+        delete clubData.club.seats;
+      }
+      if (Array.isArray(clubData.club.voice)) clubData.club.voiceIds = clubData.club.voice;
+      if (clubData.club.cid !== prevCid) {
+        clubMsgs = clubData.club.chat || [];
+        clubUnread = 0;
+        if (clubInitDone && prevCid === null) toast(T('clJoined', clubData.club.name || ''));
+        // a fresh membership (create / accept / join) opens the room
+        if (clubInitDone) clRoomView = true;
+      } else if (Array.isArray(clubData.club.chat)) {
+        clubMsgs = clubData.club.chat;
+      }
+      // friends who became members are no longer "invited-pending"
+      clubData.club.members.forEach((mm) => clubInvitedSent.delete(mm.id));
+    } else {
+      clubMsgs = [];
+      clubUnread = 0;
+      clEditCid = null;
+      if (prevCid) { clRoomView = false; cv.leave(); }
+    }
+    clubInitDone = true;
+    if (Date.now() - clDiscAt > 4000) requestDiscover();
+    renderClubs();
+  } else if (m.type === 's-club-discover-result') {
+    clDisc = m;
+    clDiscAt = Date.now();
+    renderClubs();
+  } else if (m.type === 's-club-view-result') {
+    clPublic = m.club || null;
+    if (clPublic) { renderClubPublic(); $('#ov-clubview').classList.add('show'); }
+  } else if (m.type === 's-club-liked') {
+    if (clPublic && m.club && clPublic.cid === m.club.cid) { clPublic = Object.assign({}, clPublic, m.club); renderClubPublic(); }
+    requestDiscover();
+    renderClubs();
+  } else if (m.type === 's-club-voice-state') {
+    if (clubData && clubData.club && m.club === clubData.club.cid) {
+      clubData.club.voiceIds = m.members || [];
+      clubData.club.seatMap = m.seats || [];
+      cv.onVoiceState();
+      if (clRoomView && !$('#scr-clubs').classList.contains('hidden')) renderClubSeats(clubData.club);
+    }
+  } else if (m.type === 's-rtc') {
+    cv.onSignal(m.from, m.data);
+  } else if (m.type === 's-club-search-result') {
+    clubSearchResults = m.results || [];
+    clubSearched = true;
+    renderClubs();
+  } else if (m.type === 's-club-invited') {
+    cachePerson(m.from);
+    toast(T('clNewInvite', (m.from && m.from.name) || ''));
+    // the s-club push right behind it repaints the invites + badge
+  } else if (m.type === 's-club-chat') {
+    if (clubData && clubData.club && m.club === clubData.club.cid) {
+      clubMsgs.push({ from: m.from, name: m.name, avatar: m.avatar, photo: m.photo, text: m.text, ts: m.ts });
+      while (clubMsgs.length > 50) clubMsgs.shift();
+      if (!$('#scr-clubs').classList.contains('hidden')) { clubUnread = 0; renderClubChat(); }
+      else { clubUnread++; updateClubsBadge(); }
+    }
   } else if (m.type === 's-search-result') {
     frSearchResults = m.results || [];
     frSearchResults.forEach(cachePerson);
@@ -5844,11 +6573,11 @@ function updateFriendsBadge() {
   const req = socialData ? socialData.incoming.length : 0;
   let un = 0;
   dmUnread.forEach((c) => { un += c; });
-  ['#nav-friends-badge', '#frnav-friends-badge', '#chnav-friends-badge', '#pfnav-friends-badge'].forEach((sel) => {
+  ['#nav-friends-badge', '#frnav-friends-badge', '#chnav-friends-badge', '#pfnav-friends-badge', '#clnav-friends-badge'].forEach((sel) => {
     const b = $(sel);
     if (b) { b.textContent = faNum(req); b.classList.toggle('hidden', req === 0); }
   });
-  ['#nav-chat-badge', '#frnav-chat-badge', '#chnav-chat-badge', '#pfnav-chat-badge'].forEach((sel) => {
+  ['#nav-chat-badge', '#frnav-chat-badge', '#chnav-chat-badge', '#pfnav-chat-badge', '#clnav-chat-badge'].forEach((sel) => {
     const b = $(sel);
     if (b) { b.textContent = faNum(un); b.classList.toggle('hidden', un === 0); }
   });
@@ -5870,9 +6599,10 @@ function openFriends(origin) {
   frOrigin = origin === 'lobby' ? 'lobby' : null;
   const bb = $('#btn-fr-back');
   if (bb) bb.classList.toggle('hidden', frOrigin !== 'lobby');
-  // The three pages are siblings: opening one hides the other two.
+  // The pages are siblings: opening one hides the others.
   $('#scr-chats').classList.add('hidden');
   $('#scr-profile').classList.add('hidden');
+  $('#scr-clubs').classList.add('hidden');
   $('#scr-friends').classList.remove('hidden');
   connectSocial();
   renderFriends();
@@ -5897,6 +6627,7 @@ function openChats() {
   frOrigin = null; // leaving friends via a nav page drops the lobby origin
   $('#scr-friends').classList.add('hidden');
   $('#scr-profile').classList.add('hidden');
+  $('#scr-clubs').classList.add('hidden');
   $('#scr-chats').classList.remove('hidden');
   connectSocial();
   renderChats();
@@ -5997,20 +6728,20 @@ $('#btn-fr-opensearch').onclick = () => {
 // ملګري raised as the active page; کور is the exit (the old back
 // button's job — the screen floats over home or the lobby).
 $('#frnav-friends').onclick = () => {};
-$('#frnav-clubs').onclick = () => toast(T('comingSoon'));
+$('#frnav-clubs').onclick = () => openClubs();
 $('#frnav-home').onclick = closeFriends;
 $('#frnav-profile').onclick = openProfile;
 $('#frnav-chat').onclick = () => openChats();
 // Chat page nav: چت is the raised active item; the rest cross-link
 // to the sibling pages (they stack — closing one reveals the other).
 $('#chnav-friends').onclick = () => openFriends();
-$('#chnav-clubs').onclick = () => toast(T('comingSoon'));
+$('#chnav-clubs').onclick = () => openClubs();
 $('#chnav-home').onclick = () => closeChats();
 $('#chnav-profile').onclick = openProfile;
 $('#chnav-chat').onclick = () => {};
 // Profile page nav: پروفایل is the raised active item.
 $('#pfnav-friends').onclick = () => openFriends();
-$('#pfnav-clubs').onclick = () => toast(T('comingSoon'));
+$('#pfnav-clubs').onclick = () => openClubs();
 $('#pfnav-home').onclick = () => closeProfile();
 $('#pfnav-profile').onclick = () => {};
 $('#pfnav-chat').onclick = () => openChats();
@@ -6541,6 +7272,1220 @@ $('#btn-inv-accept').onclick = () => {
 };
 $('#btn-inv-reject').onclick = () => dismissInvite(true, false);
 
+// ---------- clubs (کلبونه) — v2 Ludo-style UX ----------
+// The clubs page rides the same /social socket and the same
+// patterns as friends. Two views: DISCOVERY (tabs + Top-Clubs
+// podium + country chips + a 2-column cover-card grid + public
+// club pages) and the CLUB ROOM (header with like/invite/share,
+// 8 mic seats on the club voice room, the announcement bar, the
+// chat feed and the members/management sections). The server
+// pushes one full state (s-club) plus discovery / public-view /
+// like / voice-state messages; the page repaints from them.
+const CLUB_EMBLEM_SVGS = {
+  trophy: '<path d="M8 4h8v4.5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8A2.9 2.9 0 0 0 7.6 9M16 5.5h3.2a2.9 2.9 0 0 1-2.8 3.5"/><path d="M12 12.5V16M8.6 20h6.8M9.8 20v-4h4.4v4"/>',
+  shield: '<path d="M12 3l7 2.5V11c0 4.6-3 7.8-7 9.2C8 18.8 5 15.6 5 11V5.5z"/><path d="M9 11.6l2.1 2.1 4-4.2"/>',
+  star: '<path d="M12 3.4l2.6 5.4 5.9.8-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8L3.5 9.6l5.9-.8z"/>',
+  crown: '<path d="M4 16.5L2.9 9 8 12l4-6.6L16 12l5.1-3L20 16.5z"/><path d="M4.5 20h15"/>',
+  gem: '<path d="M7 4h10l3.4 5L12 20 3.6 9z"/><path d="M3.6 9h16.8M12 20L8.6 9l1.9-5M12 20l3.4-11-1.9-5"/>',
+  crescent: '<path d="M20 14.6A8.6 8.6 0 1 1 9.4 4a7.2 7.2 0 0 0 10.6 10.6z"/>',
+  flame: '<path d="M12 3s5.6 4.9 5.6 9.6a5.6 5.6 0 0 1-11.2 0c0-2 1-3.8 2.4-5.2.3 1.3 1 2.1 2 2.5C10.6 7 11 4.9 12 3z"/>',
+  laurel: '<path d="M6.8 19.6C5 15.6 5.2 10.2 7.8 6.2M17.2 19.6c1.8-4 1.6-9.4-1-13.4"/><path d="M7.6 9.5C6.2 9.3 5 8.5 4.4 7.4M8 13c-1.4-.1-2.7-.8-3.4-1.9M8.9 16.3c-1.4 0-2.8-.6-3.6-1.6M16.4 9.5c1.4-.2 2.6-1 3.2-2.1M16 13c1.4-.1 2.7-.8 3.4-1.9M15.1 16.3c1.4 0 2.8-.6 3.6-1.6"/>',
+};
+const CLUB_EMBLEM_IDS = Object.keys(CLUB_EMBLEM_SVGS);
+function clEmblemEl(emblem, size) {
+  const s = document.createElement('span');
+  s.className = 'cl-emblem';
+  s.style.width = size + 'px';
+  s.style.height = size + 'px';
+  s.innerHTML = '<svg viewBox="0 0 24 24" width="' + Math.round(size * 0.62) + '" height="' + Math.round(size * 0.62) + '">' +
+    (CLUB_EMBLEM_SVGS[emblem] || CLUB_EMBLEM_SVGS.trophy) + '</svg>';
+  return s;
+}
+// ---- cover gallery: 10 built-in SVG scenes in Tore's palette
+// (emerald / gold / carpet-red), ids only cross the wire. ----
+const CLUB_COVER_SVGS = {
+  mountains: '<defs><linearGradient id="mg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#79b8d8"/><stop offset=".55" stop-color="#f2c879"/><stop offset="1" stop-color="#0b3d24"/></linearGradient></defs><rect width="400" height="300" fill="url(#mg)"/><circle cx="322" cy="54" r="26" fill="#ffd75e"/><path d="M0 214 L92 96 L152 170 L216 76 L292 180 L342 128 L400 208 L400 300 L0 300 Z" fill="#0e4d2e"/><path d="M216 76 L250 124 L216 108 L188 128 Z" fill="#ffffff"/><path d="M92 96 L120 134 L92 120 L66 138 Z" fill="#ffffff"/><path d="M0 240 Q100 216 200 240 T400 240 L400 300 L0 300 Z" fill="#07331d"/>',
+  mosque: '<defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b1a4d"/><stop offset=".6" stop-color="#7d2240"/><stop offset="1" stop-color="#0b3d24"/></linearGradient></defs><rect width="400" height="300" fill="url(#sg)"/><circle cx="70" cy="52" r="17" fill="#ffeec2"/><circle cx="79" cy="47" r="15" fill="#2b1a4d"/><circle cx="330" cy="44" r="2.6" fill="#ffeec2"/><circle cx="356" cy="74" r="2" fill="#ffeec2"/><circle cx="300" cy="30" r="1.8" fill="#ffeec2"/><path d="M110 300 V190 H290 V300 Z" fill="#082416"/><path d="M200 96 C238 122 252 150 254 190 H146 C148 150 162 122 200 96 Z" fill="#0d3d24"/><rect x="195" y="66" width="10" height="34" fill="#082416"/><circle cx="200" cy="60" r="7" fill="#ffd75e"/><path d="M52 300 V120 h16 V300 Z M292 300 V120 h16 V300 Z" fill="#082416"/><path d="M60 120 l-8 -22 h32 Z M300 120 l-8 -22 h32 Z" fill="#0d3d24"/><path d="M0 300 H400 V282 H0 Z" fill="#051a10"/>',
+  caravan: '<defs><linearGradient id="dg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7b733"/><stop offset=".55" stop-color="#e2703a"/><stop offset="1" stop-color="#7d2240"/></linearGradient></defs><rect width="400" height="300" fill="url(#dg)"/><circle cx="200" cy="86" r="38" fill="#ffd75e"/><path d="M0 208 Q110 168 220 200 T400 192 L400 300 L0 300 Z" fill="#c98a3d"/><path d="M0 248 Q130 214 260 244 T400 238 L400 300 L0 300 Z" fill="#8a5a24"/><g fill="#33200a"><ellipse cx="128" cy="212" rx="26" ry="13"/><path d="M146 204 q16 -16 22 -4 q2 6 -6 8 l-14 2 Z"/><rect x="104" y="220" width="5" height="22"/><rect x="142" y="220" width="5" height="22"/><rect x="112" y="192" width="20" height="12" rx="3"/><ellipse cx="252" cy="228" rx="20" ry="10"/><path d="M266 221 q12 -12 17 -3 q1 5 -5 6 l-11 2 Z"/><rect x="234" y="234" width="4" height="17"/><rect x="260" y="234" width="4" height="17"/></g>',
+  pomegranate: '<rect width="400" height="300" fill="#0a3520"/><path d="M-10 40 Q140 90 240 30 T410 60" stroke="#5c451a" stroke-width="7" fill="none"/><path d="M40 190 Q180 150 300 200 T410 180" stroke="#5c451a" stroke-width="6" fill="none"/><g fill="#1d7a4a"><ellipse cx="90" cy="66" rx="26" ry="12" transform="rotate(-24 90 66)"/><ellipse cx="180" cy="96" rx="24" ry="11" transform="rotate(18 180 96)"/><ellipse cx="300" cy="60" rx="26" ry="12" transform="rotate(-12 300 60)"/><ellipse cx="120" cy="216" rx="24" ry="11" transform="rotate(14 120 216)"/><ellipse cx="262" cy="238" rx="26" ry="12" transform="rotate(-20 262 238)"/></g><g><circle cx="140" cy="120" r="30" fill="#c12740"/><path d="M140 88 l5 10 h-10 Z" fill="#8e1c2e"/><circle cx="128" cy="110" r="8" fill="#e5566e"/><circle cx="330" cy="128" r="24" fill="#c12740"/><path d="M330 102 l4 8 h-8 Z" fill="#8e1c2e"/><circle cx="320" cy="120" r="6" fill="#e5566e"/><circle cx="196" cy="238" r="26" fill="#c12740"/><path d="M196 210 l4 9 h-9 Z" fill="#8e1c2e"/><circle cx="185" cy="229" r="7" fill="#e5566e"/></g>',
+  city: '<defs><linearGradient id="ng" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1030"/><stop offset="1" stop-color="#123a2a"/></linearGradient></defs><rect width="400" height="300" fill="url(#ng)"/><circle cx="338" cy="48" r="20" fill="#ffeec2"/><circle cx="60" cy="36" r="2" fill="#fff"/><circle cx="130" cy="60" r="1.6" fill="#fff"/><circle cx="210" cy="30" r="2" fill="#fff"/><circle cx="280" cy="66" r="1.6" fill="#fff"/><g fill="#04150c"><rect x="18" y="130" width="52" height="170"/><rect x="82" y="96" width="62" height="204"/><rect x="156" y="150" width="46" height="150"/><rect x="214" y="76" width="58" height="224"/><rect x="284" y="120" width="50" height="180"/><rect x="344" y="160" width="44" height="140"/></g><g fill="#ffd75e"><rect x="92" y="112" width="9" height="12"/><rect x="112" y="112" width="9" height="12"/><rect x="92" y="140" width="9" height="12"/><rect x="122" y="168" width="9" height="12"/><rect x="226" y="96" width="9" height="12"/><rect x="246" y="124" width="9" height="12"/><rect x="226" y="152" width="9" height="12"/><rect x="246" y="196" width="9" height="12"/><rect x="296" y="140" width="9" height="12"/><rect x="30" y="150" width="8" height="11"/><rect x="48" y="182" width="8" height="11"/><rect x="166" y="172" width="8" height="11"/><rect x="354" y="182" width="8" height="11"/></g><rect y="292" width="400" height="8" fill="#ffd75e" opacity=".35"/>',
+  carpet: '<rect width="400" height="300" fill="#7d2231"/><rect x="14" y="14" width="372" height="272" fill="none" stroke="#ffd75e" stroke-width="4"/><rect x="30" y="30" width="340" height="240" fill="none" stroke="#d9b380" stroke-width="2"/><g fill="#0d3d24"><path d="M200 62 l34 44 -34 44 -34 -44 Z"/><path d="M92 118 l26 34 -26 34 -26 -34 Z"/><path d="M308 118 l26 34 -26 34 -26 -34 Z"/><path d="M200 196 l26 34 -26 34 -26 -34 Z"/></g><g fill="#ffd75e"><path d="M200 84 l18 22 -18 22 -18 -22 Z"/><circle cx="92" cy="152" r="9"/><circle cx="308" cy="152" r="9"/><circle cx="200" cy="230" r="9"/></g><g fill="#d9b380"><circle cx="60" cy="52" r="5"/><circle cx="340" cy="52" r="5"/><circle cx="60" cy="248" r="5"/><circle cx="340" cy="248" r="5"/></g>',
+  eagle: '<defs><linearGradient id="eg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ec9e8"/><stop offset=".7" stop-color="#f2c879"/><stop offset="1" stop-color="#e2703a"/></linearGradient></defs><rect width="400" height="300" fill="url(#eg)"/><circle cx="200" cy="238" r="34" fill="#ffd75e" opacity=".85"/><path d="M200 138 C168 100 108 78 34 92 C78 112 116 132 148 154 C112 156 76 168 46 190 C102 196 156 184 186 164 L200 186 L214 164 C244 184 298 196 354 190 C324 168 288 156 252 154 C284 132 322 112 366 92 C292 78 232 100 200 138 Z" fill="#2a1a0c"/><circle cx="200" cy="146" r="11" fill="#2a1a0c"/><path d="M200 132 l7 8 -7 6 -7 -6 Z" fill="#ffd75e"/><path d="M0 268 L70 224 L130 258 L196 218 L268 260 L330 230 L400 266 L400 300 L0 300 Z" fill="#0e4d2e"/>',
+  river: '<defs><linearGradient id="rg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a8d8ea"/><stop offset="1" stop-color="#dcefe0"/></linearGradient></defs><rect width="400" height="300" fill="url(#rg)"/><path d="M0 0 H170 C150 70 210 110 178 168 C150 220 190 260 176 300 H0 Z" fill="#1d7a4a"/><path d="M400 0 H238 C262 66 206 116 240 172 C268 220 226 262 244 300 H400 Z" fill="#146545"/><path d="M186 0 C168 66 224 112 192 170 C164 222 202 262 188 300 L232 300 C220 258 254 220 228 170 C200 114 252 68 230 0 Z" fill="#57a8d8"/><g fill="#0b3d24"><circle cx="80" cy="90" r="17"/><rect x="77" y="100" width="6" height="18"/><circle cx="316" cy="120" r="15"/><rect x="313" y="130" width="6" height="16"/><circle cx="96" cy="212" r="14"/><rect x="93" y="220" width="6" height="15"/><circle cx="330" cy="224" r="17"/><rect x="327" y="234" width="6" height="18"/></g><circle cx="52" cy="44" r="20" fill="#ffd75e"/>',
+  tent: '<defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1030"/><stop offset=".75" stop-color="#1d2a52"/><stop offset="1" stop-color="#0b3d24"/></linearGradient></defs><rect width="400" height="300" fill="url(#tg)"/><g fill="#ffeec2"><circle cx="44" cy="40" r="2"/><circle cx="110" cy="70" r="1.6"/><circle cx="180" cy="34" r="2"/><circle cx="250" cy="62" r="1.6"/><circle cx="318" cy="38" r="2"/><circle cx="360" cy="84" r="1.6"/><circle cx="84" cy="110" r="1.4"/><circle cx="300" cy="116" r="1.4"/></g><circle cx="348" cy="52" r="15" fill="#ffeec2"/><path d="M200 108 L96 258 H304 Z" fill="#7d2231"/><path d="M200 108 L158 258 H242 Z" fill="#5c1824"/><path d="M200 108 L242 258 H304 Z" fill="#932b3d"/><path d="M196 258 l4 -34 4 34 Z" fill="#ffd75e"/><rect y="258" width="400" height="42" fill="#07331d"/><g><path d="M88 268 q6 -14 0 -24 q12 8 8 24 q-3 10 -8 0 Z" fill="#ff9d3c"/><circle cx="312" cy="272" r="4" fill="#ff9d3c"/><circle cx="322" cy="278" r="3" fill="#e2703a"/></g>',
+  trophy: '<defs><radialGradient id="hg" cx=".5" cy=".34" r=".85"><stop offset="0" stop-color="#3d2c07"/><stop offset="1" stop-color="#120d02"/></radialGradient></defs><rect width="400" height="300" fill="url(#hg)"/><g stroke="#ffd75e" stroke-width="5" opacity=".5"><path d="M200 130 L60 20"/><path d="M200 130 L130 8"/><path d="M200 130 L270 8"/><path d="M200 130 L340 20"/></g><g fill="#0d3d24"><rect x="26" y="120" width="26" height="180"/><rect x="348" y="120" width="26" height="180"/></g><g fill="#ffd75e"><path d="M158 62 h84 v52 a42 42 0 0 1-84 0 Z"/><path d="M158 76 h-26 a8 8 0 0 0 6 30 l24 10 M242 76 h26 a8 8 0 0 1-6 30 l-24 10" fill="none" stroke="#ffd75e" stroke-width="9"/><rect x="190" y="150" width="20" height="30"/><path d="M164 196 h72 l8 22 H156 Z"/><rect x="146" y="218" width="108" height="12"/></g><circle cx="200" cy="88" r="11" fill="#d7263d"/>',
+};
+const CLUB_COVER_IDS = Object.keys(CLUB_COVER_SVGS);
+function clCoverEl(cover) {
+  const d = document.createElement('div');
+  d.style.width = '100%';
+  d.style.height = '100%';
+  d.innerHTML = '<svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%">' +
+    (CLUB_COVER_SVGS[cover] || CLUB_COVER_SVGS.mountains) + '</svg>';
+  return d;
+}
+function clLevelOf(count) { return Math.min(5, 1 + Math.floor(Math.max(1, count || 0) / 10)); }
+function clCatLabel(cat) { return T(cat === 'game' ? 'clCatGame' : cat === 'family' ? 'clCatFamily' : 'clCatSocial'); }
+const CL_CHIP_COUNTRIES = ['افغانستان', 'پاکستان', 'هند', 'عربستان سعودی', 'آمریکا', 'بریتانیا'];
+const CL_CROWN = {
+  0: '<svg class="cl-crown" viewBox="0 0 40 28"><path d="M3 24 L5 8 L14 16 L20 4 L26 16 L35 8 L37 24 Z" fill="#ffd75e" stroke="#a67c1a" stroke-width="1.6"/><circle cx="20" cy="20" r="2.4" fill="#d7263d"/></svg>',
+  1: '<svg class="cl-crown" viewBox="0 0 40 28"><path d="M3 24 L5 8 L14 16 L20 4 L26 16 L35 8 L37 24 Z" fill="#dfe7ea" stroke="#8d9aa0" stroke-width="1.6"/><circle cx="20" cy="20" r="2.4" fill="#57a8d8"/></svg>',
+  2: '<svg class="cl-crown" viewBox="0 0 40 28"><path d="M3 24 L5 8 L14 16 L20 4 L26 16 L35 8 L37 24 Z" fill="#e0a266" stroke="#96602e" stroke-width="1.6"/><circle cx="20" cy="20" r="2.4" fill="#7d2231"/></svg>',
+};
+let clubData = null;             // {club, invites, outgoing} from s-club
+let clubMsgs = [];               // chat tail of my club (client-kept)
+let clubUnread = 0;              // unread club chat while the page is away
+let clubInitDone = false;        // first s-club is the hello state (no join toast)
+let clubSearchResults = [];
+let clubSearched = false;
+let ccEmblem = 'trophy';         // create-overlay picks
+let ccCover = 'mountains';
+let ccCategory = 'social';
+let clEditEmblem = 'trophy';     // settings picks
+let clEditCover = 'mountains';
+let clEditCategory = 'social';
+let clEditCid = null;            // club the settings form was filled for
+const clubInvitedSent = new Set(); // friends I club-invited this session (row state)
+// ---- discovery state ----
+let clTab = 'explore';           // explore | hot | mine
+let clCountryFilter = '';        // canonical country name or '' (global)
+let clCountryMore = false;       // the «نور» country select is open
+let clDisc = null;               // last s-club-discover-result payload
+let clDiscAt = 0;                // when it arrived (soft-refresh throttle)
+let clPodIdx = 0;                // podium carousel centre index
+let clPodTimer = null;
+let clPublic = null;             // public club page payload (s-club-view-result)
+let clRoomView = false;          // true = the club room, false = discovery
+
+function openClubs() {
+  frOrigin = null; // leaving friends via a nav page drops the lobby origin
+  closeClubMenu();
+  $('#scr-friends').classList.add('hidden');
+  $('#scr-chats').classList.add('hidden');
+  $('#scr-profile').classList.add('hidden');
+  $('#scr-clubs').classList.remove('hidden');
+  clubUnread = 0;
+  connectSocial();
+  requestDiscover();
+  renderClubs();
+}
+function closeClubs() {
+  closeClubMenu();
+  stopPodium();
+  cv.leave();
+  $('#scr-clubs').classList.add('hidden');
+}
+function updateClubsBadge() {
+  let n = clubUnread;
+  if (clubData) {
+    if (!clubData.club) n += (clubData.invites || []).length;
+    else if (clubData.club.requests) n += clubData.club.requests.length;
+  }
+  ['#nav-clubs-badge', '#frnav-clubs-badge', '#chnav-clubs-badge', '#pfnav-clubs-badge', '#clnav-clubs-badge'].forEach((sel) => {
+    const b = $(sel);
+    if (b) { b.textContent = faNum(n); b.classList.toggle('hidden', n === 0); }
+  });
+}
+// Clubs page nav: کلبونه is the raised active item.
+$('#clnav-friends').onclick = () => openFriends();
+$('#clnav-clubs').onclick = () => {};
+$('#clnav-home').onclick = () => closeClubs();
+$('#clnav-profile').onclick = openProfile;
+$('#clnav-chat').onclick = () => openChats();
+
+function requestDiscover() {
+  connectSocial();
+  socialSend({ type: 's-club-discover', tab: clTab, country: clTab === 'mine' ? '' : clCountryFilter });
+}
+function clubRow(summary, actions) {
+  const row = document.createElement('div');
+  row.className = 'fr-row';
+  const who = document.createElement('div');
+  who.className = 'fr-who';
+  who.appendChild(clEmblemEl(summary.emblem, 38));
+  const meta = document.createElement('div');
+  meta.className = 'fr-meta';
+  const nm = document.createElement('div');
+  nm.className = 'fr-name';
+  nm.textContent = summary.name || '';
+  const sub = document.createElement('div');
+  sub.className = 'fr-sub';
+  const st = document.createElement('span');
+  st.textContent = T('frIdLabel') + ': ' + summary.cid + ' · ' + T('clMemberCount', summary.count) +
+    (summary.ownerName ? ' · ' + summary.ownerName : '');
+  sub.appendChild(st);
+  meta.appendChild(nm);
+  meta.appendChild(sub);
+  who.appendChild(meta);
+  row.appendChild(who);
+  const act = document.createElement('div');
+  act.className = 'fr-actions';
+  (actions || []).forEach((a) => act.appendChild(a));
+  row.appendChild(act);
+  return row;
+}
+function clubMemberRow(m) {
+  const row = document.createElement('div');
+  row.className = 'fr-row cl-mrow';
+  row.dataset.cmid = m.id; // the open popover re-anchors after a re-render
+  const who = document.createElement('div');
+  who.className = 'fr-who';
+  who.appendChild(avatarEl(m.name, m.avatar, 38, m.photo));
+  const meta = document.createElement('div');
+  meta.className = 'fr-meta';
+  const nm = document.createElement('div');
+  nm.className = 'fr-name';
+  nm.textContent = m.name || T('playerName');
+  const chip = document.createElement('span');
+  chip.className = 'cl-role ' + m.role;
+  chip.textContent = T(m.role === 'owner' ? 'clRoleOwner' : m.role === 'deputy' ? 'clRoleDeputy' : 'clRoleMember');
+  nm.appendChild(chip);
+  const sub = document.createElement('div');
+  sub.className = 'fr-sub';
+  const dot = document.createElement('span');
+  dot.className = 'dot' + (m.online ? ' on' : '');
+  sub.appendChild(dot);
+  const st = document.createElement('span');
+  const fl = m.country ? countryFlag(m.country) : '';
+  st.textContent = (fl ? fl + ' ' : '') + (m.country ? dispCountry(m.country) + ' · ' : '') +
+    (m.online ? T('frOnline') : T('frOffline'));
+  sub.appendChild(st);
+  meta.appendChild(nm);
+  meta.appendChild(sub);
+  if (m.uid) {
+    const idl = document.createElement('div');
+    idl.className = 'fr-idline';
+    idl.textContent = T('frIdLabel') + ': ' + m.uid;
+    meta.appendChild(idl);
+  }
+  who.appendChild(meta);
+  row.appendChild(who);
+  if (m.id !== socialMe) row.onclick = () => openClubMenu(m, row);
+  return row;
+}
+
+// ---------- discovery rendering ----------
+function clActivityBars(count) {
+  const lit = Math.max(1, Math.min(4, Math.ceil((count || 1) / 50 * 4)));
+  let h = '<span class="bars">';
+  [4, 6, 9, 11].forEach((hh, i) => {
+    h += '<i style="height:' + hh + 'px;' + (i < lit ? '' : 'background:rgba(255,255,255,.25)') + '"></i>';
+  });
+  return h + '</span>';
+}
+function clubCardEl(s) {
+  const card = document.createElement('div');
+  card.className = 'cl-card';
+  const cov = document.createElement('div');
+  cov.className = 'cl-card-cov';
+  cov.appendChild(clCoverEl(s.cover));
+  const badge = document.createElement('div');
+  badge.className = 'cl-card-badge';
+  badge.innerHTML = '<span>👥 ' + faNum(s.count) + '</span>' + clActivityBars(s.count);
+  cov.appendChild(badge);
+  const lvl = document.createElement('div');
+  lvl.className = 'cl-card-lvl';
+  lvl.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 8.8-8 10C7.4 19.8 4 16 4 11V5z" fill="#b3374a" stroke="#ffd75e" stroke-width="1.3"/></svg><span>' + faNum(s.level || clLevelOf(s.count)) + '</span>';
+  cov.appendChild(lvl);
+  card.appendChild(cov);
+  const nm = document.createElement('div');
+  nm.className = 'cl-card-name';
+  nm.textContent = s.name || '';
+  card.appendChild(nm);
+  const row = document.createElement('div');
+  row.className = 'cl-card-row';
+  if (s.country) {
+    const fl = document.createElement('span');
+    fl.className = 'cl-card-flag';
+    fl.textContent = countryFlag(s.country);
+    row.appendChild(fl);
+  }
+  const cat = document.createElement('span');
+  cat.className = 'cl-cat';
+  cat.textContent = clCatLabel(s.category);
+  row.appendChild(cat);
+  const lk = document.createElement('span');
+  lk.style.cssText = 'margin-inline-start:auto;font-size:12.5px;opacity:.9';
+  lk.textContent = '❤ ' + faNum(s.likes || 0);
+  row.appendChild(lk);
+  card.appendChild(row);
+  card.onclick = () => openClubPublic(s.cid);
+  return card;
+}
+function stopPodium() { if (clPodTimer) { clearInterval(clPodTimer); clPodTimer = null; } }
+function renderPodium(top) {
+  const wrap = $('#cl-podium-wrap');
+  const pod = $('#cl-podium');
+  const dots = $('#cl-podium-dots');
+  if (!top || !top.length) { wrap.classList.add('hidden'); stopPodium(); return; }
+  wrap.classList.remove('hidden');
+  pod.innerHTML = '';
+  const n = top.length;
+  if (clPodIdx >= n) clPodIdx = 0;
+  const slots = [];
+  if (n === 1) slots.push({ s: top[0], pos: 'first' });
+  else if (n === 2) { slots.push({ s: top[(clPodIdx + 1) % 2], pos: 'second' }); slots.push({ s: top[clPodIdx], pos: 'first' }); }
+  else {
+    // RTL flex lays the first child at the RIGHT edge: append #3,
+    // #1, #2 so the visual order is left #2 (silver) · centre #1
+    // (gold) · right #3 (bronze), exactly like the reference.
+    slots.push({ s: top[(clPodIdx + 2) % n], pos: 'third' });
+    slots.push({ s: top[clPodIdx], pos: 'first' });
+    slots.push({ s: top[(clPodIdx + 1) % n], pos: 'second' });
+  }
+  slots.forEach(({ s, pos }) => {
+    const rank = top.indexOf(s);
+    const d = document.createElement('div');
+    d.className = 'cl-pod ' + pos;
+    const fr = document.createElement('div');
+    fr.className = 'cl-pod-frame';
+    fr.innerHTML = CL_CROWN[rank] || '';
+    const cvv = document.createElement('div');
+    cvv.className = 'cl-pod-cov';
+    cvv.appendChild(clCoverEl(s.cover));
+    fr.appendChild(cvv);
+    d.appendChild(fr);
+    const nm = document.createElement('div');
+    nm.className = 'cl-pod-name';
+    nm.textContent = s.name || '';
+    d.appendChild(nm);
+    d.onclick = () => openClubPublic(s.cid);
+    pod.appendChild(d);
+  });
+  dots.innerHTML = '';
+  top.forEach((s, i) => {
+    const dot = document.createElement('i');
+    if (i === clPodIdx) dot.className = 'on';
+    dots.appendChild(dot);
+  });
+  if (n > 1 && !clPodTimer) {
+    clPodTimer = setInterval(() => {
+      if ($('#scr-clubs').classList.contains('hidden') || clRoomView || clTab === 'mine' || !clDisc || !clDisc.top || clDisc.top.length < 2) return;
+      clPodIdx = (clPodIdx + 1) % clDisc.top.length;
+      renderClubs();
+    }, 4000);
+  }
+}
+function renderChips() {
+  const box = $('#cl-chips');
+  box.innerHTML = '';
+  const mk = (label, active, fn) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cl-chip' + (active ? ' sel' : '');
+    b.textContent = label;
+    b.onclick = fn;
+    box.appendChild(b);
+  };
+  mk('🌐 ' + T('clGlobal'), !clCountryFilter && !clCountryMore, () => { clCountryFilter = ''; clCountryMore = false; clPodIdx = 0; requestDiscover(); renderClubs(); });
+  CL_CHIP_COUNTRIES.forEach((cn) => {
+    mk(countryFlag(cn) + ' ' + dispCountry(cn), clCountryFilter === cn && !clCountryMore, () => {
+      clCountryFilter = cn; clCountryMore = false; clPodIdx = 0; requestDiscover(); renderClubs();
+    });
+  });
+  mk(T('clMore') + ' ▾', clCountryMore, () => { clCountryMore = !clCountryMore; renderClubs(); });
+  $('#cl-morewrap').classList.toggle('hidden', !clCountryMore);
+  if (clCountryMore) {
+    const sel = $('#cl-country-sel');
+    if (!sel.options.length) {
+      const o0 = document.createElement('option');
+      o0.value = '';
+      o0.textContent = '🌐 ' + T('clGlobal');
+      sel.appendChild(o0);
+      COUNTRIES.forEach((cn) => {
+        const o = document.createElement('option');
+        o.value = cn;
+        o.textContent = (countryFlag(cn) ? countryFlag(cn) + ' ' : '') + dispCountry(cn);
+        sel.appendChild(o);
+      });
+    }
+    sel.value = clCountryFilter;
+  }
+}
+function renderExplorePane() {
+  renderChips();
+  const fresh = clDisc && clDisc.tab === clTab && (clDisc.country || '') === clCountryFilter;
+  renderPodium(fresh ? clDisc.top : []);
+  const grid = $('#cl-grid');
+  grid.innerHTML = '';
+  const results = fresh ? (clDisc.results || []) : [];
+  results.forEach((s) => grid.appendChild(clubCardEl(s)));
+  const empty = $('#cl-grid-empty');
+  empty.classList.toggle('hidden', !(fresh && !results.length));
+  if (fresh && !results.length) empty.textContent = T('clNoResults');
+  // classic name/ID search results (the round search button's flow)
+  const resBox = $('#cl-results-box');
+  resBox.classList.toggle('hidden', !clubSearched);
+  if (clubSearched) {
+    const res = $('#cl-results');
+    res.innerHTML = '';
+    clubSearchResults.forEach((s) => {
+      let btn;
+      if (s.relation === 'requested') btn = frBtn(T('clRequested'), '', null);
+      else if (s.relation === 'invited') btn = frBtn(T('frAccept'), 'primary', () => socialSend({ type: 's-club-invite-reply', club: s.cid, accept: true }));
+      else if (s.relation === 'member') btn = frBtn(T('clEnterClub'), 'primary', () => openClubPublic(s.cid));
+      else btn = frBtn(T('clRequest'), 'primary', () => socialSend({ type: 's-club-request', club: s.cid }));
+      res.appendChild(clubRow(s, [btn]));
+    });
+    if (!clubSearchResults.length) res.appendChild(frEmpty(T('clNoResults')));
+  }
+}
+function renderMinePane() {
+  const hero = $('#cl-hero-emb');
+  hero.innerHTML = '';
+  hero.appendChild(clEmblemEl('trophy', 64));
+  const invBox = $('#cl-invites-box'), invList = $('#cl-invites');
+  invList.innerHTML = '';
+  const invs = clubData ? (clubData.invites || []) : [];
+  invBox.classList.toggle('hidden', !invs.length);
+  invs.forEach((inv) => {
+    invList.appendChild(clubRow(inv.club, [
+      frBtn(T('frAccept'), 'primary', () => socialSend({ type: 's-club-invite-reply', club: inv.club.cid, accept: true })),
+      frBtn(T('frReject'), '', () => socialSend({ type: 's-club-invite-reply', club: inv.club.cid, accept: false })),
+    ]));
+  });
+  const outBox = $('#cl-outgoing-box'), outList = $('#cl-outgoing');
+  outList.innerHTML = '';
+  const outs = clubData ? (clubData.outgoing || []) : [];
+  outBox.classList.toggle('hidden', !outs.length);
+  outs.forEach((s) => {
+    outList.appendChild(clubRow(s, [
+      frBtn(T('clCancel'), '', () => socialSend({ type: 's-club-cancel', club: s.cid })),
+    ]));
+  });
+  // my club entry card (tap → the club room)
+  const slot = $('#cl-myclub-slot');
+  slot.innerHTML = '';
+  if (clubData && clubData.club) {
+    const c = clubData.club;
+    const card = document.createElement('div');
+    card.className = 'cardbox';
+    const h = document.createElement('h3');
+    h.className = 'fr-sec';
+    h.textContent = T('clMyClubTitle');
+    card.appendChild(h);
+    const row = clubRow(c, [frBtn(T('clEnterClub'), 'primary', (e) => { if (e) e.stopPropagation(); enterMyClubRoom(); })]);
+    row.style.cursor = 'pointer';
+    row.onclick = () => enterMyClubRoom();
+    card.appendChild(row);
+    slot.appendChild(card);
+  }
+  // clubs I liked
+  const liked = (clDisc && clDisc.tab === 'mine') ? (clDisc.liked || []) : [];
+  $('#cl-liked-title').classList.toggle('hidden', !liked.length);
+  const lg = $('#cl-liked-grid');
+  lg.innerHTML = '';
+  liked.forEach((s) => lg.appendChild(clubCardEl(s)));
+}
+function enterMyClubRoom() {
+  if (!clubData || !clubData.club) return;
+  clRoomView = true;
+  closeClubMenu();
+  renderClubs();
+}
+function renderDiscovery() {
+  ['explore', 'hot', 'mine'].forEach((t) => $('#cl-tab-' + t).classList.toggle('sel', clTab === t));
+  $('#cl-pane-explore').classList.toggle('hidden', clTab === 'mine');
+  $('#cl-pane-mine').classList.toggle('hidden', clTab !== 'mine');
+  $('#btn-cl-create').classList.toggle('hidden', !!(clubData && clubData.club));
+  if (clTab === 'mine') renderMinePane(); else renderExplorePane();
+}
+// ---------- public club page ----------
+function openClubPublic(cid) {
+  if (clubData && clubData.club && clubData.club.cid === cid) { enterMyClubRoom(); return; }
+  connectSocial();
+  socialSend({ type: 's-club-view', club: cid });
+}
+function renderClubPublic() {
+  const s = clPublic;
+  if (!s) return;
+  const cov = $('#cv-cov');
+  cov.innerHTML = '';
+  cov.appendChild(clCoverEl(s.cover));
+  $('#cv-name').textContent = s.name || '';
+  const fl = s.country ? countryFlag(s.country) + ' ' + dispCountry(s.country) + ' · ' : '';
+  $('#cv-meta').textContent = 'ID: ' + s.cid + ' · 👥 ' + faNum(s.count) + ' · ' + T('clLevel', s.level || clLevelOf(s.count)) + ' · ❤ ' + faNum(s.likes || 0);
+  const desc = $('#cv-desc');
+  desc.textContent = s.desc || '';
+  desc.style.display = s.desc ? '' : 'none';
+  const ann = $('#cv-annbar');
+  ann.classList.toggle('hidden', !s.announcement);
+  if (s.announcement) $('#cv-ann-text').textContent = s.announcement;
+  $('#cv-ann-lbl').textContent = '📢 ' + T('clAnnounce');
+  const mems = $('#cv-mems');
+  mems.innerHTML = '';
+  (s.members || []).forEach((m) => {
+    const d = document.createElement('div');
+    d.className = 'cv-mem';
+    d.appendChild(avatarEl(m.name, m.avatar, 40, m.photo));
+    const nm = document.createElement('div');
+    nm.className = 'cv-mem-n';
+    nm.textContent = m.name || '';
+    d.appendChild(nm);
+    mems.appendChild(d);
+  });
+  const act = $('#cv-actions');
+  act.innerHTML = '';
+  if (s.relation === 'requested') act.appendChild(frBtn(T('clRequested'), '', null));
+  else if (s.relation === 'invited') act.appendChild(frBtn(T('frAccept'), 'primary', () => { socialSend({ type: 's-club-invite-reply', club: s.cid, accept: true }); $('#ov-clubview').classList.remove('show'); }));
+  else if (s.relation === 'none' && !(clubData && clubData.club)) {
+    act.appendChild(frBtn(T('clRequest'), 'primary', () => { socialSend({ type: 's-club-request', club: s.cid }); toast(T('clRequested')); $('#ov-clubview').classList.remove('show'); }));
+  }
+  const likeBtn = $('#btn-cv-like');
+  likeBtn.textContent = '❤ ' + T('clLike') + ' · ' + faNum(s.likes || 0);
+  likeBtn.className = s.liked ? '' : 'primary';
+  likeBtn.disabled = !!s.liked;
+  $('#btn-cv-close').textContent = T('clCancel');
+}
+$('#btn-cv-close').onclick = () => $('#ov-clubview').classList.remove('show');
+$('#ov-clubview').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
+$('#btn-cv-like').onclick = () => { if (clPublic) socialSend({ type: 's-club-like', club: clPublic.cid }); };
+
+// ---------- club room ----------
+function renderClubChat() {
+  const box = $('#cl-msgs');
+  if (!box) return;
+  const scroller = box.closest('.fr-scroll');
+  const nearBottom = !scroller || (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 320);
+  box.innerHTML = '';
+  if (!clubMsgs.length) { box.appendChild(frEmpty(T('clChatEmpty'))); return; }
+  clubMsgs.forEach((m) => {
+    let name = m.name, avatar = m.avatar, photo = m.photo;
+    if (!name && clubData && clubData.club) {
+      const p = clubData.club.members.find((x) => x.id === m.from) || socialPeople.get(m.from);
+      if (p) { name = p.name; avatar = p.avatar; photo = p.photo; }
+    }
+    const item = document.createElement('div');
+    item.className = 'cl-feed-item' + (m.from === socialMe ? ' mine' : '');
+    item.appendChild(avatarEl(name, avatar, 34, photo));
+    const main = document.createElement('div');
+    main.className = 'cl-feed-main';
+    const nm = document.createElement('span');
+    nm.className = 'cl-feed-name';
+    nm.textContent = (name || '') + ':';
+    main.appendChild(nm);
+    main.appendChild(document.createTextNode(m.text));
+    const ts = document.createElement('span');
+    ts.className = 'cl-feed-ts';
+    ts.textContent = new Date(m.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    main.appendChild(ts);
+    item.appendChild(main);
+    box.appendChild(item);
+  });
+  if (scroller && nearBottom) scroller.scrollTop = scroller.scrollHeight;
+}
+const CL_MIC_SVG = '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.2M9 20.5h6"/></svg>';
+function clubSeatPerson(c, id) {
+  return (c.members || []).find((x) => x.id === id) || socialPeople.get(id) || { id, name: '', avatar: null, photo: null };
+}
+function renderClubSeats(c) {
+  const box = $('#cl-seats');
+  if (!box) return;
+  box.innerHTML = '';
+  const seatMap = new Map((c.seatMap || []).map((s) => [s.seat, s.id]));
+  for (let i = 0; i < 8; i++) {
+    const pid = seatMap.get(i);
+    const p = pid ? clubSeatPerson(c, pid) : null;
+    const d = document.createElement('div');
+    d.className = 'cl-seat' + (p ? ' occ' : '') + (p && pid === socialMe ? ' me' : '') + (p && cv.speaking.has(pid) ? ' speaking' : '');
+    const cc = document.createElement('div');
+    cc.className = 'cl-seat-c';
+    if (p) cc.appendChild(avatarEl(p.name, p.avatar, 52, p.photo));
+    else cc.innerHTML = CL_MIC_SVG;
+    cc.onclick = () => onClubSeatTap(i, pid);
+    d.appendChild(cc);
+    const nm = document.createElement('div');
+    nm.className = 'cl-seat-n';
+    nm.textContent = p ? (p.name || '') : '';
+    d.appendChild(nm);
+    box.appendChild(d);
+  }
+}
+async function onClubSeatTap(seat, occupantId) {
+  if (!clubData || !clubData.club) return;
+  if (occupantId) {
+    if (occupantId === socialMe) { socialSend({ type: 's-club-stand' }); cv.setMic(false); }
+    return;
+  }
+  const ok = await cv.ensureMic();
+  if (!ok) return;
+  cv.wantMic = true;
+  socialSend({ type: 's-club-seat', seat });
+}
+function renderClubRoom() {
+  const c = clubData.club;
+  const cov = $('#cl-room-cov');
+  cov.innerHTML = '';
+  cov.appendChild(clCoverEl(c.cover));
+  $('#cl-name').textContent = c.name || '';
+  $('#cl-id-num').textContent = 'ID: ' + c.cid;
+  const likeBtn = $('#btn-cl-like');
+  likeBtn.classList.toggle('on', !!c.liked);
+  $('#cl-like-n').textContent = faNum(c.likes || 0);
+  $('#cl-count').textContent = T('clMemberCount', c.count);
+  renderClubSeats(c);
+  // announcement
+  const annText = $('#cl-ann-text');
+  if (c.announcement) { annText.textContent = c.announcement; annText.classList.remove('dim'); }
+  else { annText.textContent = T('clAnnounceEmpty'); annText.classList.add('dim'); }
+  const isManager = c.myRole === 'owner' || c.myRole === 'deputy';
+  $('#btn-cl-ann-edit').classList.toggle('hidden', !isManager);
+  // join requests (managers only; the server sends [] to members)
+  const reqBox = $('#cl-req-box'), reqList = $('#cl-requests');
+  reqList.innerHTML = '';
+  const reqs = c.requests || [];
+  reqBox.classList.toggle('hidden', !reqs.length);
+  reqs.forEach((p) => {
+    reqList.appendChild(personRow(p, [
+      frBtn(T('frAccept'), 'primary', () => socialSend({ type: 's-club-respond', from: p.id, accept: true })),
+      frBtn(T('frReject'), '', () => socialSend({ type: 's-club-respond', from: p.id, accept: false })),
+    ]));
+  });
+  // members
+  const memBox = $('#cl-members');
+  memBox.innerHTML = '';
+  c.members.forEach((m) => memBox.appendChild(clubMemberRow(m)));
+  renderClubChat();
+  // invite friends (managers): my friends who are not in this club
+  const ifBox = $('#cl-invitefriends-box'), ifList = $('#cl-invitefriends');
+  ifList.innerHTML = '';
+  ifBox.classList.toggle('hidden', !isManager);
+  if (isManager && socialData) {
+    const memberIds = new Set(c.members.map((m) => m.id));
+    const cands = socialData.friends.filter((f) => !memberIds.has(f.id));
+    if (!cands.length) ifList.appendChild(frEmpty(T('clNoInviteFriends')));
+    cands.forEach((f) => {
+      const sent = clubInvitedSent.has(f.id);
+      ifList.appendChild(personRow(f, [sent
+        ? frBtn(T('clRequested'), '', null)
+        : frBtn(T('frInvite'), 'primary', () => {
+            clubInvitedSent.add(f.id);
+            socialSend({ type: 's-club-invite', to: f.id });
+            renderClubs();
+          })]));
+    });
+  }
+  // settings: description + owner edit form + leave/dissolve
+  const cd = new Date(c.created);
+  $('#cl-created').textContent = T('clCreated', cd.getFullYear() + '/' + (cd.getMonth() + 1) + '/' + cd.getDate());
+  const desc = $('#cl-desc');
+  desc.textContent = c.desc || '';
+  desc.style.display = c.desc ? '' : 'none';
+  const isOwner = c.myRole === 'owner';
+  $('#cl-owner-edit').classList.toggle('hidden', !isOwner);
+  $('#btn-cl-dissolve').classList.toggle('hidden', !isOwner);
+  $('#cl-leave-note').classList.toggle('hidden', !isOwner);
+  if (isOwner) {
+    const nameInp = $('#cl-edit-name'), descInp = $('#cl-edit-desc');
+    if (clEditCid !== c.cid) {
+      clEditCid = c.cid;
+      clEditEmblem = c.emblem;
+      clEditCover = c.cover || 'mountains';
+      clEditCategory = c.category || 'social';
+      nameInp.value = c.name || '';
+      descInp.value = c.desc || '';
+      fillCountrySelect($('#cl-edit-country'), c.country || '');
+    } else {
+      if (document.activeElement !== nameInp) nameInp.value = c.name || '';
+      if (document.activeElement !== descInp) descInp.value = c.desc || '';
+    }
+    buildEmblemGrid($('#cl-edit-emgrid'), clEditEmblem, (e) => { clEditEmblem = e; renderClubs(); });
+    buildCoverGrid($('#cl-edit-covgrid'), clEditCover, (cvv) => { clEditCover = cvv; renderClubs(); });
+    buildCatRow($('#cl-edit-catrow'), clEditCategory, (cat) => { clEditCategory = cat; renderClubs(); });
+  }
+  cv.enter();
+  cv.paintBtns();
+}
+function renderClubs() {
+  updateClubsBadge();
+  // static labels (painted here so a language switch is one call)
+  $('#cl-home-text').textContent = T('clHomeText');
+  $('#btn-cl-create').textContent = T('clCreate');
+  $('#cl-tab-explore').textContent = T('clTabExplore');
+  $('#cl-tab-hot').textContent = T('clTabHot');
+  $('#cl-tab-mine').textContent = T('clTabMine');
+  $('#cl-podium-title').textContent = '👑 ' + T('clTopClubs');
+  $('#cl-invites-title').textContent = T('clInvitesTitle');
+  $('#cl-liked-title').textContent = T('clLikedTitle');
+  $('#cl-search-title').textContent = T('clSearchTitle');
+  $('#btn-cl-search').textContent = T('clSearchBtn');
+  $('#cl-search-inp').placeholder = T('clSearchPh');
+  $('#cl-outgoing-title').textContent = T('clOutgoingTitle');
+  $('#cl-req-title').textContent = T('clRequestsTitle');
+  $('#cl-members-title').textContent = T('clMembers');
+  $('#cl-chat-title').textContent = T('clChatTitle');
+  $('#cl-inp').placeholder = T('clChatPh');
+  $('#cl-invitefriends-title').textContent = T('clInviteFriends');
+  $('#cl-settings-title').textContent = T('clSettings');
+  $('#cl-ann-lbl').textContent = '📢 ' + T('clAnnounce');
+  $('#cl-seats-hint').textContent = T('clSeatsHint');
+  $('#btn-cl-edit-save').textContent = T('clSave');
+  $('#btn-cl-leave').textContent = T('clLeave');
+  $('#btn-cl-dissolve').textContent = T('clDissolve');
+  $('#cl-leave-note').textContent = T('clLeaveOwnerNote');
+  $('#cc-title').textContent = T('clCreateTitle');
+  $('#cc-name-lbl').textContent = T('navClubs');
+  $('#cc-name').placeholder = T('clNamePh');
+  $('#cc-emb-lbl').textContent = T('clEmblem');
+  $('#cc-cov-lbl').textContent = T('clCover');
+  $('#cc-country-lbl').textContent = T('clCountry');
+  $('#cc-cat-lbl').textContent = T('clCategory');
+  $('#cc-desc-lbl').textContent = T('clDescPh');
+  $('#cc-desc').placeholder = T('clDescPh');
+  $('#btn-cc-create').textContent = T('clCreate');
+  $('#btn-cc-cancel').textContent = T('clCancel');
+  $('#cl-edit-name-lbl').textContent = T('navClubs');
+  $('#cl-edit-emb-lbl').textContent = T('clEmblem');
+  $('#cl-edit-cov-lbl').textContent = T('clCover');
+  $('#cl-edit-country-lbl').textContent = T('clCountry');
+  $('#cl-edit-cat-lbl').textContent = T('clCategory');
+  $('#cl-edit-desc-lbl').textContent = T('clDescPh');
+  $('#ca-title').textContent = '📢 ' + T('clAnnounce');
+  $('#ca-inp').placeholder = T('clAnnouncePh');
+  $('#btn-ca-save').textContent = T('clSave');
+  $('#btn-ca-cancel').textContent = T('clCancel');
+  if ($('#scr-clubs').classList.contains('hidden')) return;
+  const inRoom = !!(clubData && clubData.club && clRoomView);
+  $('#cl-disc-scroll').classList.toggle('hidden', inRoom);
+  $('#cl-room').classList.toggle('hidden', !inRoom);
+  if (inRoom) { stopPodium(); renderClubRoom(); }
+  else renderDiscovery();
+  validateClubMenu();
+}
+function buildEmblemGrid(box, current, onPick) {
+  if (!box) return;
+  box.innerHTML = '';
+  CLUB_EMBLEM_IDS.forEach((e) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cl-em' + (e === current ? ' sel' : '');
+    b.appendChild(clEmblemEl(e, 34));
+    b.onclick = () => onPick(e);
+    box.appendChild(b);
+  });
+}
+function buildCoverGrid(box, current, onPick) {
+  if (!box) return;
+  box.innerHTML = '';
+  CLUB_COVER_IDS.forEach((cvv) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cl-cov' + (cvv === current ? ' sel' : '');
+    b.appendChild(clCoverEl(cvv));
+    b.onclick = () => onPick(cvv);
+    box.appendChild(b);
+  });
+}
+function buildCatRow(box, current, onPick) {
+  if (!box) return;
+  box.innerHTML = '';
+  ['social', 'game', 'family'].forEach((cat) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cl-catbtn' + (cat === current ? ' sel' : '');
+    b.textContent = clCatLabel(cat);
+    b.onclick = () => onPick(cat);
+    box.appendChild(b);
+  });
+}
+function fillCountrySelect(sel, current) {
+  if (!sel) return;
+  sel.innerHTML = '';
+  const o0 = document.createElement('option');
+  o0.value = '';
+  o0.textContent = '—';
+  sel.appendChild(o0);
+  COUNTRIES.forEach((cn) => {
+    const o = document.createElement('option');
+    o.value = cn;
+    o.textContent = (countryFlag(cn) ? countryFlag(cn) + ' ' : '') + dispCountry(cn);
+    sel.appendChild(o);
+  });
+  sel.value = current || '';
+}
+// club ID tap-to-copy (room header + share button share this)
+function copyClubId() {
+  if (!clubData || !clubData.club) return;
+  const cid = clubData.club.cid;
+  const done = (ok) => toast(ok ? T('frIdCopied') : cid);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(cid).then(() => done(true), () => done(fallbackCopyText(cid)));
+  } else done(fallbackCopyText(cid));
+}
+$('#cl-id-num').onclick = copyClubId;
+$('#btn-cl-share').onclick = copyClubId;
+$('#btn-cl-like').onclick = () => { if (clubData && clubData.club) socialSend({ type: 's-club-like', club: clubData.club.cid }); };
+$('#btn-cl-exit').onclick = () => { clRoomView = false; closeClubMenu(); renderClubs(); };
+$('#btn-cl-add').onclick = () => {
+  const t = $('#cl-invitefriends-box');
+  const target = (t && !t.classList.contains('hidden')) ? t : $('#cl-members-card');
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+$('#cl-countpill').onclick = () => { const t = $('#cl-members-card'); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+// discovery tabs + search toggle
+$('#cl-tab-explore').onclick = () => { clTab = 'explore'; clPodIdx = 0; requestDiscover(); renderClubs(); };
+$('#cl-tab-hot').onclick = () => { clTab = 'hot'; clPodIdx = 0; requestDiscover(); renderClubs(); };
+$('#cl-tab-mine').onclick = () => { clTab = 'mine'; requestDiscover(); renderClubs(); };
+$('#btn-cl-search-toggle').onclick = () => { const inp = $('#cl-search-inp'); if (inp) inp.focus(); };
+$('#cl-country-sel').addEventListener('change', (e) => {
+  clCountryFilter = e.target.value || '';
+  clCountryMore = false;
+  clPodIdx = 0;
+  requestDiscover();
+  renderClubs();
+});
+function doClubSearch() {
+  const q = $('#cl-search-inp').value.trim();
+  if (!q) { clubSearched = false; clubSearchResults = []; renderClubs(); return; }
+  clubSearched = true;
+  connectSocial();
+  socialSend({ type: 's-club-search', q });
+}
+$('#btn-cl-search').onclick = doClubSearch;
+$('#cl-search-inp').addEventListener('keydown', (e) => { if (e.key === 'Enter') doClubSearch(); });
+// announcement editor
+$('#btn-cl-ann-edit').onclick = () => {
+  if (!clubData || !clubData.club) return;
+  $('#ca-inp').value = clubData.club.announcement || '';
+  $('#ov-clubann').classList.add('show');
+};
+$('#btn-ca-cancel').onclick = () => $('#ov-clubann').classList.remove('show');
+$('#ov-clubann').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
+$('#btn-ca-save').onclick = () => {
+  socialSend({ type: 's-club-announce', text: $('#ca-inp').value });
+  $('#ov-clubann').classList.remove('show');
+};
+// create overlay
+$('#btn-cl-create').onclick = () => {
+  ccEmblem = 'trophy';
+  ccCover = 'mountains';
+  ccCategory = 'social';
+  $('#cc-name').value = '';
+  $('#cc-desc').value = '';
+  buildEmblemGrid($('#cc-emgrid'), ccEmblem, function pick(e) { ccEmblem = e; buildEmblemGrid($('#cc-emgrid'), ccEmblem, pick); });
+  buildCoverGrid($('#cc-covgrid'), ccCover, function pickC(cvv) { ccCover = cvv; buildCoverGrid($('#cc-covgrid'), ccCover, pickC); });
+  buildCatRow($('#cc-catrow'), ccCategory, function pickK(cat) { ccCategory = cat; buildCatRow($('#cc-catrow'), ccCategory, pickK); });
+  fillCountrySelect($('#cc-country'), (profile && profile.country) || '');
+  renderClubs();
+  $('#ov-clubcreate').classList.add('show');
+};
+$('#btn-cc-cancel').onclick = () => $('#ov-clubcreate').classList.remove('show');
+$('#ov-clubcreate').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
+$('#btn-cc-create').onclick = () => {
+  const name = $('#cc-name').value.trim();
+  if (name.length < 2) { toast(T('errClubBadName')); return; }
+  socialSend({ type: 's-club-create', name, emblem: ccEmblem, desc: $('#cc-desc').value.trim(), cover: ccCover, country: $('#cc-country').value, category: ccCategory });
+  $('#ov-clubcreate').classList.remove('show');
+};
+$('#btn-cl-edit-save').onclick = () => {
+  socialSend({ type: 's-club-edit', name: $('#cl-edit-name').value.trim(), emblem: clEditEmblem, desc: $('#cl-edit-desc').value.trim(), cover: clEditCover, country: $('#cl-edit-country').value, category: clEditCategory });
+  toast(T('clSave'));
+};
+$('#btn-cl-leave').onclick = () => {
+  if (!clubData || !clubData.club) return;
+  if (clubData.club.myRole === 'owner') { toast(T('clLeaveOwnerNote')); return; }
+  askConfirm(T('clConfirmLeaveT'), T('clConfirmLeaveB'), T('frConfirmYes'),
+    () => socialSend({ type: 's-club-leave' }));
+};
+$('#btn-cl-dissolve').onclick = () => {
+  askConfirm(T('clConfirmDissolveT'), T('clConfirmDissolveB'), T('frConfirmYes'),
+    () => socialSend({ type: 's-club-dissolve' }));
+};
+// club chat composer
+function sendClubChat() {
+  const inp = $('#cl-inp');
+  const text = inp.value.slice(0, 500);
+  if (!text.trim()) return;
+  socialSend({ type: 's-club-chat', text });
+  inp.value = '';
+}
+$('#btn-cl-send').onclick = sendClubChat;
+$('#cl-inp').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendClubChat(); });
+
+// ---------- club voice room ----------
+// A compact WebRTC mesh on the social socket, mirroring the
+// lobby's seat-based voice: everyone in the club voice room
+// hears the mic-seat holders; sitting in a seat IS the mic.
+// One always-sendrecv audio transceiver per pair (the round-9
+// lesson: replaceTrack can never widen a recvonly leg, so the
+// direction is asserted at every offer AND answer). The smaller
+// social id is the impolite side and the initial offerer;
+// perfect-negotiation lite resolves later glare.
+const cv = {
+  cid: null, joined: false, speaker: true, wantMic: false, micOn: false,
+  stream: null, peers: new Map(), speaking: new Set(),
+  actx: null, analysers: new Map(), levelTimer: null,
+  mySeat() {
+    if (!clubData || !clubData.club) return -1;
+    const s = (clubData.club.seatMap || []).find((x) => x.id === socialMe);
+    return s ? s.seat : -1;
+  },
+  enter() {
+    const c = clubData && clubData.club;
+    if (!c) return;
+    if (this.cid === c.cid && this.joined) { this.syncPeers(); return; }
+    this.leave();
+    this.cid = c.cid;
+    this.joined = true;
+    socialSend({ type: 's-club-voice', action: 'join' });
+    try { refreshIceServers(); } catch (e) { /* STUN fallback stays */ }
+    this.startLevels();
+    this.syncPeers();
+    this.paintBtns();
+  },
+  leave() {
+    if (this.joined && this.cid) socialSend({ type: 's-club-voice', action: 'leave' });
+    this.joined = false;
+    this.cid = null;
+    this.wantMic = false;
+    this.setMic(false);
+    for (const [, P] of this.peers) { try { P.pc.close(); } catch (e) { /* gone */ } }
+    this.peers.clear();
+    this.analysers.clear();
+    this.speaking.clear();
+    if (this.levelTimer) { clearInterval(this.levelTimer); this.levelTimer = null; }
+    const box = $('#cl-audios');
+    if (box) box.innerHTML = '';
+    this.paintBtns();
+  },
+  async ensureMic() {
+    if (this.stream && this.stream.getAudioTracks().some((t) => t.readyState === 'live')) return true;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast(T('clMicDenied')); return false; }
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      return true;
+    } catch (e) { toast(T('clMicDenied')); return false; }
+  },
+  setMic(on) {
+    this.micOn = !!on;
+    if (!on && this.stream) {
+      this.stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) { /* gone */ } });
+      this.stream = null;
+      this.analysers.delete('me');
+      this.speaking.delete(socialMe);
+    }
+    for (const [, P] of this.peers) this.attachTrack(P);
+    this.paintBtns();
+    if (clubData && clubData.club && clRoomView && !$('#scr-clubs').classList.contains('hidden')) renderClubSeats(clubData.club);
+  },
+  attachTrack(P) {
+    const track = (this.micOn && this.stream) ? (this.stream.getAudioTracks()[0] || null) : null;
+    const cur = P.tx && P.tx.sender ? P.tx.sender.track : null;
+    if ((cur && cur.id) === (track && track.id)) return;
+    if (!P.tx || !P.tx.sender) return;
+    P.tx.sender.replaceTrack(track).then(() => { if (track) cvOffer(P); }).catch(() => { /* renegotiate below */ });
+    if (track) cvOffer(P);
+  },
+  syncPeers() {
+    if (!this.joined || !clubData || !clubData.club) return;
+    const voice = new Set(clubData.club.voiceIds || []);
+    for (const [id, P] of [...this.peers]) {
+      if (!voice.has(id)) {
+        try { P.pc.close(); } catch (e) { /* gone */ }
+        this.peers.delete(id);
+        const a = document.getElementById('cl-aud-' + cssEsc(id));
+        if (a) a.remove();
+      }
+    }
+    for (const id of voice) {
+      if (id === socialMe) continue;
+      if (!this.peers.has(id)) {
+        const P = cvMakePeer(id);
+        this.peers.set(id, P);
+        if (String(socialMe) < String(id)) cvOffer(P); // smaller id offers first
+      }
+    }
+    for (const [, P] of this.peers) this.attachTrack(P);
+  },
+  onVoiceState() {
+    if (!this.joined) return;
+    const seated = this.mySeat() >= 0;
+    if (seated && this.wantMic && !this.micOn) {
+      this.ensureMic().then((ok) => { if (ok) this.setMic(true); else this.wantMic = false; });
+    } else if (!seated && this.micOn) {
+      this.wantMic = false;
+      this.setMic(false);
+    }
+    this.syncPeers();
+    this.paintBtns();
+  },
+  onSignal(from, data) {
+    if (!this.joined || !data || typeof data !== 'object') return;
+    let P = this.peers.get(from);
+    if (!P) {
+      if (!data.sdp) return; // ICE for an unknown pair is dropped
+      P = cvMakePeer(from);
+      this.peers.set(from, P);
+    }
+    cvHandleSignal(P, data);
+  },
+  paintBtns() {
+    const sp = $('#btn-cl-speaker');
+    if (sp) sp.classList.toggle('on', this.speaker);
+    const mc = $('#btn-cl-mic');
+    if (mc) mc.classList.toggle('live', this.micOn && this.mySeat() >= 0);
+  },
+  renderAudios() { /* audio elements are managed per-peer in cvMakePeer/ontrack */ },
+  startLevels() {
+    if (this.levelTimer) return;
+    this.levelTimer = setInterval(() => {
+      if (!this.joined) return;
+      let changed = false;
+      const check = (key, stream) => {
+        if (!stream) { if (this.speaking.delete(key)) changed = true; return; }
+        try {
+          let an = this.analysers.get(key);
+          if (!an) {
+            if (!this.actx) this.actx = new (window.AudioContext || window.webkitAudioContext)();
+            const src = this.actx.createMediaStreamSource(stream);
+            an = this.actx.createAnalyser();
+            an.fftSize = 256;
+            src.connect(an);
+            this.analysers.set(key, an);
+          }
+          const buf = new Uint8Array(an.frequencyBinCount);
+          an.getByteFrequencyData(buf);
+          let sum = 0;
+          for (let i = 0; i < buf.length; i++) sum += buf[i];
+          const loud = (sum / buf.length) > 14;
+          if (loud && !this.speaking.has(key)) { this.speaking.add(key); changed = true; }
+          if (!loud && this.speaking.has(key)) { this.speaking.delete(key); changed = true; }
+        } catch (e) { /* analyser unavailable — no glow, voice unaffected */ }
+      };
+      check(socialMe, this.micOn ? this.stream : null);
+      for (const [id, P] of this.peers) check(id, P.remoteStream || null);
+      if (changed && clubData && clubData.club && clRoomView && !$('#scr-clubs').classList.contains('hidden')) renderClubSeats(clubData.club);
+    }, 300);
+  },
+};
+function cssEsc(s) { return String(s).replace(/[^A-Za-z0-9_-]/g, '_'); }
+function cvSignal(to, data) { socialSend({ type: 's-rtc', to, data }); }
+function cvMakePeer(id) {
+  const pc = new RTCPeerConnection({ iceServers: iceServersNow });
+  const tx = pc.addTransceiver('audio', { direction: 'sendrecv' });
+  pc.createDataChannel('ping'); // keeps the pair warm like the lobby's
+  const P = { id, pc, tx, gen: 0, makingOffer: false, remoteStream: null, polite: String(socialMe) > String(id) };
+  pc.onicecandidate = (e) => { if (e.candidate) cvSignal(id, { ice: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }); };
+  pc.ontrack = (ev) => {
+    P.remoteStream = (ev.streams && ev.streams[0]) || null;
+    let a = document.getElementById('cl-aud-' + cssEsc(id));
+    if (!a) {
+      a = document.createElement('audio');
+      a.id = 'cl-aud-' + cssEsc(id);
+      a.autoplay = true;
+      a.playsInline = true;
+      $('#cl-audios').appendChild(a);
+    }
+    if (P.remoteStream) a.srcObject = P.remoteStream;
+    a.muted = !cv.speaker;
+    const pr = a.play();
+    if (pr && pr.catch) pr.catch(() => { /* unlocked on the next tap */ });
+  };
+  pc.onconnectionstatechange = () => {
+    if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+      setTimeout(() => { if (cv.peers.get(id) === P && pc.connectionState !== 'connected') cvOffer(P); }, 1200);
+    }
+  };
+  return P;
+}
+async function cvOffer(P) {
+  if (!P || P.makingOffer) return;
+  if (P.pc.signalingState !== 'stable') return;
+  P.makingOffer = true;
+  try {
+    P.gen++;
+    try { P.tx.direction = 'sendrecv'; } catch (e) { /* older engines */ }
+    const offer = await P.pc.createOffer();
+    await P.pc.setLocalDescription(offer);
+    cvSignal(P.id, { sdp: P.pc.localDescription, gen: P.gen });
+  } catch (e) { /* a later state change retries */ }
+  P.makingOffer = false;
+}
+async function cvHandleSignal(P, data) {
+  try {
+    if (data.sdp) {
+      const desc = data.sdp;
+      if (desc.type === 'offer') {
+        const collision = P.makingOffer || P.pc.signalingState !== 'stable';
+        if (collision && !P.polite) return; // impolite side keeps its own offer
+        if (collision) { try { await P.pc.setLocalDescription({ type: 'rollback' }); } catch (e) { /* proceed */ } }
+        await P.pc.setRemoteDescription(desc);
+        try { P.tx.direction = 'sendrecv'; } catch (e) { /* older engines */ }
+        cv.attachTrack(P); // my sender track joins the answer's leg
+        const ans = await P.pc.createAnswer();
+        await P.pc.setLocalDescription(ans);
+        cvSignal(P.id, { sdp: P.pc.localDescription, gen: data.gen });
+      } else if (desc.type === 'answer') {
+        if (typeof data.gen === 'number' && data.gen !== P.gen) return; // stale answer
+        if (P.pc.signalingState === 'have-local-offer') await P.pc.setRemoteDescription(desc);
+      }
+    } else if (data.ice) {
+      try { await P.pc.addIceCandidate(data.ice); } catch (e) { /* late candidate */ }
+    }
+  } catch (e) { /* signaling races settle on the next state push */ }
+}
+$('#btn-cl-speaker').onclick = () => {
+  cv.speaker = !cv.speaker;
+  document.querySelectorAll('#cl-audios audio').forEach((a) => { a.muted = !cv.speaker; if (cv.speaker) { const p = a.play(); if (p && p.catch) p.catch(() => {}); } });
+  cv.paintBtns();
+};
+$('#btn-cl-mic').onclick = async () => {
+  if (!clubData || !clubData.club) return;
+  if (cv.mySeat() >= 0) { socialSend({ type: 's-club-stand' }); cv.setMic(false); return; }
+  const box = $('#cl-seats');
+  if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  toast(T('clSeatsHint'));
+};
+// any tap unlocks club audio playback (Android gesture rule)
+document.addEventListener('pointerdown', () => {
+  if (!cv.joined) return;
+  document.querySelectorAll('#cl-audios audio').forEach((a) => { if (a.paused) { const p = a.play(); if (p && p.catch) p.catch(() => {}); } });
+  if (cv.actx && cv.actx.state === 'suspended') cv.actx.resume().catch(() => {});
+}, true);
+
+// ---------- club member menu (tap a member) ----------
+// The player menu's anchored card again: profile, the friend
+// relation, the lobby invite (clubmates need no friendship), and
+// a manage section for owner/deputies — rank-bounded, destructive
+// rows behind the generic confirm.
+let cmMember = null;
+let cmAnchor = null;
+function cmRow(icon, label, fn, disabled) {
+  const b = document.createElement('button');
+  b.className = 'pmpop-row';
+  const ic = document.createElement('span');
+  ic.className = 'pmpop-ic';
+  if (typeof icon === 'string' && icon.charAt(0) === '<') ic.innerHTML = icon; else ic.textContent = icon;
+  const lb = document.createElement('span');
+  lb.className = 'pmpop-lbl';
+  lb.textContent = label;
+  b.appendChild(ic);
+  b.appendChild(lb);
+  if (!disabled) {
+    const ch = document.createElement('span');
+    ch.className = 'pmpop-ch';
+    ch.textContent = '›';
+    b.appendChild(ch);
+    b.onclick = fn;
+  } else b.disabled = true;
+  return b;
+}
+function openClubMenu(m, anchor) {
+  const pop = $('#ov-clubmenu');
+  if (pop.classList.contains('show') && cmMember && cmMember.id === m.id) { closeClubMenu(); return; }
+  if (document.querySelector('.overlay.show')) return;
+  cmMember = m;
+  cmAnchor = anchor || null;
+  pop.classList.add('show');
+  renderClubMenu();
+  placeAnchoredCard(pop, cmAnchor);
+}
+function renderClubMenu() {
+  const pop = $('#ov-clubmenu');
+  if (!cmMember || !pop.classList.contains('show') || !clubData || !clubData.club) return;
+  const m = clubData.club.members.find((x) => x.id === cmMember.id) || cmMember;
+  cmMember = m;
+  const av = $('#cm-av');
+  av.innerHTML = '';
+  av.appendChild(avatarEl(m.name, m.avatar, 40, m.photo));
+  $('#cm-name').textContent = m.name || '';
+  const rows = $('#cm-rows');
+  rows.innerHTML = '';
+  // profile view (the existing popup, fed like the player menu's)
+  rows.appendChild(cmRow('👤', T('navProfile'), () => {
+    const pv = $('#pv-av');
+    pv.innerHTML = '';
+    pv.appendChild(avatarEl(m.name, m.avatar, 84, m.photo));
+    $('#pv-name').textContent = m.name || '';
+    const fl = m.country ? countryFlag(m.country) : '';
+    $('#pv-country').textContent = m.country ? (fl ? fl + ' ' : '') + dispCountry(m.country) : '—';
+    const pvId = $('#pv-id');
+    pvId.textContent = m.uid ? (T('frIdLabel') + ': ' + m.uid) : '';
+    pvId.style.display = m.uid ? '' : 'none';
+    const rel = seatRelation(m.id);
+    $('#pv-rel').textContent = rel === 'friend' ? T('frIsFriend')
+      : rel === 'outgoing' ? T('frPending') : rel === 'incoming' ? T('frRespond') : '—';
+    closeClubMenu();
+    $('#ov-playerview').classList.add('show');
+  }));
+  // friend relation
+  const rel = seatRelation(m.id);
+  if (rel === 'friend') rows.appendChild(cmRow('🤝', T('frIsFriend'), null, true));
+  else if (rel === 'outgoing') rows.appendChild(cmRow('🤝', T('frPending'), null, true));
+  else if (rel === 'incoming') rows.appendChild(cmRow('🤝', T('frRespond'), () => { closeClubMenu(); openFriends(); }));
+  else if (rel === 'none') rows.appendChild(cmRow('🤝', T('frRequestBtn'), () => {
+    socialSend({ type: 's-request', to: m.id });
+    toast(T('frRequestSent'));
+    closeClubMenu();
+  }));
+  // lobby invite — clubmates ride the friend invite path unchanged
+  const code = myLobbyCode();
+  if (code) {
+    if (m.ingame) rows.appendChild(cmRow(GAMEPAD_ICON_SVG, T('frInGame'), null, true));
+    else if (m.inlobby) rows.appendChild(cmRow(GAMEPAD_ICON_SVG, T('frInLobby'), null, true));
+    else {
+      const rem = inviteCdRemaining(m.id);
+      if (rem > 0) rows.appendChild(cmRow('⏳', '⏳ ' + String(rem), null, true));
+      else rows.appendChild(cmRow('🔔', T('frInvite'), () => {
+        if (!m.online) { toast(T('frOfflineToast', m.name || '')); closeClubMenu(); return; }
+        lastInviteTo = m.id;
+        socialSend({ type: 's-invite', to: m.id, code });
+        setInviteCd(m.id, INVITE_CD_MS);
+        closeClubMenu();
+        renderClubs();
+      }));
+    }
+  }
+  // manage section (rank-bounded, mirroring the server rules)
+  const myRole = clubData.club.myRole;
+  const canKick = (myRole === 'owner' && m.role !== 'owner') || (myRole === 'deputy' && m.role === 'member');
+  const manage = [];
+  if (myRole === 'owner' && m.role === 'member') {
+    manage.push(cmRow('⬆️', T('clPromote'), () => { socialSend({ type: 's-club-role', id: m.id, role: 'deputy' }); closeClubMenu(); }));
+  }
+  if (myRole === 'owner' && m.role === 'deputy') {
+    manage.push(cmRow('⬇️', T('clDemote'), () => { socialSend({ type: 's-club-role', id: m.id, role: 'member' }); closeClubMenu(); }));
+    manage.push(cmRow('👑', T('clTransfer'), () => {
+      closeClubMenu();
+      askConfirm(T('clConfirmTransferT'), T('clConfirmTransferB', m.name || ''), T('frConfirmYes'),
+        () => socialSend({ type: 's-club-transfer', id: m.id }));
+    }));
+  }
+  if (canKick) {
+    manage.push(cmRow('🚪', T('clKick'), () => {
+      closeClubMenu();
+      askConfirm(T('clConfirmKickT'), T('clConfirmKickB', m.name || ''), T('frConfirmYes'),
+        () => socialSend({ type: 's-club-kick', id: m.id }));
+    }));
+  }
+  if (manage.length) {
+    const sep = document.createElement('div');
+    sep.className = 'pmpop-sep';
+    rows.appendChild(sep);
+    manage.forEach((r) => rows.appendChild(r));
+  }
+}
+function placeClubMenu() { placeAnchoredCard($('#ov-clubmenu'), cmAnchor); }
+function validateClubMenu() {
+  const pop = $('#ov-clubmenu');
+  if (!cmMember || !pop.classList.contains('show')) return;
+  if (!clubData || !clubData.club || !clubData.club.members.some((x) => x.id === cmMember.id)) { closeClubMenu(); return; }
+  if (cmAnchor && cmAnchor.isConnected) { renderClubMenu(); return; }
+  const row = document.querySelector('#cl-members .fr-row[data-cmid="' + cmMember.id + '"]');
+  if (!row) { closeClubMenu(); return; }
+  cmAnchor = row;
+  renderClubMenu();
+  placeClubMenu();
+}
+function closeClubMenu() { $('#ov-clubmenu').classList.remove('show'); cmMember = null; cmAnchor = null; }
+document.addEventListener('pointerdown', (e) => {
+  const pop = $('#ov-clubmenu');
+  if (!pop.classList.contains('show')) return;
+  if (pop.contains(e.target)) return;
+  if (e.target.closest && e.target.closest('.cl-mrow')) return;
+  closeClubMenu();
+}, true);
+
 // ---------- generic confirm (unfriend / block) ----------
 function askConfirm(title, body, yesLabel, cb) {
   $('#cf-title').textContent = title;
@@ -6561,7 +8506,7 @@ $('#btn-cf-no').onclick = () => {
 };
 
 // The friends screens re-render on a language switch (applyI18n hook).
-window.__frRender = () => { renderFriends(); renderChats(); if (dmPeer) renderDmThread(); };
+window.__frRender = () => { renderFriends(); renderChats(); renderClubs(); if (dmPeer) renderDmThread(); };
 // The social socket lives for the whole app session.
 connectSocial();
 
