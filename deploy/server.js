@@ -55,6 +55,22 @@ const wss = new WebSocketServer({ server: httpServer });
 
 // ---------------------------------------------------------------- rooms
 const rooms = new Map();
+// Busy-flag liveness (stale-busy fix, 2026-11-09): a seat counts
+// toward "in a game / in a lobby" only while its player is actually
+// there — connected, or disconnected inside the reconnect grace
+// (a transient drop; the client auto-reconnects within seconds).
+// A lobby seat stays RESERVED past that (the sweep never expires a
+// waiting room, so the player can always reconnect back into it),
+// but a long-dead seat must not report its owner busy forever.
+// TORE_BUSY_GRACE_MS is a test lever only; production uses the
+// reconnect grace.
+const BUSY_GRACE_MS = (() => {
+  const v = Number(process.env.TORE_BUSY_GRACE_MS);
+  return Number.isFinite(v) && v >= 0 ? v : RECONNECT_GRACE_MS;
+})();
+function seatLive(s, now) {
+  return s.connected || (!!s.disconnectAt && (now || Date.now()) - s.disconnectAt <= BUSY_GRACE_MS);
+}
 // Friends system (ملګري): a second WebSocket endpoint, /social, on
 // this same server (see social-core.js / social-node.js). Identity on
 // the Node hosts is the persistent client player id (p:<pid>); the
@@ -62,9 +78,10 @@ const rooms = new Map();
 // in its lobby phase.
 function sidInGame(id) {
   if (!id) return false;
+  const now = Date.now();
   for (const room of rooms.values()) {
     if (room.phase === 'lobby') continue;
-    if (room.seats.some((s) => s.kind === 'human' && s.sid === id)) return true;
+    if (room.seats.some((s) => s.kind === 'human' && s.sid === id && seatLive(s, now))) return true;
   }
   return false;
 }
@@ -72,11 +89,64 @@ function sidInGame(id) {
 // (owner order 2026-11-09) — the social core reports them socialBusy.
 function sidInLobby(id) {
   if (!id) return false;
+  const now = Date.now();
   for (const room of rooms.values()) {
     if (room.phase !== 'lobby') continue;
-    if (room.seats.some((s) => s.kind === 'human' && s.sid === id)) return true;
+    if (room.seats.some((s) => s.kind === 'human' && s.sid === id && seatLive(s, now))) return true;
   }
   return false;
+}
+// Invite-time verification (stale-busy fix, 2026-11-09): re-check
+// the busy claim against live room state. Every seat of this
+// identity that is NOT live (socket dead past the busy grace — the
+// app was closed without leaving) is reaped on the spot: a lobby
+// seat is freed (the first remaining human becomes host, exactly
+// like a guest leaving; a lobby left with no humans is deleted),
+// an in-match seat gets the sweep's bot conversion. The corrected
+// presence is pushed via syncBusyFor, and the VERIFIED state is
+// returned: 'match' | 'lobby' | ''. Live seats verify unchanged.
+function verifyBusySid(id) {
+  if (!id) return '';
+  const now = Date.now();
+  let state = '';
+  for (const room of [...rooms.values()]) {
+    let changed = false;
+    room.seats.forEach((s, i) => {
+      if (s.kind !== 'human' || s.sid !== id) return;
+      if (seatLive(s, now)) {
+        if (room.phase !== 'lobby') state = 'match';
+        else if (!state) state = 'lobby';
+        return;
+      }
+      if (room.phase === 'lobby') {
+        room.seats[i] = emptySeat();
+      } else {
+        s.kind = 'bot'; // bot takes over the seat and its hand
+        s.avatar = null;
+        s.country = '';
+        s.photo = null;
+        s.sid = null;
+        s.voiceMic = false;
+        s.voiceSpeaker = false;
+        s.connected = true;
+        s.disconnectAt = null;
+        pumpTurn(room);
+      }
+      changed = true;
+    });
+    if (changed) {
+      broadcastState(room);
+      const anyHuman = room.seats.some((s) => s.kind === 'human');
+      if (!anyHuman) {
+        clearTimeout(room.turnTimer);
+        clearTimeout(room.roundTimer);
+        clearTimeout(room.trickTimer);
+        rooms.delete(room.code);
+      }
+    }
+  }
+  syncBusyFor(null, [id]);
+  return state;
 }
 function syncBusyFor(room, extraSids) {
   const ids = new Set(extraSids || []);
@@ -90,6 +160,7 @@ const social = createNodeSocial({
   },
   inGameCheck: sidInGame,
   inLobbyCheck: sidInLobby,
+  verifyBusy: verifyBusySid,
 });
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
