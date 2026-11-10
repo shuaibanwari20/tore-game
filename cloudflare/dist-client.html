@@ -405,12 +405,14 @@
      RESKINNED 2026-11-09 (owner order, ?v=20261109-ludomenu) to his
      Ludo Star HOME screenshot: the shell leaves the carpet for the
      club discovery's magenta-purple family — gradient + diamond
-     pattern, glossy big cards with an original SVG card-fan, chunky
-     purple nav with the raised item in bright magenta. The home
-     background is pure CSS gradients now (no url() at all), so the
-     splash gate's carpet wait simply finds nothing and the build's
-     one remaining CSS carpet reference is the game table's. The
-     card fans are inline SVG markup — first paint, no JS wait. */
+     pattern, glossy big cards with a card-fan, chunky purple nav
+     with the raised item in bright magenta. The home background is
+     pure CSS gradients now (no url() at all), so the splash gate's
+     carpet wait simply finds nothing and the build's one remaining
+     CSS carpet reference is the game table's. The card fans were
+     inline SVG until ludomenu11; they are real deck faces now,
+     rendered by renderMenuFans() from the same ASSET() map as the
+     table cards. */
   #scr-home {
     position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 10;
     overflow-y: auto; overflow-x: hidden;
@@ -483,8 +485,8 @@
   /* The two BIG mode cards. In RTL the first in the row (online) sits
      on the RIGHT and quick play on the LEFT — the arrangement he picked.
      ludomenu reskin: glossy Ludo-style cards — انلاین purple on the
-     right, bots orange/gold on the left — each carrying an ORIGINAL
-     inline-SVG fan of Tore cards (no dice, no raster art), the label
+     right, bots orange/gold on the left — each carrying a fan of
+     Tore cards (real deck faces since ludomenu11), the label
      printed straight on the card like the reference. */
   .hm-bigrow { display: flex; gap: 12px; margin-top: 40px; }
   .hm-bigcard { flex: 1; height: 204px; width: auto; margin: 0; padding: 0; position: relative; overflow: visible;
@@ -495,10 +497,24 @@
     background: linear-gradient(115deg, rgba(255,255,255,.38), rgba(255,255,255,.05) 34%, rgba(255,255,255,0) 55%); }
   .hm-bigcard.violet { background: linear-gradient(165deg, #9d6bf5, #6d28d9 48%, #4c1d95); }
   .hm-bigcard.orange { background: linear-gradient(165deg, #ffc44d, #f59e0b 45%, #c26d0a); }
-  .hm-bigcard .fan { position: absolute; top: -34px; left: 0; right: 0; height: 172px; z-index: 2;
-    display: flex; justify-content: center; pointer-events: none; }
-  .hm-bigcard .fan svg { height: 172px; width: auto; display: block;
-    filter: drop-shadow(0 10px 12px rgba(0,0,0,.5)); }
+  /* ludomenu11 (owner order 2026-11-10): the fans carry REAL deck
+     faces now — the game's own cardEl() fills them at dressHome —
+     and every card sits FULLY INSIDE its tile's frame («ورق ها باید
+     بیرون نباشه از چوکات خود»): the -34px top overflow is gone.
+     Card size/offsets are in cqw of the tile itself (the container
+     rule below), so the containment geometry scales with the tile
+     at every phone width. Faces: انلاین front = ماتکه کالا Q♠,
+     bots front = غلام پشه J♣, لال A♥ + 10♦ خشت fanned behind. */
+  .hm-bigcard { container-type: inline-size; }
+  .hm-bigcard .fan { position: absolute; top: 2px; left: 0; right: 0; height: 140px; z-index: 2;
+    pointer-events: none; }
+  .hm-bigcard .fan .pcard { position: absolute; left: 50%; top: 50%;
+    width: 72px; width: 40cqw; max-width: 84px; height: auto; aspect-ratio: 176 / 245;
+    border-radius: 8px; box-shadow: 0 7px 15px rgba(0,0,0,.5); }
+  .hm-bigcard .fan .pcard img.face { border-radius: 8px; }
+  .hm-bigcard .fan .pos0 { transform: translate(calc(-50% - 20cqw), -50%) rotate(-12deg); z-index: 1; }
+  .hm-bigcard .fan .pos1 { transform: translate(-50%, -50%); z-index: 3; }
+  .hm-bigcard .fan .pos2 { transform: translate(calc(-50% + 20cqw), -50%) rotate(12deg); z-index: 2; }
   .hm-bigcard .globe { position: absolute; top: -12px; left: -4px; z-index: 4; color: #ffe9a3;
     filter: drop-shadow(0 3px 5px rgba(0,0,0,.5)); }
   .hm-bigcard .globe svg { width: 32px; height: 32px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; display: block; }
@@ -528,11 +544,31 @@
     font-family: inherit; background: linear-gradient(170deg, #8a2ea6, #571271 60%, #42084c); position: relative; overflow: visible;
     border: 2.5px solid rgba(255,255,255,.42); box-shadow: 0 8px 18px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.25);
     display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0; }
-  /* Round 2: the icon is a glossy CLUSTER overflowing the card's top
-     edge (fanned cards + gold token / gold key / avatar faces). */
-  .hm-small .cluster { position: absolute; top: -25px; left: 50%; transform: translateX(-50%); z-index: 2;
+  /* Round 2: the icon is a glossy CLUSTER at the card's top
+     (gold token / gold key / avatar faces). ludomenu12 (owner order
+     2026-11-10, on his crop of the join + friends tiles):
+     «آیتم‌های این کارت را هم داخلش کن» — the ludomenu11 containment
+     law now covers ALL three small tiles: every cluster sits fully
+     INSIDE its tile, like the create tile; the join/friends SVGs
+     shrink a touch (62 -> 58px) so the key teeth and the chat
+     bubbles stay clear of the label below. */
+  .hm-small .cluster { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 2;
     filter: drop-shadow(0 5px 6px rgba(0,0,0,.45)); pointer-events: none; }
   .hm-small .cluster svg { height: 62px; width: auto; display: block; }
+  #btn-join-toggle .cluster svg, #btn-friends-card .cluster svg { height: 58px; }
+  /* ludomenu11: the CREATE tile's cluster holds real cards, so it
+     obeys the same containment law as the big fans — the mini faces
+     (لال A♥ + 10♦) and the gold + token sit fully inside the tile. */
+  #btn-create .cluster { top: 8px; width: 92px; height: 58px; }
+  #fan-create .pcard { position: absolute; left: 50%; top: 50%; width: 42px; height: auto;
+    aspect-ratio: 176 / 245; border-radius: 6px; box-shadow: 0 5px 10px rgba(0,0,0,.5); }
+  #fan-create .pcard img.face { border-radius: 6px; }
+  #fan-create .pos0 { transform: translate(calc(-50% - 13px), -50%) rotate(-12deg); z-index: 1; }
+  #fan-create .pos1 { transform: translate(calc(-50% + 13px), -50%) rotate(12deg); z-index: 2; }
+  #fan-create .plustok { position: absolute; right: 0; bottom: -2px; z-index: 3; width: 26px; height: 26px;
+    border-radius: 50%; background: radial-gradient(circle at 34% 28%, #ffedb0, #f7c948 55%, #d18d06);
+    border: 2px solid #a86e00; color: #7a4d00; font-size: 19px; font-weight: 800; line-height: 22px;
+    text-align: center; box-shadow: 0 3px 7px rgba(0,0,0,.45); }
   .hm-small:active { transform: scale(.97); }
   .hm-small .ic { width: 50px; height: 50px; border-radius: 50%; color: #fff;
     background: radial-gradient(circle at 32% 26%, #ff9de2, #d63384 58%, #a4136b); border: 2px solid rgba(255,255,255,.55);
@@ -1762,6 +1798,31 @@
     box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -5px 9px rgba(10,80,0,.4), 0 7px 16px rgba(20,90,0,.5);
     text-shadow: 0 1px 3px rgba(0,60,0,.5); }
   #btn-ce-save:active { transform: scale(.96); }
+  /* --- generic confirm (#ov-confirm) in the CLUB UI language
+     (owner order 2026-11-10): the shared askConfirm popup still
+     wore the carpet-era brown/gold panel on his dissolve-confirm
+     screenshot, so it now mirrors the «پروفایل سمول» card above —
+     the same magenta gradient + lavender border family, the
+     green glossy «خوندي کول» gloss on the confirm button, and a
+     dark-plum cancel like the card's dark fields. Every
+     askConfirm caller (dissolve / member leave / unfriend /
+     block / kick / transfer) inherits it; the bespoke table-exit
+     #ov-exit keeps the table's own panel. --- */
+  #ov-confirm .panel { border: 2px solid rgba(255,183,224,.4); border-radius: 22px; color: #fff;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
+    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
+    padding: 18px 16px 14px; }
+  #ov-confirm .panel h2 { color: #fff; font-size: 21px; margin: 0 0 8px; text-shadow: 0 2px 4px rgba(0,0,0,.45); }
+  #ov-confirm .exit-body { color: #ffd9f3; opacity: 1; line-height: 1.6; margin: 0 0 2px; }
+  #ov-confirm .pf-btns { margin-top: 14px; }
+  #ov-confirm #btn-cf-yes { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 900; color: #fff;
+    background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
+    border: 2px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -5px 9px rgba(10,80,0,.4), 0 7px 16px rgba(20,90,0,.5);
+    text-shadow: 0 1px 3px rgba(0,60,0,.5); }
+  #ov-confirm #btn-cf-no { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 800; color: #ffd9f3;
+    background: rgba(43,6,54,.55); border: 1.5px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 9px rgba(0,0,0,.45); }
   /* --- friends: wood sign + magenta tiles + lavender cards --- */
   #scr-friends { background-color: #6d0d3f;
     background-image:
@@ -1797,10 +1858,65 @@
   #scr-friends .fr-act { background: rgba(43,6,54,.5); color: #ffe3f6; border-color: rgba(255,255,255,.35); }
   #scr-friends .fr-act.fr-busybtn { color: #ffd75e; }
   #scr-friends .fr-act.primary { background: linear-gradient(180deg, #ffd75e, #d9a83c); color: #33270a; border-color: #ffd75e; }
+  /* --- chats + DM (ludomenu10, owner order 2026-11-10): the چت
+     page and the DM view still wore the old emerald theme (green
+     field, dashed rows, green/brown bubbles) on his screenshot;
+     they now wear the shell's wine-plum field like the friends
+     page — the «ګپونه» list as glossy magenta cards with
+     gold-ringed avatars, magenta/plum bubbles in the thread and
+     a dark-plum composer. Scoped to #scr-chats / #scr-dm only:
+     the club room feed and the table preset-chat panel are a
+     different language and stay untouched. --- */
+  #scr-chats, #scr-dm { background-color: #6d0d3f;
+    background-image:
+      linear-gradient(45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(-45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(180deg, #4a0727 0%, #7d1046 28%, #a1185c 52%, #8a1250 74%, #4a0727 100%);
+    background-size: 34px 34px, 34px 34px, 100% 100%;
+    background-repeat: repeat, repeat, no-repeat; }
+  /* the list: the shared dark cardbox dissolves — every friend
+     row is a glossy magenta card of its own */
+  #scr-chats .cardbox { background: none; border: 0; border-radius: 0; padding: 0; margin-bottom: 0; box-shadow: none; }
+  #scr-chats .fr-sec { color: #ffd7f2; text-shadow: 0 2px 4px rgba(0,0,0,.45); }
+  #scr-chats .fr-row { background: linear-gradient(180deg, rgba(199,50,133,.92), rgba(122,20,92,.94));
+    border: 1.5px solid rgba(255,255,255,.3); border-radius: 15px; padding: 10px 12px; margin-bottom: 10px;
+    box-shadow: 0 6px 14px rgba(20,0,25,.45), inset 0 1px 0 rgba(255,255,255,.25); }
+  #scr-chats .fr-row:active { background: linear-gradient(180deg, rgba(219,72,155,.95), rgba(143,27,108,.95)); }
+  #scr-chats .fr-row .pavatar { border-radius: 50%; border: 2.5px solid #eec95f;
+    box-shadow: 0 0 0 2px rgba(0,0,0,.3), 0 3px 8px rgba(0,0,0,.4); }
+  #scr-chats .fr-name { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+  #scr-chats .ch-sub { color: #ffd7f2; }
+  #scr-chats .ch-time { color: rgba(255,215,242,.85); opacity: 1; }
+  #scr-chats .fr-empty { color: rgba(246,239,255,.85); opacity: 1; }
+  /* the thread: a magenta header bar over the plum field */
+  #scr-dm .dm-head { background: linear-gradient(180deg, rgba(168,38,110,.92), rgba(96,16,80,.95));
+    border-bottom: 1.5px solid rgba(255,255,255,.28);
+    box-shadow: 0 6px 16px rgba(20,0,25,.4), inset 0 1px 0 rgba(255,255,255,.22); }
+  #scr-dm .fr-back { background: linear-gradient(180deg, #b06bf7, #7d30e8 55%, #5c17c4); color: #fff;
+    border: 1.5px solid rgba(255,255,255,.45); border-radius: 13px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -3px 6px rgba(40,0,90,.45), 0 4px 10px rgba(20,2,50,.45); }
+  #dm-peer-av .pavatar { border-radius: 50%; border: 2.5px solid #eec95f;
+    box-shadow: 0 0 0 2px rgba(0,0,0,.3), 0 3px 8px rgba(0,0,0,.4); }
+  #scr-dm .fr-name { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+  #scr-dm .fr-sub { color: #ffd7f2; opacity: 1; }
+  #scr-dm .dm-bub.mine { background: linear-gradient(165deg, #e84393, #b3126e 60%, #8e1a63); color: #fff;
+    border: 1px solid rgba(255,183,224,.35); }
+  #scr-dm .dm-bub.theirs { background: rgba(43,6,54,.8); color: #f6e9ff;
+    border: 1px solid rgba(255,183,224,.3); }
+  #scr-dm .fr-empty { color: rgba(246,239,255,.85); opacity: 1; }
+  #scr-dm .dm-inputrow { background: rgba(24,3,36,.94); border-top: 1px solid rgba(255,255,255,.14); }
+  #scr-dm .dm-inputrow input { background: rgba(43,6,54,.6); color: #fff;
+    border: 1.5px solid rgba(255,255,255,.3); border-radius: 14px;
+    box-shadow: inset 0 2px 9px rgba(0,0,0,.45); }
+  #scr-dm .dm-inputrow input::placeholder { color: rgba(255,255,255,.42); }
+  #scr-dm #btn-dm-send { background: linear-gradient(180deg, #ff8ade, #dd379b 55%, #b3126e); color: #fff;
+    border: 1.5px solid rgba(255,255,255,.45); border-radius: 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -3px 6px rgba(140,10,90,.4), 0 4px 10px rgba(20,2,50,.45);
+    text-shadow: 0 1px 2px rgba(90,0,60,.5); }
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="nvGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset=".45" stop-color="#f7c948"/><stop offset="1" stop-color="#d18d06"/></linearGradient><linearGradient id="nvPink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb1e3"/><stop offset=".5" stop-color="#f0569f"/><stop offset="1" stop-color="#c2187a"/></linearGradient><linearGradient id="nvGreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8f5cd"/><stop offset=".5" stop-color="#3fce62"/><stop offset="1" stop-color="#1d9e4b"/></linearGradient><linearGradient id="nvBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe0ff"/><stop offset=".5" stop-color="#55a8f5"/><stop offset="1" stop-color="#2470c2"/></linearGradient><linearGradient id="nvWhite" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9d4ee"/></linearGradient></defs></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="nvGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset=".45" stop-color="#f7c948"/><stop offset="1" stop-color="#d18d06"/></linearGradient><linearGradient id="nvPink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb1e3"/><stop offset=".5" stop-color="#f0569f"/><stop offset="1" stop-color="#c2187a"/></linearGradient><linearGradient id="nvGreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8f5cd"/><stop offset=".5" stop-color="#3fce62"/><stop offset="1" stop-color="#1d9e4b"/></linearGradient><linearGradient id="nvBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe0ff"/><stop offset=".5" stop-color="#55a8f5"/><stop offset="1" stop-color="#2470c2"/></linearGradient><linearGradient id="nvWhite" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9d4ee"/></linearGradient><linearGradient id="clCoin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset="1" stop-color="#d18d06"/></linearGradient><linearGradient id="clGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe98a"/><stop offset="1" stop-color="#e0a408"/></linearGradient><linearGradient id="clViolet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b388ff"/><stop offset="1" stop-color="#6d28d9"/></linearGradient></defs></svg>
 <div id="splash" aria-hidden="true">
   <div class="sp-title">توره</div>
   <div class="sp-suits"><span class="w">♠</span><span class="r">♥</span><span class="w">♣</span><span class="r">♦</span></div>
@@ -1831,11 +1947,11 @@
       <div class="hm-bigrow" id="home-fan">
         <button class="hm-bigcard violet" id="btn-online" aria-label="انلاین لوبه">
           <span class="globe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
-          <span class="fan"><svg viewBox="0 0 200 176" aria-hidden="true"><defs><linearGradient id="fanBackV2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b6be8"/><stop offset="1" stop-color="#4527a0"/></linearGradient><linearGradient id="fanCoinV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset="1" stop-color="#d18d06"/></linearGradient></defs><g transform="rotate(-19 100 150)"><rect x="60" y="30" width="80" height="112" rx="10" fill="url(#fanBackV2)" stroke="#ffd75e" stroke-width="3"/><rect x="68" y="38" width="64" height="96" rx="7" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.6"/><text x="100" y="100" text-anchor="middle" font-size="38" fill="#ffd75e">♠</text></g><g transform="rotate(19 100 150)"><rect x="60" y="30" width="80" height="112" rx="10" fill="#fdfdf8" stroke="rgba(0,0,0,.3)" stroke-width="2"/><text x="69" y="50" font-size="16" font-weight="700" fill="#d7263d">A</text><text x="69" y="65" font-size="12" fill="#d7263d">♥</text><text x="100" y="100" text-anchor="middle" font-size="38" fill="#d7263d">♥</text></g><g><rect x="60" y="14" width="80" height="112" rx="10" fill="#fdfdf8" stroke="rgba(30,10,50,.6)" stroke-width="3"/><rect x="66" y="20" width="68" height="100" rx="7" fill="none" stroke="#e9c46a" stroke-width="1.4"/><text x="69" y="36" font-size="17" font-weight="700" fill="#20242e">Q</text><text x="69" y="51" font-size="12" fill="#20242e">♠</text><text x="100" y="86" text-anchor="middle" font-size="44" fill="#20242e">♠</text><g transform="rotate(180 100 70)"><text x="69" y="36" font-size="17" font-weight="700" fill="#20242e">Q</text><text x="69" y="51" font-size="12" fill="#20242e">♠</text></g></g><circle cx="170" cy="142" r="17" fill="url(#fanCoinV)" stroke="#a86e00" stroke-width="2.5"/><text x="170" y="150" text-anchor="middle" font-size="19" fill="#7a4d00">♠</text><circle cx="27" cy="150" r="11" fill="url(#fanCoinV)" stroke="#a86e00" stroke-width="2"/><text x="27" y="155" text-anchor="middle" font-size="12" fill="#7a4d00">♠</text><path d="M28 8l2.4 6.6L37 17l-6.6 2.4L28 26l-2.4-6.6L19 17l6.6-2.4z" fill="#ffe98a" opacity=".95"/></svg></span>
+          <span class="fan" id="fan-online" aria-hidden="true"></span>
           <span class="biglabel"><b>انلاین لوبه</b></span>
         </button>
         <button class="hm-bigcard orange" id="btn-quick" aria-label="له روباتونو سره لوبه">
-          <span class="fan"><svg viewBox="0 0 200 176" aria-hidden="true"><defs><linearGradient id="fanBackO2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f5a83d"/><stop offset="1" stop-color="#9c5410"/></linearGradient><linearGradient id="fanCoinV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset="1" stop-color="#d18d06"/></linearGradient></defs><g transform="rotate(-19 100 150)"><rect x="60" y="30" width="80" height="112" rx="10" fill="url(#fanBackO2)" stroke="#ffe9c9" stroke-width="3"/><rect x="68" y="38" width="64" height="96" rx="7" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.6"/><text x="100" y="100" text-anchor="middle" font-size="38" fill="#fff3c4">♣</text></g><g transform="rotate(19 100 150)"><rect x="60" y="30" width="80" height="112" rx="10" fill="#fdfdf8" stroke="rgba(0,0,0,.3)" stroke-width="2"/><text x="69" y="50" font-size="16" font-weight="700" fill="#d7263d">K</text><text x="69" y="65" font-size="12" fill="#d7263d">♥</text><text x="100" y="100" text-anchor="middle" font-size="38" fill="#d7263d">♥</text></g><g><rect x="60" y="14" width="80" height="112" rx="10" fill="#fdfdf8" stroke="rgba(30,10,50,.6)" stroke-width="3"/><rect x="66" y="20" width="68" height="100" rx="7" fill="none" stroke="#e9c46a" stroke-width="1.4"/><text x="69" y="36" font-size="17" font-weight="700" fill="#20242e">J</text><text x="69" y="51" font-size="12" fill="#20242e">♣</text><text x="100" y="86" text-anchor="middle" font-size="44" fill="#20242e">♣</text><g transform="rotate(180 100 70)"><text x="69" y="36" font-size="17" font-weight="700" fill="#20242e">J</text><text x="69" y="51" font-size="12" fill="#20242e">♣</text></g></g><circle cx="170" cy="142" r="17" fill="url(#fanCoinV)" stroke="#a86e00" stroke-width="2.5"/><text x="170" y="150" text-anchor="middle" font-size="19" fill="#7a4d00">♣</text><circle cx="27" cy="150" r="11" fill="url(#fanCoinV)" stroke="#a86e00" stroke-width="2"/><text x="27" y="155" text-anchor="middle" font-size="12" fill="#7a4d00">♣</text><path d="M28 8l2.4 6.6L37 17l-6.6 2.4L28 26l-2.4-6.6L19 17l6.6-2.4z" fill="#ffe98a" opacity=".95"/></svg></span>
+          <span class="fan" id="fan-bots" aria-hidden="true"></span>
           <span class="biglabel"><b>له روباتونو سره لوبه</b></span>
         </button>
       </div>
@@ -1847,7 +1963,7 @@
 
       <div class="hm-smallrow">
         <button class="hm-small" id="btn-create">
-          <span class="cluster"><svg viewBox="0 0 96 64" aria-hidden="true"><defs><linearGradient id="clCoin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset="1" stop-color="#d18d06"/></linearGradient><linearGradient id="clGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe98a"/><stop offset="1" stop-color="#e0a408"/></linearGradient><linearGradient id="clBack" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b6be8"/><stop offset="1" stop-color="#4527a0"/></linearGradient><linearGradient id="clViolet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b388ff"/><stop offset="1" stop-color="#6d28d9"/></linearGradient></defs><g transform="rotate(-13 40 34)"><rect x="24" y="10" width="32" height="45" rx="5" fill="#fdfdf8" stroke="rgba(0,0,0,.3)" stroke-width="1.6"/><text x="40" y="42" text-anchor="middle" font-size="17" fill="#20242e">♠</text></g><g transform="rotate(13 58 34)"><rect x="42" y="10" width="32" height="45" rx="5" fill="url(#clBack)" stroke="#ffd75e" stroke-width="2"/><text x="58" y="42" text-anchor="middle" font-size="15" fill="#ffd75e">♠</text></g><circle cx="76" cy="46" r="14" fill="url(#clCoin)" stroke="#a86e00" stroke-width="2"/><text x="76" y="53" text-anchor="middle" font-size="19" font-weight="800" fill="#7a4d00">+</text></svg></span>
+          <span class="cluster" id="fan-create" aria-hidden="true"><span class="plustok">+</span></span>
           <b>کوټه جوړه کړه</b>
         </button>
         <button class="hm-small" id="btn-join-toggle">
@@ -1974,8 +2090,9 @@
   // from the computed style (a data URI in the bundle, a plain path in
   // dev) — no literal filename here, so the bundle keeps its
   // no-external-image guarantee. Since the ludomenu reskin the home
-  // background is pure gradients and the fan is inline SVG, so both
-  // lists are normally empty and the language signal alone lifts the
+  // background is pure gradients, and the menu fans are real faces
+  // the main script renders (preloaded by it), so both lists are
+  // normally empty here and the language signal alone lifts the
   // veil (the caps below still apply).
   try {
     var cs = getComputedStyle(document.getElementById('scr-home')).backgroundImage || '';
@@ -3924,6 +4041,24 @@ function cardEl(code, extraClass) {
   img.draggable = false;
   d.appendChild(img);
   return d;
+}
+// ---------- home menu fans (real faces, contained) ----------
+// ludomenu11 (owner order 2026-11-10): the menu fans show the game's
+// own real deck faces, rendered by the same cardEl() as the table —
+// the four تاوان cards: ماتکه کالا (QS) front on انلاین, غلام پشه
+// (JC) front on the bots tile, لال (AH) and لس خښت (TD) fanned
+// behind each front; the create tile's cluster gets two mini faces.
+// The .fan / #fan-create CSS lays every card fully inside its tile.
+function renderMenuFans() {
+  const fill = (id, codes) => {
+    const host = document.getElementById(id);
+    if (!host) return;
+    host.querySelectorAll('.pcard').forEach((n) => n.remove());
+    codes.forEach((code, i) => host.appendChild(cardEl(code, 'pos' + i)));
+  };
+  fill('fan-online', ['TD', 'QS', 'AH']);
+  fill('fan-bots', ['TD', 'JC', 'AH']);
+  fill('fan-create', ['AH', 'TD']);
 }
 let toastTimer = null;
 function toast(msg) {
@@ -7188,10 +7323,11 @@ async function initSessionUser() {
   if (changed) { saveProfile(); renderProfileButton(); }
 }
 
-// The landing's carpet and hero fan are plain CSS/<img> markup (see the
-// <style> block and #home-fan) — they paint with the page itself and never
-// wait for this script or for __ASSETS__. Only the dynamic bits wire here.
+// The landing's carpet is plain CSS markup; its menu fans are real
+// card faces rendered by renderMenuFans() below (the faces ride the
+// same ASSET() map as the table, preloaded at script parse).
 (function dressHome() {
+  renderMenuFans();
   applyI18n();
   // Language is on the page: the splash veil may lift now (it also
   // waits for the carpet/hero decode; its own caps still apply).
