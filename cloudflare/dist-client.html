@@ -4850,15 +4850,47 @@ $('#btn-start').onclick = () => send({ type: 'start' });
 // cancels the room for everyone (the others get {type:'roomClosed'}
 // and land back on the menu). The saved reconnect token is dropped
 // either way, so «ادامهٔ بازی» can never resurrect a room I left.
-// The short delay lets the leave frame flush before the reload
-// tears the socket down.
+// The landing is an IN-APP transition — the page NEVER reloads
+// (owner report 2026-11-10: the old code called location.reload()
+// here and the whole app visibly rebooted on every lobby exit).
+// The mic stops, the leave frame flushes during the short delay,
+// then the socket closes on purpose and voice is torn down — the
+// same pieces exitSpectate and the table-exit confirm use, minus
+// the reboot. The landing screen is HOME, except for a CLUB-GAME
+// lobby (a room stamped with MY club): that lobby is a room inside
+// the club, so leaving it lands back in the CLUB ROOM (the club
+// screens repaint from social state; membership is untouched —
+// only the game room was left).
 $('#btn-leavelobby').onclick = () => {
   if (spectating) { exitSpectate(); return; } // clubs v8: a watcher just stops watching
+  const st = state;
+  const mine = roomClub();
+  const backToClub = !!(st && st.club && st.club.cid && mine && mine.cid === st.club.cid);
+  if (micOn) stopMic(); // no live mic rides onto the landing screen
   send({ type: 'leave' });
   intentionalClose = true;
   localStorage.removeItem('tore.session');
   session = null;
-  setTimeout(() => location.reload(), 200);
+  updateContinue();
+  setTimeout(() => {
+    if (ws) { try { ws.close(); } catch (e) { /* gone */ } ws = null; }
+    if (typeof peers !== 'undefined') Object.keys(peers).forEach((s) => closePeer(+s, 'teardown'));
+    Object.keys(voiceSeats).forEach((k) => delete voiceSeats[k]);
+    state = null;
+    mySeat = null;
+    closeChatPanel();
+    closeLobbyClubPanel();
+    $('#ov-exit').classList.remove('show');
+    if (backToClub) {
+      clRoomView = true;
+      $('#scr-lobby').classList.add('hidden');
+      $('#scr-game').classList.add('hidden');
+      $('#scr-clubs').classList.remove('hidden');
+      renderClubs();
+    } else {
+      show('scr-home');
+    }
+  }, 200);
 };
 // Copy the room code: the async Clipboard API where it exists, else
 // the legacy textarea + execCommand path (older / in-app browsers).
