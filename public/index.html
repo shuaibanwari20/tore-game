@@ -1359,12 +1359,32 @@
      ♥ pill, centred there, for EVERY member. Managers open the
      game picker with it; ordinary members spectate the club's
      live game. The «ژوندی» chip rides it while a club game is
-     running. */
-  #cl-room #btn-cl-game { position: relative; overflow: visible; margin: 7px auto 0;
+     running. Owner size order 2026-11-10 (clubgame3): the disc
+     grows 46px → 84px — the 94px trophy column keeps ~5px
+     margins — with the two-cards glyph at 46px and the live
+     chip scaled up and tucked to the rim so it stays fully
+     inside the column. The row's extra ~38px comes out of the
+     messages area, as with the move. Owner size order
+     2026-11-10 (clubgame4): «کمی کوچک کن» — a bit smaller:
+     the disc settles at 68px, glyph 37px, the live chip
+     re-tucked to the smaller rim. Owner order 2026-11-10
+     (clubgame5, repeated twice): «کمی کوچکتر کن و ایکن گیم
+     را قرار بدی» — a bit smaller AGAIN and put a real GAME
+     ICON on it: the disc settles at 56px and the thin
+     two-cards outline glyph is replaced by a fan of three
+     mini playing-card FACES (white cards, ♥ red left,
+     ♠ dark centre, ♦ red right) drawn as inline SVG at
+     36x27px so it reads instantly as "game"; the live chip
+     re-tucks to the smaller rim once more. The roundbtn's
+     13px padding is zeroed here — at 56px it left only a
+     28px content box and clamped the icon. */
+  #cl-room #btn-cl-game { position: relative; overflow: visible; margin: 7px auto 0; padding: 0;
+    flex-basis: 56px; width: 56px; height: 56px;
     background: radial-gradient(circle at 35% 28%, #ffe98a, #e9a83c 58%, #b97a06 88%);
-    border-color: #ffe98a; box-shadow: 0 2px 8px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.6); }
-  #cl-room #btn-cl-game svg { stroke: #5c3a06; }
-  #cl-room #btn-cl-game svg .pip { fill: #5c3a06; stroke: none; }
+    border-color: #ffe98a; box-shadow: 0 3px 9px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.6), inset 0 -3px 6px rgba(146,84,0,.35); }
+  #cl-room #btn-cl-game svg { stroke: none; width: 36px; height: 27px; }
+  #cl-room #btn-cl-game .cl-game-live { top: -5px; right: -3px; font-size: 10px; padding: 3px 6px; }
+  #cl-room #btn-cl-game .cl-live-dot { width: 6px; height: 6px; }
   .cl-game-live { position: absolute; top: -8px; right: -10px; z-index: 3;
     display: flex; align-items: center; gap: 3px;
     background: #c22333; color: #fff; font-size: 9.5px; font-weight: 800; line-height: 1;
@@ -2769,7 +2789,7 @@
           <div class="cl-trophy">
             <svg viewBox="0 0 96 54" class="cl-trophy-svg" aria-hidden="true"><defs><linearGradient id="cltg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe98a"/><stop offset=".55" stop-color="#f2c14e"/><stop offset="1" stop-color="#c9932b"/></linearGradient></defs><path d="M35 15C24 4 11 2 4 8c7 6 18 11 30 13z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><path d="M34.5 24C24 15 12 14 5.5 19c6.5 7 17.5 10.5 28 11z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><path d="M33.5 33c-8.5-7-18.5-7-24-2 5.5 6 15 8.5 23 8z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><path d="M61 15c11-11 24-13 31-7-7 6-18 11-30 13z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><path d="M61.5 24c10.5-9 22.5-10 29-5-6.5 7-17.5 10.5-28 11z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><path d="M62.5 33c8.5-7 18.5-7 24-2-5.5 6-15 8.5-23 8z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><path d="M15 38l3.5 12 4.5-6.5 4.5 6.5-1.5-12.5z" fill="#7a5fd0" stroke="#4c3483" stroke-width=".7"/><path d="M81 38l-3.5 12-4.5-6.5-4.5 6.5 1.5-12.5z" fill="#7a5fd0" stroke="#4c3483" stroke-width=".7"/><path d="M33.5 11.5C28.5 11.5 27 15.5 28.6 19c1.3 3 3.4 4 5.9 4.6" fill="none" stroke="#e9bd4f" stroke-width="3" stroke-linecap="round"/><path d="M62.5 11.5c5 0 6.5 4 4.9 7.5-1.3 3-3.4 4-5.9 4.6" fill="none" stroke="#e9bd4f" stroke-width="3" stroke-linecap="round"/><path d="M33 8h30v8a15 11 0 0 1-30 0z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1.3"/><path d="M33 8h30v3.2H33z" fill="#ffe98a" opacity=".85"/><path d="M48 10.8l1.7 3.5 3.9.6-2.8 2.7.7 3.9-3.5-1.8-3.5 1.8.7-3.9-2.8-2.7 3.9-.6z" fill="#fff3c4" stroke="#8a6a1f" stroke-width=".6"/><path d="M45.5 29.5h5V40h-5z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><rect x="36.5" y="40" width="23" height="4.4" rx="1.7" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><rect x="32.5" y="45.5" width="31" height="5.4" rx="2" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/></svg>
             <div class="cl-trophy-n"><span class="cl-trophy-heart">♥</span><span id="cl-like-n">0</span></div>
-            <button type="button" class="cl-roundbtn" id="btn-cl-game" aria-label="game"><svg viewBox="0 0 24 24"><rect x="3.6" y="5.4" width="10" height="14" rx="2" transform="rotate(-9 8.6 12.4)"/><rect x="10.2" y="4.2" width="10" height="14" rx="2" transform="rotate(8 15.2 11.2)"/><path class="pip" d="M15.2 8.1l1.9 2.7-1.9 2.7-1.9-2.7z"/></svg><span class="cl-game-live hidden" id="cl-game-live"><span class="cl-live-dot"></span><span id="cl-game-live-txt">ژوندی</span></span></button>
+            <button type="button" class="cl-roundbtn" id="btn-cl-game" aria-label="game"><svg viewBox="0 0 40 30"><g transform="rotate(-14 11 26)"><rect x="5" y="8" width="12" height="18" rx="2" fill="#ffffff" stroke="#7c6420" stroke-width="1.1"/><path d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z" fill="#d92338" stroke="none" transform="translate(11 16.5) scale(.55) translate(-8 -7.9)"/></g><g transform="rotate(14 29 26)"><rect x="23" y="8" width="12" height="18" rx="2" fill="#ffffff" stroke="#7c6420" stroke-width="1.1"/><path d="M29 11.8l3.3 4.7-3.3 4.7-3.3-4.7z" fill="#d92338" stroke="none"/></g><rect x="14" y="5" width="12" height="18" rx="2" fill="#ffffff" stroke="#7c6420" stroke-width="1.1"/><g transform="translate(20 13.6)"><path d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z" fill="#26262e" stroke="none" transform="scale(.55) translate(-8 -8) rotate(180 8 8)"/><path d="M-2 2.8h4l1.5 3.2h-7z" fill="#26262e" stroke="none"/></g></svg><span class="cl-game-live hidden" id="cl-game-live"><span class="cl-live-dot"></span><span id="cl-game-live-txt">ژوندی</span></span></button>
           </div>
         </div>
         <h3 class="fr-sec" id="cl-chat-title"></h3>
