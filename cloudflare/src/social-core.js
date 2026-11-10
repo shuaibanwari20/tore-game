@@ -111,6 +111,27 @@
  * payload-free s-clubs-changed {v} to ALL online players through
  * _clubsChanged(); clients re-run their current discover query.
  *
+ * Clubs v8 — CLUB GAMES (2026-11-10, CLUBS-PROMPT.md v8): a
+ * golden game button sits in the club room for EVERY member.
+ * Managers (owner + deputies) tap it to open the game picker in
+ * club context and create a room OF the club; ordinary members
+ * tap it to SPECTATE the club's active game (see the hosts for
+ * the spectator stream). The core's part: (1) clubGameClub(id,
+ * cid) — the game hosts call it at room-create time; only a
+ * VERIFIED manager of that club gets {cid, name} back, so a
+ * client-sent club id is never trusted on its own and a plain
+ * member / non-member can never stamp a room. (2) clubMembership
+ * (id, cid) — the hosts admit spectators by it. (3) The active-
+ * game badge: the host hook clubGameLookup(cid) -> {code, phase}
+ * | null answers which room (if any) is this club's live game;
+ * members pull it with s-club-game {club} (own club only — the
+ * reply is the empty state for any other club) and the hosts
+ * push fresh state to all online members via clubGameChanged
+ * (cid) whenever a club game appears, starts, ends or dissolves
+ * (s-club-game-state {club, code, phase}).
+ * Protocol additions (client -> server): s-club-game.
+ * Protocol additions (server -> client): s-club-game-state.
+ *
  * Invite rules (2026-11-08, extended 2026-11-09): a target holding
  * ANY seat cannot be invited — a started match (host hook
  * inGameCheck) rejects socialInGame, a waiting lobby seat (host
@@ -517,6 +538,7 @@ class SocialCore {
       case 's-club-create': return this.clubCreate(id, msg);
       case 's-club-search': return this.clubSearch(id, msg.q);
       case 's-club-enter': return this.clubEnter(id, msg.club);
+      case 's-club-game': return this.clubGameQuery(id, msg.club);
       case 's-club-invite': return this.clubInvite(id, msg.to);
       case 's-club-invite-reply': return this.clubInviteReply(id, msg.club, msg.accept);
       case 's-club-leave': return this.clubLeave(id);
@@ -981,6 +1003,63 @@ class SocialCore {
     if (this.blockedEither(id, club.owner)) return this._error(id, 'clubBlocked');
     if (club.members.length >= CLUB_CAP) return this._error(id, 'clubFull');
     this._joinClub(id, club);
+  }
+
+  // ---- clubs v8: club games (see the header note) ----
+  // The ONLY way a room earns its club stamp: the asking player
+  // must be a manager (owner or deputy) of the club AND it must
+  // be his own club (one-club rule). Returns {cid, name} or null.
+  clubGameClub(id, cidRaw) {
+    const cid = (typeof cidRaw === 'string' ? cidRaw : '').replace(/\D/g, '').slice(0, 6);
+    if (!cid || this.clubOf.get(id) !== cid) return null;
+    const club = this.clubs.get(cid);
+    if (!club || !this._clubManager(club, id)) return null;
+    return { cid: club.cid, name: club.name };
+  }
+
+  // A player's role in a club (or null) — the game hosts admit
+  // club members as spectators of a club game by this.
+  clubMembership(id, cidRaw) {
+    const cid = (typeof cidRaw === 'string' ? cidRaw : '').replace(/\D/g, '').slice(0, 6);
+    const club = cid ? this.clubs.get(cid) : null;
+    if (!club) return null;
+    return this._clubRole(club, id);
+  }
+
+  // The live club-game state for one club, from the host hook:
+  // {code, phase} while a room stamped with this club waits or
+  // plays, else nulls.
+  _clubGameState(cid) {
+    const hit = (typeof this.hooks.clubGameLookup === 'function')
+      ? this.hooks.clubGameLookup(cid) : null;
+    return {
+      type: 's-club-game-state', club: cid,
+      code: hit && typeof hit.code === 'string' ? hit.code : null,
+      phase: hit && typeof hit.phase === 'string' ? hit.phase : null,
+    };
+  }
+
+  // s-club-game {club}: a member pulls his OWN club's game
+  // state for the room button's live badge. Any other club is
+  // answered with the empty state — its game is never leaked.
+  clubGameQuery(id, cidRaw) {
+    const cid = (typeof cidRaw === 'string' ? cidRaw : '').replace(/\D/g, '').slice(0, 6);
+    if (!cid) return;
+    if (this.clubOf.get(id) !== cid) {
+      this._send(id, { type: 's-club-game-state', club: cid, code: null, phase: null });
+      return;
+    }
+    this._send(id, this._clubGameState(cid));
+  }
+
+  // Host-called whenever a club game appears, starts, ends or
+  // dissolves: every online member gets the fresh badge state.
+  clubGameChanged(cidRaw) {
+    const cid = (typeof cidRaw === 'string' ? cidRaw : '').replace(/\D/g, '').slice(0, 6);
+    const club = cid ? this.clubs.get(cid) : null;
+    if (!club) return;
+    const st = this._clubGameState(cid);
+    for (const m of club.members) if (this.isOnline(m.id)) this._send(m.id, st);
   }
 
   clubInvite(id, to) {
