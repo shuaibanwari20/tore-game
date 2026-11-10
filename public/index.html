@@ -1117,7 +1117,7 @@
     background: #2a0a45; color: #f6efff; }
   #scr-clubs .cl-morewrap select { border-color: rgba(216,178,255,.45); }
   /* club popups wear the same night */
-  #ov-clubann .panel, #ov-clubinvite .panel {
+  #ov-clubann .panel, #ov-clubinvite .panel, #ov-lobbyclub .panel {
     background: linear-gradient(165deg, #3d1163, #1e0636); border: 1.5px solid rgba(216,178,255,.5); color: #f6efff; }
   #ov-clubann input {
     background: rgba(16,4,32,.85); color: #fff; border: 1px solid rgba(216,178,255,.45); }
@@ -1353,6 +1353,27 @@
     background: radial-gradient(circle at 35% 28%, #3d3d47, #121218 80%);
     border-color: rgba(255,255,255,.20); box-shadow: inset 0 1px 2px rgba(255,255,255,.25); }
   #cl-room #btn-cl-send { flex-basis: 46px; width: 46px; height: 46px; }
+  /* clubs v8: the club-game button — golden like the room's
+     trophy. Owner move order 2026-11-10: OUT of the input bar,
+     into the trophy column directly UNDER the trophy emblem +
+     ♥ pill, centred there, for EVERY member. Managers open the
+     game picker with it; ordinary members spectate the club's
+     live game. The «ژوندی» chip rides it while a club game is
+     running. */
+  #cl-room #btn-cl-game { position: relative; overflow: visible; margin: 7px auto 0;
+    background: radial-gradient(circle at 35% 28%, #ffe98a, #e9a83c 58%, #b97a06 88%);
+    border-color: #ffe98a; box-shadow: 0 2px 8px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.6); }
+  #cl-room #btn-cl-game svg { stroke: #5c3a06; }
+  #cl-room #btn-cl-game svg .pip { fill: #5c3a06; stroke: none; }
+  .cl-game-live { position: absolute; top: -8px; right: -10px; z-index: 3;
+    display: flex; align-items: center; gap: 3px;
+    background: #c22333; color: #fff; font-size: 9.5px; font-weight: 800; line-height: 1;
+    padding: 3px 6px; border-radius: 999px; border: 1px solid #ff8fa0;
+    box-shadow: 0 1px 5px rgba(0,0,0,.5); pointer-events: none; }
+  .cl-game-live.hidden { display: none; }
+  .cl-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #fff;
+    animation: clLivePulse 1.2s ease-in-out infinite; }
+  @keyframes clLivePulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
   #cl-room .cl-roundbtn svg { stroke: #ececf2; }
   #cl-room .cl-roundbtn.on { border-color: #c9a6ff; box-shadow: 0 0 10px rgba(177,140,255,.55); }
   #cl-room .cl-roundbtn.on svg { stroke: #dcc9ff; }
@@ -1970,6 +1991,18 @@
     box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
     padding: 18px 16px 14px; }
   #scr-lobby #lobby-hint { color: #ffd7f2; text-shadow: 0 1px 3px rgba(0,0,0,.45); }
+  /* clubs v8: the club-game tag under the room code */
+  #scr-lobby #lobby-clubtag { text-align: center; font-size: 13.5px; font-weight: 700;
+    color: #ffe98a; text-shadow: 0 1px 3px rgba(0,0,0,.45); margin: -4px 0 8px; }
+  #scr-lobby #lobby-clubtag.hidden { display: none; }
+  /* clubs v8: the spectator chip on the table — a small dark
+     pill under the score strip marking the watch-only view */
+  #spec-chip { position: absolute; top: 168px; left: 50%; transform: translateX(-50%); z-index: 25;
+    background: rgba(20,6,5,.82); color: #ffd7d7; border: 1.5px solid rgba(255,143,160,.65);
+    font-size: 13px; font-weight: 700; padding: 5px 13px; border-radius: 999px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; }
+  #spec-chip.hidden { display: none; }
+  #scr-game.spectating .actionrow { visibility: hidden; }
   #scr-lobby .codereel { margin: 8px 0 12px; }
   #scr-lobby #lobby-code { background: rgba(43,6,54,.55); color: #ffd75e;
     border: 1.5px solid rgba(255,255,255,.4); border-radius: 14px;
@@ -2027,7 +2060,10 @@
      Tore has no economy. Containment law holds — the track
      clips inside the stage; the next card only peeks at the
      stage's own edge. --- */
-  #scr-picker { background-color: #6d0d3f;
+  /* clubs v8: z-index 31 (one above the z-30 page family) — the
+     picker also opens OVER the club room now, and every exit
+     path hides it explicitly, so nothing can strand it on top. */
+  #scr-picker { z-index: 31; background-color: #6d0d3f;
     background-image:
       linear-gradient(45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
       linear-gradient(-45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
@@ -2317,9 +2353,11 @@
       <div class="codereel">
         <div class="roomcode" id="lobby-code" role="button" tabindex="0" title="کوډ کاپي کړه">····</div>
       </div>
+      <div id="lobby-clubtag" class="hidden"></div>
       <div id="lobby-seats"></div>
       <button id="btn-start">لوبه پیل کړه</button>
       <button id="btn-lobby-friends" class="ghost">👥 <span id="lobby-friends-lbl">ملګري</span></button>
+      <button id="btn-lobby-club" class="ghost hidden">🏆 <span id="lobby-club-lbl">د کلب غړي</span></button>
       <button id="btn-leavelobby" class="ghost">له کوټې ووځه</button>
       <div id="lobby-note" style="text-align:center; font-size:13px; opacity:.85; margin-top:8px"></div>
       <div class="actionrow lobby-actions">
@@ -2335,6 +2373,7 @@
 
   <!-- ======== GAME ======== -->
   <section id="scr-game" class="hidden">
+    <div id="spec-chip" class="hidden">👁 <span id="spec-chip-txt"></span></div>
     <div class="scorestrip">
       <div class="ss-team">
         <div class="ss-line1"><span class="ss-tname" id="ss-name-us">زموږ ټیم</span><span class="tkstars" id="tk-us"></span><span class="ss-banknum" id="sc-us">0</span></div>
@@ -2730,6 +2769,7 @@
           <div class="cl-trophy">
             <svg viewBox="0 0 96 54" class="cl-trophy-svg" aria-hidden="true"><defs><linearGradient id="cltg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe98a"/><stop offset=".55" stop-color="#f2c14e"/><stop offset="1" stop-color="#c9932b"/></linearGradient></defs><path d="M35 15C24 4 11 2 4 8c7 6 18 11 30 13z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><path d="M34.5 24C24 15 12 14 5.5 19c6.5 7 17.5 10.5 28 11z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><path d="M33.5 33c-8.5-7-18.5-7-24-2 5.5 6 15 8.5 23 8z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><path d="M61 15c11-11 24-13 31-7-7 6-18 11-30 13z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><path d="M61.5 24c10.5-9 22.5-10 29-5-6.5 7-17.5 10.5-28 11z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><path d="M62.5 33c8.5-7 18.5-7 24-2-5.5 6-15 8.5-23 8z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><path d="M15 38l3.5 12 4.5-6.5 4.5 6.5-1.5-12.5z" fill="#7a5fd0" stroke="#4c3483" stroke-width=".7"/><path d="M81 38l-3.5 12-4.5-6.5-4.5 6.5 1.5-12.5z" fill="#7a5fd0" stroke="#4c3483" stroke-width=".7"/><path d="M33.5 11.5C28.5 11.5 27 15.5 28.6 19c1.3 3 3.4 4 5.9 4.6" fill="none" stroke="#e9bd4f" stroke-width="3" stroke-linecap="round"/><path d="M62.5 11.5c5 0 6.5 4 4.9 7.5-1.3 3-3.4 4-5.9 4.6" fill="none" stroke="#e9bd4f" stroke-width="3" stroke-linecap="round"/><path d="M33 8h30v8a15 11 0 0 1-30 0z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1.3"/><path d="M33 8h30v3.2H33z" fill="#ffe98a" opacity=".85"/><path d="M48 10.8l1.7 3.5 3.9.6-2.8 2.7.7 3.9-3.5-1.8-3.5 1.8.7-3.9-2.8-2.7 3.9-.6z" fill="#fff3c4" stroke="#8a6a1f" stroke-width=".6"/><path d="M45.5 29.5h5V40h-5z" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><rect x="36.5" y="40" width="23" height="4.4" rx="1.7" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/><rect x="32.5" y="45.5" width="31" height="5.4" rx="2" fill="url(#cltg)" stroke="#8a6a1f" stroke-width="1"/></svg>
             <div class="cl-trophy-n"><span class="cl-trophy-heart">♥</span><span id="cl-like-n">0</span></div>
+            <button type="button" class="cl-roundbtn" id="btn-cl-game" aria-label="game"><svg viewBox="0 0 24 24"><rect x="3.6" y="5.4" width="10" height="14" rx="2" transform="rotate(-9 8.6 12.4)"/><rect x="10.2" y="4.2" width="10" height="14" rx="2" transform="rotate(8 15.2 11.2)"/><path class="pip" d="M15.2 8.1l1.9 2.7-1.9 2.7-1.9-2.7z"/></svg><span class="cl-game-live hidden" id="cl-game-live"><span class="cl-live-dot"></span><span id="cl-game-live-txt">ژوندی</span></span></button>
           </div>
         </div>
         <h3 class="fr-sec" id="cl-chat-title"></h3>
@@ -2923,6 +2963,20 @@
   <div class="panel ci-panel">
     <h2 id="ci-title"></h2>
     <div id="ci-list"></div>
+  </div>
+</div>
+
+<!-- ======== CLUB-GAME LOBBY INVITES (clubs v8) ========
+     In a club game's lobby, the room creator invites CLUB
+     MEMBERS from here — clubmates need not be friends (the
+     server allows the invite on shared club membership). Each
+     row carries the standard invite states (busy gamepad,
+     in-lobby gamepad, 10 s cooldown, offline). A tap on the
+     dimmed backdrop closes it. -->
+<div class="overlay" id="ov-lobbyclub">
+  <div class="panel ci-panel">
+    <h2 id="lc-title"></h2>
+    <div id="lc-list"></div>
   </div>
 </div>
 
@@ -3353,6 +3407,16 @@ const STR = {
     errCoverTooBig: 'انځور ډېر لوی دی — تر ۲۵۰ KB کم وي',
     errCoverBadType: 'یوازې JPG، PNG یا WebP انځور',
     clMembers: 'غړي',
+    clGame: 'لوبه',
+    clLive: 'ژوندی',
+    clNoGame: 'تر اوسه لوبه نشته',
+    clWatch: 'تماشا وکړه',
+    clWatching: 'تماشا کوې',
+    clClubMembers: 'د کلب غړي',
+    clNoClubMembers: 'بل غړی نشته',
+    clClubGame: 'د کلب لوبه',
+    errSpectateDenied: 'تماشا یوازې د کلب غړو ته ده',
+    errSpectatorFull: 'تماشاچیان ډک دي',
     clMemberCount: (n) => n + ' غړي',
     clChatTitle: 'د کلب ګپ',
     clChatPh: 'پیغام ولیکه…',
@@ -3644,6 +3708,16 @@ const STR = {
     errCoverTooBig: 'عکس خیلی بزرگ است — کمتر از ۲۵۰ KB',
     errCoverBadType: 'فقط عکس JPG، PNG یا WebP',
     clMembers: 'اعضا',
+    clGame: 'بازی',
+    clLive: 'زنده',
+    clNoGame: 'هنوز بازی‌ای نیست',
+    clWatch: 'تماشا کن',
+    clWatching: 'در حال تماشا',
+    clClubMembers: 'اعضای باشگاه',
+    clNoClubMembers: 'عضو دیگری نیست',
+    clClubGame: 'بازی باشگاه',
+    errSpectateDenied: 'تماشای این بازی فقط برای اعضای باشگاه است',
+    errSpectatorFull: 'تماشاچی‌ها پر است',
     clMemberCount: (n) => n + ' عضو',
     clChatTitle: 'گپ باشگاه',
     clChatPh: 'پیام بنویس…',
@@ -3935,6 +4009,16 @@ const STR = {
     errCoverTooBig: 'Image too big — must be under 250 KB',
     errCoverBadType: 'Only JPG, PNG or WebP images',
     clMembers: 'Members',
+    clGame: 'Game',
+    clLive: 'LIVE',
+    clNoGame: 'No game yet',
+    clWatch: 'Watch',
+    clWatching: 'Watching',
+    clClubMembers: 'Club members',
+    clNoClubMembers: 'No other members',
+    clClubGame: 'Club game',
+    errSpectateDenied: 'Only club members can watch this game',
+    errSpectatorFull: 'Spectator seats are full',
     clMemberCount: (n) => n + ' members',
     clChatTitle: 'Club chat',
     clChatPh: 'Write a message…',
@@ -4712,6 +4796,7 @@ $('#btn-start').onclick = () => send({ type: 'start' });
 // The short delay lets the leave frame flush before the reload
 // tears the socket down.
 $('#btn-leavelobby').onclick = () => {
+  if (spectating) { exitSpectate(); return; } // clubs v8: a watcher just stops watching
   send({ type: 'leave' });
   intentionalClose = true;
   localStorage.removeItem('tore.session');
@@ -4778,7 +4863,10 @@ $('#btn-newgame').onclick = () => {
 // dropped and the page reloads home, which also tears voice down.
 function openExit() { $('#ov-exit').classList.add('show'); }
 function closeExit() { $('#ov-exit').classList.remove('show'); }
-$('#btn-leave').onclick = openExit;
+$('#btn-leave').onclick = () => {
+  if (spectating) { exitSpectate(); return; } // clubs v8: leaving the watch needs no confirm
+  openExit();
+};
 $('#btn-exit-cancel').onclick = closeExit;
 $('#ov-exit').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeExit(); });
 $('#btn-exit-confirm').onclick = () => {
@@ -7401,6 +7489,13 @@ $('#btn-quick').onclick = () => openPicker('bots');
 // حکم / کش wear ژر راځي: their buttons are DISABLED in the
 // markup — no handler exists for them at all.
 let pkMode = 'online';
+// Clubs v8: when the picker opens from the CLUB ROOM (the
+// managers' golden game button), it carries the club's id —
+// choosing توره then creates the room AS a club game (the
+// server verifies the manager stamp; the client flag alone
+// grants nothing) and the picker's ✖ falls back onto the club
+// room underneath it instead of the home menu.
+let pkClubCid = null;
 // The shelf art is the game's REAL faces (cardEl → the same
 // ASSET() map as the table): توره wears the fan of its story —
 // Q♠ (ماتکه کالا) in front of a heart and the 10♦ — while حکم
@@ -7450,19 +7545,24 @@ function pkGo(i, smooth) {
   track.scrollTo({ left, behavior: smooth === false ? 'auto' : 'smooth' });
   pkPaintNext();
 }
-function openPicker(mode) {
+function openPicker(mode, clubCid) {
   pkMode = mode || 'online';
+  pkClubCid = clubCid || null;
   paintPickerTabs();
   $('#scr-picker').classList.remove('hidden');
   pkGo(0, false);
   pkPaintNext();
 }
-function closePicker() { $('#scr-picker').classList.add('hidden'); }
+function closePicker() {
+  pkClubCid = null;
+  $('#scr-picker').classList.add('hidden');
+}
 function startPickedGame() {
   const mode = pkMode;
+  const club = pkClubCid;
   closePicker();
   if (mode === 'bots') quickPlay = true;
-  connect(() => send({ type: 'create', ...profilePayload() }));
+  connect(() => send({ type: 'create', ...(club ? { club } : {}), ...profilePayload() }));
 }
 $('#btn-pk-close').onclick = () => closePicker();
 ['online', 'bots', 'room'].forEach((m) => {
@@ -7792,6 +7892,7 @@ function onMsg(msg) {
     endJoinFlight(); // the join (or create/reconnect) landed
     closeJoin(); // the join popup has done its job — never cover the lobby
     closePicker(); // a picker-started flow lands the same way
+    closeClubs(); // a room entered from the club screens (club-game create, invite accept) must not stay covered by them
     mySeat = msg.seat;
     if (!voiceT0) voiceT0 = Date.now(); // diagnostics log epoch: seconds since join
     session = { code: msg.code, token: msg.token, name: myName() };
@@ -7806,9 +7907,26 @@ function onMsg(msg) {
     // Quick play: I just created this room and I am its host — start at
     // once so the empty seats fill with bots (one-tap bot game).
     if (quickPlay) { quickPlay = false; send({ type: 'start' }); }
+  } else if (msg.type === 'spectating') {
+    // Clubs v8: the watch stream attached. NO session is stored
+    // (a spectator has nothing to resume) and the table renders
+    // from seat 0's viewpoint with every action guarded by the
+    // `spectating` flag — the server never sends a hand anyway.
+    spectating = true;
+    specCode = msg.code;
+    mySeat = 0;
+    $('#connbar').textContent = '';
   } else if (msg.type === 'state') {
     state = msg;
     if (mySeat === null) mySeat = msg.mySeat;
+    // Clubs v8: a spectator's stream is render-only — no voice
+    // mesh, no pair healing, no mic/speaker mirroring: the
+    // watcher holds no seat and joins no voice pair.
+    if (spectating) {
+      if (mySeat === null || mySeat < 0) mySeat = 0;
+      render(msg);
+      return;
+    }
     // Voice truth rides in every state: mirror the per-seat
     // {mic, speaker} flags, drop peers whose seat is gone / a bot /
     // disconnected, and reconcile the mesh with the pairing rule.
@@ -7867,6 +7985,9 @@ function onMsg(msg) {
     const nm = state && state.seats[msg.seat] ? (dispName(state.seats[msg.seat]) || T('playerName')) : T('playerName');
     toast(T('declaredToast', nm));
   } else if (msg.type === 'roomClosed') {
+    // Clubs v8: a spectator whose watched lobby is cancelled
+    // lands back in the club room, not the home menu.
+    if (spectating) { exitSpectate(); toast(T('roomCancelled')); return; }
     // The host cancelled the waiting room: drop the saved session so
     // «ادامهٔ بازی» cannot resurrect it, say why, and go to the menu.
     localStorage.removeItem('tore.session');
@@ -8025,6 +8146,7 @@ function onSocialMsg(m) {
     renderFriends();
     renderClubs();
     renderChats();
+    renderLobbyClubPanel();
     if (dmPeer && dmPeer.id === m.id) paintDmPeer();
   } else if (m.type === 's-club') {
     const prevCid = clubData && clubData.club ? clubData.club.cid : null;
@@ -8074,6 +8196,15 @@ function onSocialMsg(m) {
     }
   } else if (m.type === 's-clubs-changed') {
     onClubsChanged();
+  } else if (m.type === 's-club-game-state') {
+    // Clubs v8: my club's live game ({code, phase}) or nulls —
+    // drives the club-room game button's «ژوندی» badge and the
+    // member tap-through into spectating.
+    const rc2 = roomClub();
+    if (rc2 && m.club === rc2.cid) {
+      clubGame = m.code ? { code: m.code, phase: m.phase } : null;
+      paintClubGameBtn();
+    }
   } else if (m.type === 's-club-liked') {
     requestDiscover();
     renderClubs();
@@ -8414,6 +8545,7 @@ function seatRelation(sid) {
   return 'none';
 }
 function openPlayerMenu(idx, anchor) {
+  if (spectating) return; // clubs v8: watchers open no player menus
   const s = state && state.seats && state.seats[idx];
   if (!s || s.kind !== 'human' || idx === mySeat) return;
   const pop = $('#ov-playermenu');
@@ -9664,6 +9796,7 @@ function renderClubRoom() {
   $('#cl-annbar').classList.toggle('canedit', c.myRole === 'owner' || c.myRole === 'deputy');
   trackClubJoins(c);
   renderClubChat();
+  pullClubGame(c); // clubs v8: the game button's live badge state
   cv.enter();
   cv.paintBtns();
   renderSeatReqBar();
@@ -9919,6 +10052,7 @@ function renderClubs() {
   // uploaded photo flips its working cover to 'custom'
   if ($('#ov-clubedit').classList.contains('show')) syncClubEditFromPush();
   if ($('#ov-clubinvite').classList.contains('show')) renderClubInvitePopup();
+  if ($('#ov-lobbyclub').classList.contains('show')) renderLobbyClubPanel();
   if ($('#scr-clubs').classList.contains('hidden')) return;
   const inRoom = !!(roomClub() && clRoomView);
   $('#cl-disc-scroll').classList.toggle('hidden', inRoom);
@@ -11483,6 +11617,11 @@ let prevPhase = ''; // matchEnd edge for the vibration buzz
 function render(st) {
   if (st.phase === 'lobby') { renderLobby(st); show('scr-lobby'); return; }
   show('scr-game');
+  // Clubs v8: the spectator view wears its chip and hides the
+  // action row (chat / mic / speaker belong to seated players).
+  $('#scr-game').classList.toggle('spectating', !!spectating);
+  $('#spec-chip').classList.toggle('hidden', !spectating);
+  if (spectating) $('#spec-chip-txt').textContent = T('clWatching');
   const myTeam = mySeat % 2, them = 1 - myTeam;
 
   // Scoreboard headline = the BANKED tawan (جمع‌شده) per the user's order —
@@ -11541,12 +11680,12 @@ function render(st) {
     // another HUMAN's badge is tappable: it opens the player menu
     // (the #seat-<pos> click bindings below). Mine, bots and empty
     // seats stay inert — pointer-events: none in the CSS above.
-    el.classList.toggle('tappable', s.kind === 'human' && i !== mySeat);
+    el.classList.toggle('tappable', !spectating && s.kind === 'human' && i !== mySeat);
     const crown = (winSeat === i && st.phase === 'playing') ? '👑 ' : '';
     const kindMark = s.kind === 'human'
       ? '<span class="dot ' + (s.connected ? 'on' : '') + '"></span>' : '';
     el.innerHTML = '<div class="badgename">' + kindMark + '<span class="bnm">' + crown +
-      badgeName(s) + (i === mySeat ? T('youSuffix') : '') + '</span></div>';
+      badgeName(s) + (!spectating && i === mySeat ? T('youSuffix') : '') + '</span></div>';
     el.prepend(barAvatar(pos, s, i));
   });
   // live-mic dots and any still-fresh chat bubbles ride on top of the
@@ -11739,7 +11878,7 @@ function renderLobby(st) {
       main.appendChild(avatarEl(s.name, s.kind === 'bot' ? { t: 'bot' } : s.avatar, 30, s.photo));
       const nm = document.createElement('span');
       nm.className = 'sr-name';
-      nm.textContent = dispName(s) + (i === mySeat ? T('youSuffix') : '');
+      nm.textContent = dispName(s) + (!spectating && i === mySeat ? T('youSuffix') : '');
       main.appendChild(nm);
       // live-mic dot beside the lobby avatar, same as the table badge
       if (vflags(i).mic) {
@@ -11764,7 +11903,7 @@ function renderLobby(st) {
     // Another HUMAN's row is tappable: it opens the small player
     // menu (friend request + profile view). Bots, empty seats and
     // my own row open nothing.
-    if (s.kind === 'human' && i !== mySeat) {
+    if (!spectating && s.kind === 'human' && i !== mySeat) {
       row.classList.add('tappable');
       row.addEventListener('click', () => openPlayerMenu(i, row));
     }
@@ -11772,10 +11911,170 @@ function renderLobby(st) {
     row.appendChild(meta);
     box.appendChild(row);
   });
-  const isHost = mySeat === st.hostSeat;
+  const isHost = !spectating && mySeat === st.hostSeat;
   $('#btn-start').disabled = !isHost;
-  $('#lobby-note').textContent = isHost ? T('lobbyNoteHost') : T('lobbyNoteGuest');
+  $('#lobby-note').textContent = spectating ? '👁 ' + T('clWatching')
+    : isHost ? T('lobbyNoteHost') : T('lobbyNoteGuest');
+  renderLobbyClub(st);
   validatePlayerMenu();
+}
+
+// ---------- clubs v8: club games ----------
+// The golden game button in the club room serves EVERY member.
+// Managers (owner + deputies) open the game picker in club
+// context: choosing توره creates a room OF this club, and from
+// its lobby they invite clubmates (clubmates need not be
+// friends — the server's invite already allows a shared club).
+// Ordinary members watch: while a club game is live the button
+// wears the «ژوندی» badge and a tap spectates it; with no game
+// running the tap only toasts «تر اوسه لوبه نشته».
+// clubGame mirrors the server's word (s-club-game-state):
+// {code, phase} while a room stamped with my club waits or
+// plays, else null.
+let clubGame = null;
+let clubGamePullCid = null; // the club the badge state was last pulled for
+let spectating = false;     // I am watching a club game (no seat, no hand)
+let specCode = null;
+
+function paintClubGameBtn() {
+  const btn = $('#btn-cl-game');
+  if (!btn) return;
+  btn.setAttribute('aria-label', T('clGame'));
+  const live = $('#cl-game-live');
+  if (live) {
+    live.classList.toggle('hidden', !clubGame);
+    $('#cl-game-live-txt').textContent = T('clLive');
+  }
+}
+
+// Pull the badge state once per club (on room entry); after
+// that the server's pushes keep it live.
+function pullClubGame(c) {
+  if (!c) return;
+  if (clubGamePullCid !== c.cid) {
+    clubGamePullCid = c.cid;
+    clubGame = null;
+    socialSend({ type: 's-club-game', club: c.cid });
+  }
+  paintClubGameBtn();
+}
+
+$('#btn-cl-game').onclick = () => {
+  const c = roomClub();
+  if (!c) return;
+  if (clubIsManager(c)) { openPicker('room', c.cid); return; }
+  if (clubGame && clubGame.code) spectateClubGame(clubGame.code);
+  else toast(T('clNoGame'));
+};
+
+function hideClubScreens() {
+  $('#scr-clubpage').classList.add('hidden');
+  $('#scr-clubmembers').classList.add('hidden');
+  $('#scr-clubseatreqs').classList.add('hidden');
+  $('#scr-clubs').classList.add('hidden');
+}
+
+function spectateClubGame(code) {
+  hideClubScreens();
+  spectating = true;
+  specCode = code;
+  intentionalClose = false;
+  connect(() => send({ type: 'spectate', code, ...profilePayload() }));
+}
+
+// Leaving the watch: the socket closes (a spectator holds no
+// seat, so there is nothing to hand over) and the club room
+// the watch started from comes back.
+function exitSpectate() {
+  const was = spectating;
+  spectating = false;
+  specCode = null;
+  if (!was) return;
+  intentionalClose = true;
+  if (ws) { try { ws.close(); } catch (e) { /* gone */ } ws = null; }
+  state = null;
+  mySeat = null;
+  closeChatPanel();
+  closeLobbyClubPanel();
+  $('#ov-exit').classList.remove('show');
+  $('#scr-lobby').classList.add('hidden');
+  $('#scr-game').classList.add('hidden');
+  $('#spec-chip').classList.add('hidden');
+  clRoomView = true;
+  $('#scr-clubs').classList.remove('hidden');
+  renderClubs();
+}
+
+// ----- the club-game lobby: tag, invite button, member panel -----
+function renderLobbyClub(st) {
+  const tag = $('#lobby-clubtag');
+  const btn = $('#btn-lobby-club');
+  $('#lobby-club-lbl').textContent = T('clClubMembers');
+  const isClubLobby = !!(st && st.club && st.club.cid);
+  tag.classList.toggle('hidden', !isClubLobby);
+  if (isClubLobby) tag.textContent = '🏆 ' + T('clClubGame') + ' · ' + (st.club.name || '');
+  // The invite panel belongs to the room CREATOR (seat = host)
+  // and only while the room's club is his own club.
+  const mine = roomClub();
+  const canInvite = isClubLobby && !spectating && mySeat === st.hostSeat &&
+    !!mine && mine.cid === st.club.cid;
+  btn.classList.toggle('hidden', !canInvite);
+  if (!canInvite) closeLobbyClubPanel();
+}
+
+let lcTimer = null;
+function openLobbyClubPanel() {
+  $('#ov-lobbyclub').classList.add('show');
+  renderLobbyClubPanel();
+  // The invite cooldown counts down on the buttons themselves —
+  // repaint once a second while the panel is open.
+  if (lcTimer) clearInterval(lcTimer);
+  lcTimer = setInterval(() => {
+    if (!$('#ov-lobbyclub').classList.contains('show')) {
+      clearInterval(lcTimer); lcTimer = null; return;
+    }
+    renderLobbyClubPanel();
+  }, 1000);
+}
+function closeLobbyClubPanel() {
+  const ov = $('#ov-lobbyclub');
+  if (ov) ov.classList.remove('show');
+  if (lcTimer) { clearInterval(lcTimer); lcTimer = null; }
+}
+$('#btn-lobby-club').onclick = () => openLobbyClubPanel();
+$('#ov-lobbyclub').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeLobbyClubPanel(); });
+
+// The club's members (minus me) with the STANDARD invite states
+// — busy gamepad (in a match / in a lobby), 10 s cooldown on
+// the button, offline toast — riding the exact s-invite flow
+// the friend rows use; the server allows it for clubmates.
+function renderLobbyClubPanel() {
+  const list = $('#lc-list');
+  if (!list || !$('#ov-lobbyclub').classList.contains('show')) return;
+  $('#lc-title').textContent = T('clClubMembers');
+  $('#lobby-club-lbl').textContent = T('clClubMembers');
+  list.innerHTML = '';
+  const c = roomClub();
+  const code = myLobbyCode();
+  if (!c || !code) { list.appendChild(frEmpty(T('clNoClubMembers'))); return; }
+  const others = (c.members || []).filter((m) => m.id !== socialMe);
+  if (!others.length) { list.appendChild(frEmpty(T('clNoClubMembers'))); return; }
+  others.forEach((m) => {
+    let btn;
+    if (m.ingame || m.inlobby) btn = frBusyBtn(m);
+    else {
+      const rem = inviteCdRemaining(m.id);
+      if (rem > 0) btn = frBtn('⏳ ' + rem, '', null);
+      else btn = frBtn('🔔 ' + T('frInvite'), 'primary', () => {
+        if (!m.online) { toast(T('frOfflineToast', m.name || '')); return; }
+        lastInviteTo = m.id;
+        socialSend({ type: 's-invite', to: m.id, code });
+        setInviteCd(m.id, INVITE_CD_MS);
+        renderLobbyClubPanel();
+      });
+    }
+    list.appendChild(personRow(m, [btn]));
+  });
 }
 </script>
 </body>
