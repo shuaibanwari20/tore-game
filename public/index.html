@@ -1654,18 +1654,52 @@
      and can arrive seconds after the images). Hard caps keep it from
      ever lingering, and the CSS animation lifts it even if every
      script fails (set later than the JS cap so it never undercuts
-     the language gate on slow loads). */
+     the language gate on slow loads).
+     RESKINNED 2026-11-10 (owner order, ?v=20261110-splash) to the
+     shell's Ludo purple: wine-plum/magenta gradient + the home
+     shell's diamond lattice, an original inline-SVG night-city
+     skyline along the bottom (the club room's city, redrawn small),
+     a chunky gold-gloss wordmark with a slow shine sweep, and the
+     four suits larger, glossier and gently floating. Pure CSS/SVG
+     still — show/hide logic and timing untouched. */
   #splash {
     position: fixed; inset: 0; z-index: 90;
-    background: radial-gradient(ellipse at 50% 42%, #4a2f16 0%, #2a1a09 62%, #1c0f04 100%);
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+    background-color: #2a0a45;
+    background-image:
+      radial-gradient(ellipse 90% 46% at 50% 40%, rgba(240,86,159,.30) 0%, rgba(240,86,159,0) 62%),
+      linear-gradient(45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(-45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(180deg, #2a0a52 0%, #57105e 30%, #8a1250 58%, #5c0a3e 80%, #1c0530 100%);
+    background-size: 100% 100%, 34px 34px, 34px 34px, 100% 100%;
+    background-repeat: no-repeat, repeat, repeat, no-repeat;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
     transition: opacity .35s ease;
     animation: splashAuto .45s ease 6.5s forwards;
+    overflow: hidden;
   }
   #splash.bye { opacity: 0; pointer-events: none; }
-  #splash .sp-title { font-size: 56px; font-weight: 900; line-height: 1.1; color: #ffd75e; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
-  #splash .sp-suits { font-size: 16px; letter-spacing: 8px; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
-  #splash .sp-suits .r { color: #ff5a4d; } #splash .sp-suits .w { color: #f5e7c6; }
+  #splash .sp-city { position: absolute; left: 0; right: 0; bottom: 0; height: 30%; min-height: 118px; z-index: 0; pointer-events: none; }
+  #splash .sp-city svg { display: block; width: 100%; height: 100%; }
+  #splash .sp-title { position: relative; z-index: 1; font-size: 78px; font-weight: 900; line-height: 1.1; color: #ffd75e;
+    filter: drop-shadow(0 3px 0 rgba(90,10,60,.55)) drop-shadow(0 10px 22px rgba(0,0,0,.45)) drop-shadow(0 0 26px rgba(255,183,71,.35)); }
+  @supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    #splash .sp-title {
+      background-image: linear-gradient(180deg, #fff6c8 0%, #ffe98a 30%, #ffd75e 48%, #f5b81e 72%, #d18d06 100%);
+      background-size: 100% 220%;
+      -webkit-background-clip: text; background-clip: text;
+      color: transparent; -webkit-text-fill-color: transparent;
+      animation: spShine 3.4s ease-in-out infinite alternate;
+    }
+  }
+  @keyframes spShine { from { background-position: 50% 0%; } to { background-position: 50% 100%; } }
+  #splash .sp-suits { position: relative; z-index: 1; font-size: 30px; letter-spacing: 10px; }
+  #splash .sp-suits span { display: inline-block; animation: spFloat 2.8s ease-in-out infinite alternate; }
+  #splash .sp-suits span:nth-child(2) { animation-delay: .18s; }
+  #splash .sp-suits span:nth-child(3) { animation-delay: .36s; }
+  #splash .sp-suits span:nth-child(4) { animation-delay: .54s; }
+  #splash .sp-suits .r { color: #ff6a5e; text-shadow: 0 2px 0 rgba(120,10,10,.4), 0 4px 10px rgba(0,0,0,.5), 0 0 14px rgba(255,90,77,.4); }
+  #splash .sp-suits .w { color: #fdf3d0; text-shadow: 0 2px 0 rgba(120,80,0,.35), 0 4px 10px rgba(0,0,0,.5), 0 0 14px rgba(255,215,94,.35); }
+  @keyframes spFloat { from { transform: translateY(0); } to { transform: translateY(-4px); } }
   @keyframes splashAuto { to { opacity: 0; visibility: hidden; } }
 
   /* ===== ludopages (?v=20261109-ludomenu6, owner refs 2026-11-09):
@@ -2208,6 +2242,7 @@
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="nvGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset=".45" stop-color="#f7c948"/><stop offset="1" stop-color="#d18d06"/></linearGradient><linearGradient id="nvPink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb1e3"/><stop offset=".5" stop-color="#f0569f"/><stop offset="1" stop-color="#c2187a"/></linearGradient><linearGradient id="nvGreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8f5cd"/><stop offset=".5" stop-color="#3fce62"/><stop offset="1" stop-color="#1d9e4b"/></linearGradient><linearGradient id="nvBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe0ff"/><stop offset=".5" stop-color="#55a8f5"/><stop offset="1" stop-color="#2470c2"/></linearGradient><linearGradient id="nvWhite" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9d4ee"/></linearGradient><linearGradient id="clCoin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset="1" stop-color="#d18d06"/></linearGradient><linearGradient id="clGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe98a"/><stop offset="1" stop-color="#e0a408"/></linearGradient><linearGradient id="clViolet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b388ff"/><stop offset="1" stop-color="#6d28d9"/></linearGradient></defs></svg>
 <div id="splash" aria-hidden="true">
+  <div class="sp-city" aria-hidden="true"><svg viewBox="0 0 480 150" preserveAspectRatio="xMidYMax slice"><path fill="#8e4bd0" opacity=".38" d="M-6 150V62h54v88zM58 150V44h40v106zM112 150V70h58v80zM188 150V38h44v112zM248 150V60h62v90zM326 150V48h42v102zM384 150V66h56v84zM452 150V54h36v96z"/><path fill="#451c72" opacity=".92" d="M-10 150V88h48v62zM50 150V74h36v76zM100 150V96h52v54zM166 150V66h40v84zM222 150V90h58v60zM300 150V76h44v74zM360 150V94h52v56zM428 150V82h58v68z"/><path fill="#27094a" d="M-14 150v-42h56v42zM56 150v-50h44v50zM112 150v-36h60v36zM186 150v-46h38v46zM236 150v-40h54v40zM304 150v-48h16v48zM336 150v-38h48v38zM398 150v-44h66v44z"/><path fill="#27094a" d="M304 102a8 7 0 0 1 16 0z"/><path fill="#ffd98a" opacity=".85" d="M66 112h3v5h-3zM78 122h3v5h-3zM126 122h3v5h-3zM146 130h3v5h-3zM196 114h3v5h-3zM206 126h3v5h-3zM248 120h3v5h-3zM266 132h3v5h-3zM310 112h3v5h-3zM348 122h3v5h-3zM368 132h3v5h-3zM410 116h3v5h-3zM432 128h3v5h-3zM20 118h3v5h-3zM-2 130h3v5h-3z"/><path fill="#ffedbe" opacity=".9" d="M84 108h3v5h-3zM158 118h3v5h-3zM256 108h3v5h-3zM356 110h3v5h-3zM446 118h3v5h-3zM32 132h3v5h-3z"/><rect y="143" width="480" height="7" fill="#0d0122"/><path stroke="#0d0122" stroke-width="3" fill="none" stroke-linecap="round" d="M40 150c1-10 2-16 4-22M44 128c-6-4-11-3-15 1M44 128c-4-6-9-7-13-5M44 128c-1-7 2-11 6-12M44 128c4-5 9-6 13-3M44 128c6-2 11 0 14 4M448 150c-1-9-2-14-4-19M444 131c-6-4-11-3-14 1M444 131c-4-6-9-7-13-5M444 131c-1-6 2-10 6-11M444 131c4-5 9-5 12-3M444 131c6-2 10 0 13 4"/></svg></div>
   <div class="sp-title">توره</div>
   <div class="sp-suits"><span class="w">♠</span><span class="r">♥</span><span class="w">♣</span><span class="r">♦</span></div>
 </div>
