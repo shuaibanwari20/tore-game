@@ -982,38 +982,45 @@
   .cl-seats-wrap { margin-bottom: 10px; }
   .cl-seats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px 6px; }
   .cl-seat { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-  .cl-seat-c { width: 54px; height: 54px; border-radius: 50%; position: relative; cursor: pointer;
+  .cl-seat-c { width: 48px; height: 48px; border-radius: 50%; position: relative; cursor: pointer;
     background: radial-gradient(circle at 38% 32%, rgba(255,255,255,.13), rgba(0,0,0,.4) 75%);
     border: 1.5px solid rgba(217,179,128,.4); display: flex; align-items: center; justify-content: center; }
-  .cl-seat-c > svg { width: 24px; height: 24px; stroke: rgba(248,236,208,.5); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .cl-seat-c > svg { width: 22px; height: 22px; stroke: rgba(248,236,208,.5); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .cl-seat.occ .cl-seat-c { border-color: #ffd75e; padding: 0; background: #07271a; }
   .cl-seat.occ .cl-seat-c .pavatar { width: 100% !important; height: 100% !important; border-radius: 50%; overflow: hidden; }
   .cl-seat.me .cl-seat-c { box-shadow: 0 0 0 2px #ffd75e, 0 0 14px rgba(255,215,94,.5); }
   .cl-seat.speaking .cl-seat-c { box-shadow: 0 0 0 2.5px #57ff9a, 0 0 18px rgba(87,255,154,.75); }
   .cl-seat-n { font-size: 11px; font-weight: 700; color: #e8f2e4; max-width: 62px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .cl-seats-hint { font-size: 12.5px; opacity: .75; text-align: center; margin: 8px 0 0; }
   /* chat feed bars */
   #cl-msgs { display: flex; flex-direction: column; gap: 7px; padding: 2px 0 10px; }
   /* clubs v7 (owner order 2026-11-09): in the club room ONLY
      the messages scroll — #cl-room is a non-scrolling flex
-     column (header bar, members pill, seats + hint,
+     column (header bar, members pill, seats,
      announcement + trophy all sit in the fixed block), the
      feed takes the leftover height and scrolls alone, and
      the chat bar stays pinned on the bottom edge. The old
      300px feed cap is gone with the .fr-scroll wrapper. */
   #cl-room { overflow: hidden; }
   #cl-room .cl-room-fixed { flex: none; }
-  #cl-room .fr-inner { padding-bottom: 4px; }
+  #cl-room .fr-inner { padding-bottom: 0; }
+  /* clubgame6 (owner order 2026-11-10): the messages sit
+     DIRECTLY under the announcement row — the stack between
+     the annrow's bottom edge and the first message is just
+     annrow margin 6 + this padding-top 4 = ~10px, no dead
+     sky in between.
+     clubgame7 (owner order 2026-11-10): «کمی دیگه هم بالا
+     ببر» — raised a bit MORE: annrow margin 6 -> 0 and this
+     padding-top 4 -> 3, so the stack is ~3px and the first
+     message hugs the announcement row. */
   #cl-room > .cl-feed { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
-    width: 100%; max-width: 520px; margin: 0 auto; padding: 6px 14px 12px; box-sizing: border-box; }
+    width: 100%; max-width: 520px; margin: 0 auto; padding: 3px 14px 12px; box-sizing: border-box; }
   .cl-feed-item { display: flex; align-items: flex-start; gap: 9px; background: rgba(255,255,255,.055);
     border: 1px solid rgba(217,179,128,.22); border-radius: 12px; padding: 7px 10px; }
   .cl-feed-item.mine { background: rgba(255,215,94,.1); border-color: rgba(255,215,94,.35); }
   .cl-feed-item .pavatar { flex: 0 0 auto; }
   .cl-feed-main { flex: 1; min-width: 0; font-size: 14.5px; line-height: 1.65; word-break: break-word; }
   .cl-feed-name { font-weight: 800; color: #ffd75e; margin-inline-end: 6px; }
-  .cl-feed-ts { display: block; font-size: 10.5px; opacity: .55; margin-top: 1px; }
   /* bottom input bar */
   .cl-inputbar { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 10px;
     background: rgba(3,17,10,.92); border-top: 1.5px solid rgba(217,179,128,.4); }
@@ -1293,28 +1300,29 @@
   .cl-exitbtn:active { transform: scale(.93); }
   /* ludomenu3 (owner, same sitting): the member-count pill under
      the header shrinks ~15% too — smaller font + padding, the
-     people glyph scales with the text; position/colors/tap kept. */
+     people glyph scales with the text; position/colors/tap kept.
+     clubseats5 (owner order 2026-11-10): a bit smaller again —
+     11px text, 3px 9px padding, 4px gap. */
   #cl-room .cl-countpill { background: rgba(14,3,28,.78); border-color: rgba(255,255,255,.15); color: #fff;
-    font-size: 12px; padding: 4px 11px; gap: 5px; }
+    font-size: 11px; padding: 3px 9px; gap: 4px; }
   /* --- the room: avatar seats over the night sky --- */
-  #cl-room .cl-seats { gap: 11px 4px; }
+  #cl-room .cl-seats { gap: 9px 4px; }
   #cl-room .cl-seat { position: relative; }
-  #cl-room .cl-seat.speaking::before { content: ''; position: absolute; left: 50%; top: 28px; z-index: 0;
-    width: 88px; height: 88px; transform: translate(-50%, -50%); border-radius: 50%;
+  #cl-room .cl-seat.speaking::before { content: ''; position: absolute; left: 50%; top: 24px; z-index: 0;
+    width: 80px; height: 80px; transform: translate(-50%, -50%); border-radius: 50%;
     background: radial-gradient(circle, rgba(196,160,255,.5) 0%, rgba(196,160,255,.16) 55%, transparent 72%); }
-  #cl-room .cl-seat-c { width: 56px; height: 56px; z-index: 1;
+  #cl-room .cl-seat-c { width: 48px; height: 48px; z-index: 1;
     background: radial-gradient(circle at 42% 32%, rgba(236,226,255,.55), rgba(168,130,230,.30) 72%);
     border: 2px solid rgba(240,230,255,.55); box-shadow: inset 0 2px 6px rgba(255,255,255,.25), 0 3px 9px rgba(0,0,0,.35); }
-  #cl-room .cl-seat-c > svg { width: 26px; height: 26px; stroke: rgba(255,255,255,.88); }
+  #cl-room .cl-seat-c > svg { width: 22px; height: 22px; stroke: rgba(255,255,255,.88); }
   #cl-room .cl-seat.occ .cl-seat-c { border: 3px solid #e9c46a; background: #2a0a45; box-shadow: 0 3px 9px rgba(0,0,0,.4); }
   #cl-room .cl-seat.me .cl-seat-c { box-shadow: 0 0 0 2px #fff, 0 0 16px rgba(255,215,94,.65); }
   #cl-room .cl-seat.speaking .cl-seat-c { box-shadow: 0 0 0 2.5px #c9a6ff, 0 0 24px rgba(177,140,255,.95); }
   #cl-room .cl-seat-n { color: #fff; font-weight: 800; font-size: 11.5px; max-width: 62px; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
   #cl-room .cl-seat-n.num { font-size: 14px; font-weight: 900; }
-  #cl-room .cl-seats-hint { color: rgba(246,239,255,.78); opacity: 1; }
   #cl-room .cl-seatreq { color: #ffd98a; }
   /* --- the room: announcement box + gold trophy --- */
-  .cl-annrow { display: flex; align-items: flex-start; gap: 12px; direction: ltr; margin: 0 0 12px; }
+  .cl-annrow { display: flex; align-items: flex-start; gap: 12px; direction: ltr; margin: 0; }
   #cl-room .cl-annbar { flex: 1; min-width: 0; background: rgba(233,224,252,.95); color: #341257;
     border-radius: 14px; padding: 12px 15px 14px; min-height: 88px; box-shadow: 0 4px 14px rgba(0,0,0,.28); }
   #cl-room .cl-annbar.canedit { cursor: pointer; }
@@ -1323,20 +1331,46 @@
   #cl-room .cl-ann-text { font-size: 16px; line-height: 1.85; word-break: break-word; }
   #cl-room .cl-ann-text.dim { opacity: .55; }
   .cl-trophy { flex: 0 0 94px; text-align: center; }
-  .cl-trophy-svg { width: 92px; height: 52px; filter: drop-shadow(0 3px 6px rgba(0,0,0,.45)); }
-  .cl-trophy-n { display: inline-flex; align-items: center; gap: 4px; margin-top: 1px; background: rgba(14,3,28,.82);
-    color: #fff; font-size: 13px; font-weight: 800; border-radius: 10px; padding: 1.5px 8px; }
+  /* clubgame8 (owner, «کمی بالا ببر» on the clubgame7 proof):
+     the 3px feed gap was already minimal — the win comes from
+     the trophy column itself getting SHORTER, since it is the
+     annrow's tallest item and sets where the feed starts:
+     emblem 52 -> 42px tall, ♥ pill margin/padding trimmed,
+     game-button top margin 7 -> 2px. The annrow bottom (and
+     with it the first message) rises ~18px; nothing overlaps,
+     the 56px game button and the emblem stay fully legible. */
+  /* clubseats3 (owner, «اول تصویرش را بساز بعد اپلای کن —
+     پیام ها را بالا ببری کمی» on the clubseats2 proof): the
+     feed gap is still 3px, so the raise comes from INSIDE
+     the trophy column again: emblem 74x42 -> 66x38 and now
+     display:block (its inline line box held ~8px of strut /
+     descender slack under the svg), ♥ pill padding .5px -> 0
+     with line-height 1.25, game-button top margin 2 -> 0
+     (the 56px button itself untouched). The column drops
+     ~13px; the first message rises with it, gap unchanged. */
+  .cl-trophy-svg { display: block; margin: 0 auto; width: 66px; height: 38px; filter: drop-shadow(0 3px 6px rgba(0,0,0,.45)); }
+  .cl-trophy-n { display: inline-flex; align-items: center; gap: 4px; margin-top: 0; background: rgba(14,3,28,.82);
+    color: #fff; font-size: 13px; font-weight: 800; line-height: 1.25; border-radius: 10px; padding: 0 8px; }
   .cl-trophy-heart { color: #ff5b8f; font-size: 12px; }
   /* --- the room: chat over the background --- */
   #cl-room #cl-chat-title { display: none; }
-  #cl-room #cl-msgs { gap: 12px; padding-bottom: 12px; max-height: none; overflow-y: visible; }
+  #cl-room #cl-msgs { gap: 9px; padding-bottom: 10px; max-height: none; overflow-y: visible; }
   #cl-room .cl-feed-item { background: none; border: none; border-radius: 0; padding: 0; gap: 10px; direction: ltr; }
   #cl-room .cl-feed-item .pavatar { box-shadow: 0 0 0 2px #e9c46a; border-radius: 50%; }
-  #cl-room .cl-feed-main { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; font-size: 15px; }
-  #cl-room .cl-feed-name { color: #fff; font-size: 15px; font-weight: 900; margin: 0; text-shadow: 0 1px 3px rgba(0,0,0,.55); unicode-bidi: plaintext; }
-  #cl-room .cl-feed-bub { background: rgba(13,3,27,.84); color: #fff; border-radius: 12px; padding: 8px 13px;
-    line-height: 1.7; word-break: break-word; box-shadow: 0 2px 7px rgba(0,0,0,.3); unicode-bidi: plaintext; }
-  #cl-room .cl-feed-ts { color: rgba(246,239,255,.55); margin-top: 0; }
+  /* clubseats2 (owner order 2026-11-10): «پیام ها را کمی کوچک
+     کن» — the room's messages go COMPACT: text 15 -> 13px,
+     bubble padding 8px 13px -> 5px 11px and line-height
+     1.7 -> 1.5, name 15 -> 14px, feed avatar 34 -> 28px
+     (renderClubChat), the main column's inner gaps 3 -> 2px,
+     the ts line tightens to 1.3 and the row gap 12 -> 9px.
+     A standard one-line message drops 89.6 -> ~70px (~22%
+     shorter), so 4 messages fit the feed viewport where 3
+     did. Feed position (3px under the announcement row) and
+     everything else are untouched. */
+  #cl-room .cl-feed-main { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; font-size: 13px; }
+  #cl-room .cl-feed-name { color: #fff; font-size: 14px; font-weight: 900; margin: 0; text-shadow: 0 1px 3px rgba(0,0,0,.55); unicode-bidi: plaintext; }
+  #cl-room .cl-feed-bub { background: rgba(13,3,27,.84); color: #fff; border-radius: 12px; padding: 5px 11px;
+    line-height: 1.5; word-break: break-word; box-shadow: 0 2px 7px rgba(0,0,0,.3); unicode-bidi: plaintext; }
   #cl-room .cl-feed-sys { display: flex; align-items: center; gap: 9px; direction: ltr; background: rgba(228,216,250,.88);
     color: #341257; border-radius: 12px; padding: 6px 12px 6px 7px; font-size: 14px; font-weight: 800;
     box-shadow: 0 3px 9px rgba(0,0,0,.25); }
@@ -1378,7 +1412,7 @@
      re-tucks to the smaller rim once more. The roundbtn's
      13px padding is zeroed here — at 56px it left only a
      28px content box and clamped the icon. */
-  #cl-room #btn-cl-game { position: relative; overflow: visible; margin: 7px auto 0; padding: 0;
+  #cl-room #btn-cl-game { position: relative; overflow: visible; margin: 0 auto; padding: 0;
     flex-basis: 56px; width: 56px; height: 56px;
     background: radial-gradient(circle at 35% 28%, #ffe98a, #e9a83c 58%, #b97a06 88%);
     border-color: #ffe98a; box-shadow: 0 3px 9px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.6), inset 0 -3px 6px rgba(146,84,0,.35); }
@@ -2775,7 +2809,6 @@
         </div>
         <div class="cl-seats-wrap">
           <div class="cl-seats" id="cl-seats"></div>
-          <p class="cl-seats-hint" id="cl-seats-hint"></p>
         </div>
         <div class="cl-seatreq hidden" id="cl-seatreq-bar">
           <span id="cl-seatreq-txt"></span>
@@ -9580,7 +9613,7 @@ function renderClubChat() {
     }
     const item = document.createElement('div');
     item.className = 'cl-feed-item' + (m.from === socialMe ? ' mine' : '');
-    item.appendChild(avatarEl(name, avatar, 34, photo));
+    item.appendChild(avatarEl(name, avatar, 28, photo)); /* clubseats2: compact feed avatar 34 -> 28px */
     const main = document.createElement('div');
     main.className = 'cl-feed-main';
     const nm = document.createElement('span');
@@ -9591,10 +9624,9 @@ function renderClubChat() {
     bub.className = 'cl-feed-bub';
     bub.textContent = m.text;
     main.appendChild(bub);
-    const ts = document.createElement('span');
-    ts.className = 'cl-feed-ts';
-    ts.textContent = new Date(m.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    main.appendChild(ts);
+    /* clubseats4: NO time line under club messages (owner order
+       2026-11-10: «در پیام ها وقت را حذف کن») — m.ts stays in the
+       data (order/history), it is simply never rendered here. */
     item.appendChild(main);
     box.appendChild(item);
   });
@@ -9621,7 +9653,7 @@ function renderClubSeats(c) {
   if (!box) return;
   box.innerHTML = '';
   const seatMap = new Map((c.seatMap || []).map((s) => [s.seat, s]));
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 10; i++) {
     const ent = seatMap.get(i);
     const pid = ent && ent.id;
     const p = pid ? clubSeatPerson(c, pid) : null;
@@ -9630,7 +9662,7 @@ function renderClubSeats(c) {
     const cc = document.createElement('div');
     cc.className = 'cl-seat-c';
     if (p) {
-      cc.appendChild(avatarEl(p.name, p.avatar, 56, p.photo));
+      cc.appendChild(avatarEl(p.name, p.avatar, 48, p.photo));
       // A seated player with his mic OFF keeps the seat — the
       // muted badge is the only sign (owner order 2026-11-09).
       if (ent.mic === false) cc.insertAdjacentHTML('beforeend', CL_MUTE_BADGE);
@@ -9796,7 +9828,10 @@ function renderClubRoom() {
   const likeBtn = $('#btn-cl-like');
   likeBtn.classList.toggle('on', !!c.liked);
   $('#cl-like-n').textContent = faNum(c.likes || 0);
-  $('#cl-count').textContent = T('clMemberCount', c.count);
+  // clubseats5 (owner order 2026-11-10): the room's member pill
+  // shows the count ONLY — no «غړي» word. clMemberCount keeps its
+  // word on the club page (#cp-count) and the friends club rows.
+  $('#cl-count').textContent = faNum(c.count);
   renderClubSeats(c);
   // the seat-requests button: the OWNER only (he approves), with
   // the pending count badged on it
@@ -10038,7 +10073,6 @@ function renderClubs() {
   $('#cm-title').textContent = T('clMembers');
   $('#ci-title').textContent = T('clInviteFriends');
   $('#cp-id-lbl').textContent = T('frIdLabel');
-  $('#cl-seats-hint').textContent = T('clSeatsHint');
   $('#btn-cl-seatreq-cancel').textContent = T('clCancel');
   $('#cl-ann-lbl').textContent = T('clAnnounce');
   $('#ca-title').textContent = T('clAnnounce');
