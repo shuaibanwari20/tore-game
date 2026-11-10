@@ -544,16 +544,21 @@
     font-family: inherit; background: linear-gradient(170deg, #8a2ea6, #571271 60%, #42084c); position: relative; overflow: visible;
     border: 2.5px solid rgba(255,255,255,.42); box-shadow: 0 8px 18px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.25);
     display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0; }
-  /* Round 2: the icon is a glossy CLUSTER overflowing the card's top
-     edge (fanned cards + gold token / gold key / avatar faces). */
-  .hm-small .cluster { position: absolute; top: -25px; left: 50%; transform: translateX(-50%); z-index: 2;
+  /* Round 2: the icon is a glossy CLUSTER at the card's top
+     (gold token / gold key / avatar faces). ludomenu12 (owner order
+     2026-11-10, on his crop of the join + friends tiles):
+     «آیتم‌های این کارت را هم داخلش کن» — the ludomenu11 containment
+     law now covers ALL three small tiles: every cluster sits fully
+     INSIDE its tile, like the create tile; the join/friends SVGs
+     shrink a touch (62 -> 58px) so the key teeth and the chat
+     bubbles stay clear of the label below. */
+  .hm-small .cluster { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 2;
     filter: drop-shadow(0 5px 6px rgba(0,0,0,.45)); pointer-events: none; }
   .hm-small .cluster svg { height: 62px; width: auto; display: block; }
+  #btn-join-toggle .cluster svg, #btn-friends-card .cluster svg { height: 58px; }
   /* ludomenu11: the CREATE tile's cluster holds real cards, so it
      obeys the same containment law as the big fans — the mini faces
-     (لال A♥ + 10♦) and the gold + token sit fully inside the tile.
-     The join/friends clusters keep their approved top-edge overflow;
-     they hold no cards. */
+     (لال A♥ + 10♦) and the gold + token sit fully inside the tile. */
   #btn-create .cluster { top: 8px; width: 92px; height: 58px; }
   #fan-create .pcard { position: absolute; left: 50%; top: 50%; width: 42px; height: auto;
     aspect-ratio: 176 / 245; border-radius: 6px; box-shadow: 0 5px 10px rgba(0,0,0,.5); }
