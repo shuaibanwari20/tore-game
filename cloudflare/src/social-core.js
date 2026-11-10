@@ -78,7 +78,7 @@
  * country filter is an exact match on the stored country ('' =
  * global). 'mine' returns my club + the clubs I liked. The public
  * page reads s-club-view {club} (summary + member preview).
- * The club room is also a VOICE room: 8 mic seats per club,
+ * The club room is also a VOICE room: 10 mic seats per club,
  * tracked in the core as RUNTIME-ONLY state (never persisted) —
  * s-club-voice {action:'join'|'leave'} enters/leaves the room,
  * s-club-seat {seat} sits (members only; a taken seat rejects
@@ -178,6 +178,20 @@
  * left is sitting in a mic seat, through the owner-approved
  * seat-request list. Protocol addition (client -> server):
  * s-club-enter.
+ *
+ * Clubs v9 — TEN SEATS (2026-11-10, CLUBS-PROMPT.md v9): the
+ * room's mic seats grow from 8 to 10 (CLUB_SEATS) and shrink on
+ * screen, so the seat block takes two even rows of five and the
+ * chat feed below it gains the freed height. Every seat rule is
+ * unchanged — request + owner approval, rank-bounded seat kick,
+ * mic-off keeps the seat — only the count moved; all seat paths
+ * already bound-check against CLUB_SEATS, so the constant is
+ * the whole server change. Stored-state safety: seats are
+ * runtime-only and never persisted, but a legacy club record
+ * that still carries a `seats` array (written when the room
+ * had 8 chairs) is normalized on load — occupants keep their
+ * indices, the new chairs pad in empty — so no reader ever
+ * sees the old length (see loadClubs).
  */
 'use strict';
 
@@ -207,7 +221,11 @@ const CLUB_CATEGORIES = ['social', 'game', 'family', 'fun'];
 // the three UI languages, defaulting to Pashto like the app.
 const CLUB_LANGS = ['ps', 'fa', 'en'];
 const CLUB_ANN_MAX = 200;
-const CLUB_SEATS = 8;
+// Clubs v9: 10 mic seats per club (was 8 through v8) — two rows
+// of five on screen. Every seat path bound-checks against this
+// constant, and loadClubs pads any legacy 8-entry stored seat
+// array up to this length.
+const CLUB_SEATS = 10;
 // Seat requests (owner order 2026-11-09, reshaped the same day):
 // a member who wants a mic seat asks the club OWNER, who approves
 // or rejects. There is NO popup and NO timeout: the request WAITS
@@ -335,6 +353,20 @@ class SocialCore {
       if (typeof c.announcement !== 'string') c.announcement = '';
       if (typeof c.desc !== 'string') c.desc = '';
       if (!Array.isArray(c.members)) c.members = [];
+      // Clubs v9 stored-state safety: a legacy record may carry
+      // a `seats` array written when the room had 8 chairs.
+      // Normalize it to exactly CLUB_SEATS entries — occupants
+      // keep their indices, anything past the old end (or not a
+      // player id) pads in empty — so the stored shape can never
+      // resurrect the old seat count. Membership, invites and
+      // chat live outside this field and are untouched.
+      if (Array.isArray(c.seats)) {
+        const padded = new Array(CLUB_SEATS).fill(null);
+        for (let i = 0; i < Math.min(c.seats.length, CLUB_SEATS); i++) {
+          if (typeof c.seats[i] === 'string' && c.seats[i]) padded[i] = c.seats[i];
+        }
+        c.seats = padded;
+      }
     }
     // Legacy snapshots may still carry a `requests` array (the
     // deleted join-request flow): it is ignored on purpose —
