@@ -1941,6 +1941,75 @@
     border: 1.5px solid rgba(255,255,255,.45); border-radius: 14px;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -3px 6px rgba(140,10,90,.4), 0 4px 10px rgba(20,2,50,.45);
     text-shadow: 0 1px 2px rgba(90,0,60,.5); }
+  /* --- lobby (lobbypurple, owner order 2026-11-10): the لابي
+     still wore the emerald/gold carpet theme on his screenshot
+     (gold code, gold پیل button, brass mic/speaker) while home,
+     friends, chats and the club popups already wear the Ludo
+     purple; the lobby now joins them — the shell's wine-plum
+     field (it becomes a fixed full screen like #scr-home), the
+     club magenta card, the room code on a dark-plum inset chip,
+     glossy magenta seat rows (dark-plum for the empty «تش»
+     seats), the green glossy start, dark-plum secondaries and
+     purple-gloss voice buttons. Scoped to #scr-lobby only: the
+     shared .cardbox / .roomcode / .seatrow / .ghost / .iconbtn
+     classes keep serving the table and every other screen
+     unchanged; ids, strings, handlers and renderLobby are
+     untouched. --- */
+  #scr-lobby { position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 10;
+    overflow-y: auto; overflow-x: hidden; padding: 16px 12px 18px;
+    background-color: #6d0d3f;
+    background-image:
+      linear-gradient(45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(-45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(180deg, #4a0727 0%, #7d1046 28%, #a1185c 52%, #8a1250 74%, #4a0727 100%);
+    background-size: 34px 34px, 34px 34px, 100% 100%;
+    background-repeat: repeat, repeat, no-repeat; }
+  #scr-lobby .cardbox { max-width: 520px; margin: 0 auto 12px; color: #fff;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
+    border: 2px solid rgba(255,183,224,.4); border-radius: 22px;
+    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
+    padding: 18px 16px 14px; }
+  #scr-lobby #lobby-hint { color: #ffd7f2; text-shadow: 0 1px 3px rgba(0,0,0,.45); }
+  #scr-lobby .codereel { margin: 8px 0 12px; }
+  #scr-lobby #lobby-code { background: rgba(43,6,54,.55); color: #ffd75e;
+    border: 1.5px solid rgba(255,255,255,.4); border-radius: 14px;
+    box-shadow: inset 0 2px 9px rgba(0,0,0,.45);
+    padding: 8px 22px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,.5); }
+  #scr-lobby .seatrow { background: linear-gradient(180deg, rgba(199,50,133,.92), rgba(122,20,92,.94));
+    border: 1.5px solid rgba(255,255,255,.3); border-radius: 15px;
+    padding: 10px 12px; margin-bottom: 10px; color: #fff;
+    box-shadow: 0 6px 14px rgba(20,0,25,.45), inset 0 1px 0 rgba(255,255,255,.25); }
+  #scr-lobby .seatrow:last-child { border-bottom: 1.5px solid rgba(255,255,255,.3); margin-bottom: 2px; }
+  #scr-lobby .seatrow:has(.pavatar.empty) { background: rgba(43,6,54,.55);
+    border: 1.5px solid rgba(255,183,224,.28);
+    box-shadow: inset 0 2px 9px rgba(0,0,0,.4); }
+  #scr-lobby .seatrow:has(.pavatar.empty):last-child { border-bottom: 1.5px solid rgba(255,183,224,.28); }
+  #scr-lobby .seatrow .pavatar { border-radius: 50%; border: 2.5px solid #eec95f;
+    box-shadow: 0 0 0 2px rgba(0,0,0,.3), 0 3px 8px rgba(0,0,0,.4); }
+  #scr-lobby .seatrow .pavatar.empty { background: rgba(24,3,36,.6); color: #ffd7f2;
+    border: 2px dashed rgba(255,215,242,.65); box-shadow: none;
+    align-items: center; justify-content: center; }
+  #scr-lobby .sr-name { color: #fff; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+  #scr-lobby .seatrow:has(.pavatar.empty) .sr-name { color: #ffd7f2; font-weight: 600; text-shadow: none; }
+  #scr-lobby .teamtag { color: #ffd7f2; opacity: 1; }
+  #scr-lobby .seatrow.tappable:active { background: linear-gradient(180deg, rgba(219,72,155,.95), rgba(143,27,108,.95)); }
+  #scr-lobby #btn-start { padding: 13px; border-radius: 14px; font-size: 17px; font-weight: 900; color: #fff;
+    background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
+    border: 2px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -5px 9px rgba(10,80,0,.4), 0 7px 16px rgba(20,90,0,.5);
+    text-shadow: 0 1px 3px rgba(0,60,0,.5); }
+  #scr-lobby button.ghost { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 800; color: #ffd9f3;
+    background: rgba(43,6,54,.55); border: 1.5px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 9px rgba(0,0,0,.45); }
+  #scr-lobby #lobby-note { color: #ffd7f2; }
+  #scr-lobby .iconbtn { background: linear-gradient(180deg, #b06bf7, #7d30e8 55%, #5c17c4);
+    border: 1.5px solid rgba(255,255,255,.45);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -3px 6px rgba(40,0,90,.45), 0 4px 10px rgba(20,2,50,.45); }
+  #scr-lobby .iconbtn svg { stroke: #fff; }
+  #scr-lobby .iconbtn.on { background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
+    border-color: rgba(255,255,255,.55);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -4px 8px rgba(10,80,0,.4), 0 0 0 2px rgba(139,242,90,.35), 0 4px 10px rgba(20,90,0,.5); }
+  #scr-lobby .iconbtn.on svg { stroke: #fff; }
 </style>
 </head>
 <body>
