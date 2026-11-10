@@ -632,7 +632,7 @@
      behind a dark emerald veil, its own scroll. Opened from the
      bottom nav (and from the lobby's friends button); it floats
      above home/lobby/table without disturbing the game screens. */
-  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs {
+  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker {
     position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 30;
     overflow-x: hidden;
     /* The home screen's dark emerald veil, without the carpet photo:
@@ -654,9 +654,9 @@
   #scr-friends { display: flex; flex-direction: column; overflow-y: hidden; }
   /* Chat + profile pages (owner order 2026-11-08): same family as the
      friends screen — scrolling content, bottom nav pinned at the foot. */
-  #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs { display: flex; flex-direction: column; overflow-y: hidden; }
+  #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker { display: flex; flex-direction: column; overflow-y: hidden; }
   .fr-scroll { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; width: 100%; }
-  #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav, #scr-clubpage .hm-nav, #scr-clubmembers .hm-nav, #scr-clubseatreqs .hm-nav { margin: 0; flex: none; width: 100%; }
+  #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav, #scr-clubpage .hm-nav, #scr-clubmembers .hm-nav, #scr-clubseatreqs .hm-nav, #scr-picker .hm-nav { margin: 0; flex: none; width: 100%; }
   /* chat list rows: the whole row is the tap target into the DM view */
   .ch-row { cursor: pointer; border-radius: 8px; }
   .ch-row:active { background: rgba(255, 215, 94, .08); }
@@ -1153,14 +1153,14 @@
      and lavender club cards with the level SHIELD on the cover.
      Discovery-only paint: the room keeps the v6.1 city night.
      The podium is a STATIC top-3 now — no rotation, no dots. */
-  .cl-xbtn { flex: 0 0 46px; width: 46px; height: 46px; margin: 0; padding: 0; border-radius: 50%; cursor: pointer;
+  .cl-xbtn, .pk-xbtn { flex: 0 0 46px; width: 46px; height: 46px; margin: 0; padding: 0; border-radius: 50%; cursor: pointer;
     background: radial-gradient(circle at 35% 27%, #ff9a86, #f03434 52%, #b30d0d 88%);
     border: 2px solid rgba(255,255,255,.4);
     box-shadow: inset 0 2px 3px rgba(255,255,255,.6), inset 0 -4px 7px rgba(90,0,0,.5), 0 4px 10px rgba(0,0,0,.45);
     display: flex; align-items: center; justify-content: center; }
-  .cl-xbtn svg { width: 21px; height: 21px; stroke: #fff; fill: none; stroke-width: 3.1; stroke-linecap: round;
+  .cl-xbtn svg, .pk-xbtn svg { width: 21px; height: 21px; stroke: #fff; fill: none; stroke-width: 3.1; stroke-linecap: round;
     filter: drop-shadow(0 1px 1px rgba(90,0,0,.6)); }
-  .cl-xbtn:active { transform: scale(.92); }
+  .cl-xbtn:active, .pk-xbtn:active { transform: scale(.92); }
   .cl-headrow { display: flex; align-items: center; gap: 11px; direction: ltr; margin-bottom: 11px; }
   .cl-createbtn { flex: 1 1 auto; direction: rtl; margin: 0; padding: 10px 22px; font-family: inherit; font-size: 15px; font-weight: 800;
     color: #fff; background: linear-gradient(180deg, #ff7ad9, #e84393 55%, #cf2f7f);
@@ -2010,6 +2010,109 @@
     border-color: rgba(255,255,255,.55);
     box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -4px 8px rgba(10,80,0,.4), 0 0 0 2px rgba(139,242,90,.35), 0 4px 10px rgba(20,90,0,.5); }
   #scr-lobby .iconbtn.on svg { stroke: #fff; }
+  /* --- game picker (لوبه وټاکه) — owner order 2026-11-10: the
+     three home doors (انلاین / روباتونه / کوټه) no longer start
+     directly — they open this selection page, modelled on his
+     Ludo Star mode picker (screenshot 2026-11-10 11:00): the
+     shell's wine-plum field, a glossy red ✖ in the top corner,
+     a header line, three mode TABS (انلاین / روباتونه / کوټه —
+     active = hot-pink gloss, icon in a medallion) and BIG
+     SWIPEABLE GAME CARDS: pink-bordered purple card, a crown-
+     shield emblem riding its top edge, the game title, a shelf
+     of REAL card faces standing on a glossy ledge, a players
+     line and a big glossy GREEN action button. توره plays (the
+     green button runs the SELECTED TAB's flow — the old home
+     buttons' behaviour); حکم and کش wear a ژر راځي badge and a
+     disabled grey button — inert, no flow. NO currency pills:
+     Tore has no economy. Containment law holds — the track
+     clips inside the stage; the next card only peeks at the
+     stage's own edge. --- */
+  #scr-picker { background-color: #6d0d3f;
+    background-image:
+      linear-gradient(45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(-45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(180deg, #4a0727 0%, #7d1046 28%, #a1185c 52%, #8a1250 74%, #4a0727 100%);
+    background-size: 34px 34px, 34px 34px, 100% 100%;
+    background-repeat: repeat, repeat, no-repeat;
+    color: #fff; }
+  .pk-scroll { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; width: 100%; }
+  .pk-inner { max-width: 520px; margin: 0 auto; padding: 14px 14px 20px; }
+  .pk-head { display: flex; align-items: center; gap: 11px; direction: ltr; margin-bottom: 12px; }
+  .pk-title { flex: 1; direction: rtl; text-align: center; font-size: 21px; font-weight: 900; color: #fff;
+    text-shadow: 0 2px 5px rgba(0,0,0,.5); }
+  /* the mode tabs: one dark-plum pill bar, three segments */
+  .pk-tabs { display: flex; gap: 4px; padding: 5px; border-radius: 18px;
+    background: rgba(43,6,54,.72); border: 1.5px solid rgba(255,183,224,.3);
+    box-shadow: inset 0 2px 9px rgba(0,0,0,.5), 0 6px 14px rgba(20,0,25,.35); }
+  .pk-tab { flex: 1; margin: 0; padding: 7px 2px 6px; border: 0; border-radius: 13px; cursor: pointer;
+    background: transparent; color: #ffd7f2; font-family: inherit;
+    display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .pk-tab .pkt-ic { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 35% 28%, #8a5aa8, #4a1663 78%); border: 1.5px solid rgba(255,255,255,.28);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,.3), 0 2px 5px rgba(0,0,0,.4); }
+  .pk-tab .pkt-ic svg { width: 19px; height: 19px; stroke: #ffe9fb; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .pk-tab .pkt-lbl { font-size: 13.5px; font-weight: 800; line-height: 1.25; }
+  .pk-tab.sel { background: linear-gradient(180deg, #ff8ade, #f452b8 45%, #dd379b); color: #fff;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.6), inset 0 -3px 6px rgba(140,10,90,.35), 0 5px 12px rgba(221,55,155,.5); }
+  .pk-tab.sel .pkt-ic { background: radial-gradient(circle at 35% 28%, #ffe98a, #e9a83c 60%, #b97a06);
+    border-color: #fff0b3; box-shadow: inset 0 1px 2px rgba(255,255,255,.6), 0 2px 6px rgba(90,40,0,.5); }
+  .pk-tab.sel .pkt-ic svg { stroke: #5c3400; }
+  .pk-tab:active { transform: scale(.97); }
+  /* the swipe stage: cards are 84% wide, centred by snap, so the
+     next card peeks at the track's edge without leaving it */
+  .pk-stage { position: relative; margin-top: 4px; }
+  .pk-track { position: relative; display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
+    padding: 32px 0 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .pk-track::-webkit-scrollbar { display: none; }
+  .pk-card { position: relative; flex: 0 0 84%; scroll-snap-align: center;
+    border: 2.5px solid #ff9ed2; border-radius: 24px; padding: 0 14px 16px;
+    background:
+      radial-gradient(circle at 50% 30%, rgba(255,158,210,.16) 0 40px, transparent 70px),
+      linear-gradient(180deg, #7a2a8f 0%, #5c1a75 46%, #3f0f56 100%);
+    box-shadow: 0 16px 32px rgba(15,0,25,.55), inset 0 2px 0 rgba(255,255,255,.28), inset 0 -16px 30px rgba(20,0,35,.4); }
+  .pk-card:first-child { margin-left: 8%; }
+  .pk-card:last-child { margin-right: 8%; }
+  .pk-emblem { position: absolute; top: -27px; left: 50%; transform: translateX(-50%); width: 62px; height: 68px; z-index: 3;
+    filter: drop-shadow(0 5px 9px rgba(10,0,20,.55)); }
+  .pk-gname { margin: 46px 0 0; text-align: center; font-size: 27px; font-weight: 900; color: #fff;
+    text-shadow: 0 2px 0 rgba(90,10,80,.65), 0 4px 9px rgba(0,0,0,.45); }
+  .pk-shelf { position: relative; height: 150px; margin-top: 6px; }
+  .pk-shelf::after { content: ""; position: absolute; left: 4%; right: 4%; bottom: 6px; height: 16px; border-radius: 9px;
+    background: linear-gradient(180deg, #e88fd0, #b44f9d 55%, #8a2f78);
+    box-shadow: 0 6px 12px rgba(10,0,20,.5), inset 0 2px 2px rgba(255,255,255,.5); }
+  .pk-shelf .pcard { position: absolute; left: 50%; bottom: 21px; width: 76px; height: auto;
+    aspect-ratio: 176 / 245; border-radius: 8px; box-shadow: 0 8px 16px rgba(0,0,0,.55); }
+  .pk-shelf .pcard img.face { border-radius: 8px; }
+  .pk-shelf .pos0 { transform: translateX(calc(-50% - 53px)) rotate(-13deg); z-index: 1; }
+  .pk-shelf .pos1 { transform: translateX(-50%); z-index: 3; }
+  .pk-shelf .pos2 { transform: translateX(calc(-50% + 53px)) rotate(13deg); z-index: 2; }
+  .pk-sub { text-align: center; font-size: 14.5px; font-weight: 700; color: #ffd7f2; margin-top: 12px; }
+  .pk-soon { position: absolute; top: 14px; inset-inline-end: 12px; z-index: 4; padding: 4px 12px; border-radius: 999px;
+    font-size: 13px; font-weight: 900; color: #fff;
+    background: linear-gradient(180deg, #ffb03a, #f08c0a); border: 1.5px solid #ffd9a0;
+    box-shadow: 0 4px 9px rgba(60,30,0,.45), inset 0 1px 0 rgba(255,255,255,.55); }
+  .pk-play { display: block; width: 100%; margin: 14px 0 0; padding: 13px; border-radius: 16px; cursor: pointer;
+    font-family: inherit; font-size: 19px; font-weight: 900; color: #fff;
+    background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
+    border: 2px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -5px 9px rgba(10,80,0,.4), 0 7px 16px rgba(20,90,0,.5);
+    text-shadow: 0 1px 3px rgba(0,60,0,.5); }
+  .pk-play:active { transform: scale(.97); }
+  .pk-play:disabled { cursor: default; color: rgba(255,255,255,.78);
+    background: linear-gradient(180deg, #8d8496, #655b70 55%, #4c4356);
+    border-color: rgba(255,255,255,.22);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.25), inset 0 -5px 9px rgba(0,0,0,.35), 0 4px 10px rgba(0,0,0,.35);
+    text-shadow: 0 1px 2px rgba(0,0,0,.4); }
+  .pk-play:disabled:active { transform: none; }
+  .pk-next { position: absolute; top: 48%; right: 0; z-index: 5; width: 38px; height: 56px; margin: 0; padding: 0;
+    border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,.12));
+    border: 1.5px solid rgba(255,255,255,.45);
+    box-shadow: 0 5px 12px rgba(10,0,20,.45), inset 0 1px 0 rgba(255,255,255,.5); }
+  .pk-next svg { width: 20px; height: 20px; stroke: #fff; fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+  .pk-next:active { transform: scale(.94); }
+  .pk-next.hidden { display: none; }
 </style>
 </head>
 <body>
@@ -2383,6 +2486,85 @@
 </section>
 
 <!-- ======== PROFILE PAGE (پروفایل) ======== -->
+<!-- ======== GAME PICKER (لوبه وټاکه) ======== -->
+<section id="scr-picker" class="hidden">
+  <div class="pk-scroll">
+    <div class="pk-inner">
+      <div class="pk-head">
+        <button type="button" class="pk-xbtn" id="btn-pk-close" aria-label="close"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+        <div class="pk-title" id="pk-header-txt">لوبه وټاکه</div>
+      </div>
+      <div class="pk-tabs" role="tablist">
+        <button type="button" class="pk-tab sel" id="pktab-online">
+          <span class="pkt-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a13.6 13.6 0 0 1 3.7 9 13.6 13.6 0 0 1-3.7 9 13.6 13.6 0 0 1-3.7-9A13.6 13.6 0 0 1 12 3z"/></svg></span>
+          <span class="pkt-lbl" id="pktab-online-lbl">انلاین</span>
+        </button>
+        <button type="button" class="pk-tab" id="pktab-bots">
+          <span class="pkt-ic"><svg viewBox="0 0 24 24"><path d="M12 8V4.6"/><circle cx="12" cy="3.4" r="1.2"/><rect x="5" y="8" width="14" height="10.5" rx="3"/><circle cx="9.5" cy="12.8" r=".4"/><circle cx="14.5" cy="12.8" r=".4"/><path d="M9.8 15.8h4.4M3.5 12.5v3M20.5 12.5v3"/></svg></span>
+          <span class="pkt-lbl" id="pktab-bots-lbl">روباتونه</span>
+        </button>
+        <button type="button" class="pk-tab" id="pktab-room">
+          <span class="pkt-ic"><svg viewBox="0 0 24 24"><path d="M4 20.5v-9.2L12 5l8 6.3v9.2"/><path d="M10 20.5v-5.8h4v5.8"/></svg></span>
+          <span class="pkt-lbl" id="pktab-room-lbl">کوټه</span>
+        </button>
+      </div>
+      <div class="pk-stage">
+        <div class="pk-track" id="pk-track" dir="ltr">
+          <article class="pk-card" dir="rtl">
+            <svg class="pk-emblem" viewBox="0 0 62 68" aria-hidden="true"><defs><linearGradient id="pkshA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb3e2"/><stop offset=".5" stop-color="#e86bb8"/><stop offset="1" stop-color="#a02c7d"/></linearGradient></defs><path d="M31 3 55 10v22c0 16-10 27-24 33C17 59 7 48 7 32V10z" fill="url(#pkshA)" stroke="#ffd7f2" stroke-width="2.5"/><path d="M18.5 39l-2.6-14.5 8.8 6.2L31 19.5l6.3 11.2 8.8-6.2L43.5 39z" fill="#ffd75e" stroke="#a86e00" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.5 43.5h25" stroke="#ffd75e" stroke-width="3.4" stroke-linecap="round"/></svg>
+            <h3 class="pk-gname" id="pk-g-tore">توره</h3>
+            <div class="pk-shelf" id="pk-shelf-tore"></div>
+            <div class="pk-sub" id="pk-sub-tore">څلور کسیزه ورق لوبه • دوه ټیمه</div>
+            <button type="button" class="pk-play" id="btn-pk-play">لوبه وکړه</button>
+          </article>
+          <article class="pk-card" dir="rtl">
+            <svg class="pk-emblem" viewBox="0 0 62 68" aria-hidden="true"><defs><linearGradient id="pkshB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d6bcff"/><stop offset=".5" stop-color="#9d6bf0"/><stop offset="1" stop-color="#5c17c4"/></linearGradient></defs><path d="M31 3 55 10v22c0 16-10 27-24 33C17 59 7 48 7 32V10z" fill="url(#pkshB)" stroke="#e6dcff" stroke-width="2.5"/><path d="M18.5 39l-2.6-14.5 8.8 6.2L31 19.5l6.3 11.2 8.8-6.2L43.5 39z" fill="#ffd75e" stroke="#a86e00" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.5 43.5h25" stroke="#ffd75e" stroke-width="3.4" stroke-linecap="round"/></svg>
+            <span class="pk-soon" id="pk-soon-hokm">ژر راځي</span>
+            <h3 class="pk-gname" id="pk-g-hokm">حکم</h3>
+            <div class="pk-shelf" id="pk-shelf-hokm"></div>
+            <div class="pk-sub" id="pk-sub-hokm">څلور کسیزه ورق لوبه • دوه ټیمه</div>
+            <button type="button" class="pk-play" id="btn-pk-soon-hokm" disabled>ژر راځي</button>
+          </article>
+          <article class="pk-card" dir="rtl">
+            <svg class="pk-emblem" viewBox="0 0 62 68" aria-hidden="true"><defs><linearGradient id="pkshC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a5ecff"/><stop offset=".5" stop-color="#4db8e8"/><stop offset="1" stop-color="#1668a0"/></linearGradient></defs><path d="M31 3 55 10v22c0 16-10 27-24 33C17 59 7 48 7 32V10z" fill="url(#pkshC)" stroke="#dcf6ff" stroke-width="2.5"/><path d="M18.5 39l-2.6-14.5 8.8 6.2L31 19.5l6.3 11.2 8.8-6.2L43.5 39z" fill="#ffd75e" stroke="#a86e00" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.5 43.5h25" stroke="#ffd75e" stroke-width="3.4" stroke-linecap="round"/></svg>
+            <span class="pk-soon" id="pk-soon-kesh">ژر راځي</span>
+            <h3 class="pk-gname" id="pk-g-kesh">کش</h3>
+            <div class="pk-shelf" id="pk-shelf-kesh"></div>
+            <div class="pk-sub" id="pk-sub-kesh">ورق لوبه • تفریحي</div>
+            <button type="button" class="pk-play" id="btn-pk-soon-kesh" disabled>ژر راځي</button>
+          </article>
+        </div>
+        <button type="button" class="pk-next" id="btn-pk-next" aria-label="next"><svg viewBox="0 0 24 24"><path d="M9 4.5 16.5 12 9 19.5"/></svg></button>
+      </div>
+    </div>
+  </div>
+  <nav class="hm-nav">
+    <button class="hm-navitem" id="pknav-friends">
+      <span class="nav-badge hidden" id="pknav-friends-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M1.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M27.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M10.5 43c.8-9.5 6.3-15 13.5-15s12.7 5.5 13.5 15z" fill="url(#nvBlue)"/><circle cx="11" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="37" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="24" cy="19.5" r="8.4" fill="url(#nvWhite)"/></svg></span>
+      <span class="nl" id="pknav-friends-lbl">ملګري</span>
+    </button>
+    <button class="hm-navitem" id="pknav-clubs">
+      <span class="nav-badge hidden" id="pknav-clubs-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M15 5h18v6.5a9 9 0 0 1-18 0z" fill="url(#nvGold)"/><path d="M15 8.5H8a7 7 0 0 0 7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M33 8.5h7a7 7 0 0 1-7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M22 20h4v13h-4z" fill="url(#nvGold)"/><path d="M15 33h18l2.6 6H12.4z" fill="url(#nvGold)"/><rect x="11.5" y="39" width="25" height="4.6" rx="2.3" fill="url(#nvGold)"/><path d="M24 7.6l1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5z" fill="#fff3c4"/></svg></span>
+      <span class="nl" id="pknav-clubs-lbl">کلبونه</span>
+    </button>
+    <button class="hm-navitem home" id="pknav-home">
+      <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
+      <span class="nl" id="pknav-home-lbl">کور</span>
+    </button>
+    <button class="hm-navitem" id="pknav-profile">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
+      <span class="nl" id="pknav-profile-lbl">پروفایل</span>
+    </button>
+    <button class="hm-navitem" id="pknav-chat">
+      <span class="nav-badge hidden" id="pknav-chat-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="19" y="4" width="25" height="20" rx="7" fill="url(#nvGreen)"/><path d="M35 22.5 35 30l-7.5-6.5z" fill="#28b751"/><rect x="4" y="15" width="29" height="22" rx="8" fill="url(#nvPink)"/><path d="M11 35.5 11 43l8-6.6z" fill="#e84393"/><ellipse cx="29" cy="9" rx="7" ry="2.6" fill="#fff" opacity=".35"/><ellipse cx="13" cy="20" rx="8" ry="2.8" fill="#fff" opacity=".35"/><circle cx="12.5" cy="26" r="2.1" fill="#fff"/><circle cx="18.5" cy="26" r="2.1" fill="#fff"/><circle cx="24.5" cy="26" r="2.1" fill="#fff"/></svg></span>
+      <span class="nl" id="pknav-chat-lbl">چت</span>
+    </button>
+  </nav>
+</section>
+
 <section id="scr-profile" class="hidden">
   <div class="fr-scroll">
     <div class="fr-inner">
@@ -3086,6 +3268,18 @@ const STR = {
     chatsTitle: 'ګپونه',
     pfEditAvatar: 'انځور بدلول',
     comingSoon: 'ژر راځي!',
+    pkHeader: 'لوبه وټاکه',
+    pkTabOnline: 'انلاین',
+    pkTabBots: 'روباتونه',
+    pkTabRoom: 'کوټه',
+    pkGameTore: 'توره',
+    pkGameHokm: 'حکم',
+    pkGameKesh: 'کش',
+    pkToreSub: 'څلور کسیزه ورق لوبه • دوه ټیمه',
+    pkHokmSub: 'څلور کسیزه ورق لوبه • دوه ټیمه',
+    pkKeshSub: 'ورق لوبه • تفریحي',
+    playNow: 'لوبه وکړه',
+    pkSoon: 'ژر راځي',
     friendsTitle: 'ملګري',
     frBack: 'شاته',
     frSearchPh: 'د لوبغاړي ID ولټوه…',
@@ -3365,6 +3559,18 @@ const STR = {
     chatsTitle: 'گفت‌وگوها',
     pfEditAvatar: 'تغییر عکس',
     comingSoon: 'به‌زودی می‌آید!',
+    pkHeader: 'بازی را انتخاب کن',
+    pkTabOnline: 'آنلاین',
+    pkTabBots: 'ربات‌ها',
+    pkTabRoom: 'اتاق',
+    pkGameTore: 'توره',
+    pkGameHokm: 'حکم',
+    pkGameKesh: 'کش',
+    pkToreSub: 'بازی ورق چهار نفره • دو تیم',
+    pkHokmSub: 'بازی ورق چهار نفره • دو تیم',
+    pkKeshSub: 'بازی ورق • سرگرمی',
+    playNow: 'بازی کن',
+    pkSoon: 'به‌زودی',
     friendsTitle: 'دوستان',
     frBack: 'بازگشت',
     frSearchPh: 'آیدی بازیکن را جست‌وجو کن…',
@@ -3644,6 +3850,18 @@ const STR = {
     chatsTitle: 'Chats',
     pfEditAvatar: 'Change picture',
     comingSoon: 'Coming soon!',
+    pkHeader: 'Choose a game',
+    pkTabOnline: 'Online',
+    pkTabBots: 'Bots',
+    pkTabRoom: 'Room',
+    pkGameTore: 'Tore',
+    pkGameHokm: 'Hokm',
+    pkGameKesh: 'Kesh',
+    pkToreSub: 'Four-player card game • Two teams',
+    pkHokmSub: 'Four-player card game • Two teams',
+    pkKeshSub: 'Card game • Casual',
+    playNow: 'Play now',
+    pkSoon: 'Coming soon',
     friendsTitle: 'Friends',
     frBack: 'Back',
     frSearchPh: 'Search a player by ID…',
@@ -3915,7 +4133,7 @@ function applyI18n() {
   document.title = T('docTitle');
   const ltr = LANG === 'en';
   ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-settings', 'ov-exit', 'ov-join',
-   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-clubseatreqs', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu']
+   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-clubseatreqs', 'scr-picker', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu']
     .forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.setAttribute('dir', ltr ? 'ltr' : 'rtl');
@@ -3980,6 +4198,27 @@ function applyI18n() {
   set('#chnav-home-lbl', 'navHome');
   set('#chnav-profile-lbl', 'navProfile');
   set('#chnav-chat-lbl', 'navChat');
+  // game picker statics (لوبه وټاکه page)
+  set('#pk-header-txt', 'pkHeader');
+  set('#pktab-online-lbl', 'pkTabOnline');
+  set('#pktab-bots-lbl', 'pkTabBots');
+  set('#pktab-room-lbl', 'pkTabRoom');
+  set('#pk-g-tore', 'pkGameTore');
+  set('#pk-g-hokm', 'pkGameHokm');
+  set('#pk-g-kesh', 'pkGameKesh');
+  set('#pk-sub-tore', 'pkToreSub');
+  set('#pk-sub-hokm', 'pkHokmSub');
+  set('#pk-sub-kesh', 'pkKeshSub');
+  set('#btn-pk-play', 'playNow');
+  set('#pk-soon-hokm', 'pkSoon');
+  set('#pk-soon-kesh', 'pkSoon');
+  set('#btn-pk-soon-hokm', 'pkSoon');
+  set('#btn-pk-soon-kesh', 'pkSoon');
+  set('#pknav-friends-lbl', 'navFriends');
+  set('#pknav-clubs-lbl', 'navClubs');
+  set('#pknav-home-lbl', 'navHome');
+  set('#pknav-profile-lbl', 'navProfile');
+  set('#pknav-chat-lbl', 'navChat');
   set('#pfnav-friends-lbl', 'navFriends');
   set('#pfnav-clubs-lbl', 'navClubs');
   set('#pfnav-home-lbl', 'navHome');
@@ -4435,10 +4674,12 @@ function connect(onOpen) {
 }
 function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
 
-$('#btn-create').onclick = () => connect(() => send({ type: 'create', ...profilePayload() }));
-// The big ONLINE card is the same door as create-room: a fresh room
-// whose code goes to friends.
-$('#btn-online').onclick = () => connect(() => send({ type: 'create', ...profilePayload() }));
+// The home doors open the GAME PICKER now (owner order
+// 2026-11-10): create-room pre-selects its کوټه tab, the big
+// ONLINE card its انلاین tab — the flows themselves run from the
+// picker's توره card (see startPickedGame below).
+$('#btn-create').onclick = () => openPicker('room');
+$('#btn-online').onclick = () => openPicker('online');
 // The one join flow — the code popup and the friends-invite accept
 // both land here, so every join gets the same validation and the
 // same server error toasts (full room, already started, …).
@@ -7147,13 +7388,101 @@ async function renderVoiceDiag() {
 }
 
 // ---------- home: field-style menu wiring ----------
-// Quick play: create a room and, the moment the server confirms it (the
-// 'room' message in onMsg), send start — empty seats fill with bots.
+// Quick play (the bots door): the flag is set by the picker's توره
+// Play button when the روباتونه tab is selected; it is consumed in
+// the 'room' message handler, which sends {type:'start'} — the
+// room's empty seats then fill with bots (the lobby never shows).
 let quickPlay = false;
-$('#btn-quick').onclick = () => {
-  quickPlay = true;
+$('#btn-quick').onclick = () => openPicker('bots');
+
+// ---------- game picker (owner order 2026-11-10) ----------
+// The three home doors open #scr-picker with their mode tab
+// pre-selected; the tabs switch freely on the page. توره is the
+// one playable card: its green «لوبه وکړه» runs the SELECTED
+// tab's flow — exactly the old home buttons' behaviour:
+// انلاین / کوټه → a fresh room and its lobby (خودش + کد برای
+// دوستان), روباتونه → quickPlay, so the room auto-starts on bots.
+// حکم / کش wear ژر راځي: their buttons are DISABLED in the
+// markup — no handler exists for them at all.
+let pkMode = 'online';
+// The shelf art is the game's REAL faces (cardEl → the same
+// ASSET() map as the table): توره wears the fan of its story —
+// Q♠ (ماتکه کالا) in front of a heart and the 10♦ — while حکم
+// and کش get their own faces.
+function renderPickerArt() {
+  const fill = (id, codes) => {
+    const host = document.getElementById(id);
+    if (!host) return;
+    host.querySelectorAll('.pcard').forEach((n) => n.remove());
+    codes.forEach((code, i) => host.appendChild(cardEl(code, 'pos' + i)));
+  };
+  fill('pk-shelf-tore', ['TD', 'QS', 'AH']);
+  fill('pk-shelf-hokm', ['KH', 'AS', 'QD']);
+  fill('pk-shelf-kesh', ['JH', 'KD', 'QC']);
+}
+function paintPickerTabs() {
+  ['online', 'bots', 'room'].forEach((m) => {
+    const t = $('#pktab-' + m);
+    if (t) t.classList.toggle('sel', m === pkMode);
+  });
+}
+function pkCards() { return Array.prototype.slice.call(document.querySelectorAll('#pk-track .pk-card')); }
+function pkIndex() {
+  const track = $('#pk-track');
+  if (!track) return 0;
+  const mid = track.getBoundingClientRect().left + track.clientWidth / 2;
+  let best = 0, bd = Infinity;
+  pkCards().forEach((c, i) => {
+    const r = c.getBoundingClientRect();
+    const d = Math.abs(r.left + r.width / 2 - mid);
+    if (d < bd) { bd = d; best = i; }
+  });
+  return best;
+}
+function pkPaintNext() {
+  const b = $('#btn-pk-next');
+  if (b) b.classList.toggle('hidden', pkIndex() >= pkCards().length - 1);
+}
+function pkGo(i, smooth) {
+  const track = $('#pk-track');
+  const cards = pkCards();
+  if (!track || !cards.length) return;
+  i = Math.max(0, Math.min(cards.length - 1, i));
+  const tr = track.getBoundingClientRect();
+  const cr = cards[i].getBoundingClientRect();
+  const left = track.scrollLeft + (cr.left - tr.left) - (track.clientWidth - cr.width) / 2;
+  track.scrollTo({ left, behavior: smooth === false ? 'auto' : 'smooth' });
+  pkPaintNext();
+}
+function openPicker(mode) {
+  pkMode = mode || 'online';
+  paintPickerTabs();
+  $('#scr-picker').classList.remove('hidden');
+  pkGo(0, false);
+  pkPaintNext();
+}
+function closePicker() { $('#scr-picker').classList.add('hidden'); }
+function startPickedGame() {
+  const mode = pkMode;
+  closePicker();
+  if (mode === 'bots') quickPlay = true;
   connect(() => send({ type: 'create', ...profilePayload() }));
-};
+}
+$('#btn-pk-close').onclick = () => closePicker();
+['online', 'bots', 'room'].forEach((m) => {
+  const t = $('#pktab-' + m);
+  if (t) t.onclick = () => { pkMode = m; paintPickerTabs(); };
+});
+$('#btn-pk-next').onclick = () => pkGo(pkIndex() + 1, true);
+$('#pk-track').addEventListener('scroll', () => pkPaintNext(), { passive: true });
+$('#btn-pk-play').onclick = () => startPickedGame();
+// Picker page nav: کور is the raised active item (the picker is
+// a home sub-page); کور closes back to the home menu it covers.
+$('#pknav-friends').onclick = () => openFriends();
+$('#pknav-clubs').onclick = () => openClubs();
+$('#pknav-home').onclick = () => closePicker();
+$('#pknav-profile').onclick = openProfile;
+$('#pknav-chat').onclick = () => openChats();
 // Join with a code: the small menu card opens a proper POPUP — the
 // #ov-join overlay, same family as the profile/settings popups (owner
 // order 2026-11-08). The code input and the join button live there;
@@ -7371,6 +7700,7 @@ function openProfile() {
   $('#scr-clubs').classList.add('hidden');
   $('#scr-clubpage').classList.add('hidden');
   $('#scr-clubmembers').classList.add('hidden');
+  $('#scr-picker').classList.add('hidden');
   $('#scr-profile').classList.remove('hidden');
 }
 function closeProfile() { $('#scr-profile').classList.add('hidden'); }
@@ -7425,6 +7755,7 @@ async function initSessionUser() {
 // same ASSET() map as the table, preloaded at script parse).
 (function dressHome() {
   renderMenuFans();
+  renderPickerArt();
   applyI18n();
   // Language is on the page: the splash veil may lift now (it also
   // waits for the carpet/hero decode; its own caps still apply).
@@ -7464,6 +7795,7 @@ function onMsg(msg) {
   if (msg.type === 'room') {
     endJoinFlight(); // the join (or create/reconnect) landed
     closeJoin(); // the join popup has done its job — never cover the lobby
+    closePicker(); // a picker-started flow lands the same way
     mySeat = msg.seat;
     if (!voiceT0) voiceT0 = Date.now(); // diagnostics log epoch: seconds since join
     session = { code: msg.code, token: msg.token, name: myName() };
@@ -7886,11 +8218,11 @@ function updateFriendsBadge() {
   const req = socialData ? socialData.incoming.length : 0;
   let un = 0;
   dmUnread.forEach((c) => { un += c; });
-  ['#nav-friends-badge', '#frnav-friends-badge', '#chnav-friends-badge', '#pfnav-friends-badge', '#clnav-friends-badge', '#cpnav-friends-badge', '#cmnav-friends-badge', '#srqnav-friends-badge'].forEach((sel) => {
+  ['#nav-friends-badge', '#frnav-friends-badge', '#chnav-friends-badge', '#pfnav-friends-badge', '#clnav-friends-badge', '#cpnav-friends-badge', '#cmnav-friends-badge', '#srqnav-friends-badge', '#pknav-friends-badge'].forEach((sel) => {
     const b = $(sel);
     if (b) { b.textContent = faNum(req); b.classList.toggle('hidden', req === 0); }
   });
-  ['#nav-chat-badge', '#frnav-chat-badge', '#chnav-chat-badge', '#pfnav-chat-badge', '#clnav-chat-badge', '#cpnav-chat-badge', '#cmnav-chat-badge', '#srqnav-chat-badge'].forEach((sel) => {
+  ['#nav-chat-badge', '#frnav-chat-badge', '#chnav-chat-badge', '#pfnav-chat-badge', '#clnav-chat-badge', '#cpnav-chat-badge', '#cmnav-chat-badge', '#srqnav-chat-badge', '#pknav-chat-badge'].forEach((sel) => {
     const b = $(sel);
     if (b) { b.textContent = faNum(un); b.classList.toggle('hidden', un === 0); }
   });
@@ -7918,6 +8250,7 @@ function openFriends(origin) {
   $('#scr-clubs').classList.add('hidden');
   $('#scr-clubpage').classList.add('hidden');
   $('#scr-clubmembers').classList.add('hidden');
+  $('#scr-picker').classList.add('hidden');
   $('#scr-friends').classList.remove('hidden');
   connectSocial();
   renderFriends();
@@ -7945,6 +8278,7 @@ function openChats() {
   $('#scr-clubs').classList.add('hidden');
   $('#scr-clubpage').classList.add('hidden');
   $('#scr-clubmembers').classList.add('hidden');
+  $('#scr-picker').classList.add('hidden');
   $('#scr-chats').classList.remove('hidden');
   connectSocial();
   renderChats();
@@ -8719,6 +9053,7 @@ function openClubs() {
   $('#scr-friends').classList.add('hidden');
   $('#scr-chats').classList.add('hidden');
   $('#scr-profile').classList.add('hidden');
+  $('#scr-picker').classList.add('hidden');
   $('#scr-clubpage').classList.add('hidden');
   $('#scr-clubmembers').classList.add('hidden');
   $('#scr-clubseatreqs').classList.add('hidden');
