@@ -45,6 +45,7 @@ const BOT_DELAY_MS = 750;         // bot "thinking" delay (watchable pace)
 const ROUND_PAUSE_MS = 6000;      // round-summary pause before next round
 const TRICK_PAUSE_MS = 1600;      // completed trick stays on the table before it is collected
 const RECONNECT_GRACE_MS = 120000; // seat+hand kept for a reconnecting player
+const SPECTATOR_CAP = 20;          // clubs v8: watchers per club-game room
 const SWEEP_MS = 10000;           // seat-expiry sweep cadence (was setInterval)
 
 const STORAGE_KEY = 'tore:v1'; // legacy single-blob snapshot (read + migrate, never written)
@@ -273,6 +274,8 @@ export class GameServer {
         return seat;
       }),
       trickHold: snap.trickHold || null,
+      club: snap.club || null, // clubs v8: {cid, name} club-game stamp (spectators are runtime-only)
+      spectators: new Set(),
       match: null,
     };
     room.emit = (evt) => this._onMatchEvent(room, evt);
@@ -290,6 +293,7 @@ export class GameServer {
         token: s.token, connected: s.connected, disconnectAt: s.disconnectAt,
       })),
       trickHold: room.trickHold,
+      club: room.club || null,
       match: snapshotMatch(room.match),
     };
   }
@@ -452,8 +456,10 @@ export class GameServer {
       const anyHuman = room.seats.some((s) => s.kind === 'human');
       if (!anyHuman) {
         this._cancelTimers(room.code);
+        this._sendToSpectators(room, { type: 'roomClosed', code: 'roomCancelled' });
         this.rooms.delete(room.code);
         this._pendingDeletes.add(room.code);
+        this._syncClubGame(room);
       }
     }
   }
@@ -510,6 +516,8 @@ export class GameServer {
       inGameCheck: (id) => this._isInGame(id),
       inLobbyCheck: (id) => this._isInLobby(id),
       verifyBusy: (id) => this._verifyBusy(id),
+      // Clubs v8: the club's live game room, scanned from the room table.
+      clubGameLookup: (cid) => this._clubGameLookup(cid),
       coverBlobDelete: (cid) => { this._deleteCoverBlob(cid); },
     });
     const saved = await this.state.storage.get('social:v1').catch(() => null);
@@ -706,8 +714,10 @@ export class GameServer {
         const anyHuman = room.seats.some((s) => s.kind === 'human');
         if (!anyHuman) {
           this._cancelTimers(room.code);
+          this._sendToSpectators(room, { type: 'roomClosed', code: 'roomCancelled' });
           this.rooms.delete(room.code);
           this._pendingDeletes.add(room.code);
+          this._syncClubGame(room);
         }
       }
     }
@@ -786,6 +796,27 @@ export class GameServer {
     if (att && att.sid && this.social) this.social.socketClosed(att.sid);
   }
 
+  // ------------------------------------------------------------ club games (v8)
+  // A room stamped as a club game (room.club = {cid, name},
+  // granted ONLY by SocialCore.clubGameClub at create time) is
+  // findable by its club while it waits or plays — the club
+  // room's game button badges it and routes member spectators.
+  _clubGameLookup(cid) {
+    for (const room of this.rooms.values()) {
+      if (room.club && room.club.cid === cid &&
+          (room.phase === 'lobby' || room.phase === 'playing' || room.phase === 'roundEnd')) {
+        return { code: room.code, phase: room.phase };
+      }
+    }
+    return null;
+  }
+
+  _syncClubGame(room) {
+    if (room && room.club && this.social) {
+      try { this.social.clubGameChanged(room.club.cid); } catch { /* social never breaks the game */ }
+    }
+  }
+
   _attachment(ws) {
     try { return ws.deserializeAttachment(); } catch { return null; }
   }
@@ -824,7 +855,14 @@ export class GameServer {
 
   _onDisconnect(ws) {
     const att = this._attachment(ws);
-    if (!att || !att.code) return;
+    if (!att) return;
+    // Clubs v8: a spectator holds no seat — just leave the watch list.
+    if (att.spectator) {
+      const sroom = this.rooms.get(att.code);
+      if (sroom && sroom.spectators) sroom.spectators.delete(ws);
+      return;
+    }
+    if (!att.code) return;
     const room = this.rooms.get(att.code);
     if (!room) return;
     const seat = room.seats[att.seat];
@@ -855,6 +893,8 @@ export class GameServer {
       phase: 'lobby', // lobby | playing | roundEnd | matchEnd
       match: null,
       trickHold: null, // { plays: [{seat, card}...], winnerSeat } while a finished trick is displayed
+      club: null, // clubs v8: {cid, name} when a club manager created this room as a club game
+      spectators: new Set(), // clubs v8: receive-only sockets watching the public state
     };
     room.emit = (evt) => this._onMatchEvent(room, evt);
     this.rooms.set(room.code, room);
@@ -876,6 +916,7 @@ export class GameServer {
       type: 'state',
       phase: room.phase,
       code: room.code,
+      club: room.club ? { cid: room.club.cid, name: room.club.name } : null,
       mySeat: seatIdx,
       hostSeat: this._hostSeat(room),
       target: G.BANK_LOSE_TARGET,
@@ -911,16 +952,45 @@ export class GameServer {
     };
   }
 
+  // Clubs v8 — the SPECTATOR state: the full public table (seats,
+  // badges, trick, won piles, scores, turn) with every hand
+  // stripped. Built from a seat's push with the private fields
+  // blanked — hand [], legal [], no declare-13, mySeat -1. The
+  // roundResult rides along: game.js history carries only round
+  // aggregates (tawan/banked counts), never a card in hand.
+  _publicStateFor(room) {
+    const st = this._stateFor(room, 0);
+    st.mySeat = -1;
+    st.spectator = true;
+    st.hand = [];
+    st.legal = [];
+    st.canDeclare13 = false;
+    return st;
+  }
+
+  _sendToSpectators(room, obj) {
+    if (!room.spectators || !room.spectators.size) return;
+    for (const sws of [...room.spectators]) {
+      try { sws.send(JSON.stringify(obj)); }
+      catch { room.spectators.delete(sws); }
+    }
+  }
+
   _broadcastState(room) {
     room.seats.forEach((s, i) => {
       if (s.kind === 'human' && s.connected && s.ws) send(s.ws, this._stateFor(room, i));
     });
+    this._sendToSpectators(room, this._publicStateFor(room));
     this._syncBusyFor(room);
   }
   _broadcastEvent(room, obj) {
     room.seats.forEach((s) => {
       if (s.kind === 'human' && s.connected && s.ws) send(s.ws, obj);
     });
+    // Public table events (takan, declared 13, preset chat, voice
+    // flags) are part of what a spectator watches — hands never
+    // ride events, so the fan-out is safe as-is.
+    this._sendToSpectators(room, obj);
   }
 
   // ---------------------------------------------------------- game flow
@@ -941,6 +1011,7 @@ export class GameServer {
       this._cancelTimers(room.code, 'turn');
       this._cancelTimers(room.code, 'round');
       this._broadcastState(room);
+      this._syncClubGame(room); // clubs v8: the club game ended — the button badge clears
     }
     // cardPlayed / trickWon need no immediate push: state is pushed after
     // every completed play() call in _doPlay().
@@ -1117,17 +1188,70 @@ export class GameServer {
   async _handleMessage(ws, att, msg) {
     // Auth gate: with AUTH on, room actions need the signed-in user the
     // Worker verified from the session cookie (carried in the attachment).
-    const needsAuth = msg.type === 'create' || msg.type === 'join' || msg.type === 'reconnect';
+    const needsAuth = msg.type === 'create' || msg.type === 'join' || msg.type === 'reconnect' || msg.type === 'spectate';
     if (this.authEnabled && needsAuth && !att.user) {
       return sendError(ws, 'اول با گوگل یا فیسبوک وارد شو', 'signInFirst');
+    }
+    // Clubs v8: a SPECTATOR attachment is receive-only. It may
+    // leave; every other frame (play, chat, rtc, start, …) is
+    // dropped here so a spectator can never act on the room.
+    if (att.spectator) {
+      if (msg.type === 'leave') {
+        const room = this.rooms.get(att.code);
+        if (room && room.spectators) room.spectators.delete(ws);
+        att.spectator = false;
+        att.code = null;
+        this._saveAttachment(ws, att);
+        try { ws.close(1000, 'spectator left'); } catch { /* ignore */ }
+      }
+      return;
     }
     switch (msg.type) {
       case 'create': {
         const room = this._createRoom();
         this._attachPlayer(ws, att, room, 0, displayName(msg, att.user), msg);
+        // Clubs v8: a club stamp is granted ONLY by the social
+        // core, which verifies the creator is a manager of that
+        // club — a forged club id in the create frame earns
+        // nothing. Set before the persist so the stamp is durable.
+        if (msg.club) {
+          const core = await this._ensureSocial();
+          const cg = core.clubGameClub(room.seats[0].sid, msg.club);
+          if (cg) room.club = cg;
+        }
         await this._persistRoom(room); // durable before the code is announced
         this._sendRoomReply(ws, room, 0);
         this._broadcastState(room);
+        this._syncClubGame(room);
+        break;
+      }
+      case 'spectate': {
+        // Clubs v8 — spectating is a CLUB feature: the room must
+        // be a club game and the watcher a member of that club
+        // (the core verifies from social state). Spectators hold
+        // no seat, never count as busy, are capped per room, and
+        // only ever receive the public state (_publicStateFor).
+        const code = String(msg.code || '').toUpperCase().trim();
+        let room = this.rooms.get(code);
+        if (!room) room = await this._loadRoom(code); // read-repair from storage
+        if (!room) return sendError(ws, 'اتاق پیدا نشد — کد را بررسی کن', 'roomNotFound');
+        room = this.rooms.get(code) || room;
+        const core = await this._ensureSocial();
+        const sid = this._joinSid(att, msg);
+        if (!room.club || !sid || !core.clubMembership(sid, room.club.cid)) {
+          return sendError(ws, 'تماشای این بازی فقط برای اعضای کلب است', 'spectateDenied');
+        }
+        if (!room.spectators) room.spectators = new Set();
+        if (!room.spectators.has(ws) && room.spectators.size >= SPECTATOR_CAP) {
+          return sendError(ws, 'تعداد تماشاچیان پر است', 'spectatorFull');
+        }
+        room.spectators.add(ws);
+        att.spectator = true;
+        att.code = room.code;
+        att.seat = -1;
+        this._saveAttachment(ws, att);
+        send(ws, { type: 'spectating', code: room.code });
+        send(ws, this._publicStateFor(room));
         break;
       }
       case 'join': {
@@ -1205,6 +1329,7 @@ export class GameServer {
         if (!room || room.phase !== 'lobby') return;
         if (att.seat !== this._hostSeat(room)) return sendError(ws, 'فقط میزبان می‌تواند بازی را شروع کند', 'hostOnly');
         this._startMatch(room);
+        this._syncClubGame(room); // clubs v8: the club game is now in progress
         break;
       }
       case 'leave': {
@@ -1229,9 +1354,11 @@ export class GameServer {
                 send(s.ws, { type: 'roomClosed', code: 'roomCancelled' });
               }
             });
+            this._sendToSpectators(room, { type: 'roomClosed', code: 'roomCancelled' });
             this._cancelTimers(room.code);
             this.rooms.delete(room.code);
             this._pendingDeletes.add(room.code);
+            this._syncClubGame(room); // clubs v8: the club game dissolved — badge clears
             this._syncBusyFor(null, roomSids);
           } else {
             room.seats[att.seat] = emptySeat();
