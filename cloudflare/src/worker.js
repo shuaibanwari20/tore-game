@@ -50,12 +50,12 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261111-inviteui';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261111-tabnew';
 const STICKER_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/stickers/';
 const COVER_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/covers/';
-const CLIENT_MIN_BYTES = 3_000_000; // the real bundle is ~3.1 MB
+const CLIENT_MIN_BYTES = 2_500_000; // the real bundle is ~2.8 MB (was ~3.1 MB until the tabnew reskin retired the CSS carpet's second copy)
 const CLIENT_CACHE_TTL = 86400; // seconds the EDGE keeps the client copy —
 // the browser never gets this TTL: serveClient hands the browser
 // `Cache-Control: no-cache` so it revalidates `/` on every load and
