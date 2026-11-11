@@ -1038,21 +1038,36 @@ class SocialCore {
   }
 
   // ---- clubs v8: club games (see the header note) ----
+  // Clubs v9.2 (owner's live report 2026-11-10): the club id a
+  // client sends is normalized LENIENTLY here — a numeric id (a
+  // webview / storage round-trip can lose the string type) means
+  // the same club as its string form. The old strict typeof check
+  // silently dropped the stamp for such a frame: the room was
+  // created, but its lobby wore no club tag and no club-invite
+  // button. The club RECORD (its member list) is the source of
+  // truth for the manager check; the clubOf index is only a
+  // cache of it and is healed when the two disagree.
+  _normCid(v) {
+    if (typeof v === 'number' && Number.isFinite(v)) v = String(Math.trunc(v));
+    return (typeof v === 'string' ? v : '').replace(/\D/g, '').slice(0, 6);
+  }
+
   // The ONLY way a room earns its club stamp: the asking player
   // must be a manager (owner or deputy) of the club AND it must
   // be his own club (one-club rule). Returns {cid, name} or null.
   clubGameClub(id, cidRaw) {
-    const cid = (typeof cidRaw === 'string' ? cidRaw : '').replace(/\D/g, '').slice(0, 6);
-    if (!cid || this.clubOf.get(id) !== cid) return null;
+    const cid = this._normCid(cidRaw);
+    if (!cid) return null;
     const club = this.clubs.get(cid);
     if (!club || !this._clubManager(club, id)) return null;
+    if (this.clubOf.get(id) !== cid) this.clubOf.set(id, cid); // heal a stale index from the record
     return { cid: club.cid, name: club.name };
   }
 
   // A player's role in a club (or null) — the game hosts admit
   // club members as spectators of a club game by this.
   clubMembership(id, cidRaw) {
-    const cid = (typeof cidRaw === 'string' ? cidRaw : '').replace(/\D/g, '').slice(0, 6);
+    const cid = this._normCid(cidRaw);
     const club = cid ? this.clubs.get(cid) : null;
     if (!club) return null;
     return this._clubRole(club, id);
@@ -1075,19 +1090,21 @@ class SocialCore {
   // state for the room button's live badge. Any other club is
   // answered with the empty state — its game is never leaked.
   clubGameQuery(id, cidRaw) {
-    const cid = (typeof cidRaw === 'string' ? cidRaw : '').replace(/\D/g, '').slice(0, 6);
+    const cid = this._normCid(cidRaw);
     if (!cid) return;
-    if (this.clubOf.get(id) !== cid) {
+    const club = this.clubs.get(cid);
+    if (!club || !this._clubRole(club, id)) {
       this._send(id, { type: 's-club-game-state', club: cid, code: null, phase: null });
       return;
     }
+    if (this.clubOf.get(id) !== cid) this.clubOf.set(id, cid); // heal a stale index from the record
     this._send(id, this._clubGameState(cid));
   }
 
   // Host-called whenever a club game appears, starts, ends or
   // dissolves: every online member gets the fresh badge state.
   clubGameChanged(cidRaw) {
-    const cid = (typeof cidRaw === 'string' ? cidRaw : '').replace(/\D/g, '').slice(0, 6);
+    const cid = this._normCid(cidRaw);
     const club = cid ? this.clubs.get(cid) : null;
     if (!club) return;
     const st = this._clubGameState(cid);
