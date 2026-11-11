@@ -6,7 +6,7 @@
  *  - Gate ON + valid session (/auth/me 200) → play; if the local profile
  *    has no name yet, prefill it from the account name.
  *  - Gate ON + no session (/auth/me 401) → cover the menu with the
- *    sign-in screen (same carpet + gold field style).
+ *    sign-in screen (the gate's Ludo purple field style).
  *
  * Google sign-in runs through Firebase Authentication in the browser:
  * the pinned Firebase JS SDK is loaded as ES modules from gstatic,
@@ -124,14 +124,14 @@
     var gate = document.createElement('div');
     gate.id = 'auth-gate';
     gate.setAttribute('dir', glang === 'en' ? 'ltr' : 'rtl');
-    var bg = '';
-    var home = document.getElementById('scr-home');
-    if (home) {
-      try { bg = getComputedStyle(home).backgroundImage || ''; } catch (e) { bg = ''; }
-    }
     gate.style.cssText =
       'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;' +
-      'background-color:#3a2410;' + (bg && bg !== 'none' ? 'background-image:' + bg + ';background-size:cover;' : '');
+      'background-color:#4a0727;background-image:' +
+      'radial-gradient(ellipse 90% 46% at 50% 40%, rgba(240,86,159,.30) 0%, rgba(240,86,159,0) 62%),' +
+      'linear-gradient(45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),' +
+      'linear-gradient(-45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),' +
+      'linear-gradient(180deg,#4a0727 0%,#7d1046 34%,#a1185c 62%,#67124e 82%,#2a0a2e 100%);' +
+      'background-size:100% 100%,34px 34px,34px 34px,100% 100%;background-repeat:no-repeat,repeat,repeat,no-repeat;';
     var googleG =
       '<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">' +
       '<path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.5 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/>' +
@@ -152,9 +152,9 @@
         '<a href="/auth/facebook" style="' + btn + 'background:#1877f2;color:#fff;box-shadow:0 4px 0 #0d4fae">' + fbF + GS.fb + '</a>'
       : '';
     gate.innerHTML =
-      '<div style="width:min(88vw,340px);background:rgba(24,15,7,.92);border:2px solid #d4af37;border-radius:22px;' +
-      'padding:28px 22px;text-align:center;color:#f5e7c6;box-shadow:0 18px 50px rgba(0,0,0,.55)">' +
-      '<div style="font-size:44px;font-weight:900;color:#f2c14e;line-height:1.1">توره</div>' +
+      '<div style="width:min(88vw,340px);background:linear-gradient(180deg,#d81b74 0%,#b3126e 34%,#8e1a63 70%,#67124e 100%);border:2px solid rgba(255,183,224,.4);border-radius:22px;' +
+      'padding:28px 22px;text-align:center;color:#fff;box-shadow:0 14px 34px rgba(0,0,0,.6),0 0 44px rgba(216,27,116,.35),inset 0 2px 0 rgba(255,255,255,.35),inset 0 -14px 26px rgba(40,0,35,.35)">' +
+      '<div style="font-size:44px;font-weight:900;color:#ffd75e;line-height:1.1;text-shadow:0 3px 0 rgba(90,10,60,.55),0 8px 20px rgba(0,0,0,.45)">توره</div>' +
       '<div style="margin:6px 0 4px;font-size:15px">' + GS.sub + '</div>' +
       '<div style="margin:0 0 20px;font-size:13px;opacity:.85">' + GS.prompt + '</div>' +
       '<button type="button" id="auth-google-btn" style="' + btn +
