@@ -640,6 +640,26 @@
     border: 2px solid rgba(255,255,255,.4);
     box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -5px 9px rgba(10,80,0,.4), 0 7px 16px rgba(20,90,0,.5);
     text-shadow: 0 1px 3px rgba(0,60,0,.5); }
+  /* No-internet popup (offline build): the family Ludo card, a gold
+     wifi-off glyph in a dark-plum medallion, one green «سمه ده». */
+  #ov-nonet .panel { border: 2px solid rgba(255,183,224,.4); border-radius: 22px; color: #fff;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
+    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
+    padding: 20px 18px 15px; max-width: 360px; text-align: center; }
+  #ov-nonet .nonet-ico { width: 76px; height: 76px; margin: 0 auto 10px; border-radius: 50%;
+    background: rgba(43,6,54,.55); border: 2px solid rgba(240,185,62,.85);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.5), 0 4px 12px rgba(0,0,0,.35); }
+  #ov-nonet .nonet-ico svg { width: 42px; height: 42px; stroke: #ffd75e; stroke-width: 2.1; fill: none;
+    stroke-linecap: round; stroke-linejoin: round; display: block; }
+  #ov-nonet .panel h2 { color: #fff; font-size: 21px; margin: 0 0 8px; text-shadow: 0 2px 4px rgba(0,0,0,.45); }
+  #ov-nonet .nonet-body { color: #ffd9f3; line-height: 1.9; margin: 0; font-size: 15.5px; }
+  #ov-nonet .pf-btns { margin-top: 15px; }
+  #ov-nonet #btn-nonet-ok { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 900; color: #fff;
+    background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
+    border: 2px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -5px 9px rgba(10,80,0,.4), 0 7px 16px rgba(20,90,0,.5);
+    text-shadow: 0 1px 3px rgba(0,60,0,.5); }
 
   /* The three small mode cards: create, join with code, play with
      friends (ludomenu reskin — the rules card moved into the settings
@@ -3958,6 +3978,18 @@
   </div>
 </div>
 
+<!-- ======== NO-INTERNET POPUP (offline guard for the online doors) ======== -->
+<div class="overlay" id="ov-nonet">
+  <div class="panel">
+    <div class="nonet-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg></div>
+    <h2 id="nonet-title">انټرنټ نشته</h2>
+    <p class="nonet-body" id="nonet-body">د انټرنټ اتصال نشته، انټرنټ چالان کړه او بیا هڅه وکړه</p>
+    <div class="pf-btns">
+      <button id="btn-nonet-ok">سمه ده</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="ov-exit">
   <div class="panel pf-panel">
     <h2 id="exit-title">له لوبې وځې؟</h2>
@@ -4362,6 +4394,10 @@ const STR = {
     tapToClose: 'د بندولو لپاره ټک وکړه',
     installApp: 'اپ نصب کړه',
     installSteps: '۱. لاندې د <b>Share</b> تڼۍ (⬆️) ووهه<br>۲. <b>«Add to Home Screen»</b> وټاکه<br>۳. <b>«Add»</b> ووهه — توره به ستا په کور سکرین کې د یو اپ په څېر راشي',
+    noNetTitle: 'انټرنټ نشته',
+    noNetBody: 'د انټرنټ اتصال نشته، انټرنټ چالان کړه او بیا هڅه وکړه',
+    noNetOk: 'سمه ده',
+    offlineGameToast: 'آفلاین لوبه',
     cancelLine: (a, ca, b, cb, p) => '🤝 تکانونه یو له بله خلاص شول: د (' + a + ') ټیم ' + ca + ' تکان او د (' + b + ') ټیم ' + cb + ' تکان — ' + p + ' جوړې له منځه لاړې، نه شمېرل کېږي',
     pendLine: (names) => 'د (' + names + ') ټیم تکان د راتلونکو لاسونو لپاره پاتې شو ⭐',
     execLine: (amount, victim, takan) => amount + ' تاوان د (' + victim + ') له جمع شوي څخه کم شو او (' + takan + ') ټیم ته ورکړل شو',
@@ -4727,6 +4763,10 @@ const STR = {
     tapToClose: 'برای بستن، روی آن بزن',
     installApp: 'نصب اپ',
     installSteps: '۱. دکمهٔ <b>Share</b> (⬆️) را در پایین بزن<br>۲. <b>«Add to Home Screen»</b> را انتخاب کن<br>۳. <b>«Add»</b> را بزن — توره مثل یک اپ روی صفحهٔ اصلی‌ات می‌آید',
+    noNetTitle: 'اینترنت نیست',
+    noNetBody: 'اتصال اینترنت برقرار نیست — لطفاً اینترنت را روشن کن و دوباره تلاش کن',
+    noNetOk: 'باشه',
+    offlineGameToast: 'بازی آفلاین',
     cancelLine: (a, ca, b, cb, p) => '🤝 تکان‌ها با هم ادا شدند: تیمِ (' + a + ') ' + ca + ' تکان و تیمِ (' + b + ') ' + cb + ' تکان — ' + p + ' جفت حذف شد، بدون حساب',
     pendLine: (names) => 'تکانِ تیمِ (' + names + ') ماند برای دست‌های بعد ⭐',
     execLine: (amount, victim, takan) => amount + ' تاوان از جمع‌شدهٔ تیمِ (' + victim + ') کم شد و به تیمِ (' + takan + ') داده شد',
@@ -5092,6 +5132,10 @@ const STR = {
     tapToClose: 'Tap to close',
     installApp: 'Install app',
     installSteps: '1. Tap the <b>Share</b> button (⬆️) below<br>2. Choose <b>“Add to Home Screen”</b><br>3. Tap <b>“Add”</b> — Tore appears on your home screen like an app',
+    noNetTitle: 'No internet',
+    noNetBody: 'There is no internet connection — turn on your internet and try again',
+    noNetOk: 'OK',
+    offlineGameToast: 'Offline game',
     cancelLine: (a, ca, b, cb, p) => '🤝 Takans cancelled out: team (' + a + ') ' + ca + ' and team (' + b + ') ' + cb + ' — ' + p + ' pair(s) removed, no charge',
     pendLine: (names) => 'Team (' + names + ')’s takan stays for later hands ⭐',
     execLine: (amount, victim, takan) => amount + ' tawan moved from team (' + victim + ')’s bank to team (' + takan + ')',
@@ -5144,7 +5188,7 @@ function applyI18n() {
   document.documentElement.lang = LANG;
   document.title = T('docTitle');
   const ltr = LANG === 'en';
-  ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-settings', 'ov-exit', 'ov-join', 'ov-install',
+  ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-settings', 'ov-exit', 'ov-join', 'ov-install', 'ov-nonet',
    'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-clubseatreqs', 'scr-picker', 'scr-leaders', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu', 'ov-feltpick', 'ov-feltview', 'ov-backpick', 'ov-backview', 'ov-pollcreate', 'ov-clubvs', 'ov-clubvsinv']
     .forEach((id) => {
       const el = document.getElementById(id);
@@ -5183,6 +5227,9 @@ function applyI18n() {
   set('#install-title', 'installApp');
   { const st = $('#install-steps'); if (st) st.innerHTML = T('installSteps'); }
   set('#btn-install-close', 'closeBtn');
+  set('#nonet-title', 'noNetTitle');
+  set('#nonet-body', 'noNetBody');
+  set('#btn-nonet-ok', 'noNetOk');
   set('#rules-txt', 'rulesBtn');
   set('#foot-a', 'homeFootA');
   set('#foot-b', 'homeFootB');
@@ -5726,6 +5773,11 @@ function connect(onOpen) {
   ws.onmessage = (ev) => { try { onMsg(JSON.parse(ev.data)); } catch (e) {} };
   ws.onclose = () => {
     endJoinFlight(); // an unanswered join dies with its socket
+    // Offline bot fallback (2026-11-11): a bot-game create whose
+    // socket dies BEFORE the room reply means the server is
+    // unreachable — hand the game to the in-page local host
+    // instead of the reconnect loop below.
+    if (botFallbackArm) { disarmBotFallback(); startLocalBotGame(true); return; }
     if (intentionalClose) return;
     // Peer connections were negotiated over this socket's session:
     // drop them; they re-form after the reconnect re-announces voice.
@@ -5740,8 +5792,8 @@ function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj))
 // 2026-11-10): create-room pre-selects its کوټه tab, the big
 // ONLINE card its انلاین tab — the flows themselves run from the
 // picker's توره card (see startPickedGame below).
-$('#btn-create').onclick = () => openPicker('room');
-$('#btn-online').onclick = () => openPicker('online');
+$('#btn-create').onclick = () => { if (!guardOnlineDoor()) openPicker('room'); };
+$('#btn-online').onclick = () => { if (!guardOnlineDoor()) openPicker('online'); };
 // The one join flow — the code popup and the friends-invite accept
 // both land here, so every join gets the same validation and the
 // same server error toasts (full room, already started, …).
@@ -5760,6 +5812,7 @@ function endJoinFlight() {
   const b = $('#btn-join'); if (b) b.disabled = false;
 }
 function joinRoomWithCode(code) {
+  if (guardOnlineDoor()) return; // joining a room is an online act
   code = String(code || '').trim().toUpperCase();
   if (code.length !== 4) { toast(T('codeLenToast')); return; }
   if (joinInFlight) return;
@@ -8519,6 +8572,662 @@ async function renderVoiceDiag() {
   body.innerHTML = lines.join('') + '<div class="vd-log">' + (log || '<div>no events yet</div>') + '</div>';
 }
 
+// ---------- offline play (owner order 2026-11-11) ----------
+// Three pieces, one promise: after ONE online visit the bot game
+// works with no internet at all, and the online doors say so
+// honestly instead of spinning forever.
+//   1. The no-net popup (#ov-nonet) guards every ONLINE door
+//      (online game, create room, join by code, club game).
+//   2. A LOCAL HOST (below) runs a bot match inside the page: it
+//      speaks the exact wire protocol of the server hosts and is
+//      driven by the shared rules modules (game.js + bots.js,
+//      inlined into the bundle by build-deploy.js as
+//      window.ToreEngine / window.ToreBots — one source of truth,
+//      never forked). It activates ONLY for bot games, only when
+//      the device is offline or the server cannot be reached; an
+//      answered server keeps hosting (and recording stats) as
+//      before. Offline matches are recorded NOWHERE.
+//   3. An asset warm-up keeps the deck + carpets in the service
+//      worker's cache, so the first offline table paints whole.
+function netOffline() { return navigator.onLine === false; }
+function showNoNet() { const o = $('#ov-nonet'); if (o) o.classList.add('show'); }
+function hideNoNet() { const o = $('#ov-nonet'); if (o) o.classList.remove('show'); }
+// True (and the popup shown) when a door must not proceed offline.
+function guardOnlineDoor() { if (netOffline()) { showNoNet(); return true; } return false; }
+$('#btn-nonet-ok').onclick = hideNoNet;
+$('#ov-nonet').addEventListener('click', (e) => { if (e.target === e.currentTarget) hideNoNet(); });
+window.addEventListener('online', hideNoNet);
+window.addEventListener('offline', () => {
+  // The picker sitting on an online tab loses its floor the moment
+  // the connection drops — say so at once; the bots tab stays live.
+  const pk = $('#scr-picker');
+  if (pk && !pk.classList.contains('hidden') && pkMode !== 'bots') showNoNet();
+});
+
+// ----- bot-game dispatch: server when it answers, local when not
+function engineReady() {
+  return typeof window.ToreEngine === 'object' && !!window.ToreEngine &&
+    typeof window.ToreBots === 'object' && !!window.ToreBots;
+}
+let botFallbackArm = null; // { timer } while a server bot-create is unanswered
+let localGameLive = false; // the room on screen is hosted in-page
+function disarmBotFallback() {
+  if (botFallbackArm) { clearTimeout(botFallbackArm.timer); botFallbackArm = null; }
+}
+function armBotFallback() {
+  disarmBotFallback();
+  botFallbackArm = { timer: setTimeout(() => {
+    // The create was sent (or the socket died trying — that path
+    // lands in connect()'s onclose) and no room reply ever came:
+    // the server is unreachable in practice, so this same tap
+    // becomes a local game.
+    botFallbackArm = null;
+    intentionalClose = true;
+    if (ws) { try { ws.onclose = null; ws.close(); } catch (e) { /* gone */ } ws = null; }
+    startLocalBotGame(true);
+  }, 4000) };
+}
+function startBotGame(club) {
+  window.__toreLocalGame = false;
+  const createFrame = () => ({ type: 'create', ...(club ? { club } : {}), felt: validFelt(profile.felt), back: validBack(profile.back), ...profilePayload() });
+  if (!engineReady()) {
+    // The bare client source (the dev hosts serve public/ as-is,
+    // without the build step) carries no bundled engine: the
+    // server runs the bots, exactly as before this build.
+    if (netOffline()) { showNoNet(); return; }
+    quickPlay = true;
+    connect(() => send(createFrame()));
+    return;
+  }
+  if (netOffline()) { startLocalBotGame(false); return; }
+  // Online: the server stays the host (its matches feed the stats
+  // and the weekly leaderboard). The fallback is armed in case the
+  // server cannot be reached after all; a club stamp, which only
+  // the server can verify, simply does not apply to a local game.
+  quickPlay = true;
+  armBotFallback();
+  connect(() => send(createFrame()));
+}
+function startLocalBotGame(withToast) {
+  disarmBotFallback();
+  quickPlay = true;
+  const host = new LocalHost();
+  ws = host.socket;
+  ws.onmessage = (ev) => { try { onMsg(JSON.parse(ev.data)); } catch (e) { /* bad frame */ } };
+  ws.onclose = () => {
+    endJoinFlight();
+    localGameLive = false;
+    window.__toreLocalGame = false;
+    host.destroy();
+  };
+  ws.onopen = () => send({ type: 'create', felt: validFelt(profile.felt), back: validBack(profile.back), ...profilePayload() });
+  localGameLive = true;
+  window.__toreLocalGame = true;
+  host.open();
+  if (withToast) toast(T('offlineGameToast'));
+}
+
+// ----- asset warm-up (offline entry) -----
+// After the home screen shows, quietly fetch the whole deck, every
+// carpet thumbnail and my own felt (full) once per service-worker
+// version: the service worker files each response into its asset
+// cache, so a first offline bot game never waits on an image.
+// Online play still lazy-loads exactly as before — this loop runs
+// in idle time, in the background, and never blocks the menu.
+const ASSET_WARM_KEY = 'tore.assetwarm.v4';
+let assetWarmStarted = false;
+function scheduleAssetWarmup() {
+  if (assetWarmStarted) return;
+  assetWarmStarted = true;
+  try {
+    if (localStorage.getItem(ASSET_WARM_KEY)) return;
+    if (!('serviceWorker' in navigator)) return;
+    if (netOffline()) { assetWarmStarted = false; return; } // retry on a later online boot
+  } catch (e) { return; }
+  const run = () => { warmAssets().catch(() => {}); };
+  const idle = () => {
+    if (window.requestIdleCallback) requestIdleCallback(run, { timeout: 9000 });
+    else setTimeout(run, 3500);
+  };
+  // The worker only files away the fetches it intercepts: before
+  // it controls the page (the very first visit) warm-up requests
+  // would sail straight past it and cache nothing — wait for
+  // control, which the worker's activate claims immediately.
+  if (navigator.serviceWorker.controller) idle();
+  else {
+    const onCtl = () => { navigator.serviceWorker.removeEventListener('controllerchange', onCtl); idle(); };
+    navigator.serviceWorker.addEventListener('controllerchange', onCtl);
+  }
+}
+async function warmAssets() {
+  const urls = [];
+  const ranks = '23456789TJQKA', suits = 'CDHS';
+  for (const s of suits) for (const r of ranks) urls.push(ASSET('cards/' + r + s + '.png'));
+  urls.push(ASSET('cards/back.png'));
+  for (let n = 1; n <= 11; n++) urls.push(THUMB('carpets/felt' + n + '.jpg'));
+  urls.push(ASSET('carpets/felt' + validFelt(profile.felt) + '.jpg'));
+  const queue = urls.slice();
+  let ok = 0;
+  const worker = async () => {
+    while (queue.length) {
+      const u = queue.shift();
+      try {
+        const r = await fetch(u);
+        if (r && r.ok) { ok++; await r.arrayBuffer().catch(() => {}); }
+      } catch (e) { /* one miss never blocks the rest */ }
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  if (ok >= urls.length - 3) { try { localStorage.setItem(ASSET_WARM_KEY, '1'); } catch (e) { /* private mode */ } }
+}
+
+// ----- the local host -----
+// A faithful in-page port of the Node host's room flow (server.js),
+// narrowed to the one room a bot game ever is: the local player in
+// seat 0, three bots, no club stamp, no spectators, no social
+// hooks. THE SEAM: the client already speaks to its host through
+// the `ws` socket + onMsg, so the local host IS a socket — same
+// frames in, same frames out, zero changes to the table renderer,
+// the lobby, the summary card or the rematch UI. Deliberate
+// differences from the server host, all forced by the medium:
+//   - the room lives and dies with the page (no reconnect across a
+//     reload; the session is marked local so Continue hides);
+//   - 'rtc' frames are dropped (bots hold no peer connections);
+//   - a match end records NO stats and NO leaderboard entry.
+class LocalHost {
+  constructor() {
+    this.G = window.ToreEngine;
+    this.bots = window.ToreBots;
+    this.room = null;
+    this.dead = false;
+    this.outbox = [];
+    this.drainTimer = null;
+    this.timers = new Set();
+    const host = this;
+    this.socket = {
+      readyState: 0,
+      OPEN: 1,
+      onopen: null, onmessage: null, onclose: null,
+      send(str) { host.receive(str); },
+      close() {
+        if (this.readyState === 3) return;
+        this.readyState = 3;
+        host.destroy();
+        if (this.onclose) { try { this.onclose(); } catch (e) { /* gone */ } }
+      },
+    };
+  }
+  open() {
+    this.later(() => {
+      if (this.socket.readyState !== 0) return;
+      this.socket.readyState = 1;
+      if (this.socket.onopen) this.socket.onopen();
+    }, 0);
+  }
+  later(fn, ms) {
+    if (this.dead) return null;
+    const t = setTimeout(() => { this.timers.delete(t); if (!this.dead) fn(); }, ms);
+    this.timers.add(t);
+    return t;
+  }
+  cancelT(t) { if (t) { clearTimeout(t); this.timers.delete(t); } }
+  destroy() {
+    if (this.dead) return;
+    this.dead = true;
+    for (const t of [...this.timers]) clearTimeout(t);
+    this.timers.clear();
+    if (this.drainTimer) { clearTimeout(this.drainTimer); this.drainTimer = null; }
+    this.outbox.length = 0;
+    this.room = null;
+  }
+  // Host -> client delivery is queued and drained on a macrotask,
+  // like a real socket: a reply never re-enters the client's
+  // message handler synchronously.
+  emit(obj) {
+    if (this.dead) return;
+    this.outbox.push(obj);
+    if (this.drainTimer) return;
+    this.drainTimer = setTimeout(() => {
+      this.drainTimer = null;
+      const q = this.outbox.splice(0);
+      for (const m of q) {
+        if (this.dead) return;
+        if (this.socket.onmessage) { try { this.socket.onmessage({ data: JSON.stringify(m) }); } catch (e) { /* handler guards itself */ } }
+      }
+    }, 0);
+  }
+  receive(str) {
+    if (this.dead) return;
+    let msg;
+    try { msg = JSON.parse(str); } catch (e) { return; }
+    try { this.handle(msg); } catch (e) { this.err('خطای سرور', 'serverError'); }
+  }
+  err(message, code, extra) { this.emit(Object.assign({ type: 'error', message, code }, extra || {})); }
+
+  // ----- room construction (ports of server.js) -----
+  newToken() {
+    try {
+      const a = new Uint8Array(8);
+      crypto.getRandomValues(a);
+      return [...a].map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) { return 'local' + Math.random().toString(36).slice(2, 14); }
+  }
+  emptySeat() {
+    return { kind: 'empty', name: '', avatar: null, country: '', photo: null, token: null, connected: false, disconnectAt: null, voiceMic: false, voiceSpeaker: true, lastChatAt: 0, sid: null };
+  }
+  createRoom() {
+    const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 4; i++) code += alphabet[Math.floor(Math.random() * alphabet.length)];
+    const room = {
+      code, // cosmetic locally — no one can join an in-page room
+      seats: [this.emptySeat(), this.emptySeat(), this.emptySeat(), this.emptySeat()],
+      phase: 'lobby', // lobby | playing | roundEnd | matchEnd
+      match: null,
+      turnTimer: null, roundTimer: null, trickTimer: null,
+      trickHold: null,
+      felt: 11, back: 1,
+      rematch: null, rematchTimer: null,
+      statsRecorded: false,
+    };
+    room.emit = (evt) => this.onMatchEvent(room, evt);
+    return room;
+  }
+  cleanName(name) { const n = String(name || '').trim().slice(0, 20); return n || 'بازیکن'; }
+  cleanAvatar(av) {
+    const ids = ['av1', 'av2', 'av3', 'av4', 'av5', 'av6', 'av7', 'av8', 'av9', 'av10', 'av11', 'av12'];
+    return (typeof av === 'string' && (ids.includes(av) || av === 'google')) ? av : null;
+  }
+  cleanCountry(c) { return String(c || '').trim().slice(0, 40); }
+  cleanPhoto(p) {
+    if (typeof p !== 'string' || p.length > 300) return null;
+    if (!p.startsWith('https://')) return null;
+    if (!p.includes('googleusercontent.com')) return null;
+    return p;
+  }
+  cleanPid(pid) { return (typeof pid === 'string' && /^[A-Za-z0-9_-]{6,64}$/.test(pid)) ? pid : null; }
+  attach(msg) {
+    const room = this.room;
+    const seat = room.seats[0];
+    seat.kind = 'human';
+    seat.name = this.cleanName(msg.name);
+    seat.avatar = this.cleanAvatar(msg.avatar);
+    seat.country = this.cleanCountry(msg.country);
+    seat.photo = seat.avatar === 'google' ? this.cleanPhoto(msg.photo) : null;
+    const pid0 = this.cleanPid(msg.pid);
+    seat.sid = pid0 ? 'p:' + pid0 : null;
+    seat.token = this.newToken();
+    seat.connected = true;
+    seat.disconnectAt = null;
+    this.emit({ type: 'room', code: room.code, seat: 0, token: seat.token, isHost: true });
+    this.broadcastState(room);
+  }
+
+  // ----- state push (stateFor, minus club/vs/spectators) -----
+  stateFor(room, seatIdx) {
+    const G = this.G;
+    const round = room.match ? room.match.round : null;
+    const last = room.match && room.match.history.length
+      ? room.match.history[room.match.history.length - 1] : null;
+    return {
+      type: 'state',
+      phase: room.phase,
+      code: room.code,
+      club: null,
+      felt: room.felt || 11,
+      back: room.back || 1,
+      vs: null,
+      mySeat: seatIdx,
+      hostSeat: 0,
+      target: G.BANK_LOSE_TARGET,
+      seats: room.seats.map((s, i) => ({
+        name: s.name, kind: s.kind, connected: s.connected,
+        avatar: s.avatar, country: s.country, photo: s.photo, sid: s.sid || null,
+        uid: s.sid ? (typeof socialUid !== 'undefined' ? socialUid : null) : null,
+        voice: { mic: !!s.voiceMic, speaker: s.voiceSpeaker !== false },
+        cards: round ? round.hands[i].length : 0,
+      })),
+      hand: round ? round.hands[seatIdx].slice() : [],
+      trick: room.trickHold
+        ? room.trickHold.plays.map((p) => ({ seat: p.seat, card: p.card }))
+        : round ? round.trick.map((p) => ({ seat: p.seat, card: p.card })) : [],
+      trickWinner: room.trickHold ? room.trickHold.winnerSeat : null,
+      turn: round && !round.finished ? round.turn : null,
+      legal: round ? round.legalMovesFor(seatIdx) : [],
+      bankedTawan: room.match ? room.match.bankedTawan.slice() : [0, 0],
+      roundTawan: round
+        ? [G.tawanOf(round.captured[0]), G.tawanOf(round.captured[1])] : [0, 0],
+      takanCount: round ? round.takanCount.slice() : [0, 0],
+      pendingTakan: room.match ? room.match.pendingTakan.slice() : [0, 0],
+      piles: round ? round.wonTricks.slice() : [0, 0, 0, 0],
+      canDeclare13: round && !room.trickHold ? round.canDeclare13(seatIdx) : false,
+      declared13: round ? round.declared13 : false,
+      roundNo: room.match ? room.match.roundNo : 0,
+      roundResult: (room.phase === 'roundEnd' || room.phase === 'matchEnd') ? last : null,
+      matchWinner: room.match && room.match.finished ? room.match.winner : null,
+      matchLoser: room.match && room.match.finished ? room.match.loser : null,
+      rematch: room.rematch ? {
+        bySeat: room.rematch.bySeat,
+        expiresIn: Math.max(0, Math.ceil((room.rematch.expires - Date.now()) / 1000)),
+        acceptedSeats: room.seats
+          .map((s, i) => (s.kind === 'human' && s.sid && room.rematch.accepts.has(s.sid)) ? i : -1)
+          .filter((i) => i >= 0),
+        totalHumans: room.seats.filter((s) => s.kind === 'human' && s.sid).length,
+      } : null,
+    };
+  }
+  broadcastState(room) { if (this.room === room) this.emit(this.stateFor(room, 0)); }
+
+  // ----- game flow (ports of server.js) -----
+  onMatchEvent(room, evt) {
+    if (evt.type === 'takan') {
+      this.emit({ type: 'takan', seat: evt.seat, team: evt.team, count: evt.count });
+    } else if (evt.type === 'declared13') {
+      this.emit({ type: 'declared13', seat: evt.seat });
+    }
+    if (evt.type === 'roundFinished') {
+      room.phase = 'roundEnd';
+      this.cancelT(room.turnTimer); room.turnTimer = null;
+      this.broadcastState(room);
+      this.cancelT(room.roundTimer);
+      room.roundTimer = this.later(() => {
+        room.roundTimer = null;
+        if (this.room !== room || room.match.finished) return;
+        room.phase = 'playing';
+        room.match.startRound();
+        this.broadcastState(room);
+        this.pumpTurn(room);
+      }, 8000); // ROUND_PAUSE_MS — the summary card's full read
+    } else if (evt.type === 'matchFinished') {
+      room.phase = 'matchEnd';
+      this.cancelT(room.turnTimer); room.turnTimer = null;
+      this.cancelT(room.roundTimer); room.roundTimer = null;
+      // Offline matches are NOT recorded — no stats, no leaderboard.
+      this.broadcastState(room);
+    }
+    // cardPlayed / trickWon need no immediate push: state is pushed
+    // after every completed play() call in doPlay().
+  }
+  doPlay(room, seat, card) {
+    const round = room.match && room.match.round;
+    if (!round) return false;
+    if (room.trickHold) return false; // finished trick still on display
+    const tricksBefore = round.tricksPlayed;
+    const trickBefore = round.trick.slice();
+    // BOT NO-REPEAT LAW: keep the engine's bot-seat flags current.
+    round.botSeats = room.seats.map((s) => s.kind === 'bot');
+    try {
+      round.play(seat, card);
+    } catch (e) {
+      return false; // illegal — caller decides how to complain
+    }
+    if (round.tricksPlayed > tricksBefore) {
+      room.trickHold = {
+        plays: trickBefore.concat([{ seat, card }]),
+        winnerSeat: round.turn, // play() leaves turn on the trick winner
+      };
+      this.cancelT(room.turnTimer); room.turnTimer = null;
+      this.broadcastState(room);
+      this.cancelT(room.trickTimer);
+      room.trickTimer = this.later(() => {
+        room.trickHold = null;
+        if (this.room !== room) return;
+        this.broadcastState(room);
+        this.pumpTurn(room);
+      }, 1600); // TRICK_PAUSE_MS
+      return true;
+    }
+    this.broadcastState(room);
+    this.pumpTurn(room);
+    return true;
+  }
+  botPlay(room, seat, mayDeclare) {
+    const round = room.match && room.match.round;
+    if (!round || round.finished || round.turn !== seat) return;
+    if (room.trickHold) return;
+    if (mayDeclare && this.bots.maybeDeclare13(round, seat)) {
+      round.declare13(seat); // emits declared13 → the client toasts it
+      this.broadcastState(room);
+      this.pumpTurn(room);   // then the bot plays on the next tick
+      return;
+    }
+    let card;
+    try { card = this.bots.chooseCard(round, seat); } catch (e) { return; }
+    this.doPlay(room, seat, card);
+  }
+  pumpTurn(room) {
+    this.cancelT(room.turnTimer); room.turnTimer = null;
+    if (room.trickHold) return; // the trick-pause timer re-arms the turn
+    if (room.phase !== 'playing' || !room.match || !room.match.round) return;
+    const round = room.match.round;
+    if (round.finished) return;
+    const seat = round.turn;
+    const info = room.seats[seat];
+    const delay = info.kind === 'bot' ? 750 : 30000; // BOT_DELAY_MS : TURN_TIMEOUT_MS
+    room.turnTimer = this.later(() => this.botPlay(room, seat, info.kind === 'bot'), delay);
+  }
+  startMatch(room) {
+    this.cancelT(room.trickTimer); room.trickTimer = null;
+    room.trickHold = null;
+    if (room.rematchTimer) { this.cancelT(room.rematchTimer); room.rematchTimer = null; }
+    room.rematch = null; // a fresh match spends any live offer
+    room.statsRecorded = false;
+    const botDigits = ['1', '2', '3'];
+    let botNo = 0;
+    room.seats.forEach((s) => {
+      if (s.kind === 'empty') {
+        s.kind = 'bot';
+        s.name = 'ربات ' + (botDigits[botNo] || String(botNo + 1));
+        botNo++;
+        s.connected = true;
+        s.voiceMic = false; // bots never talk and never listen
+        s.voiceSpeaker = false;
+      }
+    });
+    room.match = new this.G.Match(room.emit);
+    room.match.botSeats = room.seats.map((s) => s.kind === 'bot');
+    room.phase = 'playing';
+    room.match.startRound();
+    this.broadcastState(room);
+    this.pumpTurn(room);
+  }
+
+  // ----- rematch (feature 4 — offline, it restarts in place) -----
+  rematchHumans(room) {
+    const out = [];
+    room.seats.forEach((s, i) => { if (s.kind === 'human' && s.sid) out.push({ sid: s.sid, seat: i }); });
+    return out;
+  }
+  cancelRematch(room, reason) {
+    if (!room || !room.rematch) return false;
+    room.rematch = null;
+    if (room.rematchTimer) { this.cancelT(room.rematchTimer); room.rematchTimer = null; }
+    this.emit({ type: 'rematch-cancelled', reason });
+    return true;
+  }
+  expireRematchIfNeeded(room) {
+    if (room && room.rematch && Date.now() >= room.rematch.expires) {
+      this.cancelRematch(room, 'expired');
+      this.broadcastState(room);
+      return true;
+    }
+    return false;
+  }
+  armRematchTimer(room) {
+    if (room.rematchTimer) this.cancelT(room.rematchTimer);
+    const delay = Math.max(0, room.rematch.expires - Date.now());
+    room.rematchTimer = this.later(() => {
+      room.rematchTimer = null;
+      if (this.room !== room) return;
+      this.expireRematchIfNeeded(room);
+    }, delay);
+  }
+  cancelRoomTimers(room) {
+    this.cancelT(room.turnTimer); room.turnTimer = null;
+    this.cancelT(room.roundTimer); room.roundTimer = null;
+    this.cancelT(room.trickTimer); room.trickTimer = null;
+    if (room.rematchTimer) { this.cancelT(room.rematchTimer); room.rematchTimer = null; }
+  }
+
+  // ----- the wire: same frames the server host answers -----
+  handle(msg) {
+    const room = this.room;
+    switch (msg.type) {
+      case 'create': {
+        this.room = this.createRoom();
+        this.room.felt = validFelt(msg.felt); // creator's felt, validated; fixed at creation
+        this.room.back = validBack(msg.back); // creator's card back, validated the same way
+        this.attach(msg);
+        return;
+      }
+      case 'reconnect': {
+        if (!room) return this.err('نشست منقضی شده است — اتاق تازه بساز', 'sessionExpired');
+        const idx = room.seats.findIndex((s) => s.kind === 'human' && s.token === msg.token);
+        if (idx === -1) return this.err('نشست منقضی شده است — اتاق تازه بساز', 'sessionExpired');
+        const seat = room.seats[idx];
+        const av = this.cleanAvatar(msg.avatar); if (av) seat.avatar = av;
+        const co = this.cleanCountry(msg.country); if (co) seat.country = co;
+        const pid = this.cleanPid(msg.pid); if (pid) seat.sid = 'p:' + pid;
+        if (seat.avatar === 'google') {
+          const ph = this.cleanPhoto(msg.photo); if (ph) seat.photo = ph;
+        } else {
+          seat.photo = null;
+        }
+        seat.connected = true;
+        seat.disconnectAt = null;
+        this.emit({ type: 'room', code: room.code, seat: idx, token: seat.token, isHost: idx === 0 });
+        this.broadcastState(room);
+        return;
+      }
+      case 'start': {
+        if (room && room.phase === 'lobby') this.startMatch(room);
+        return;
+      }
+      case 'leave': {
+        // The page is going home and closes the socket a beat
+        // later; silence the room so no timer pushes into a
+        // closing page.
+        if (room) { this.cancelRoomTimers(room); this.room = null; }
+        return;
+      }
+      case 'play': {
+        if (!room) return;
+        this.expireRematchIfNeeded(room);
+        const round = room.match && room.match.round;
+        if (room.phase !== 'playing' || !round || room.trickHold) {
+          return this.err('الان نوبت بازی نیست', 'notPlaying');
+        }
+        if (round.turn !== 0) return this.err('نوبت شما نیست', 'notYourTurn');
+        if (!round.hands[0].includes(msg.card)) {
+          return this.err('این کارت در دست شما نیست', 'cardNotInHand');
+        }
+        const legal = round.legalMovesFor(0);
+        if (!legal.includes(msg.card)) {
+          const led = round.trick.length ? this.G.suitOf(round.trick[0].card) : null;
+          const hasLed = led && round.hands[0].some((c) => this.G.suitOf(c) === led);
+          if (hasLed) return this.err('باید از همان خال بازی کنید', 'mustFollowSuit', { suit: led });
+          return this.err('این کارت را نمی‌توانید بازی کنید', 'cannotPlay');
+        }
+        if (!this.doPlay(room, 0, msg.card)) {
+          return this.err('این کارت را نمی‌توانید بازی کنید', 'cannotPlay');
+        }
+        return;
+      }
+      case 'declare13': {
+        if (!room) return;
+        const round = room.match && room.match.round;
+        if (round && room.phase === 'playing' && !room.trickHold && round.canDeclare13(0)) {
+          round.declare13(0);
+          this.broadcastState(room);
+          this.pumpTurn(room);
+        }
+        return;
+      }
+      case 'rematch': {
+        if (!room) return;
+        const seat = room.seats[0];
+        if (room.phase !== 'matchEnd' || seat.kind !== 'human' || !seat.sid) return;
+        if (room.rematch) return; // one live offer at a time
+        const humans = this.rematchHumans(room);
+        room.rematch = {
+          bySid: seat.sid, bySeat: 0,
+          expires: Date.now() + 30000, // REMATCH_OFFER_MS
+          accepts: new Set([seat.sid]),
+        };
+        if (humans.length <= 1) {
+          // A lone human's rematch IS the restart (same as the
+          // server: bots always come back).
+          room.rematch = null;
+          this.startMatch(room);
+          return;
+        }
+        this.armRematchTimer(room);
+        this.broadcastState(room);
+        return;
+      }
+      case 'rematch-reply': {
+        if (!room || !room.rematch) return;
+        if (this.expireRematchIfNeeded(room)) return;
+        const seat = room.seats[0];
+        if (seat.kind !== 'human' || !seat.sid) return;
+        if (msg.accept) {
+          room.rematch.accepts.add(seat.sid);
+          const humans = this.rematchHumans(room);
+          const allIn = humans.every((h) => room.rematch.accepts.has(h.sid));
+          if (allIn) {
+            if (room.rematchTimer) { this.cancelT(room.rematchTimer); room.rematchTimer = null; }
+            room.rematch = null;
+            this.startMatch(room);
+            return;
+          }
+          this.broadcastState(room);
+        } else {
+          this.cancelRematch(room, 'declined');
+          this.broadcastState(room);
+        }
+        return;
+      }
+      case 'chat': {
+        if (!room) return;
+        // Preset-only chat, the server's exact allowlists (the
+        // client's own copies — verified identical) + its 800 ms
+        // per-seat pace.
+        const clean = (typeof msg.value === 'string' && msg.kind === 'phrase' && CHAT_PHRASES.includes(msg.value))
+          ? { kind: 'phrase', value: msg.value }
+          : (typeof msg.value === 'string' && msg.kind === 'emoji' && CHAT_EMOJIS.includes(msg.value))
+            ? { kind: 'emoji', value: msg.value }
+            : (typeof msg.value === 'string' && msg.kind === 'sticker' && CHAT_STICKERS.includes(msg.value))
+              ? { kind: 'sticker', value: msg.value } : null;
+        if (!clean) return;
+        const seat = room.seats[0];
+        const now = Date.now();
+        if (now - (seat.lastChatAt || 0) < 800) return;
+        seat.lastChatAt = now;
+        this.emit({ type: 'chat', seat: 0, kind: clean.kind, value: clean.value });
+        return;
+      }
+      case 'voice': {
+        if (!room) return;
+        const seat = room.seats[0];
+        seat.voiceMic = msg.mic !== undefined ? !!msg.mic
+          : (msg.on !== undefined ? !!msg.on : seat.voiceMic);
+        if (msg.speaker !== undefined) seat.voiceSpeaker = !!msg.speaker;
+        this.emit({ type: 'voice', seat: 0, mic: seat.voiceMic, speaker: seat.voiceSpeaker !== false, on: seat.voiceMic });
+        return;
+      }
+      case 'rtc': {
+        // Bots hold no peer connections — there is nobody to relay
+        // to. (On the server this frame earns an error toast; here
+        // it is simply dropped: the client's voice mesh never
+        // forms a pair with a bot seat, so it never sends one.)
+        return;
+      }
+      default:
+        return;
+    }
+  }
+}
+
 // ---------- home: field-style menu wiring ----------
 // Quick play (the bots door): the flag is set by the picker's توره
 // Play button when the روباتونه tab is selected; it is consumed in
@@ -8649,8 +9358,13 @@ function startPickedGame() {
     const mine = roomClub();
     if (mine && clubIsManager(mine)) club = mine.cid;
   }
+  // Offline guard: the online + room flows (a club game included)
+  // live on the server — offline they stop HERE, with the no-net
+  // popup over the still-open picker. The bots flow never stops:
+  // startBotGame routes it to the in-page host instead.
+  if (mode !== 'bots' && netOffline()) { showNoNet(); return; }
   closePicker();
-  if (mode === 'bots') quickPlay = true;
+  if (mode === 'bots') { startBotGame(club); return; }
   connect(() => send({ type: 'create', ...(club ? { club } : {}), felt: validFelt(profile.felt), back: validBack(profile.back), ...profilePayload() }));
 }
 $('#btn-pk-close').onclick = () => closePicker();
@@ -8674,7 +9388,7 @@ $('#pknav-chat').onclick = () => openChats();
 // the old inline expansion inside the home screen is gone. Backdrop
 // tap or the cancel button closes it; a successful join closes it
 // too (see the 'room' handler), a failed one leaves it open to retry.
-function openJoin() { $('#ov-join').classList.add('show'); $('#inp-code').focus(); }
+function openJoin() { if (guardOnlineDoor()) return; $('#ov-join').classList.add('show'); $('#inp-code').focus(); }
 function closeJoin() { $('#ov-join').classList.remove('show'); }
 $('#btn-join-toggle').onclick = openJoin;
 $('#btn-join-close').onclick = closeJoin;
@@ -8908,11 +9622,14 @@ function savedSession() {
 }
 function updateContinue() {
   const s = savedSession();
-  $('#btn-continue').classList.toggle('hidden', !(s && s.code && s.token));
+  // A local (offline) session is never offered: its room lived in
+  // the page that created it and is gone.
+  $('#btn-continue').classList.toggle('hidden', !(s && s.code && s.token && !s.local));
 }
 $('#btn-continue').onclick = () => {
   const s = savedSession();
   if (!s || !s.code || !s.token) return updateContinue();
+  if (s.local) { localStorage.removeItem('tore.session'); return updateContinue(); }
   if (ws) { try { ws.onclose = null; ws.close(); } catch (e) {} ws = null; }
   intentionalClose = false;
   connect(() => send({ type: 'reconnect', code: s.code, token: s.token, ...profileMsg() }));
@@ -9229,6 +9946,10 @@ async function initSessionUser() {
   // (full version) in the background so a table I create paints its
   // carpet instantly. Nothing else is preloaded (lazy law above).
   try { const wf = new Image(); wf.src = ASSET('carpets/felt' + validFelt(profile.felt) + '.jpg'); } catch { /* warm-up only */ }
+  // Offline build: once the home screen is up, warm the service
+  // worker's asset cache (deck + thumbs + my felt) in idle time so
+  // the first offline bot game paints whole. Once per SW version.
+  scheduleAssetWarmup();
   renderPickerArt();
   applyI18n();
   // Language is on the page: the splash veil may lift now (it also
@@ -9268,6 +9989,7 @@ function serverMsgText(msg) {
 function onMsg(msg) {
   if (msg.type === 'room') {
     endJoinFlight(); // the join (or create/reconnect) landed
+    disarmBotFallback(); // a host answered (server or local) — no fallback
     closeJoin(); // the join popup has done its job — never cover the lobby
     closePicker(); // a picker-started flow lands the same way
     closeClubs(); // a room entered from the club screens (club-game create, invite accept) must not stay covered by them
@@ -9275,6 +9997,13 @@ function onMsg(msg) {
     if (!voiceT0) voiceT0 = Date.now(); // diagnostics log epoch: seconds since join
     session = { code: msg.code, token: msg.token, name: myName() };
     localStorage.setItem('tore.session', JSON.stringify(session));
+    // An in-page (offline) room dies with the page — it is NOT
+    // resumable, so its session is marked local and the Continue
+    // button never offers a dead reconnect for it.
+    if (localGameLive) {
+      session.local = 1;
+      try { localStorage.setItem('tore.session', JSON.stringify(session)); } catch (e) { /* private mode */ }
+    }
     $('#connbar').textContent = '';
     updateContinue();
     // A reconnect lands here too: re-announce my mic/speaker flags
@@ -9380,6 +10109,7 @@ function onMsg(msg) {
     show('scr-home');
   } else if (msg.type === 'error') {
     endJoinFlight(); // a rejected join re-arms the join button
+    disarmBotFallback(); // the server answered — with an error, but it answered
     quickPlay = false;
     toast(serverMsgText(msg));
     // Session expiry: detected by the machine code; the old «نشست»
@@ -13659,6 +14389,7 @@ function pullClubGame(c) {
 }
 
 $('#btn-cl-game').onclick = () => {
+  if (guardOnlineDoor()) return; // a club game lives on the server
   const c = roomClub();
   if (!c) return;
   if (clubIsManager(c)) { openPicker('room', c.cid); return; }
