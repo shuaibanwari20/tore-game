@@ -31,6 +31,9 @@
 -->
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  /* the page's deepest base is dark walnut (the board wood): no gap,
+     overscroll or unpainted strip anywhere can ever flash white */
+  html { background: #241305; }
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
   body {
     font-family: system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
@@ -62,28 +65,52 @@
   .legend b { color: #ffd75e; }
   .red { color: #d7263d; } .blk { color: #1c2430; }
 
-  /* ---------- game screen: Ludo purple felt ----------
-     RESKIN (owner order 2026-11-11; proof approved by him the same
-     day, ?v=20261111-tabnew): the table leaves the Afghan carpet
-     photo for the shell's purple family — a deep-plum felt with a
-     soft magenta radial glow at the centre, the shell's 34px
-     diamond lattice and the wine-plum gradient, calm enough that
-     cards and trick slots read clearly. The build's old CSS-carpet
-     needle/count check was retired with the carpet (build-deploy.js
-     step 3a); the carpet stays in the ASSET() map (a preload names
-     it) but nothing paints it anymore. */
+  /* ---------- game screen: the table wears a REAL CARPET PHOTO --
+     The eleven felts are real carpet PHOTOGRAPHS (public/carpets/
+     felt1..11.jpg; provenance in carpet-src/SOURCES.md): ornate
+     central-medallion carpets, flat top-down product photos the
+     owner chose the style of (2026-11-11 — first plain colour
+     felts, then drawn Afghan patterns, both rejected: «find real
+     carpets like these»). JS paints the photo: applyTableFelt()
+     sets #scr-game's background-image from ASSET('carpets/feltN
+     .jpg') — a data URI in the bundle, the plain file in dev — and
+     paintFelts() paints the same photos into the settings
+     swatches. The table wears the ROOM CREATOR's carpet: the
+     create frame carries profile.felt, the servers stamp it on
+     the room and every state push carries it back, so all four
+     players (and spectators) play on the creator's carpet. The
+     score strip, seat pills and action buttons keep the shell's
+     dark-plum/purple family — furniture ON the carpet, not part
+     of it. The carpet lies on a BOARD (تخته — owner order
+     2026-11-11: «زیرش را تخته بدی که صفحه سفید را نمایش نده»):
+     several source photos carry studio-white margins and the old
+     fit-the-whole-photo processing baked them into the felt
+     (felt3 shipped with ~73px white bands); the margins are now
+     cropped out at the source (carpet-src/process_carpets.py) AND
+     the screen's own base below is dark walnut planks — with the
+     html base also walnut — so no edge, gap or load instant can
+     ever show white on any felt or screen height. Felt 11 is
+     the ORIGINAL carpet (owner order 2026-11-11: «قالین پیش فرض
+     امان قبلی باشه») — the cream antique Oushak photo (public/
+     carpet.jpg, 810x1440) that covered the table from the first
+     build until the tabnew reskin — and it is the DEFAULT: a
+     profile with no saved felt, and every validation fallback
+     on client and hosts, lands on 11, not 1. */
   #scr-game {
     position: fixed; inset: 0; height: 100dvh; z-index: 10;
     display: flex; flex-direction: column; overflow: hidden;
     padding: 10px;
-    background-color: #2a0a52; /* deep plum base while the gradient paints */
+    /* the BOARD under the carpet: horizontal dark-walnut planks
+       (per-plank tone drift, grain streaks, seam lines) — the
+       carpet photo paints over it edge to edge via the two-layer
+       background in applyTableFelt (carpet first, board beneath);
+       this single layer is what shows before the photo lands. */
+    background-color: #2a180a;
     background-image:
-      radial-gradient(ellipse 95% 58% at 50% 44%, rgba(240,86,159,.22) 0%, rgba(240,86,159,0) 68%),
-      linear-gradient(45deg, rgba(255,255,255,.03) 1px, transparent 1.3px),
-      linear-gradient(-45deg, rgba(255,255,255,.03) 1px, transparent 1.3px),
-      linear-gradient(180deg, #2a0a52 0%, #57105e 32%, #75135c 56%, #4a0a48 80%, #1c0530 100%);
-    background-size: 100% 100%, 34px 34px, 34px 34px, 100% 100%;
-    background-repeat: no-repeat, repeat, repeat, no-repeat;
+      repeating-linear-gradient(90deg, rgba(0,0,0,.13) 0 2px, transparent 2px 7px),
+      repeating-linear-gradient(0deg, rgba(0,0,0,.55) 0 2px, rgba(255,214,150,.07) 2px 3px, transparent 3px 86px),
+      linear-gradient(90deg, #3a2110 0%, #2e1a0b 30%, #40260f 55%, #2a180a 80%, #33200e 100%);
+    background-size: cover; background-position: center; background-repeat: no-repeat;
   }
   /* ---------- compact header: two-line score strip on TOP, the exit-
      button row BELOW it (owner order 2026-11-07 — the strip moved up,
@@ -1849,7 +1876,8 @@
   #ov-settings .panel { position: relative; border: 3px solid #f0b93e; border-radius: 22px; color: #fff;
     background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
     box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
-    padding: 22px 16px 16px; text-align: start; }
+    padding: 22px 16px 16px; text-align: start;
+    max-height: calc(100dvh - 32px); overflow-y: auto; }
   #ov-settings .panel h2 { color: #fff; text-align: center; font-size: 23px; margin-bottom: 12px;
     text-shadow: 0 2px 4px rgba(0,0,0,.45); }
   .st-ribbon { position: absolute; top: -17px; inset-inline-start: 16px; width: 44px; height: 54px; margin: 0;
@@ -1889,6 +1917,33 @@
     stroke-linecap: round; stroke-linejoin: round; opacity: 0; transform: scale(.55);
     transition: opacity .15s, transform .15s; filter: drop-shadow(0 1px 2px rgba(0,60,0,.65)); }
   .st-check.on svg { opacity: 1; transform: scale(1); }
+  /* --- settings: field-edit section (د لوبې ډګر سمول) — a grid of
+     eleven felt swatches; each swatch IS a mini-preview (paintFelts()
+     paints the same carpet photo into it). The player's choice
+     wears a gold ring + check disc; tapping selects + persists
+     at once. */
+  .st-felts { margin-top: 12px; background: rgba(43,6,54,.55); border-radius: 16px;
+    padding: 10px 10px 11px; box-shadow: inset 0 2px 8px rgba(0,0,0,.35); }
+  .st-felts-title { font-size: 16.5px; font-weight: 700; color: #fff; padding: 1px 4px 9px; }
+  .felt-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
+  .felt-sw { position: relative; height: 60px; margin: 0; padding: 0; overflow: hidden;
+    border: 2px solid rgba(255,255,255,.28); border-radius: 11px; cursor: pointer;
+    display: flex; align-items: flex-end; justify-content: center;
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+    box-shadow: inset 0 2px 6px rgba(255,255,255,.12), 0 2px 5px rgba(0,0,0,.35); }
+  .felt-sw:active { transform: scale(.96); }
+  .felt-sw .felt-nm { width: 100%; padding: 2px 1px 3px; text-align: center;
+    font-size: 9.5px; font-weight: 700; line-height: 1.3; color: #fff;
+    background: rgba(0,0,0,.48); text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  .felt-sw.sel { border-color: #ffd75e; box-shadow: 0 0 0 2px #ffd75e, 0 3px 8px rgba(0,0,0,.45); }
+  .felt-sw .felt-check { position: absolute; top: 3px; inset-inline-end: 3px;
+    width: 18px; height: 18px; border-radius: 50%; display: none;
+    align-items: center; justify-content: center;
+    background: linear-gradient(180deg, #ffd75e, #d9a83c);
+    box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+  .felt-sw .felt-check svg { width: 12px; height: 12px; stroke: #33270a; stroke-width: 3.6;
+    fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .felt-sw.sel .felt-check { display: flex; }
   .st-follow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
   .st-follow span { font-size: 14.5px; font-weight: 700; color: #ffd7f2; }
   .st-ig { width: 46px; height: 46px; flex: 0 0 auto; border-radius: 13px; text-decoration: none;
@@ -3387,6 +3442,10 @@
         <span id="st-logout-lbl">له حسابه وتل</span>
       </button>
     </div>
+    <div class="st-felts">
+      <div class="st-felts-title" id="st-felts-title">د لوبې ډګر سمول</div>
+      <div class="felt-grid" id="felt-grid"></div>
+    </div>
     <div class="st-follow">
       <span id="st-follow-lbl">د نورو لپاره موږ تعقیب کړئ</span>
       <a class="st-ig" href="https://www.instagram.com/shuaibanwari20" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.3" cy="6.7" r="1.15" fill="#fff" stroke="none"/></svg></a>
@@ -3480,6 +3539,18 @@ const STR = {
     stFollowUs: 'د نورو لپاره موږ تعقیب کړئ',
     setVibrate: 'رېږدل',
     setChat: 'د لوبې چټ',
+    setFieldEdit: 'د لوبې ډګر سمول',
+    felt1: 'ترنج شين',
+    felt2: 'ترنج ابي',
+    felt3: 'ترنج سور',
+    felt4: 'ترنج کرمي',
+    felt5: 'ترنج تور',
+    felt6: 'ترنج بنفش',
+    felt7: 'ترنج فيروزي',
+    felt8: 'ترنج سمندري',
+    felt9: 'ترنج سور ګل',
+    felt10: 'ترنج ژور ابي',
+    felt11: 'اصلي قالین',
     closeBtn: 'بندول',
     menuQuick: 'له روباتونو سره لوبه',
     menuQuickSub: 'سمدستي پیل — تمرین او تفریح',
@@ -3785,6 +3856,18 @@ const STR = {
     stFollowUs: 'برای بیشتر، ما را دنبال کنید',
     setVibrate: 'لرزش',
     setChat: 'چت بازی',
+    setFieldEdit: 'ویرایش میدان بازی',
+    felt1: 'ترنج سبز',
+    felt2: 'ترنج آبی',
+    felt3: 'ترنج شرابی',
+    felt4: 'ترنج کرمی',
+    felt5: 'ترنج مشکی',
+    felt6: 'ترنج بنفش',
+    felt7: 'ترنج فیروزه‌ای',
+    felt8: 'ترنج دریایی',
+    felt9: 'ترنج سرخ گلدار',
+    felt10: 'ترنج نیلی',
+    felt11: 'قالین اصلی',
     closeBtn: 'بستن',
     menuQuick: 'بازی با ربات‌ها',
     menuQuickSub: 'شروع فوری — تمرین و سرگرمی',
@@ -4090,6 +4173,18 @@ const STR = {
     stFollowUs: 'Follow us for more',
     setVibrate: 'Vibration',
     setChat: 'Game chat',
+    setFieldEdit: 'Edit game field',
+    felt1: 'Green Medallion',
+    felt2: 'Navy Medallion',
+    felt3: 'Burgundy Medallion',
+    felt4: 'Cream Medallion',
+    felt5: 'Black Medallion',
+    felt6: 'Purple Medallion',
+    felt7: 'Turquoise Medallion',
+    felt8: 'Teal Medallion',
+    felt9: 'Red Floral',
+    felt10: 'Deep Navy',
+    felt11: 'Original',
     closeBtn: 'Close',
     menuQuick: 'Play with Bots',
     menuQuickSub: 'Instant start — practice & fun',
@@ -4631,9 +4726,11 @@ const __ASSETS__ = window.__ASSETS__ || {};
 function ASSET(u) { return __ASSETS__[u] || u; }
 
 // Real deck faces: cards/<code>.png (Byron Knoll public-domain deck).
-// Preload the carpet + every face + the back so play never waits on images.
+// Preload the carpet + the eleven felt photos + every face + the back
+// so play never waits on images.
 (function preloadAssets() {
   const bg = new Image(); bg.src = ASSET('carpet.jpg');
+  for (let n = 1; n <= 11; n++) { const f = new Image(); f.src = ASSET('carpets/felt' + n + '.jpg'); }
   ['H', 'D', 'C', 'S'].forEach((s) => ['A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K']
     .forEach((r) => { const i = new Image(); i.src = ASSET('cards/' + r + s + '.png'); }));
   const bk = new Image(); bk.src = ASSET('cards/back.png');
@@ -4684,7 +4781,7 @@ try { session = JSON.parse(localStorage.getItem('tore.session') || 'null'); } ca
 
 // ---------- profile (name + avatar + country) ----------
 // Single source of truth: localStorage 'tore.profile' {name, avatar,
-// country}, where avatar is a portrait id ('av1'…'av12', see AVATAR_ART
+// country, photo, felt}, where avatar is a portrait id ('av1'…'av12', see AVATAR_ART
 // below). The profile name IS the game name — myName() reads it, and
 // create/join/reconnect all carry {avatar, country} to the server.
 // The old standalone 'tore.name' value is migrated into the profile once.
@@ -4864,6 +4961,16 @@ function validAvatar(av) {
   return av === 'google' ||
     (typeof av === 'string' && Object.prototype.hasOwnProperty.call(AVATAR_ART, av));
 }
+// Table carpets (قالین): eleven real carpets (the SVG pattern
+// stacks at the top of the stylesheet), picked in Settings → «د لوبې ډګر
+// سمول». profile.felt is MY choice; it rides the create frame, the
+// server stamps it on the room, and every state push carries it
+// back so the WHOLE room plays on the creator's field. The same
+// validation runs on all three hosts.
+function validFelt(n) {
+  n = Number(n);
+  return Number.isInteger(n) && n >= 1 && n <= 11 ? n : 11;
+}
 function loadProfile() {
   let p = null;
   try { p = JSON.parse(localStorage.getItem('tore.profile') || 'null'); } catch (e) { p = null; }
@@ -4874,6 +4981,7 @@ function loadProfile() {
     avatar: validAvatar(p.avatar) ? p.avatar : 'av1',
     country: (typeof p.country === 'string' && p.country.trim()) ? p.country.trim() : 'افغانستان',
     photo: (typeof p.photo === 'string' && p.photo.startsWith('https://')) ? p.photo.slice(0, 300) : '',
+    felt: validFelt(p.felt),
   };
 }
 let profile = loadProfile();
@@ -7834,7 +7942,7 @@ function startPickedGame() {
   }
   closePicker();
   if (mode === 'bots') quickPlay = true;
-  connect(() => send({ type: 'create', ...(club ? { club } : {}), ...profilePayload() }));
+  connect(() => send({ type: 'create', ...(club ? { club } : {}), felt: validFelt(profile.felt), ...profilePayload() }));
 }
 $('#btn-pk-close').onclick = () => closePicker();
 ['online', 'bots', 'room'].forEach((m) => {
@@ -7902,6 +8010,62 @@ function paintSettings() {
   const cc = $('#st-chat-check'); if (cc) cc.classList.toggle('on', c);
   const vr = $('#row-set-vibrate'); if (vr) vr.setAttribute('aria-checked', String(v));
   const cr = $('#row-set-chat'); if (cr) cr.setAttribute('aria-checked', String(c));
+  paintFelts();
+}
+// ----- settings: field edit (د لوبې ډګر سمول) — eleven felt swatches.
+// Tapping one selects it IMMEDIATELY and persists it in
+// tore.profile (profile.felt). The choice takes effect on the next
+// room I CREATE: the felt is fixed at creation and the whole room
+// (and spectators) play on the creator's field; changing the
+// setting mid-room never recolours a live room. -----
+function paintFelts() {
+  const grid = $('#felt-grid');
+  if (!grid) return;
+  const title = $('#st-felts-title');
+  if (title) title.textContent = T('setFieldEdit');
+  const mine = validFelt(profile.felt);
+  grid.innerHTML = '';
+  for (let n = 1; n <= 11; n++) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'felt-sw' + (mine === n ? ' sel' : '');
+    b.dataset.felt = String(n);
+    b.style.backgroundImage = 'url("' + ASSET('carpets/felt' + n + '.jpg') + '")';
+    b.setAttribute('aria-label', T('felt' + n));
+    b.setAttribute('aria-pressed', String(mine === n));
+    const chk = document.createElement('span');
+    chk.className = 'felt-check';
+    chk.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg>';
+    b.appendChild(chk);
+    const nm = document.createElement('span');
+    nm.className = 'felt-nm';
+    nm.textContent = T('felt' + n);
+    b.appendChild(nm);
+    b.onclick = () => { profile.felt = n; saveProfile(); paintFelts(); };
+    grid.appendChild(b);
+  }
+}
+// The felt the table currently wears — always the room creator's,
+// taken from the state push; before any state (or from an older
+// host that sends none) my own profile felt is the fallback.
+let tableFelt = 11;
+function applyTableFelt(n) {
+  tableFelt = validFelt(n);
+  const g = $('#scr-game');
+  if (g) {
+    g.dataset.felt = String(tableFelt);
+    // two layers: the carpet photo on top (cover, edge to edge) and,
+    // beneath it, the BOARD — the same walnut-plank stack the CSS
+    // base carries — so any edge the photo cannot cover shows dark
+    // wood, never the white page (owner order 2026-11-11).
+    g.style.backgroundImage =
+      'url("' + ASSET('carpets/felt' + tableFelt + '.jpg') + '"), ' +
+      'repeating-linear-gradient(90deg, rgba(0,0,0,.13) 0 2px, transparent 2px 7px), ' +
+      'repeating-linear-gradient(0deg, rgba(0,0,0,.55) 0 2px, rgba(255,214,150,.07) 2px 3px, transparent 3px 86px), ' +
+      'linear-gradient(90deg, #3a2110 0%, #2e1a0b 30%, #40260f 55%, #2a180a 80%, #33200e 100%)';
+    g.style.backgroundSize = 'cover, auto, auto, auto';
+    g.style.backgroundRepeat = 'no-repeat, repeat, repeat, no-repeat';
+  }
 }
 function applyChatSetting() {
   const on = toreSetting('chat', true);
@@ -11903,6 +12067,10 @@ let prevPhase = ''; // matchEnd edge for the vibration buzz
 function render(st) {
   if (st.phase === 'lobby') { renderLobby(st); show('scr-lobby'); return; }
   show('scr-game');
+  // Felts: the table wears the ROOM CREATOR's felt, stamped on the
+  // room at creation and carried on every state push (spectator
+  // pushes included). A host that sends none leaves my own felt.
+  applyTableFelt(st.felt != null ? st.felt : profile.felt);
   // Clubs v8: the spectator view wears its chip and hides the
   // action row (chat / mic / speaker belong to seated players).
   $('#scr-game').classList.toggle('spectating', !!spectating);
