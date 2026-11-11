@@ -1461,12 +1461,44 @@
     display: flex; gap: 8px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
   .dm-inputrow input { flex: 1; min-width: 0; }
   .dm-inputrow button { width: auto; margin: 0; padding: 0 20px; flex: 0 0 auto; font-size: 18px; }
-  /* lobby-invite popup card */
+  /* lobby-invite popup card — in the CLUB UI language (owner
+     order 2026-11-11): the invite popup still wore the carpet-era
+     brown/gold panel on his club screenshot, so it now mirrors the
+     «پروفایل سمول» / askConfirm card — the same magenta gradient +
+     lavender border family, the green glossy gloss on تایید, a
+     dark-plum رد like the card's dark fields, and a SOURCE badge
+     under the inviter's name (server-derived: club president /
+     deputy / clubmate / friend) so the receiver always knows
+     where the invite comes from. Scoped to #ov-invite only; ids,
+     strings and the accept/reject/expiry behaviour are untouched. */
   #ov-invite { z-index: 65; }
+  #ov-invite .panel { border: 2px solid rgba(255,183,224,.4); border-radius: 22px; color: #fff;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
+    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
+    padding: 18px 16px 14px; }
+  #ov-invite .exit-body { color: #ffd9f3; opacity: 1; line-height: 1.6; margin: 0 0 2px; }
+  #ov-invite .pf-btns { margin-top: 14px; }
+  #ov-invite #btn-inv-accept { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 900; color: #fff;
+    background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
+    border: 2px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -5px 9px rgba(10,80,0,.4), 0 7px 16px rgba(20,90,0,.5);
+    text-shadow: 0 1px 3px rgba(0,60,0,.5); }
+  #ov-invite #btn-inv-reject { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 800; color: #ffd9f3;
+    background: rgba(43,6,54,.55); border: 1.5px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 9px rgba(0,0,0,.45); }
   .inv-who { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 6px; }
-  .inv-who .pavatar { border-radius: 50%; border: 2.5px solid #eec95f; }
+  .inv-who .pavatar { border-radius: 50%; border: 2.5px solid #e9c46a; }
   .inv-name { font-size: 18px; font-weight: 800; color: #ffeec2; }
+  #ov-invite .inv-name { color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.45); }
+  .inv-role { display: inline-block; margin: 0 auto 7px; padding: 3px 13px; border-radius: 999px;
+    font-size: 13.5px; font-weight: 800; line-height: 1.5; max-width: 100%;
+    background: rgba(43,6,54,.55); color: #ffd9f3; border: 1.5px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 9px rgba(0,0,0,.45); }
+  .inv-role:empty { display: none; }
+  .inv-role-owner { background: linear-gradient(180deg, #ffd75e, #d9a83c); color: #33270a; border-color: #ffd75e;
+    box-shadow: 0 3px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.6); text-shadow: none; }
   .inv-code { font-size: 13px; opacity: .85; margin-top: 2px; }
+  #ov-invite .inv-code { color: #ffd9f3; }
   /* lobby player menu: another human's row is tappable */
   .seatrow.tappable { cursor: pointer; border-radius: 8px; }
   .seatrow.tappable:active { background: rgba(255, 215, 94, .10); }
@@ -3147,6 +3179,7 @@
 <div class="overlay" id="ov-invite">
   <div class="panel" style="max-width:340px">
     <div class="inv-who"><span id="inv-av"></span><span class="inv-name" id="inv-name"></span></div>
+    <div class="inv-role" id="inv-role"></div>
     <p class="exit-body" id="inv-text"></p>
     <div class="inv-code" id="inv-code"></div>
     <div class="pf-btns">
@@ -3453,6 +3486,10 @@ const STR = {
     frLobbyBanner: (code) => 'ته په لابي ' + code + ' کې یې — ملګري دې دې لابي ته وبله',
     frInviteText: 'تا د لوبې لابي ته بلي',
     frInviteRoom: (code) => 'د کوټې کوډ: ' + code,
+    invSrcClubOwner: (club) => '👑 ریس کلب · ' + club,
+    invSrcClubDeputy: (club) => 'معاون کلب · ' + club,
+    invSrcClubMember: (club) => 'د کلب له خوا · ' + club,
+    invSrcFriend: 'ملګری',
     frInviteRejected: (name) => name + ' ستا بلنه رد کړه',
     frOfflineToast: (name) => name + ' افلاین دی',
     frNewRequest: (name) => name + ' د دوستۍ غوښتنه واستوله',
@@ -3754,6 +3791,10 @@ const STR = {
     frLobbyBanner: (code) => 'تو در لابی ' + code + ' هستی — دوستانت را به این لابی دعوت کن',
     frInviteText: 'تو را به لابی بازی دعوت می‌کند',
     frInviteRoom: (code) => 'کد اتاق: ' + code,
+    invSrcClubOwner: (club) => '👑 رئیس کلب · ' + club,
+    invSrcClubDeputy: (club) => 'معاون کلب · ' + club,
+    invSrcClubMember: (club) => 'از طرف کلب · ' + club,
+    invSrcFriend: 'دوست',
     frInviteRejected: (name) => name + ' دعوتت را رد کرد',
     frOfflineToast: (name) => name + ' آفلاین است',
     frNewRequest: (name) => name + ' درخواست دوستی فرستاد',
@@ -4055,6 +4096,10 @@ const STR = {
     frLobbyBanner: (code) => 'You are in lobby ' + code + ' — invite your friends to this lobby',
     frInviteText: 'Invites you to their game lobby',
     frInviteRoom: (code) => 'Room code: ' + code,
+    invSrcClubOwner: (club) => '👑 Club president · ' + club,
+    invSrcClubDeputy: (club) => 'Club deputy · ' + club,
+    invSrcClubMember: (club) => 'From the club · ' + club,
+    invSrcFriend: 'Friend',
     frInviteRejected: (name) => name + ' rejected your invitation',
     frOfflineToast: (name) => name + ' is offline',
     frNewRequest: (name) => name + ' sent you a friend request',
@@ -8463,7 +8508,7 @@ function onSocialMsg(m) {
     // code and countdown; only once it resolves (accept / reject /
     // 30 s expiry) can the next invite show.
     if (!inviteCurrent) {
-      inviteCurrent = { from: m.from, code: m.code };
+      inviteCurrent = { from: m.from, code: m.code, src: m.src || null };
       showInvite();
     }
   } else if (m.type === 's-invite-result') {
@@ -9191,6 +9236,18 @@ function showInvite() {
   av.innerHTML = '';
   av.appendChild(avatarEl(p.name, p.avatar, 52, p.photo));
   $('#inv-name').textContent = p.name || '';
+  // The SOURCE badge (owner order 2026-11-11): the server derives
+  // it from the club record / friends graph and ships it as
+  // inviteCurrent.src — the popup always says whether this invite
+  // comes from the club president, a deputy, a clubmate or a plain
+  // friend. A missing src (older host) falls back to the friend
+  // line so the source is never blank.
+  const src = inviteCurrent.src || { kind: 'friend' };
+  const roleEl = $('#inv-role');
+  if (src.kind === 'clubOwner') { roleEl.textContent = T('invSrcClubOwner', src.club || ''); roleEl.className = 'inv-role inv-role-owner'; }
+  else if (src.kind === 'clubDeputy') { roleEl.textContent = T('invSrcClubDeputy', src.club || ''); roleEl.className = 'inv-role'; }
+  else if (src.kind === 'clubMember') { roleEl.textContent = T('invSrcClubMember', src.club || ''); roleEl.className = 'inv-role'; }
+  else { roleEl.textContent = T('invSrcFriend'); roleEl.className = 'inv-role'; }
   // The inviter's name shows ONCE — in the header beside the avatar
   // (owner order 2026-11-08); the body sentence carries no name.
   $('#inv-text').textContent = T('frInviteText');
