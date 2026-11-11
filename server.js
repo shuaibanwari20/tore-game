@@ -39,7 +39,14 @@ const httpServer = http.createServer((req, res) => {
   if (!full.startsWith(PUBLIC_DIR) || !fs.existsSync(full) || fs.statSync(full).isDirectory()) {
     res.writeHead(404); return res.end('not found');
   }
-  res.writeHead(200, { 'Content-Type': MIME[path.extname(full)] || 'application/octet-stream' });
+  // The game IMAGE files (speed pass) ride the long cache like the
+  // production hosts give them: /cards/, /carpets/ (incl. thumbs),
+  // /carpet.jpg — a browser/SW never re-downloads them per open.
+  const isGameImage = pathOnly.startsWith('/cards/') || pathOnly.startsWith('/carpets/') || pathOnly === '/carpet.jpg';
+  res.writeHead(200, {
+    'Content-Type': MIME[path.extname(full)] || 'application/octet-stream',
+    ...(isGameImage ? { 'Cache-Control': 'public, max-age=86400' } : {}),
+  });
   fs.createReadStream(full).pipe(res);
 });
 
