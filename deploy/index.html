@@ -800,6 +800,25 @@
       linear-gradient(180deg, rgba(3,26,18,.97), rgba(4,32,22,.94) 30%, rgba(4,30,20,.95) 65%, rgba(2,20,13,.99)),
       radial-gradient(ellipse at top, #1d6a3c 0%, #0d3b21 70%, #082a17 100%);
   }
+  /* Profile backdrop (owner order 2026-11-12, ?v=20261112-profile):
+     he saw the OLD GREEN around the profile card in the proof and
+     ordered it fixed with the new UI — so #scr-profile alone leaves
+     the shared emerald veil above and wears the home shell's
+     wine-plum stack instead, values copied verbatim from #scr-home
+     (same rule block higher up) so the two pages match exactly.
+     Scoped to the profile screen only — the same override the
+     friends/picker/chats reskins already carry for themselves;
+     the screens still on the veil (clubs family, leaders) keep
+     it until he says otherwise. */
+  #scr-profile {
+    background-color: #6d0d3f;
+    background-image:
+      linear-gradient(45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(-45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(180deg, #4a0727 0%, #7d1046 28%, #a1185c 52%, #8a1250 74%, #4a0727 100%);
+    background-size: 34px 34px, 34px 34px, 100% 100%;
+    background-repeat: repeat, repeat, no-repeat;
+  }
   /* Friends screen (owner layout order 2026-11-08): a flex column —
      the list scrolls in .fr-scroll and the home screen's bottom nav
      is pinned at the foot with ملګري as the raised active item; no
@@ -1916,7 +1935,8 @@
      in localStorage, and the profile شمېرې rows show only data the
      game actually has (server ID, friends count, club, country). */
   /* --- profile: the card --- */
-  #scr-profile .pf-card { position: relative; color: #fff; border-radius: 22px; padding: 16px 14px 16px;
+  #scr-profile .fr-inner { padding: 12px 14px 14px; }
+  #scr-profile .pf-card { position: relative; color: #fff; border-radius: 22px; padding: 13px 14px 13px;
     border: 3px solid #f0b93e;
     background: linear-gradient(180deg, #d81b74 0%, #b3126e 32%, #8e1a63 66%, #67124e 100%);
     box-shadow: 0 12px 28px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35); }
@@ -1929,13 +1949,9 @@
   #scr-profile .pf-card .pf-x svg { width: 21px; height: 21px; stroke: #fff; fill: none; stroke-width: 3.1;
     stroke-linecap: round; filter: drop-shadow(0 1px 1px rgba(90,0,0,.6)); }
   #scr-profile .pf-card .pf-x:active { transform: scale(.92); }
-  .pf-headrow { display: flex; align-items: center; gap: 10px; background: rgba(43,6,54,.45);
-    border-radius: 14px; padding: 8px 10px; box-shadow: inset 0 2px 6px rgba(0,0,0,.3); }
-  #pf-head-av { flex: 0 0 auto; display: inline-flex; line-height: 0; }
-  #pf-head-av .pavatar { width: 54px !important; height: 54px !important; border-radius: 50%;
-    border: 3px solid #eec95f; box-shadow: 0 0 0 2px rgba(0,0,0,.35), 0 3px 8px rgba(0,0,0,.4); }
-  .pf-headname { flex: 1; min-width: 0; font-size: 19px; font-weight: 800; color: #fff;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px rgba(0,0,0,.55); }
+  /* profile rework (2026-11-12): the .pf-headrow header bar rules
+     are gone with the bar itself; .pf-pencil / .pf-flagname survive
+     for the country row that now lives inside the photo frame. */
   .pf-pencil { width: 40px; height: 40px; flex: 0 0 auto; margin: 0; padding: 0; border-radius: 50%; cursor: pointer;
     background: radial-gradient(circle at 32% 26%, #cda6f9, #7d30e8 58%, #5c17c4);
     border: 2px solid rgba(255,255,255,.55);
@@ -1945,21 +1961,46 @@
   .pf-pencil:active { transform: scale(.93); }
   .pf-pencil.sm { width: 34px; height: 34px; }
   .pf-pencil.sm svg { width: 16px; height: 16px; }
-  .pf-flagrow { display: flex; align-items: center; gap: 9px; margin: 10px 2px 0; }
   .pf-flagname { font-size: 16.5px; font-weight: 800; letter-spacing: .4px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.55); }
-  #scr-profile .pf-card .pf-pvwrap { margin-top: 14px; display: flex; justify-content: center; }
+  /* the photo frame is the profile header now: photo, then the
+     player NAME under it, then the COUNTRY row (flag + name +
+     pencil) under the name — all inside the one gold frame. */
+  #scr-profile .pf-card .pf-pvwrap { margin-top: 2px; display: flex; justify-content: center; }
   #scr-profile .pf-card .pf-preview { flex: 0 1 auto; }
   #scr-profile .pf-card .pf-preview { background: rgba(43,6,54,.5); border: 2.5px solid #f0b93e; border-radius: 18px;
-    padding: 14px 20px 10px; box-shadow: inset 0 2px 9px rgba(0,0,0,.45), 0 4px 12px rgba(0,0,0,.3); }
-  #scr-profile .pf-card .pf-preview .pavatar { width: 128px !important; height: 128px !important; border-radius: 22px; }
-  #scr-profile .pf-card .pf-pvname { color: #fff; font-size: 15px; margin-top: 4px; }
-  #scr-profile .pf-card .pf-editav { top: -9px; left: calc(50% + 56px); width: 38px; height: 38px;
+    padding: 10px 18px 9px; box-shadow: inset 0 2px 9px rgba(0,0,0,.45), 0 4px 12px rgba(0,0,0,.3); }
+  #scr-profile .pf-card .pf-preview .pavatar { width: 116px !important; height: 116px !important; border-radius: 20px; }
+  #scr-profile .pf-card .pf-pvname { color: #fff; font-size: 17px; font-weight: 800; margin-top: 5px;
+    max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px rgba(0,0,0,.55); }
+  #scr-profile .pf-card .pf-pvcountry { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 3px; }
+  #scr-profile .pf-card .pf-pvcountry .pf-flagname { font-size: 14.5px; }
+  #scr-profile .pf-card .pf-pvcountry .pf-pencil.sm { width: 30px; height: 30px; }
+  #scr-profile .pf-card .pf-pvcountry .pf-pencil.sm svg { width: 14px; height: 14px; }
+  #scr-profile .pf-card .pf-editav { top: -9px; left: calc(50% + 50px); width: 38px; height: 38px;
     background: radial-gradient(circle at 32% 26%, #cda6f9, #7d30e8 58%, #5c17c4);
     border: 2px solid rgba(255,255,255,.55); box-shadow: 0 3px 8px rgba(0,0,0,.45), inset 0 2px 3px rgba(255,255,255,.45); }
   #scr-profile .pf-card .pf-editav svg { width: 18px; height: 18px; fill: #fff; display: block; }
   #scr-profile .pf-card .pf-label { color: #ffd7f2; }
-  #pf-editbox { margin-top: 12px; background: rgba(43,6,54,.45); border-radius: 14px; padding: 4px 12px 12px;
+  #pf-editbox { margin-top: 10px; background: rgba(43,6,54,.45); border-radius: 14px; padding: 4px 12px 12px;
     box-shadow: inset 0 2px 6px rgba(0,0,0,.3); }
+  /* --- profile edit popup (name + avatar in ONE popup): the
+     feltpick Ludo card treatment; the moved-in name input and
+     avatar cells get the profile card's dark-field styling --- */
+  #ov-pfedit .pfe-wrap { position: relative; width: 100%; max-width: 420px; }
+  #ov-pfedit .panel { position: relative; border: 3px solid #f0b93e; border-radius: 22px; color: #fff;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
+    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
+    padding: 22px 16px 16px; text-align: start;
+    max-height: calc(100dvh - 64px); overflow-y: auto; }
+  #ov-pfedit .panel h2 { color: #fff; text-align: center; font-size: 21px; margin-bottom: 10px;
+    text-shadow: 0 2px 4px rgba(0,0,0,.45); }
+  #ov-pfedit .pf-label { color: #ffd7f2; }
+  #ov-pfedit input { background: rgba(20,4,30,.78); color: #fff; border: 1px solid rgba(255,255,255,.42); }
+  #ov-pfedit input::placeholder { color: rgba(255,255,255,.4); }
+  #ov-pfedit .pf-cell { background: rgba(43,6,54,.5); border-color: rgba(255,255,255,.3); }
+  #ov-pfedit .pf-cell.sel { border-color: #ffd75e; background: rgba(255,215,94,.18); }
+  #ov-pfedit .pf-cell .pf-name { color: #ffd7f2; }
+  #ov-pfedit .ghost { color: #fff; border-color: rgba(255,255,255,.5); background: rgba(255,255,255,.08); }
   #scr-profile .pf-card input, #scr-profile .pf-card select { background: rgba(20,4,30,.78); color: #fff;
     border: 1px solid rgba(255,255,255,.42); }
   #scr-profile .pf-card select option { background: #2a0a45; color: #fff; }
@@ -1968,22 +2009,22 @@
   #scr-profile .pf-card .pf-cell.sel { border-color: #ffd75e; background: rgba(255,215,94,.18); }
   #scr-profile .pf-card .pf-cell .pf-name { color: #ffd7f2; }
   #scr-profile .pf-card .ghost { color: #fff; border-color: rgba(255,255,255,.5); background: rgba(255,255,255,.08); }
-  .pf-stats { margin-top: 14px; background: rgba(43,6,54,.55); border-radius: 16px; padding: 10px 14px 4px;
+  .pf-stats { margin-top: 11px; background: rgba(43,6,54,.55); border-radius: 16px; padding: 8px 13px 2px;
     box-shadow: inset 0 2px 8px rgba(0,0,0,.35); }
-  .pf-stats-title { position: relative; text-align: center; font-size: 16.5px; font-weight: 900; color: #fff;
-    text-shadow: 0 1px 3px rgba(0,0,0,.5); margin-bottom: 4px; }
+  .pf-stats-title { position: relative; text-align: center; font-size: 15.5px; font-weight: 900; color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,.5); margin-bottom: 2px; }
   .pf-stats-title::before, .pf-stats-title::after { content: ""; position: absolute; top: 50%; width: 26%; height: 2px;
     background: linear-gradient(90deg, transparent, rgba(255,183,224,.75)); border-radius: 2px; }
   .pf-stats-title::before { inset-inline-start: 0; }
   .pf-stats-title::after { inset-inline-end: 0; transform: scaleX(-1); }
-  .pf-stat { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0;
+  .pf-stat { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4.5px 0;
     border-bottom: 1px solid rgba(255,255,255,.12); }
   .pf-stat:last-child { border-bottom: 0; }
-  .pf-stat-lbl { font-size: 14.5px; font-weight: 700; color: #ffd7f2; }
-  .pf-stat-val { font-size: 15.5px; font-weight: 800; color: #fff; background: rgba(0,0,0,.28);
-    border-radius: 9px; padding: 4px 12px; min-width: 58px; text-align: center; }
+  .pf-stat-lbl { font-size: 13.5px; font-weight: 700; color: #ffd7f2; }
+  .pf-stat-val { font-size: 14px; font-weight: 800; color: #fff; background: rgba(0,0,0,.28);
+    border-radius: 9px; padding: 3px 10px; min-width: 52px; text-align: center; }
   #scr-profile .pf-card .pf-idnum { color: #fff; background: rgba(0,0,0,.28); border-radius: 9px;
-    font-size: 20px; letter-spacing: 3px; padding: 4px 12px; }
+    font-size: 18px; letter-spacing: 3px; padding: 3px 11px; }
   /* --- settings: the card --- */
   /* .st-wrap takes the panel's overlay box so the close ribbon can live
      OUTSIDE the scrolling panel (owner order 2026-11-11) without the
@@ -2173,7 +2214,7 @@
   #ov-backview { background: rgba(0,0,0,.92); }
   #ov-backview .bv-tile { width: min(62vw, 250px); aspect-ratio: 132 / 173; border-radius: 14px; }
   #ov-backview .ce-x { top: 14px; right: 14px; }
-  .pf-leadersbtn { width: 100%; margin-top: 10px; padding: 11px; border-radius: 14px; font-size: 16px;
+  .pf-leadersbtn { width: 100%; margin-top: 9px; padding: 9px; border-radius: 14px; font-size: 15px;
     font-weight: 900; cursor: pointer; font-family: inherit;
     color: #33270a; background: linear-gradient(180deg, #ffd75e, #d9a83c); border: 2px solid #ffd75e; }
   .pf-leadersbtn:active { transform: scale(.98); }
@@ -3232,31 +3273,32 @@
     <div class="fr-inner">
       <div class="pf-card">
         <button type="button" class="pf-x" id="btn-pf-home" aria-label="کور"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
-        <div class="pf-headrow">
-          <span class="pf-headav" id="pf-head-av"></span>
-          <span class="pf-headname" id="pf-head-name">…</span>
-          <button type="button" class="pf-pencil" id="btn-pf-edit-name" aria-label="نوم بدلول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
-        </div>
-        <div class="pf-flagrow">
-          <button type="button" class="pf-pencil sm" id="btn-pf-edit-country" aria-label="هېواد بدلول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
-          <span class="pf-flagname" id="pf-head-country">…</span>
-        </div>
+        <!-- profile rework (owner orders 2026-11-12): the old dark
+             header bar (small avatar + name + pencil) and the
+             standalone country row are DELETED. The framed photo
+             container itself now carries the player NAME under the
+             photo (replacing the old «د ګوګل عکس» caption) and the
+             COUNTRY (flag + name + its pencil) directly under the
+             name. The frame pencil opens ONE popup (#ov-pfedit) for
+             name + avatar; the country pencil opens the country box
+             below, as before. -->
         <div class="pf-pvwrap">
-          <div class="pf-preview" id="pf-preview"></div>
+          <div class="pf-preview" id="pf-preview">
+            <div id="pf-preview-av"></div>
+            <div class="pf-pvname" id="pf-pv-name">…</div>
+            <div class="pf-pvcountry">
+              <span class="pf-flagname" id="pf-pv-country">…</span>
+              <button type="button" class="pf-pencil sm" id="btn-pf-edit-country" aria-label="هېواد بدلول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+            </div>
+          </div>
           <button type="button" class="pf-editav" id="btn-pf-edit-av" aria-label="انځور بدلول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
         </div>
-        <div id="pf-picker" class="hidden">
-          <span class="pf-label" id="pf-avatar-lbl">انځور</span>
-          <div class="pf-grid" id="pf-grid"></div>
-        </div>
         <div id="pf-editbox" class="hidden">
-          <label class="pf-label" id="pf-name-lbl" for="pf-name">نوم</label>
-          <input id="pf-name" type="text" maxlength="20" placeholder="نوم دې — لکه احمد" autocomplete="name">
           <label class="pf-label" id="pf-country-lbl" for="pf-country">هېواد</label>
           <select id="pf-country"></select>
           <div class="pf-btns">
-            <button id="btn-profile-save">ساتل</button>
-            <button id="btn-profile-close" class="ghost">بندول</button>
+            <button id="btn-pf-country-save">ساتل</button>
+            <button id="btn-pf-country-close" class="ghost">بندول</button>
           </div>
         </div>
         <div class="pf-stats">
@@ -3299,6 +3341,29 @@
     </button>
   </nav>
 </section>
+
+<!-- ======== PROFILE EDIT POPUP (نوم + انځور) ========
+     ONE popup for name + avatar (owner order 2026-11-12), opened by
+     the pencil on the profile photo frame. Reuses the existing
+     #pf-name input, #pf-grid avatar picker and the profile save —
+     tore.profile semantics unchanged. Ludo family card like
+     #ov-feltpick, with the standard .ce-x outside the panel. -->
+<div class="overlay" id="ov-pfedit">
+  <div class="pfe-wrap">
+    <div class="panel pfe-panel">
+      <h2 id="pf-title">زما پروفایل</h2>
+      <label class="pf-label" id="pf-name-lbl" for="pf-name">نوم</label>
+      <input id="pf-name" type="text" maxlength="20" placeholder="نوم دې — لکه احمد" autocomplete="name">
+      <span class="pf-label" id="pf-avatar-lbl">انځور</span>
+      <div class="pf-grid" id="pf-grid"></div>
+      <div class="pf-btns">
+        <button id="btn-profile-save">ساتل</button>
+        <button id="btn-profile-close" class="ghost">بندول</button>
+      </div>
+    </div>
+    <button type="button" class="ce-x" id="btn-pfedit-x" aria-label="بندول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+  </div>
+</div>
 
 <!-- ======== WEEKLY LEADERS (د اونۍ غوره لوبغاړي) ========
      The week's top-10 by wins, from the same s-stats payload as
@@ -5245,7 +5310,7 @@ function applyI18n() {
   document.title = T('docTitle');
   const ltr = LANG === 'en';
   ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-settings', 'ov-exit', 'ov-join', 'ov-install', 'ov-nonet',
-   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-clubseatreqs', 'scr-picker', 'scr-leaders', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu', 'ov-feltpick', 'ov-feltview', 'ov-backpick', 'ov-backview', 'ov-pollcreate', 'ov-clubvs', 'ov-clubvsinv']
+   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-clubseatreqs', 'scr-picker', 'scr-leaders', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu', 'ov-feltpick', 'ov-feltview', 'ov-backpick', 'ov-backview', 'ov-pollcreate', 'ov-clubvs', 'ov-clubvsinv', 'ov-pfedit']
     .forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.setAttribute('dir', ltr ? 'ltr' : 'rtl');
@@ -5428,7 +5493,9 @@ function applyI18n() {
   set('#st-chat-lbl', 'setChat');
   set('#st-follow-lbl', 'stFollowUs');
   aria('#btn-pf-home', 'navHome');
-  aria('#btn-pf-edit-name', 'pfEditName');
+  aria('#btn-pfedit-x', 'closeBtn');
+  set('#btn-pf-country-save', 'saveBtn');
+  set('#btn-pf-country-close', 'closeBtn');
   aria('#btn-pf-edit-country', 'pfEditCountry');
   aria('#btn-st-lang-edit', 'languageLbl');
   aria('#btn-settings-x', 'closeBtn');
@@ -9882,23 +9949,23 @@ function avatarChoices() {
 }
 function sameAvatar(a, b) { return a === b; }
 function pfRenderPreview() {
-  const box = $('#pf-preview');
-  box.innerHTML = '';
-  box.appendChild(avatarEl('', pfAvatar, 88, pfAvatar === 'google' ? profile.photo : undefined));
-  const cap = document.createElement('span');
-  cap.className = 'pf-pvname';
-  cap.textContent = pfAvatar === 'google'
-    ? T('googlePhoto')
-    : avatarName((typeof pfAvatar === 'string' && AVATAR_ART[pfAvatar]) ? pfAvatar : 'av1');
-  box.appendChild(cap);
+  // The framed container (2026-11-12 rework): photo, then the player
+  // NAME under it — the old «د ګوګل عکس» / portrait-name caption is
+  // REPLACED by the name; the Google origin of a photo avatar stays
+  // visible in the edit popup's grid, where the google tile keeps
+  // its «د ګوګل عکس» label. Country renders under the name via
+  // pfRenderHead.
+  const box = $('#pf-preview-av');
+  if (box) {
+    box.innerHTML = '';
+    box.appendChild(avatarEl('', pfAvatar, 88, pfAvatar === 'google' ? profile.photo : undefined));
+  }
   pfRenderHead();
 }
 function pfRenderHead() {
-  const av = $('#pf-head-av');
-  if (av) { av.innerHTML = ''; av.appendChild(avatarEl('', pfAvatar, 54, pfAvatar === 'google' ? profile.photo : undefined)); }
-  const nm = $('#pf-head-name');
+  const nm = $('#pf-pv-name');
   if (nm) nm.textContent = ($('#pf-name').value || '').trim() || profile.name || T('playerName');
-  const cn = $('#pf-head-country');
+  const cn = $('#pf-pv-country');
   if (cn) {
     const c = $('#pf-country').value || profile.country || '';
     cn.textContent = (c && countryFlag(c) ? countryFlag(c) + ' ' : '') + (c ? dispCountry(c) : '');
@@ -10033,9 +10100,10 @@ function openProfile() {
   sel.value = COUNTRIES.includes(profile.country) ? profile.country : 'افغانستان';
   pfRenderGrid();
   pfRenderPreview();
-  // The avatar picker starts HIDDEN on the page — the ✏️ button on
-  // the photo opens it (owner order 2026-11-08).
-  $('#pf-picker').classList.add('hidden');
+  // The name+avatar editor starts CLOSED — the ✏️ button on the
+  // photo frame opens it as the #ov-pfedit popup (owner orders
+  // 2026-11-08 + 2026-11-12); the country box starts hidden too.
+  $('#ov-pfedit').classList.remove('show');
   $('#pf-editbox').classList.add('hidden');
   renderProfileStats();
   paintMatchStats();
@@ -10051,14 +10119,31 @@ function openProfile() {
 }
 function closeProfile() { $('#scr-profile').classList.add('hidden'); }
 $('#btn-profile').onclick = openProfile;
-$('#btn-profile-close').onclick = closeProfile;
-$('#btn-pf-edit-av').onclick = () => { $('#pf-picker').classList.toggle('hidden'); };
+// ONE edit popup for name + avatar (owner order 2026-11-12): opened
+// by the pencil on the photo frame. Opening re-seeds the fields from
+// the saved profile; closing WITHOUT save reverts the pending
+// avatar/name preview to the saved profile.
+function openPfEdit() {
+  pfAvatar = profile.avatar;
+  $('#pf-name').value = profile.name || '';
+  pfRenderGrid();
+  pfRenderPreview();
+  $('#ov-pfedit').classList.add('show');
+}
+function closePfEdit() {
+  $('#ov-pfedit').classList.remove('show');
+  pfAvatar = profile.avatar;
+  $('#pf-name').value = profile.name || '';
+  pfRenderPreview();
+}
+$('#btn-profile-close').onclick = closePfEdit;
+$('#btn-pfedit-x').onclick = closePfEdit;
+$('#btn-pf-edit-av').onclick = openPfEdit;
 $('#btn-pf-home').onclick = closeProfile;
-$('#btn-pf-edit-name').onclick = () => { $('#pf-editbox').classList.remove('hidden'); $('#pf-name').focus(); };
 $('#btn-pf-edit-country').onclick = () => { $('#pf-editbox').classList.remove('hidden'); $('#pf-country').focus(); };
 $('#pf-name').addEventListener('input', pfRenderHead);
 $('#pf-country').addEventListener('change', pfRenderHead);
-$('#btn-profile-save').onclick = () => {
+function pfPersist() {
   profile = {
     name: $('#pf-name').value.trim().slice(0, 20),
     // 'google' needs its photo; without one it degrades to the default.
@@ -10070,7 +10155,23 @@ $('#btn-profile-save').onclick = () => {
   };
   saveProfile();
   socialHello(); // the friends directory record follows the profile
+}
+$('#btn-profile-save').onclick = () => {
+  pfPersist();
+  $('#ov-pfedit').classList.remove('show');
   closeProfile();
+};
+$('#btn-pf-country-save').onclick = () => {
+  pfPersist();
+  closeProfile();
+};
+$('#btn-pf-country-close').onclick = () => {
+  // Abandon the pending country pick: restore the saved country in
+  // the select (and in the frame's country line) and fold the box.
+  const sel = $('#pf-country');
+  sel.value = COUNTRIES.includes(profile.country) ? profile.country : 'افغانستان';
+  pfRenderHead();
+  $('#pf-editbox').classList.add('hidden');
 };
 // Google identity → game profile: on hosts with sign-in (the Cloudflare
 // Worker), /auth/me returns the signed-in account. Adopt the account
