@@ -711,6 +711,44 @@ class SocialCore {
     this._send(id, { type: 's-dm-history', with: withId, messages: thread });
   }
 
+  // The invite's SOURCE, attached to every s-invited so the
+  // receiver can always tell where an invite comes from (owner
+  // order 2026-11-11: the popup must show whether it is from the
+  // club president or from somewhere else). Derived HERE from the
+  // club RECORD and the friends graph — never from anything the
+  // sending client claimed: a shared club (both are members of the
+  // same club record) reports the inviter's role in it (owner /
+  // deputy / plain member) plus the club name; anything else is a
+  // plain friend invite.
+  inviteSource(id, to, code) {
+    const srcOf = (club, role) => ({
+      kind: role === 'owner' ? 'clubOwner' : role === 'deputy' ? 'clubDeputy' : 'clubMember',
+      club: club.name,
+    });
+    // 1) The room's own club: when this lobby is a club game, the
+    // inviter's role in THAT club is the truest source (it names
+    // the club president even for a receiver who is not himself a
+    // member). The host reports the stamp; the role still comes
+    // from the club record here.
+    if (code && typeof this.hooks.inviteRoomClub === 'function') {
+      try {
+        const rc = this.hooks.inviteRoomClub(id, code);
+        const club = rc && rc.cid ? this.clubs.get(this._normCid(rc.cid)) : null;
+        const role = club ? this._clubRole(club, id) : null;
+        if (club && role) return srcOf(club, role);
+      } catch (e) { /* fall through to the shared-club source */ }
+    }
+    // 2) A club both players belong to: the inviter's role in it.
+    const cid = this.clubOf.get(id);
+    const club = cid ? this.clubs.get(cid) : null;
+    if (club) {
+      const role = this._clubRole(club, id);
+      if (role && this._clubRole(club, to)) return srcOf(club, role);
+    }
+    // 3) No club relation at all: a plain friend invite.
+    return { kind: 'friend' };
+  }
+
   invite(id, to, code) {
     code = (typeof code === 'string' ? code : '').toUpperCase().trim().slice(0, 8);
     if (typeof to !== 'string' || to === id || !code) return;
@@ -770,7 +808,7 @@ class SocialCore {
     if (this.pendingInvites.size > 200) {
       for (const [k, t] of this.pendingInvites) if (now - t >= INVITE_PENDING_MS) this.pendingInvites.delete(k);
     }
-    this._send(to, { type: 's-invited', from: this.person(id), code });
+    this._send(to, { type: 's-invited', from: this.person(id), code, src: this.inviteSource(id, to, code) });
   }
 
   inviteReply(id, from, code, accept) {
