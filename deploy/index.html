@@ -19,6 +19,19 @@
   }
 </script>
 <title>توره — د قندهار ورق لوبه</title>
+<!-- PWA (Phase 0): installable web app. The manifest, service worker
+     and icons are static files served at stable root URLs by every
+     host (public/ on the Node hosts, pinned Worker routes in
+     production). The service worker is deliberately conservative —
+     see sw.js. -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#4a0727">
+<link rel="icon" type="image/png" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="توره">
 <!--
   Asset credits:
   - Carpet background (carpet.jpg): photograph of an antique Oushak carpet,
@@ -596,6 +609,37 @@
     background: radial-gradient(circle at 32% 26%, #ff9de2, #d63384 60%, #a4136b); color: #fff;
     display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
   .hm-continue .play svg { width: 13px; height: 13px; fill: currentColor; display: block; }
+
+  /* PWA install entry (Phase 0): a slim gold bar under Continue,
+     shown ONLY when the app can actually be installed (a captured
+     beforeinstallprompt, or iOS Safari which gets the instructions
+     popup instead) and never when already running standalone. The
+     bar obeys the containment law: full width inside the home
+     column, fixed height, nothing overflows it. */
+  .hm-install { width: 100%; height: 46px; margin: 12px 0 0; padding: 0 16px; border-radius: 14px;
+    background: linear-gradient(90deg, #8a6d1f, #c9a227 55%, #8a6d1f); border: 2px solid rgba(255,237,176,.75);
+    display: flex; align-items: center; justify-content: center; gap: 9px; cursor: pointer; font-family: inherit;
+    box-shadow: 0 6px 16px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.45);
+    font-size: 16px; font-weight: 800; color: #2a1a05; }
+  .hm-install:active { transform: scale(.98); }
+  .hm-install .dl { width: 24px; height: 24px; flex: 0 0 auto; border-radius: 50%;
+    background: rgba(42,26,5,.16); display: flex; align-items: center; justify-content: center; }
+  .hm-install .dl svg { width: 14px; height: 14px; stroke: #2a1a05; stroke-width: 2.4; fill: none;
+    stroke-linecap: round; stroke-linejoin: round; display: block; }
+  /* iOS install instructions popup — the family Ludo card (same
+     magenta panel as #ov-exit / #ov-confirm). */
+  #ov-install .panel { border: 2px solid rgba(255,183,224,.4); border-radius: 22px; color: #fff;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
+    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
+    padding: 18px 16px 14px; max-width: 360px; }
+  #ov-install .panel h2 { color: #fff; font-size: 21px; margin: 0 0 8px; text-shadow: 0 2px 4px rgba(0,0,0,.45); }
+  #ov-install .install-steps { color: #ffd9f3; line-height: 2; margin: 0 0 4px; font-size: 15.5px; text-align: start; }
+  #ov-install .pf-btns { margin-top: 14px; }
+  #ov-install #btn-install-close { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 900; color: #fff;
+    background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
+    border: 2px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -5px 9px rgba(10,80,0,.4), 0 7px 16px rgba(20,90,0,.5);
+    text-shadow: 0 1px 3px rgba(0,60,0,.5); }
 
   /* The three small mode cards: create, join with code, play with
      friends (ludomenu reskin — the rules card moved into the settings
@@ -2483,6 +2527,11 @@
         <span id="continue-txt">لوبې ته دوام ورکړه</span>
       </button>
 
+      <button class="hm-install hidden" id="btn-install">
+        <span class="dl"><svg viewBox="0 0 24 24"><path d="M12 3v11M7.5 10 12 14.5 16.5 10M4 19.5h16"/></svg></span>
+        <span id="install-txt">اپ نصب کړه</span>
+      </button>
+
       <div class="hm-smallrow">
         <button class="hm-small" id="btn-create">
           <span class="cluster" id="fan-create" aria-hidden="true"><span class="plustok">+</span></span>
@@ -2561,9 +2610,9 @@
     var L0 = localStorage.getItem('tore.lang');
     if (L0 !== 'fa' && L0 !== 'en') L0 = 'ps';
     var MINI = {
-      ps: { playerPlaceholder: 'د تورې لوبغاړی', menuQuick: 'له روباتونو سره لوبه', menuQuickSub: 'سمدستي پیل — تمرین او تفریح', menuCreate: 'کوټه جوړه کړه', menuCreateSub: 'کوټه جوړه کړه او کوډ ملګرو ته ولېږه', menuJoin: 'د کوډ سره ورګډ شه', menuJoinSub: 'د ملګري د کوټې 4 توري کوډ دننه کړه', roomCodeLabel: 'د کوټې کوډ', joinRoom: 'کوټې ته ننوځه', continueGame: 'لوبې ته دوام ورکړه', rulesBtn: 'د لوبې قوانین', homeFootA: 'څلور کسيزه ورق لوبه', homeFootB: 'دوه ټیمه، دوه پر دوه', menuOnline: 'انلاین لوبه', menuFriends: 'له ملګرو سره لوبه', navFriends: 'ملګري', navClubs: 'کلبونه', navHome: 'کور', navProfile: 'پروفایل', navChat: 'چت', rulesBack: '→ مینو ته وګرځه' },
-      fa: { playerPlaceholder: 'بازیکن توره', menuQuick: 'بازی با ربات‌ها', menuQuickSub: 'شروع فوری — تمرین و سرگرمی', menuCreate: 'ساختن اتاق', menuCreateSub: 'اتاق بساز و کد را به دوست‌ها بفرست', menuJoin: 'پیوستن با کد اتاق', menuJoinSub: 'کد 4 حرفی اتاق دوستت را وارد کن', roomCodeLabel: 'کد اتاق', joinRoom: 'ورود به اتاق', continueGame: 'ادامهٔ بازی', rulesBtn: 'قانون‌های بازی', homeFootA: 'بازی ورق چهار نفره', homeFootB: 'دو تیم، دو به دو', menuOnline: 'بازی آنلاین', menuFriends: 'بازی با دوستان', navFriends: 'دوستان', navClubs: 'باشگاه‌ها', navHome: 'خانه', navProfile: 'پروفایل', navChat: 'چت', rulesBack: '→ برگشت به منو' },
-      en: { playerPlaceholder: 'Tore Player', menuQuick: 'Play with Bots', menuQuickSub: 'Instant start — practice & fun', menuCreate: 'Create a Room', menuCreateSub: 'Make a room and send the code to friends', menuJoin: 'Join with Room Code', menuJoinSub: "Enter your friend's 4-letter room code", roomCodeLabel: 'Room code', joinRoom: 'Enter Room', continueGame: 'Continue Game', rulesBtn: 'Game Rules', homeFootA: 'Four-player card game', homeFootB: 'Two teams, two vs two', menuOnline: 'Play Online', menuFriends: 'Play with Friends', navFriends: 'Friends', navClubs: 'Clubs', navHome: 'Home', navProfile: 'Profile', navChat: 'Chat', rulesBack: '← Back to menu' }
+      ps: { playerPlaceholder: 'د تورې لوبغاړی', menuQuick: 'له روباتونو سره لوبه', menuQuickSub: 'سمدستي پیل — تمرین او تفریح', menuCreate: 'کوټه جوړه کړه', menuCreateSub: 'کوټه جوړه کړه او کوډ ملګرو ته ولېږه', menuJoin: 'د کوډ سره ورګډ شه', menuJoinSub: 'د ملګري د کوټې 4 توري کوډ دننه کړه', roomCodeLabel: 'د کوټې کوډ', joinRoom: 'کوټې ته ننوځه', continueGame: 'لوبې ته دوام ورکړه', installApp: 'اپ نصب کړه', rulesBtn: 'د لوبې قوانین', homeFootA: 'څلور کسيزه ورق لوبه', homeFootB: 'دوه ټیمه، دوه پر دوه', menuOnline: 'انلاین لوبه', menuFriends: 'له ملګرو سره لوبه', navFriends: 'ملګري', navClubs: 'کلبونه', navHome: 'کور', navProfile: 'پروفایل', navChat: 'چت', rulesBack: '→ مینو ته وګرځه' },
+      fa: { playerPlaceholder: 'بازیکن توره', menuQuick: 'بازی با ربات‌ها', menuQuickSub: 'شروع فوری — تمرین و سرگرمی', menuCreate: 'ساختن اتاق', menuCreateSub: 'اتاق بساز و کد را به دوست‌ها بفرست', menuJoin: 'پیوستن با کد اتاق', menuJoinSub: 'کد 4 حرفی اتاق دوستت را وارد کن', roomCodeLabel: 'کد اتاق', joinRoom: 'ورود به اتاق', continueGame: 'ادامهٔ بازی', installApp: 'نصب اپ', rulesBtn: 'قانون‌های بازی', homeFootA: 'بازی ورق چهار نفره', homeFootB: 'دو تیم، دو به دو', menuOnline: 'بازی آنلاین', menuFriends: 'دوستان', navClubs: 'باشگاه‌ها', navHome: 'خانه', navProfile: 'پروفایل', navChat: 'چت', rulesBack: '→ برگشت به منو' },
+      en: { playerPlaceholder: 'Tore Player', menuQuick: 'Play with Bots', menuQuickSub: 'Instant start — practice & fun', menuCreate: 'Create a Room', menuCreateSub: 'Make a room and send the code to friends', menuJoin: 'Join with Room Code', menuJoinSub: "Enter your friend's 4-letter room code", roomCodeLabel: 'Room code', joinRoom: 'Enter Room', continueGame: 'Continue Game', installApp: 'Install app', rulesBtn: 'Game Rules', homeFootA: 'Four-player card game', homeFootB: 'Two teams, two vs two', menuOnline: 'Play Online', menuFriends: 'Play with Friends', navFriends: 'Friends', navClubs: 'Clubs', navHome: 'Home', navProfile: 'Profile', navChat: 'Chat', rulesBack: '← Back to menu' }
     }[L0];
     document.documentElement.lang = L0;
     var home0 = document.getElementById('scr-home');
@@ -2591,6 +2640,7 @@
     set0('#nav-profile-lbl', MINI.navProfile);
     set0('#nav-chat-lbl', MINI.navChat);
     set0('#continue-txt', MINI.continueGame);
+    set0('#install-txt', MINI.installApp);
     set0('#rules-txt', MINI.rulesBtn);
     set0('#foot-a', MINI.homeFootA);
     set0('#foot-b', MINI.homeFootB);
@@ -3520,6 +3570,17 @@
 </div>
 
 <!-- ======== EXIT CONFIRM POPUP ======== -->
+<!-- ======== PWA INSTALL INSTRUCTIONS (iOS Safari: Share -> Add to Home Screen) ======== -->
+<div class="overlay" id="ov-install">
+  <div class="panel">
+    <h2 id="install-title">اپ نصب کړه</h2>
+    <p class="install-steps" id="install-steps"></p>
+    <div class="pf-btns">
+      <button id="btn-install-close">بندول</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="ov-exit">
   <div class="panel pf-panel">
     <h2 id="exit-title">له لوبې وځې؟</h2>
@@ -3881,6 +3942,8 @@ const STR = {
     rowQs: 'ماتکه کالا (Q♠) ونیوله',
     nextRoundSoon: 'بل لاس ژر پیلېږي…',
     tapToClose: 'د بندولو لپاره ټک وکړه',
+    installApp: 'اپ نصب کړه',
+    installSteps: '۱. لاندې د <b>Share</b> تڼۍ (⬆️) ووهه<br>۲. <b>«Add to Home Screen»</b> وټاکه<br>۳. <b>«Add»</b> ووهه — توره به ستا په کور سکرین کې د یو اپ په څېر راشي',
     cancelLine: (a, ca, b, cb, p) => '🤝 تکانونه یو له بله خلاص شول: د (' + a + ') ټیم ' + ca + ' تکان او د (' + b + ') ټیم ' + cb + ' تکان — ' + p + ' جوړې له منځه لاړې، بې حسابه',
     pendLine: (names) => 'د (' + names + ') ټیم تکان د راتلونکو لاسونو لپاره پاتې شو ⭐',
     execLine: (amount, victim, takan) => amount + ' تاوان د (' + victim + ') له جمع شوي څخه کم شو او (' + takan + ') ټیم ته ورکړل شو',
@@ -4199,6 +4262,8 @@ const STR = {
     rowQs: 'ماتکه کالا (Q♠) را گرفت',
     nextRoundSoon: 'دست بعدی به‌زودی شروع می‌شود…',
     tapToClose: 'برای بستن، روی آن بزن',
+    installApp: 'نصب اپ',
+    installSteps: '۱. دکمهٔ <b>Share</b> (⬆️) را در پایین بزن<br>۲. <b>«Add to Home Screen»</b> را انتخاب کن<br>۳. <b>«Add»</b> را بزن — توره مثل یک اپ روی صفحهٔ اصلی‌ات می‌آید',
     cancelLine: (a, ca, b, cb, p) => '🤝 تکان‌ها با هم ادا شدند: تیمِ (' + a + ') ' + ca + ' تکان و تیمِ (' + b + ') ' + cb + ' تکان — ' + p + ' جفت حذف شد، بدون حساب',
     pendLine: (names) => 'تکانِ تیمِ (' + names + ') ماند برای دست‌های بعد ⭐',
     execLine: (amount, victim, takan) => amount + ' تاوان از جمع‌شدهٔ تیمِ (' + victim + ') کم شد و به تیمِ (' + takan + ') داده شد',
@@ -4517,6 +4582,8 @@ const STR = {
     rowQs: 'Took the Queen of Spades (Q♠)',
     nextRoundSoon: 'The next hand starts soon…',
     tapToClose: 'Tap to close',
+    installApp: 'Install app',
+    installSteps: '1. Tap the <b>Share</b> button (⬆️) below<br>2. Choose <b>“Add to Home Screen”</b><br>3. Tap <b>“Add”</b> — Tore appears on your home screen like an app',
     cancelLine: (a, ca, b, cb, p) => '🤝 Takans cancelled out: team (' + a + ') ' + ca + ' and team (' + b + ') ' + cb + ' — ' + p + ' pair(s) removed, no charge',
     pendLine: (names) => 'Team (' + names + ')’s takan stays for later hands ⭐',
     execLine: (amount, victim, takan) => amount + ' tawan moved from team (' + victim + ')’s bank to team (' + takan + ')',
@@ -4569,7 +4636,7 @@ function applyI18n() {
   document.documentElement.lang = LANG;
   document.title = T('docTitle');
   const ltr = LANG === 'en';
-  ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-settings', 'ov-exit', 'ov-join',
+  ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-settings', 'ov-exit', 'ov-join', 'ov-install',
    'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-clubseatreqs', 'scr-picker', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu']
     .forEach((id) => {
       const el = document.getElementById(id);
@@ -4604,6 +4671,10 @@ function applyI18n() {
   if (codeInp) codeInp.placeholder = T('roomCodeLabel');
   set('#btn-join', 'joinRoom');
   set('#continue-txt', 'continueGame');
+  set('#install-txt', 'installApp');
+  set('#install-title', 'installApp');
+  { const st = $('#install-steps'); if (st) st.innerHTML = T('installSteps'); }
+  set('#btn-install-close', 'closeBtn');
   set('#rules-txt', 'rulesBtn');
   set('#foot-a', 'homeFootA');
   set('#foot-b', 'homeFootB');
@@ -8211,6 +8282,70 @@ $('#btn-continue').onclick = () => {
   intentionalClose = false;
   connect(() => send({ type: 'reconnect', code: s.code, token: s.token, ...profileMsg() }));
 };
+// ---------- PWA (Phase 0): service worker + install entry ----------
+// The worker (sw.js) is conservative by design: cache-first only for
+// the pinned PWA assets, network-first for the shell, and it never
+// touches sockets, auth, TURN or any POST — registration here is
+// equally guarded (secure contexts only, every failure swallowed:
+// the game must run exactly as before on any browser that declines).
+try {
+  if ('serviceWorker' in navigator &&
+      (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+} catch (e) { /* no PWA on this browser — the game is unaffected */ }
+// The home install entry: visible ONLY when installation is really
+// possible — a captured beforeinstallprompt (Android/Chrome), or
+// iOS Safari, which has no such event and gets the Share-sheet
+// instructions popup instead. Already-standalone (installed) hides
+// it for good.
+let deferredInstallPrompt = null;
+function pwaStandalone() {
+  try {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      window.navigator.standalone === true;
+  } catch (e) { return false; }
+}
+function pwaIsIOS() {
+  const ua = window.navigator.userAgent || '';
+  return /iphone|ipad|ipod/i.test(ua) ||
+    (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1);
+}
+function paintInstallEntry() {
+  const btn = $('#btn-install');
+  if (!btn) return;
+  const showIt = !pwaStandalone() && (!!deferredInstallPrompt || pwaIsIOS());
+  btn.classList.toggle('hidden', !showIt);
+}
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  paintInstallEntry();
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  paintInstallEntry();
+});
+$('#btn-install').onclick = async () => {
+  if (deferredInstallPrompt) {
+    const ev = deferredInstallPrompt;
+    deferredInstallPrompt = null;
+    paintInstallEntry();
+    try {
+      await ev.prompt();
+      if (ev.userChoice) await ev.userChoice;
+    } catch (e) { /* dismissed — the entry may return with a fresh event */ }
+    return;
+  }
+  // iOS Safari (and any browser without the prompt): the Ludo-card
+  // instructions — Share, then «Add to Home Screen».
+  $('#ov-install').classList.add('show');
+};
+$('#btn-install-close').onclick = () => $('#ov-install').classList.remove('show');
+$('#ov-install').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('show');
+});
+paintInstallEntry();
 // ---------- bottom nav (home screen) ----------
 // ملګري opens the friends page, کلبونه opens the clubs page,
 // پروفایل opens the profile PAGE, چت opens the chat page;
