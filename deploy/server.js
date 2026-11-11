@@ -178,6 +178,11 @@ const social = createNodeSocial({
     const room = rooms.get(code);
     return !!room && room.phase === 'lobby';
   },
+  // Invite source badge (2026-11-11): the room's club stamp.
+  roomClub: (id, code) => {
+    const room = rooms.get(code);
+    return room && room.club ? { cid: room.club.cid, name: room.club.name } : null;
+  },
   inGameCheck: sidInGame,
   inLobbyCheck: sidInLobby,
   verifyBusy: verifyBusySid,
@@ -258,6 +263,7 @@ function createRoom() {
     roundTimer: null,
     trickTimer: null,
     trickHold: null, // { plays: [{seat, card}...], winnerSeat } while a finished trick is displayed
+    felt: 11, // the creator's table felt (1..11) — set from the create frame, fixed for the room's life
   };
   room.emit = (evt) => onMatchEvent(room, evt);
   rooms.set(room.code, room);
@@ -290,6 +296,7 @@ function stateFor(room, seatIdx) {
     type: 'state',
     phase: room.phase,
     code: room.code,
+    felt: room.felt || 11,
     mySeat: seatIdx,
     hostSeat: hostSeat(room),
     target: G.BANK_LOSE_TARGET,
@@ -655,6 +662,7 @@ function handleMessage(ws, msg) {
   switch (msg.type) {
     case 'create': {
       const room = createRoom();
+      room.felt = cleanFelt(msg.felt); // creator's felt, validated; fixed at creation
       attachPlayer(ws, room, 0, cleanName(msg.name), msg);
       break;
     }
@@ -853,6 +861,16 @@ function handleMessage(ws, msg) {
 function cleanName(name) {
   const n = String(name || '').trim().slice(0, 20);
   return n || 'بازیکن';
+}
+
+// Table felts (قالین): the create frame carries the creator's felt
+// (integer 1..11). Anything else — missing, fractional, out of
+// range, a forged string — falls back to 11 (the default: felt 11,
+// the ORIGINAL cream carpet from the game's first build). The
+// felt is fixed at creation; stateFor stamps it on every push so
+// the whole room plays on the creator's field.
+function cleanFelt(v) {
+  return (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 11) ? v : 11;
 }
 
 httpServer.listen(PORT, () => {
