@@ -2366,6 +2366,57 @@
   #ov-join #btn-join-close { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 800; color: #ffd9f3;
     background: rgba(43,6,54,.55); border: 1.5px solid rgba(255,255,255,.4);
     box-shadow: inset 0 2px 9px rgba(0,0,0,.45); }
+  /* --- features-batch + missed popups in the CLUB UI language
+     (owner order 2026-11-11, evening): the poll-create popup and
+     the club-vs-club challenge/invite popups shipped in the
+     features batch still wore the carpet-era brown .panel with
+     pale base inputs and the gold base primary (his live club
+     screenshots); the blocked-list and player-profile-view
+     popups had been missed by every earlier sweep the same way.
+     All five now wear the family card — the #ov-round/#ov-invite
+     magenta gradient with a GOLD title, dark-plum fields and
+     pick rows, the green glossy primary gloss and a dark-plum
+     لغوه — and the rematch offer's accept/decline inside
+     #ov-match take the same gloss. Checked and NOT repainted:
+     the poll-close action has no popup (the room button sends
+     at once) and the leaders page is a full screen on the purple
+     shell, not a panel. Ids, strings, geometry and behaviour
+     are untouched. --- */
+  #ov-pollcreate .panel, #ov-clubvs .panel, #ov-clubvsinv .panel,
+  #ov-blocked .panel, #ov-playerview .panel { border: 2px solid rgba(255,183,224,.4); border-radius: 22px; color: #fff;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
+    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
+    padding: 18px 16px 14px; }
+  #ov-pollcreate .panel h2, #ov-clubvs .panel h2, #ov-clubvsinv .panel h2,
+  #ov-blocked .panel h2, #ov-playerview .panel h2 { color: #ffd75e; font-size: 22px; margin: 0 0 12px;
+    text-shadow: 0 2px 5px rgba(0,0,0,.5); }
+  #ov-pollcreate input, #ov-clubvs input { background: rgba(43,6,54,.55); color: #fff;
+    border: 1.5px solid rgba(255,255,255,.4); border-radius: 13px;
+    box-shadow: inset 0 2px 9px rgba(0,0,0,.45); }
+  #ov-pollcreate input::placeholder, #ov-clubvs input::placeholder { color: rgba(255,217,243,.55); }
+  #ov-clubvs .fr-row, #ov-clubvsinv .fr-row, #ov-blocked .fr-row { background: rgba(43,6,54,.55);
+    border: 1.5px solid rgba(255,255,255,.22); border-radius: 12px;
+    box-shadow: inset 0 2px 9px rgba(0,0,0,.4); padding: 8px 10px; margin: 0 0 6px; }
+  #ov-clubvs .fr-row:last-child, #ov-clubvsinv .fr-row:last-child, #ov-blocked .fr-row:last-child { margin-bottom: 0; }
+  #cvi-players { color: #ffe9a3; }
+  #ov-pollcreate .pf-btns, #ov-clubvs .pf-btns, #ov-clubvsinv .pf-btns,
+  #ov-blocked .pf-btns, #ov-playerview .pf-btns { margin-top: 14px; }
+  #btn-pc-create, #btn-cv-send, #btn-cvi-accept, #btn-pv-watch { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 900; color: #fff;
+    background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
+    border: 2px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -5px 9px rgba(10,80,0,.4), 0 7px 16px rgba(20,90,0,.5);
+    text-shadow: 0 1px 3px rgba(0,60,0,.5); }
+  #btn-pc-cancel, #btn-cv-cancel, #btn-cvi-decline, #btn-blocked-close, #btn-pv-close { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 800; color: #ffd9f3;
+    background: rgba(43,6,54,.55); border: 1.5px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 9px rgba(0,0,0,.45); }
+  #ov-match #btn-rematch-accept { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 900; color: #fff;
+    background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
+    border: 2px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -5px 9px rgba(10,80,0,.4), 0 7px 16px rgba(20,90,0,.5);
+    text-shadow: 0 1px 3px rgba(0,60,0,.5); }
+  #ov-match #btn-rematch-decline { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 800; color: #ffd9f3;
+    background: rgba(43,6,54,.55); border: 1.5px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 9px rgba(0,0,0,.45); }
   /* --- friends: wood sign + magenta tiles + lavender cards --- */
   #scr-friends { background-color: #6d0d3f;
     background-image:
