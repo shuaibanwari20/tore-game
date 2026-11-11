@@ -28,8 +28,16 @@
  *
  * Bump SW_VERSION on any change to this file or the precache list:
  * activate() deletes every older tore-* cache.
+ *
+ * v4 (offline build, 2026-11-11): a pure cache roll shipped with
+ * the offline bot mode. The laws above are unchanged — what makes
+ * offline play whole is the CLIENT's asset warm-up (it fetches the
+ * deck, the carpet thumbs and the player's own felt once per SW
+ * version; this worker's cache-first asset route below files every
+ * one of those responses into tore-assets-v4). The gate law is
+ * untouched: only HTTP-200 navigations ever enter the shell cache.
  */
-const SW_VERSION = 'v3';
+const SW_VERSION = 'v4';
 const STATIC_CACHE = 'tore-static-' + SW_VERSION;
 const SHELL_CACHE = 'tore-shell-' + SW_VERSION;
 const ASSET_CACHE = 'tore-assets-' + SW_VERSION;
