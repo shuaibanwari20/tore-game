@@ -5,13 +5,19 @@
  * The game is a LIVE multiplayer app behind a sign-in gate, so this
  * worker's first law is: never get between the player and the game.
  *
- *   - It answers ONLY two kinds of request itself:
+ *   - It answers ONLY three kinds of request itself:
  *       1. the pinned static PWA assets (icons + manifest) —
  *          cache-first; they are versioned by the cache name below.
  *       2. page navigations (the HTML shell at '/') — NETWORK-FIRST,
  *          so the ?v= cache-bust flow and every new build arrive
  *          exactly as before; a copy of the last GOOD shell is kept
- *          only as an offline fallback.
+ *          only as an offline fallback. (Since the speed pass the
+ *          shell revalidates with ETag/If-None-Match, so this
+ *          network-first check costs a 304, not the whole page.)
+ *       3. the game IMAGE files (speed pass: /cards/, /carpets/
+ *          incl. thumbs, /carpet.jpg) — CACHE-FIRST from a versioned
+ *          runtime cache, filled on first use: the installed app
+ *          reopens with its deck and carpets already on the phone.
  *   - Everything else is left completely alone (no respondWith):
  *     WebSocket upgrades (not fetch events anyway), /auth/*,
  *     /turn-credentials, /social, /club-cover, every POST and every
@@ -23,9 +29,10 @@
  * Bump SW_VERSION on any change to this file or the precache list:
  * activate() deletes every older tore-* cache.
  */
-const SW_VERSION = 'v2';
+const SW_VERSION = 'v3';
 const STATIC_CACHE = 'tore-static-' + SW_VERSION;
 const SHELL_CACHE = 'tore-shell-' + SW_VERSION;
+const ASSET_CACHE = 'tore-assets-' + SW_VERSION;
 const PRECACHE = [
   '/manifest.webmanifest',
   '/icons/icon-192.png',
@@ -48,7 +55,7 @@ self.addEventListener('activate', (event) => {
     caches.keys()
       .then((keys) => Promise.all(
         keys
-          .filter((k) => k.startsWith('tore-') && k !== STATIC_CACHE && k !== SHELL_CACHE)
+          .filter((k) => k.startsWith('tore-') && k !== STATIC_CACHE && k !== SHELL_CACHE && k !== ASSET_CACHE)
           .map((k) => caches.delete(k))
       ))
       .then(() => self.clients.claim())
@@ -83,6 +90,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // 1b) Game image files (speed pass): cache-first from the
+  //     versioned asset cache; a miss fetches once and stores the
+  //     copy. Only 200s are stored. A new SW_VERSION (shipped with
+  //     any client rebuild that changes the art) retires the lot.
+  if (path.startsWith('/cards/') || path.startsWith('/carpets/') || path === '/carpet.jpg') {
+    event.respondWith(
+      caches.open(ASSET_CACHE).then((cache) => cache.match(req, { ignoreSearch: true }).then((hit) => hit || fetch(req).then((res) => {
+        if (res && res.status === 200) {
+          const copy = res.clone();
+          cache.put(req, copy).catch(() => {});
+        }
+        return res;
+      })))
+    );
+    return;
+  }
+
   // 2) The HTML shell: network-first. Only a 200 may be stored as
   //    the offline fallback — a 401 gate page (or any error) is
   //    served as-is and NEVER cached.
@@ -100,5 +124,5 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Everything else (stickers, covers, card requests, …): untouched.
+  // Everything else (stickers, covers, …): untouched.
 });
