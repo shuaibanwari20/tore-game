@@ -27,6 +27,7 @@ const RECONNECT_GRACE_MS = 120000; // seat+hand kept for a reconnecting player
 const INDEX_HTML = fs.readFileSync(path.join(__dirname, 'index.html'));
 const STICKERS_DIR = path.join(__dirname, 'stickers');
 const COVERS_DIR = path.join(__dirname, 'covers');
+const ICONS_DIR = path.join(__dirname, 'icons');
 
 const httpServer = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
@@ -51,6 +52,33 @@ const httpServer = http.createServer((req, res) => {
         res.writeHead(200, { 'Content-Type': 'image/gif', 'Cache-Control': 'public, max-age=86400' });
         return fs.createReadStream(full).pipe(res);
       }
+    }
+    res.writeHead(404); return res.end('not found');
+  }
+  // The PWA statics (copied here by build-deploy.js from public/):
+  // the manifest and the service worker are served no-cache so an
+  // update lands at once; the icons ride the long cache like the
+  // stickers. Only the known file set exists.
+  if (url === '/manifest.webmanifest' || url === '/sw.js') {
+    const name = url.slice(1);
+    const full = path.join(__dirname, name);
+    if (fs.existsSync(full)) {
+      res.writeHead(200, {
+        'Content-Type': name === 'sw.js' ? 'text/javascript' : 'application/manifest+json',
+        'Cache-Control': 'no-cache',
+      });
+      return fs.createReadStream(full).pipe(res);
+    }
+    res.writeHead(404); return res.end('not found');
+  }
+  if (url === '/apple-touch-icon.png' || url.startsWith('/icons/')) {
+    const name = url === '/apple-touch-icon.png' ? 'apple-touch-icon.png' : url.slice('/icons/'.length);
+    const pinned = url === '/apple-touch-icon.png'
+      ? path.join(__dirname, name)
+      : (/^icon-(192|512|512-maskable)\.png$/.test(name) ? path.join(ICONS_DIR, name) : null);
+    if (pinned && fs.existsSync(pinned)) {
+      res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' });
+      return fs.createReadStream(pinned).pipe(res);
     }
     res.writeHead(404); return res.end('not found');
   }
