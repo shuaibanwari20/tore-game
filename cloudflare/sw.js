@@ -23,7 +23,7 @@
  * Bump SW_VERSION on any change to this file or the precache list:
  * activate() deletes every older tore-* cache.
  */
-const SW_VERSION = 'v1';
+const SW_VERSION = 'v2';
 const STATIC_CACHE = 'tore-static-' + SW_VERSION;
 const SHELL_CACHE = 'tore-shell-' + SW_VERSION;
 const PRECACHE = [
