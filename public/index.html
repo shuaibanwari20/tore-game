@@ -2078,6 +2078,57 @@
   #ov-exit #btn-exit-cancel { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 800; color: #ffd9f3;
     background: rgba(43,6,54,.55); border: 1.5px solid rgba(255,255,255,.4);
     box-shadow: inset 0 2px 9px rgba(0,0,0,.45); }
+  /* --- round-end summary (#ov-round) + match end (#ov-match) in
+     the CLUB UI language (owner order 2026-11-11): both still wore
+     the carpet-era brown .panel — the summary was missed by the
+     table reskin. It is now the family magenta card with a GOLD
+     title and the two teams in ALIGNED COLUMNS (player names in
+     the column heads) over dark-plum rows, so every number sits
+     under its own team and can no longer be read against the
+     wrong side. All ids, strings and the data flow are unchanged;
+     the one change of form: the final-tawan sentence became two
+     big column numbers — its team names moved into the column
+     heads, nothing was dropped. Timing (same order): the hosts'
+     ROUND_PAUSE_MS went 6000 -> 8000, and a TAP on the card
+     closes it at once on this screen only, so the player can
+     play — the room's pause runs its course for everyone. --- */
+  #ov-round .panel, #ov-match .panel { border: 2px solid rgba(255,183,224,.4); border-radius: 22px; color: #fff;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
+    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
+    padding: 18px 16px 14px; }
+  #ov-round .panel h2, #ov-match .panel h2 { color: #ffd75e; font-size: 23px; margin: 0 0 12px;
+    text-shadow: 0 2px 5px rgba(0,0,0,.5); }
+  #ov-round { cursor: pointer; }
+  .ovr-grid { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+  .ovr-head, .ovr-row { display: grid; grid-template-columns: 1fr 74px 74px; align-items: center; column-gap: 6px; }
+  .ovr-head { padding: 0 10px 1px; }
+  .ovr-hteam { text-align: center; line-height: 1.35; min-width: 0; }
+  .ovr-hteam small { display: block; font-size: 14px; font-weight: 900; color: #ffd75e; }
+  .ovr-hteam .ovr-names { display: block; font-size: 10.5px; font-weight: 600; color: #ffd9f3; opacity: .9; }
+  .ovr-row { background: rgba(43,6,54,.5); border: 1.5px solid rgba(255,255,255,.22); border-radius: 12px;
+    box-shadow: inset 0 2px 9px rgba(0,0,0,.4); padding: 7px 10px; }
+  .ovr-lbl { font-size: 14.5px; font-weight: 700; color: #ffd9f3; text-align: start; line-height: 1.4; }
+  .ovr-v { font-size: 18px; font-weight: 900; color: #fff; text-align: center; text-shadow: 0 1px 3px rgba(0,0,0,.45); }
+  .ovr-stars { color: #ffd75e; font-size: 15px; letter-spacing: 1px; }
+  .ovr-row.final { background: rgba(43,6,54,.68); border-color: rgba(255,215,94,.55); }
+  .ovr-row.final .ovr-lbl { color: #fff; font-size: 16px; }
+  .ovr-row.final .ovr-v { font-size: 26px; color: #ffd75e; }
+  .ovr-row.bank .ovr-v { color: #ffd75e; font-size: 20px; }
+  .ovr-wide { grid-column: 2 / 4; font-size: 15px; font-weight: 800; color: #fff; text-align: center; line-height: 1.45; }
+  .ovr-note { font-size: 13.5px; line-height: 1.65; color: #ffd9f3; padding: 5px 8px 1px; }
+  #ovr-next { margin-top: 9px; font-size: 13.5px; color: #ffd9f3; opacity: .9; }
+  #ovr-tap { margin-top: 3px; font-size: 11.5px; color: #ffd9f3; opacity: .65; }
+  /* match end shares the card: its one wide row becomes a
+     dark-plum strip and نوې لوبه takes the family's green gloss. */
+  #ov-match .panel .row { background: rgba(43,6,54,.5); border: 1.5px solid rgba(255,255,255,.22); border-radius: 12px;
+    box-shadow: inset 0 2px 9px rgba(0,0,0,.4); padding: 10px 12px; color: #fff; }
+  #ov-match .panel .row small { color: #ffd75e; opacity: 1; font-size: 12px; font-weight: 800; }
+  #ov-match #ov-f-why { color: #ffd9f3; padding: 10px 4px 0; line-height: 1.6; }
+  #ov-match #btn-newgame { margin-top: 14px; width: 100%; padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 900; color: #fff;
+    background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
+    border: 2px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -5px 9px rgba(10,80,0,.4), 0 7px 16px rgba(20,90,0,.5);
+    text-shadow: 0 1px 3px rgba(0,60,0,.5); cursor: pointer; }
   /* --- join-by-code (#ov-join) in the CLUB UI language
      (owner order 2026-11-10): the «د کوډ سره ورګډ شه» popup still
      wore the carpet-era brown/gold panel on his home screenshot,
@@ -3366,18 +3417,30 @@
 <div class="overlay" id="ov-round">
   <div class="panel">
     <h2 id="ov-round-title">د لاس پای</h2>
-    <div class="row"><span id="ovr-card-lbl">د ورقو تاوان</span><span><small class="sm-us">موږ </small><b id="ov-card-us">0</b> · <small class="sm-them">سیال </small><b id="ov-card-them">0</b></span></div>
-    <div class="row" id="ov-tk-row"><span id="ovr-tk-lbl">تکان ⭐</span><span><small class="sm-us">موږ </small><b id="ov-tk-us">—</b> · <small class="sm-them">سیال </small><b id="ov-tk-them">—</b></span></div>
-    <div id="ov-cancel" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
-    <div id="ov-pend" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
-    <div id="ov-exec" style="display:none; font-size:13.5px; opacity:.95; padding:2px 2px 0"></div>
-    <div class="row big"><span id="ovr-final-lbl">وروستی تاوان</span><b id="ov-tw">—</b></div>
-    <div class="row"><span id="ovr-add-lbl">بانک ته ورزیات شو</span><span><small class="sm-us">موږ </small><b id="ov-add-us">0</b> · <small class="sm-them">سیال </small><b id="ov-add-them">0</b></span></div>
-    <div id="ov-bump" style="font-size:13.5px; opacity:.9; padding:2px 2px 0"></div>
-    <div class="row"><span id="ovr-bank-lbl">جمع شوی تاوان (بانک)</span><span><small class="sm-us">موږ </small><b id="ov-bk-us">0</b> · <small class="sm-them">سیال </small><b id="ov-bk-them">0</b></span></div>
-    <div class="row"><span id="ovr-qs-lbl">ماتکه کالا (Q♠) ونیوله</span><b id="ov-qs">—</b></div>
-    <div id="ov-tie" style="display:none; font-size:13.5px; opacity:.9; padding:4px 2px 0"></div>
-    <div id="ovr-next" style="margin-top:10px; font-size:13.5px; opacity:.85">بل لاس ژر پیلېږي…</div>
+    <div class="ovr-grid">
+      <div class="ovr-head">
+        <span class="ovr-hlab"></span>
+        <span class="ovr-hteam"><small class="sm-us">موږ </small><span class="ovr-names" id="ovr-names-us"></span></span>
+        <span class="ovr-hteam"><small class="sm-them">سیال </small><span class="ovr-names" id="ovr-names-them"></span></span>
+      </div>
+      <div class="ovr-row"><span class="ovr-lbl" id="ovr-card-lbl">د ورقو تاوان</span><b class="ovr-v" id="ov-card-us">0</b><b class="ovr-v" id="ov-card-them">0</b></div>
+      <div class="ovr-row" id="ov-tk-row"><span class="ovr-lbl" id="ovr-tk-lbl">تکان ⭐</span><b class="ovr-v ovr-stars" id="ov-tk-us">—</b><b class="ovr-v ovr-stars" id="ov-tk-them">—</b></div>
+    </div>
+    <div class="ovr-note" id="ov-cancel" style="display:none"></div>
+    <div class="ovr-note" id="ov-pend" style="display:none"></div>
+    <div class="ovr-note" id="ov-exec" style="display:none"></div>
+    <div class="ovr-grid">
+      <div class="ovr-row final"><span class="ovr-lbl" id="ovr-final-lbl">وروستی تاوان</span><b class="ovr-v" id="ov-fin-us">—</b><b class="ovr-v" id="ov-fin-them">—</b></div>
+      <div class="ovr-row"><span class="ovr-lbl" id="ovr-add-lbl">بانک ته ورزیات شو</span><b class="ovr-v" id="ov-add-us">0</b><b class="ovr-v" id="ov-add-them">0</b></div>
+    </div>
+    <div class="ovr-note" id="ov-bump"></div>
+    <div class="ovr-grid">
+      <div class="ovr-row bank"><span class="ovr-lbl" id="ovr-bank-lbl">جمع شوی تاوان (بانک)</span><b class="ovr-v" id="ov-bk-us">0</b><b class="ovr-v" id="ov-bk-them">0</b></div>
+      <div class="ovr-row"><span class="ovr-lbl" id="ovr-qs-lbl">ماتکه کالا (Q♠) ونیوله</span><span class="ovr-wide" id="ov-qs">—</span></div>
+    </div>
+    <div class="ovr-note" id="ov-tie" style="display:none"></div>
+    <div id="ovr-next">بل لاس ژر پیلېږي…</div>
+    <div id="ovr-tap">د بندولو لپاره ټک وکړه</div>
   </div>
 </div>
 
@@ -3813,6 +3876,7 @@ const STR = {
     rowBankTotal: 'جمع شوی تاوان (بانک)',
     rowQs: 'ماتکه کالا (Q♠) ونیوله',
     nextRoundSoon: 'بل لاس ژر پیلېږي…',
+    tapToClose: 'د بندولو لپاره ټک وکړه',
     cancelLine: (a, ca, b, cb, p) => '🤝 تکانونه یو له بله خلاص شول: د (' + a + ') ټیم ' + ca + ' تکان او د (' + b + ') ټیم ' + cb + ' تکان — ' + p + ' جوړې له منځه لاړې، بې حسابه',
     pendLine: (names) => 'د (' + names + ') ټیم تکان د راتلونکو لاسونو لپاره پاتې شو ⭐',
     execLine: (amount, victim, takan) => amount + ' تاوان د (' + victim + ') له جمع شوي څخه کم شو او (' + takan + ') ټیم ته ورکړل شو',
@@ -4130,6 +4194,7 @@ const STR = {
     rowBankTotal: 'تاوان جمع‌شده (بانک)',
     rowQs: 'ماتکه کالا (Q♠) را گرفت',
     nextRoundSoon: 'دست بعدی به‌زودی شروع می‌شود…',
+    tapToClose: 'برای بستن، روی آن بزن',
     cancelLine: (a, ca, b, cb, p) => '🤝 تکان‌ها با هم ادا شدند: تیمِ (' + a + ') ' + ca + ' تکان و تیمِ (' + b + ') ' + cb + ' تکان — ' + p + ' جفت حذف شد، بدون حساب',
     pendLine: (names) => 'تکانِ تیمِ (' + names + ') ماند برای دست‌های بعد ⭐',
     execLine: (amount, victim, takan) => amount + ' تاوان از جمع‌شدهٔ تیمِ (' + victim + ') کم شد و به تیمِ (' + takan + ') داده شد',
@@ -4447,6 +4512,7 @@ const STR = {
     rowBankTotal: 'Banked tawan (bank)',
     rowQs: 'Took the Queen of Spades (Q♠)',
     nextRoundSoon: 'The next hand starts soon…',
+    tapToClose: 'Tap to close',
     cancelLine: (a, ca, b, cb, p) => '🤝 Takans cancelled out: team (' + a + ') ' + ca + ' and team (' + b + ') ' + cb + ' — ' + p + ' pair(s) removed, no charge',
     pendLine: (names) => 'Team (' + names + ')’s takan stays for later hands ⭐',
     execLine: (amount, victim, takan) => amount + ' tawan moved from team (' + victim + ')’s bank to team (' + takan + ')',
@@ -4646,6 +4712,7 @@ function applyI18n() {
   set('#ovr-bank-lbl', 'rowBankTotal');
   set('#ovr-qs-lbl', 'rowQs');
   set('#ovr-next', 'nextRoundSoon');
+  set('#ovr-tap', 'tapToClose');
   setAll('.sm-us', 'usSmall');
   setAll('.sm-them', 'themSmall');
   set('#ovm-final-lbl', 'finalBankedLbl');
@@ -12064,6 +12131,8 @@ function barAvatar(pos, s, seatIdx) {
 }
 
 let prevPhase = ''; // matchEnd edge for the vibration buzz
+let ovRoundNo = -1;      // roundNo of the round summary currently on screen
+let ovRoundDismissed = -1; // roundNo this player tapped away (this screen only)
 function render(st) {
   if (st.phase === 'lobby') { renderLobby(st); show('scr-lobby'); return; }
   show('scr-game');
@@ -12219,13 +12288,18 @@ function render(st) {
 
   // overlays
   const r = st.roundResult;
-  $('#ov-round').classList.toggle('show', st.phase === 'roundEnd' && !!r);
+  $('#ov-round').classList.toggle('show', st.phase === 'roundEnd' && !!r && r.roundNo !== ovRoundDismissed);
   if (r && st.phase === 'roundEnd') {
+    ovRoundNo = r.roundNo;
     $('#ov-round-title').textContent = T('roundEndTitle', faNum(r.roundNo));
     // Name the teams by their PLAYERS in every summary line that carries a
     // per-team value, so no number can ever be read against the wrong team
     // (bare "X · Y" pairs in an RTL panel caused exactly that misreading).
     const teamNames = (t) => [t, t + 2].map((s) => (st.seats[s] && dispName(st.seats[s])) || T('playerName')).join(T('nameJoin'));
+    // The teams' player names head the two value columns — every
+    // number below sits under its own team's names.
+    $('#ovr-names-us').textContent = teamNames(myTeam);
+    $('#ovr-names-them').textContent = teamNames(them);
     $('#ov-card-us').textContent = faNum(r.cardTawan[myTeam]);
     $('#ov-card-them').textContent = faNum(r.cardTawan[them]);
     const tkTxt = (t) => r.takanCount[t] ? '★'.repeat(r.takanCount[t]) : '—'; // stars only — a takan is a claim, not round tawan
@@ -12261,8 +12335,8 @@ function render(st) {
       $('#ov-exec').textContent = execTeams.map((t) =>
         T('execLine', faNum(30 * executed[t]), teamNames(1 - t), teamNames(t))).join(' · ');
     }
-    $('#ov-tw').textContent = T('finalLine', teamNames(myTeam), faNum(r.tawan[myTeam]),
-      teamNames(them), faNum(r.tawan[them]));
+    $('#ov-fin-us').textContent = faNum(r.tawan[myTeam]);
+    $('#ov-fin-them').textContent = faNum(r.tawan[them]);
     // The amounts added to the bank are the BANDED values (بندهای
     // ده‌تایی): the raw final banks as 0 / 10 / 20 / 30. Show the
     // additions, and spell out every conversion where banding changed
@@ -12307,6 +12381,17 @@ function render(st) {
     }
   }
 }
+
+// Round summary tap-to-dismiss (owner order 2026-11-11): a tap on
+// the card closes it AT ONCE on this screen so the player can see
+// the table and play; the room's own pause (ROUND_PAUSE_MS on the
+// hosts) runs its course for everyone — only this overlay hides,
+// and only for the round it belongs to (the render toggle checks
+// ovRoundDismissed, so a later state push cannot resurrect it).
+$('#ov-round').addEventListener('click', () => {
+  if (ovRoundNo >= 0) ovRoundDismissed = ovRoundNo;
+  $('#ov-round').classList.remove('show');
+});
 
 function renderLobby(st) {
   $('#lobby-code').textContent = st.code.split('').join(' ');
