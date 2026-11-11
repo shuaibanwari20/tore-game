@@ -738,7 +738,7 @@
      behind a dark emerald veil, its own scroll. Opened from the
      bottom nav (and from the lobby's friends button); it floats
      above home/lobby/table without disturbing the game screens. */
-  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker {
+  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders {
     position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 30;
     overflow-x: hidden;
     /* The home screen's dark emerald veil, without the carpet photo:
@@ -760,9 +760,9 @@
   #scr-friends { display: flex; flex-direction: column; overflow-y: hidden; }
   /* Chat + profile pages (owner order 2026-11-08): same family as the
      friends screen — scrolling content, bottom nav pinned at the foot. */
-  #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker { display: flex; flex-direction: column; overflow-y: hidden; }
+  #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders { display: flex; flex-direction: column; overflow-y: hidden; }
   .fr-scroll { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; width: 100%; }
-  #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav, #scr-clubpage .hm-nav, #scr-clubmembers .hm-nav, #scr-clubseatreqs .hm-nav, #scr-picker .hm-nav { margin: 0; flex: none; width: 100%; }
+  #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav, #scr-clubpage .hm-nav, #scr-clubmembers .hm-nav, #scr-clubseatreqs .hm-nav, #scr-picker .hm-nav, #scr-leaders .hm-nav { margin: 0; flex: none; width: 100%; }
   /* chat list rows: the whole row is the tap target into the DM view */
   .ch-row { cursor: pointer; border-radius: 8px; }
   .ch-row:active { background: rgba(255, 215, 94, .08); }
@@ -2002,8 +2002,13 @@
      بزرگ هست کوچکش کن») so the WHOLE settings sheet fits one popup
      view with no scrolling at 390x844 / 390x932 (proof:
      tore-proofs-settingsx-applied asserts scrollHeight <= clientHeight). */
-  .felt-single { position: relative; width: 132px; margin: 2px auto 0; }
-  .felt-preview { position: relative; width: 132px; height: 173px; margin: 0; padding: 0;
+  .felt-single { position: relative; width: 124px; margin: 2px auto 0; }
+  /* carpets + card-backs share ONE settings block side by side
+     (features batch 2026-11-11) so the sheet still fits one popup
+     view with no scrolling after the back section was added. */
+  .st-duo { display: flex; gap: 12px; justify-content: center; }
+  .st-duo .st-felts-title { text-align: center; font-size: 15px; padding-bottom: 4px; }
+  .felt-preview { position: relative; width: 124px; height: 162px; margin: 0; padding: 0;
     overflow: hidden; border: 2px solid #ffd75e; border-radius: 12px; cursor: pointer;
     display: flex; align-items: flex-end; justify-content: center;
     background-size: cover; background-position: center; background-repeat: no-repeat;
@@ -2028,6 +2033,126 @@
   #ov-feltview .fv-img { width: 92vw; max-width: 430px; height: 78dvh;
     background-size: contain; background-position: center; background-repeat: no-repeat; }
   #ov-feltview .ce-x { top: 14px; right: 14px; }
+  /* --- features batch: card backs (.cback-1..6, six original CSS
+     designs in the plum/gold Ludo palette — gradients and repeating
+     patterns under one centred gold star emblem), the leaders page,
+     the rematch offer bar, the club poll card and the club-vs-club
+     popups. Every tile is contained: fixed sizes, overflow hidden. */
+  .cback { position: relative; overflow: hidden; border: 1.5px solid #e9c46a; box-sizing: border-box;
+    box-shadow: inset 0 0 0 2px rgba(255,215,94,.4), inset 0 0 0 5px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.4); }
+  .cback::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: center / 44% auto no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1 L15 9 L23 12 L15 15 L12 23 L9 15 L1 12 L9 9 Z' fill='%23ffd75e' stroke='%23a67c1a' stroke-width='1'/%3E%3C/svg%3E"); }
+  .cback-1 { background:
+    repeating-linear-gradient(45deg, rgba(255,215,94,.22) 0 2px, transparent 2px 13px),
+    repeating-linear-gradient(-45deg, rgba(255,215,94,.22) 0 2px, transparent 2px 13px),
+    linear-gradient(160deg, #5b21b6, #3b0f63 60%, #2a0a45); }
+  .cback-2 { background:
+    repeating-linear-gradient(45deg, rgba(233,196,106,.5) 0 2px, transparent 2px 10px),
+    repeating-linear-gradient(-45deg, rgba(233,196,106,.5) 0 2px, transparent 2px 10px),
+    linear-gradient(160deg, #3a2a05, #241a02); }
+  .cback-3 { background:
+    repeating-conic-gradient(from -8deg at 50% 50%, rgba(255,138,222,.34) 0deg 9deg, transparent 9deg 18deg),
+    linear-gradient(160deg, #a1125e, #5e0b3d 65%, #3d0729); }
+  .cback-4 { background:
+    repeating-radial-gradient(circle at 50% 46%, rgba(233,196,106,.3) 0 2px, transparent 2px 15px),
+    linear-gradient(165deg, #341257, #1d0733 70%); }
+  .cback-5 { background:
+    radial-gradient(circle at 22% 26%, rgba(255,183,200,.28) 0 6px, transparent 7px),
+    radial-gradient(circle at 74% 62%, rgba(255,183,200,.28) 0 6px, transparent 7px),
+    repeating-linear-gradient(62deg, rgba(255,183,200,.14) 0 3px, transparent 3px 17px),
+    linear-gradient(160deg, #7d1f2c, #4a0f1c 70%); }
+  .cback-6 { background:
+    repeating-linear-gradient(90deg, rgba(94,234,212,.2) 0 2px, transparent 2px 12px),
+    repeating-linear-gradient(0deg, rgba(94,234,212,.2) 0 2px, transparent 2px 12px),
+    linear-gradient(160deg, #0f3050, #0a2438 60%, #123a4d); }
+  .pileback { width: 28px; height: 39px; border-radius: 3px; flex: 0 0 auto; }
+  .pilerow[data-pos="bottom"] .pileback, .pilerow[data-pos="top"] .pileback { margin-left: -15px; }
+  .pilerow[data-pos="bottom"] .pileback:first-child, .pilerow[data-pos="top"] .pileback:first-child { margin-left: 0; }
+  .pilerow[data-pos="right"] .pileback, .pilerow[data-pos="left"] .pileback { margin-top: -28px; }
+  .pilerow[data-pos="right"] .pileback:first-child, .pilerow[data-pos="left"] .pileback:first-child { margin-top: 0; }
+  .back-preview { position: relative; width: 124px; height: 162px; margin: 0; padding: 0; overflow: hidden;
+    border-radius: 12px; cursor: pointer; display: flex; align-items: flex-end; justify-content: center; }
+  .back-preview:active { transform: scale(.98); }
+  .back-preview .felt-nm { width: 100%; padding: 3px 1px 4px; text-align: center;
+    font-size: 11.5px; font-weight: 700; line-height: 1.3; color: #fff;
+    background: rgba(0,0,0,.48); text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  .back-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+  .back-sw { position: relative; height: 118px; margin: 0; padding: 0; overflow: hidden;
+    border: 2px solid rgba(255,255,255,.28); border-radius: 11px; cursor: pointer;
+    display: flex; align-items: flex-end; justify-content: center;
+    box-shadow: inset 0 2px 6px rgba(255,255,255,.12), 0 2px 5px rgba(0,0,0,.35); }
+  .back-sw:active { transform: scale(.96); }
+  .back-sw .felt-nm { width: 100%; padding: 2px 1px 3px; text-align: center;
+    font-size: 10.5px; font-weight: 700; line-height: 1.3; color: #fff;
+    background: rgba(0,0,0,.48); text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  .back-sw.sel { border-color: #ffd75e; box-shadow: 0 0 0 2px #ffd75e, 0 3px 8px rgba(0,0,0,.45); }
+  .back-sw .felt-check { position: absolute; top: 3px; inset-inline-end: 3px; z-index: 2;
+    width: 18px; height: 18px; border-radius: 50%; display: none;
+    align-items: center; justify-content: center;
+    background: linear-gradient(180deg, #ffd75e, #d9a83c);
+    box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+  .back-sw .felt-check svg { width: 12px; height: 12px; stroke: #33270a; stroke-width: 3.6;
+    fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .back-sw.sel .felt-check { display: flex; }
+  #ov-backpick .fp-wrap { position: relative; width: 100%; max-width: 420px; }
+  #ov-backpick .panel { position: relative; border: 3px solid #f0b93e; border-radius: 22px; color: #fff;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
+    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
+    padding: 22px 16px 16px; text-align: start;
+    max-height: calc(100dvh - 64px); overflow-y: auto; }
+  #ov-backpick .panel h2 { color: #fff; text-align: center; font-size: 21px; margin-bottom: 12px;
+    text-shadow: 0 2px 4px rgba(0,0,0,.45); }
+  #ov-backview { background: rgba(0,0,0,.92); }
+  #ov-backview .bv-tile { width: min(62vw, 250px); aspect-ratio: 132 / 173; border-radius: 14px; }
+  #ov-backview .ce-x { top: 14px; right: 14px; }
+  .pf-leadersbtn { width: 100%; margin-top: 10px; padding: 11px; border-radius: 14px; font-size: 16px;
+    font-weight: 900; cursor: pointer; font-family: inherit;
+    color: #33270a; background: linear-gradient(180deg, #ffd75e, #d9a83c); border: 2px solid #ffd75e; }
+  .pf-leadersbtn:active { transform: scale(.98); }
+  #ld-list .ld-rank { flex: 0 0 30px; text-align: center; font-size: 17px; font-weight: 900; color: #ffd75e; }
+  #ld-list .ld-wins { margin-inline-start: auto; flex: 0 0 auto; font-weight: 800; color: #ffd75e; white-space: nowrap; }
+  #ov-match #btn-rematch { margin-top: 10px; width: 100%; padding: 11px; border-radius: 14px; font-size: 17px;
+    font-weight: 900; color: #33270a; cursor: pointer; font-family: inherit;
+    background: linear-gradient(180deg, #ffd75e, #d9a83c); border: 2px solid #ffd75e; }
+  #ov-match #btn-rematch:disabled { opacity: .45; cursor: default; }
+  #ovm-rematch { margin-top: 10px; background: rgba(43,6,54,.5); border: 1.5px solid rgba(255,255,255,.22);
+    border-radius: 12px; padding: 9px 10px; }
+  #ovm-rematch-info { font-weight: 800; color: #fff; text-align: center; word-break: break-word; }
+  #vs-tag { position: absolute; top: 118px; left: 50%; transform: translateX(-50%); z-index: 24;
+    max-width: 92%; padding: 5px 14px; border-radius: 999px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    background: rgba(24,3,36,.88); color: #ffd75e; border: 1.5px solid #e9c46a;
+    font-size: 13.5px; font-weight: 800; box-shadow: 0 3px 10px rgba(0,0,0,.5); }
+  #vs-tag.hidden { display: none; }
+  .cl-poll { margin-top: 8px; background: rgba(20,6,40,.62); border: 1.5px solid rgba(216,178,255,.4);
+    border-radius: 14px; padding: 9px 10px; }
+  .cl-poll-q { font-weight: 900; color: #fff; font-size: 15.5px; margin-bottom: 7px; word-break: break-word; }
+  .cl-poll-opt { position: relative; display: flex; align-items: center; gap: 8px; width: 100%;
+    margin: 0 0 6px; padding: 8px 10px; overflow: hidden; text-align: start;
+    border-radius: 10px; border: 1.5px solid rgba(255,255,255,.25); background: rgba(43,6,54,.55);
+    color: #fff; cursor: pointer; font-family: inherit; font-size: 14.5px; font-weight: 700; }
+  .cl-poll-opt:last-child { margin-bottom: 0; }
+  .cl-poll-opt:disabled { cursor: default; }
+  .cl-poll-opt.mine { border-color: #ffd75e; }
+  .cl-poll-fill { position: absolute; inset: 0; width: 0; background: rgba(255,215,94,.22); pointer-events: none; }
+  .cl-poll-lbl { position: relative; flex: 1; min-width: 0; word-break: break-word; }
+  .cl-poll-n { position: relative; flex: 0 0 auto; color: #ffd75e; font-weight: 900; white-space: nowrap; }
+  .cl-poll-foot { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+  .cl-poll-closedtag { font-size: 12px; font-weight: 900; color: #33270a; border-radius: 999px; padding: 2px 10px;
+    background: linear-gradient(180deg, #ffd75e, #d9a83c); }
+  .cl-poll-closebtn { margin-inline-start: auto; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+    font-family: inherit; font-size: 13.5px; font-weight: 800;
+    background: rgba(43,6,54,.5); color: #ffe3f6; border: 1.5px solid rgba(255,255,255,.35); }
+  .cl-room-btnrow { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .cl-minibtn { flex: 1 1 130px; min-width: 0; padding: 9px 10px; border-radius: 12px; cursor: pointer;
+    font-family: inherit; font-size: 14.5px; font-weight: 800;
+    background: rgba(43,6,54,.55); color: #ffe3f6; border: 1.5px solid rgba(255,255,255,.35); }
+  .cl-minibtn:active { transform: scale(.98); }
+  #ov-pollcreate input, #ov-clubvs input { width: 100%; box-sizing: border-box; margin: 0 0 8px;
+    padding: 11px 12px; font-size: 16px; border-radius: 10px; font-family: inherit; }
+  .cv-pick-lbl { font-weight: 800; color: #ffd75e; margin: 4px 0 6px; }
+  .cv-check { flex: 0 0 auto; width: 34px; height: 34px; margin: 0; padding: 0; border-radius: 9px; cursor: pointer;
+    border: 1.5px solid rgba(255,255,255,.4); background: rgba(43,6,54,.5); color: #ffd75e; font-size: 17px; }
+  #cvi-players { color: #fff; font-weight: 700; margin-bottom: 6px; word-break: break-word; }
   .st-follow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
   .st-follow span { font-size: 14.5px; font-weight: 700; color: #ffd7f2; }
   .st-ig { width: 46px; height: 46px; flex: 0 0 auto; border-radius: 13px; text-decoration: none;
@@ -2750,6 +2875,7 @@
   <!-- ======== GAME ======== -->
   <section id="scr-game" class="hidden">
     <div id="spec-chip" class="hidden">👁 <span id="spec-chip-txt"></span></div>
+    <div id="vs-tag" class="hidden"></div>
     <div class="scorestrip">
       <div class="ss-team">
         <div class="ss-line1"><span class="ss-tname" id="ss-name-us">زموږ ټیم</span><span class="tkstars" id="tk-us"></span><span class="ss-banknum" id="sc-us">0</span></div>
@@ -3018,7 +3144,11 @@
           <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-friends-lbl">ملګري</span><span class="pf-stat-val" id="pf-stat-friends">0</span></div>
           <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-club-lbl">کلب</span><span class="pf-stat-val" id="pf-stat-club">هېڅ</span></div>
           <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-country-lbl">هېواد</span><span class="pf-stat-val" id="pf-stat-country">…</span></div>
+          <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-played-lbl">لوبې</span><span class="pf-stat-val" id="pf-stat-played">0</span></div>
+          <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-won-lbl">ګټلي</span><span class="pf-stat-val" id="pf-stat-won">0</span></div>
+          <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-lost-lbl">بایللي</span><span class="pf-stat-val" id="pf-stat-lost">0</span></div>
         </div>
+        <button type="button" class="pf-leadersbtn" id="btn-leaders">د اونۍ غوره لوبغاړي</button>
       </div>
     </div>
   </div>
@@ -3045,6 +3175,46 @@
       <span class="nav-badge hidden" id="pfnav-chat-badge">0</span>
       <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="19" y="4" width="25" height="20" rx="7" fill="url(#nvGreen)"/><path d="M35 22.5 35 30l-7.5-6.5z" fill="#28b751"/><rect x="4" y="15" width="29" height="22" rx="8" fill="url(#nvPink)"/><path d="M11 35.5 11 43l8-6.6z" fill="#e84393"/><ellipse cx="29" cy="9" rx="7" ry="2.6" fill="#fff" opacity=".35"/><ellipse cx="13" cy="20" rx="8" ry="2.8" fill="#fff" opacity=".35"/><circle cx="12.5" cy="26" r="2.1" fill="#fff"/><circle cx="18.5" cy="26" r="2.1" fill="#fff"/><circle cx="24.5" cy="26" r="2.1" fill="#fff"/></svg></span>
       <span class="nl" id="pfnav-chat-lbl">چت</span>
+    </button>
+  </nav>
+</section>
+
+<!-- ======== WEEKLY LEADERS (د اونۍ غوره لوبغاړي) ========
+     The week's top-10 by wins, from the same s-stats payload as
+     the profile شمېرې rows; back returns to the profile page. -->
+<section id="scr-leaders" class="hidden">
+  <div class="fr-scroll">
+    <div class="fr-inner">
+      <div class="cp-head">
+        <button class="fr-back" id="btn-ld-back">→</button>
+        <h2 id="ld-title"></h2>
+      </div>
+      <div id="ld-list"></div>
+    </div>
+  </div>
+<nav class="hm-nav">
+    <button class="hm-navitem" id="ldnav-friends">
+      <span class="nav-badge hidden" id="ldnav-friends-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M1.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M27.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M10.5 43c.8-9.5 6.3-15 13.5-15s12.7 5.5 13.5 15z" fill="url(#nvBlue)"/><circle cx="11" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="37" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="24" cy="19.5" r="8.4" fill="url(#nvWhite)"/></svg></span>
+      <span class="nl" id="ldnav-friends-lbl">ملګري</span>
+    </button>
+    <button class="hm-navitem" id="ldnav-clubs">
+      <span class="nav-badge hidden" id="ldnav-clubs-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M15 5h18v6.5a9 9 0 0 1-18 0z" fill="url(#nvGold)"/><path d="M15 8.5H8a7 7 0 0 0 7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M33 8.5h7a7 7 0 0 1-7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M22 20h4v13h-4z" fill="url(#nvGold)"/><path d="M15 33h18l2.6 6H12.4z" fill="url(#nvGold)"/><rect x="11.5" y="39" width="25" height="4.6" rx="2.3" fill="url(#nvGold)"/><path d="M24 7.6l1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5z" fill="#fff3c4"/></svg></span>
+      <span class="nl" id="ldnav-clubs-lbl">کلبونه</span>
+    </button>
+    <button class="hm-navitem" id="ldnav-home">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
+      <span class="nl" id="ldnav-home-lbl">کور</span>
+    </button>
+    <button class="hm-navitem" id="ldnav-profile">
+      <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
+      <span class="nl" id="ldnav-profile-lbl">پروفایل</span>
+    </button>
+    <button class="hm-navitem" id="ldnav-chat">
+      <span class="nav-badge hidden" id="ldnav-chat-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="19" y="4" width="25" height="20" rx="7" fill="url(#nvGreen)"/><path d="M35 22.5 35 30l-7.5-6.5z" fill="#28b751"/><rect x="4" y="15" width="29" height="22" rx="8" fill="url(#nvPink)"/><path d="M11 35.5 11 43l8-6.6z" fill="#e84393"/><ellipse cx="29" cy="9" rx="7" ry="2.6" fill="#fff" opacity=".35"/><ellipse cx="13" cy="20" rx="8" ry="2.8" fill="#fff" opacity=".35"/><circle cx="12.5" cy="26" r="2.1" fill="#fff"/><circle cx="18.5" cy="26" r="2.1" fill="#fff"/><circle cx="24.5" cy="26" r="2.1" fill="#fff"/></svg></span>
+      <span class="nl" id="ldnav-chat-lbl">چت</span>
     </button>
   </nav>
 </section>
@@ -3147,6 +3317,18 @@
             <button type="button" class="cl-roundbtn" id="btn-cl-game" aria-label="game"><svg viewBox="0 0 40 30"><g transform="rotate(-14 11 26)"><rect x="5" y="8" width="12" height="18" rx="2" fill="#ffffff" stroke="#7c6420" stroke-width="1.1"/><path d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z" fill="#d92338" stroke="none" transform="translate(11 16.5) scale(.55) translate(-8 -7.9)"/></g><g transform="rotate(14 29 26)"><rect x="23" y="8" width="12" height="18" rx="2" fill="#ffffff" stroke="#7c6420" stroke-width="1.1"/><path d="M29 11.8l3.3 4.7-3.3 4.7-3.3-4.7z" fill="#d92338" stroke="none"/></g><rect x="14" y="5" width="12" height="18" rx="2" fill="#ffffff" stroke="#7c6420" stroke-width="1.1"/><g transform="translate(20 13.6)"><path d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z" fill="#26262e" stroke="none" transform="scale(.55) translate(-8 -8) rotate(180 8 8)"/><path d="M-2 2.8h4l1.5 3.2h-7z" fill="#26262e" stroke="none"/></g></svg><span class="cl-game-live hidden" id="cl-game-live"><span class="cl-live-dot"></span><span id="cl-game-live-txt">ژوندی</span></span></button>
           </div>
         </div>
+        <div class="cl-poll hidden" id="cl-poll">
+          <div class="cl-poll-q" id="cl-poll-q"></div>
+          <div id="cl-poll-opts"></div>
+          <div class="cl-poll-foot">
+            <span class="cl-poll-closedtag hidden" id="cl-poll-closedtag"></span>
+            <button type="button" class="cl-poll-closebtn hidden" id="btn-poll-close"></button>
+          </div>
+        </div>
+        <div class="cl-room-btnrow">
+          <button type="button" class="cl-minibtn hidden" id="btn-poll-create"></button>
+          <button type="button" class="cl-minibtn hidden" id="btn-cl-vs"></button>
+        </div>
         <h3 class="fr-sec" id="cl-chat-title"></h3>
       </div>
     </div>
@@ -3206,6 +3388,7 @@
         <button type="button" class="pf-idnum" id="cp-id-num" dir="ltr">…</button>
       </div>
       <div class="cl-sub" id="cp-count"></div>
+      <div class="cl-sub hidden" id="cp-vsrecord"></div>
       <p class="cl-desc" id="cl-desc"></p>
       <div class="cl-sub" id="cl-created"></div>
       <!-- clubs v7: the settings/edit FORM is deleted — this
@@ -3329,6 +3512,50 @@
     </button>
   </nav>
 </section>
+
+<!-- ======== CLUB POLL CREATE (managers) ======== -->
+<div class="overlay" id="ov-pollcreate">
+  <div class="panel" style="max-width:340px">
+    <h2 id="pc-title"></h2>
+    <input id="pc-q" type="text" maxlength="120">
+    <input class="pc-opt" id="pc-o1" type="text" maxlength="60">
+    <input class="pc-opt" id="pc-o2" type="text" maxlength="60">
+    <input class="pc-opt" id="pc-o3" type="text" maxlength="60">
+    <input class="pc-opt" id="pc-o4" type="text" maxlength="60">
+    <div class="pf-btns">
+      <button type="button" id="btn-pc-create"></button>
+      <button type="button" id="btn-pc-cancel" class="ghost"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== CLUB-VS-CLUB CHALLENGE (managers) ======== -->
+<div class="overlay" id="ov-clubvs">
+  <div class="panel" style="max-width:340px">
+    <h2 id="cv-title"></h2>
+    <input id="cv-clubid" type="text" inputmode="numeric" maxlength="6" dir="ltr">
+    <div class="cv-pick-lbl" id="cv-pick-lbl"></div>
+    <div id="cv-pick"></div>
+    <div class="pf-btns">
+      <button type="button" id="btn-cv-send"></button>
+      <button type="button" id="btn-cv-cancel" class="ghost"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== CLUB-VS-CLUB INVITE (managers of the challenged club) ======== -->
+<div class="overlay" id="ov-clubvsinv">
+  <div class="panel" style="max-width:340px">
+    <h2 id="cvi-title"></h2>
+    <div id="cvi-players"></div>
+    <div class="cv-pick-lbl" id="cvi-pick-lbl"></div>
+    <div id="cvi-pick"></div>
+    <div class="pf-btns">
+      <button type="button" id="btn-cvi-accept"></button>
+      <button type="button" id="btn-cvi-decline" class="ghost"></button>
+    </div>
+  </div>
+</div>
 
 <!-- ======== CLUB INVITE POPUP (from the members page) ========
      The manager's friends with their invite state; sending keeps
@@ -3486,6 +3713,7 @@
     <div class="pv-line" id="pv-id" dir="ltr"></div>
     <div class="pv-rel" id="pv-rel"></div>
     <div class="pf-btns">
+      <button type="button" id="btn-pv-watch" class="hidden">تماشا</button>
       <button id="btn-pv-close" class="ghost">بندول</button>
     </div>
   </div>
@@ -3540,6 +3768,14 @@
     <h2 id="ov-match-title">🏆 د لوبې پای</h2>
     <div class="row big"><span id="ovm-final-lbl">وروستی جمع شوی تاوان</span><b><small class="sm-us">موږ </small><span id="ov-f-us">0</span> — <small class="sm-them">سیال </small><span id="ov-f-them">0</span></b></div>
     <div id="ov-f-why" style="font-size:14px; font-weight:700; padding:4px 2px 0"></div>
+    <div id="ovm-rematch" class="hidden">
+      <div id="ovm-rematch-info"></div>
+      <div class="pf-btns">
+        <button type="button" id="btn-rematch-accept">قبلوم</button>
+        <button type="button" id="btn-rematch-decline" class="ghost">نه منم</button>
+      </div>
+    </div>
+    <button type="button" id="btn-rematch">بیا لوبه</button>
     <button id="btn-newgame">نوې لوبه</button>
   </div>
 </div>
@@ -3596,10 +3832,21 @@
       </button>
     </div>
     <div class="st-felts">
-      <div class="st-felts-title" id="st-felts-title">د لوبې ډګر سمول</div>
-      <div class="felt-single">
-        <button type="button" class="felt-preview" id="felt-preview" aria-label="اصلي قالین"><span class="felt-nm" id="felt-preview-nm"></span></button>
-        <button type="button" class="pf-pencil felt-pencil" id="btn-felt-edit" aria-label="د لوبې ډګر سمول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+      <div class="st-duo">
+        <div class="st-duo-col">
+          <div class="st-felts-title" id="st-felts-title">د لوبې ډګر سمول</div>
+          <div class="felt-single">
+            <button type="button" class="felt-preview" id="felt-preview" aria-label="اصلي قالین"><span class="felt-nm" id="felt-preview-nm"></span></button>
+            <button type="button" class="pf-pencil felt-pencil" id="btn-felt-edit" aria-label="د لوبې ډګر سمول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          </div>
+        </div>
+        <div class="st-duo-col">
+          <div class="st-felts-title" id="st-backs-title">د کارت شا</div>
+          <div class="felt-single">
+            <button type="button" class="back-preview cback cback-1" id="back-preview" aria-label="ارغواني الماس"><span class="felt-nm" id="back-preview-nm"></span></button>
+            <button type="button" class="pf-pencil felt-pencil" id="btn-back-edit" aria-label="د کارت شا"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="st-follow">
@@ -3629,6 +3876,23 @@
 <div class="overlay" id="ov-feltview">
   <div class="fv-img" id="felt-view-img"></div>
   <button type="button" class="ce-x" id="btn-feltview-x" aria-label="بندول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+</div>
+
+<!-- ======== CARD-BACK PICKER POPUP (the six CSS backs) ======== -->
+<div class="overlay" id="ov-backpick">
+  <div class="fp-wrap">
+    <div class="panel fp-panel">
+      <h2 id="bp-title">د کارت شا</h2>
+      <div class="back-grid" id="back-grid"></div>
+    </div>
+    <button type="button" class="ce-x" id="btn-backpick-x" aria-label="بندول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+  </div>
+</div>
+
+<!-- ======== CARD-BACK LARGE VIEWER ======== -->
+<div class="overlay" id="ov-backview">
+  <div class="bv-tile cback cback-1" id="back-view-tile"></div>
+  <button type="button" class="ce-x" id="btn-backview-x" aria-label="بندول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
 </div>
 
 <!-- ======== EXIT CONFIRM POPUP ======== -->
@@ -3737,6 +4001,51 @@ const STR = {
     felt9: 'ترنج سور ګل',
     felt10: 'ترنج ژور ابي',
     felt11: 'اصلي قالین',
+    back1: 'ارغواني الماس',
+    back2: 'طلايي جال',
+    back3: 'لمرين',
+    back4: 'حلقې',
+    back5: 'تاک',
+    back6: 'هندسي',
+    backSection: 'د کارت شا',
+    watchBtn: 'تماشا',
+    errSocialNotInGame: 'هغه اوس په لوبه کې نه دی',
+    errClubPollActive: 'یوه رایه‌اچونه لا روانه ده',
+    errClubNoPoll: 'رایه‌اچونه نشته',
+    errClubPollClosed: 'رایه‌اچونه بنده شوه',
+    errClubVsPending: 'یوه ننګونه لا په تمه ده',
+    errClubVsPlayers: 'لوبغاړي سم نه دي',
+    errClubVsNone: 'ننګونه نشته',
+    errClubVsStartFail: 'لوبه پیل نه شوه',
+    rematchBtn: 'بیا لوبه',
+    rematchAccept: 'قبلوم',
+    rematchDecline: 'نه منم',
+    rematchOffer: (name) => name + ' بیا لوبه غواړي',
+    rematchDeclinedToast: 'یو لوبغاړي ونه منله',
+    rematchLeftToast: 'یو لوبغاړی ووت',
+    rematchExpiredToast: 'وخت ختم شو',
+    statPlayed: 'لوبې',
+    statWon: 'ګټلي',
+    statLost: 'بایللي',
+    leadersTitle: 'د اونۍ غوره لوبغاړي',
+    leadersEmpty: 'تر اوسه چا نه ده ګټلې',
+    pollTitle: 'رایه‌اچونه',
+    pollQuestionPh: 'پوښتنه ولیکه…',
+    pollOptionPh: (n) => 'ټاکنه ' + n,
+    pollSubmit: 'جوړه کړه',
+    pollClose: 'وتړه',
+    pollClosedTag: 'بنده شوه',
+    pollNeedTwo: 'لږ تر لږه دوه ټاکنې ولیکه',
+    vsChallengeBtn: 'د بل کلب سره لوبه',
+    vsClubIdPh: 'د بل کلب ID…',
+    vsPickTwo: 'دو لوبغاړي وټاکه',
+    vsSendBtn: 'واستوه',
+    vsInvitedFrom: (club) => 'د «' + club + '» کلب ننګونه',
+    vsDeclined: 'بل کلب ونه منله',
+    vsFailed: 'لوبه پیل نه شوه',
+    vsStarted: 'لوبه پیل شوه!',
+    vsRecordLine: (w, l) => 'د کلبونو لوبې: ' + w + ' ګټلي · ' + l + ' بایللي',
+    vsNeedClubId: 'د کلب ID ولیکه',
     closeBtn: 'بندول',
     menuQuick: 'له روباتونو سره لوبه',
     menuQuickSub: 'همدا اوس پیل — تمرین او تفریح',
@@ -4057,6 +4366,51 @@ const STR = {
     felt9: 'ترنج سرخ گلدار',
     felt10: 'ترنج نیلی',
     felt11: 'قالین اصلی',
+    back1: 'الماس بنفش',
+    back2: 'توری طلایی',
+    back3: 'خورشیدی',
+    back4: 'حلقه‌ها',
+    back5: 'تاک',
+    back6: 'هندسی',
+    backSection: 'پشت کارت',
+    watchBtn: 'تماشا',
+    errSocialNotInGame: 'الان در بازی نیست',
+    errClubPollActive: 'یک رأی‌گیری هنوز در جریان است',
+    errClubNoPoll: 'رأی‌گیری‌ای نیست',
+    errClubPollClosed: 'رأی‌گیری بسته شد',
+    errClubVsPending: 'یک چالش هنوز در انتظار است',
+    errClubVsPlayers: 'بازیکن‌ها درست نیستند',
+    errClubVsNone: 'چالشی نیست',
+    errClubVsStartFail: 'بازی شروع نشد',
+    rematchBtn: 'بازی دوباره',
+    rematchAccept: 'قبول',
+    rematchDecline: 'رد',
+    rematchOffer: (name) => name + ' بازی دوباره می‌خواهد',
+    rematchDeclinedToast: 'یک بازیکن قبول نکرد',
+    rematchLeftToast: 'یک بازیکن رفت',
+    rematchExpiredToast: 'وقت تمام شد',
+    statPlayed: 'بازی‌ها',
+    statWon: 'بردها',
+    statLost: 'باخت‌ها',
+    leadersTitle: 'بهترین‌های هفته',
+    leadersEmpty: 'هنوز کسی نبرده',
+    pollTitle: 'رأی‌گیری',
+    pollQuestionPh: 'سؤال را بنویس…',
+    pollOptionPh: (n) => 'گزینهٔ ' + n,
+    pollSubmit: 'ایجاد کن',
+    pollClose: 'ببند',
+    pollClosedTag: 'بسته شد',
+    pollNeedTwo: 'دست‌کم دو گزینه بنویس',
+    vsChallengeBtn: 'بازی با باشگاه دیگر',
+    vsClubIdPh: 'آیدی باشگاه دیگر…',
+    vsPickTwo: 'دو بازیکن انتخاب کن',
+    vsSendBtn: 'بفرست',
+    vsInvitedFrom: (club) => 'چالش از باشگاه «' + club + '»',
+    vsDeclined: 'باشگاه دیگر قبول نکرد',
+    vsFailed: 'بازی شروع نشد',
+    vsStarted: 'بازی شروع شد!',
+    vsRecordLine: (w, l) => 'بازی‌های بین کلب‌ها: ' + w + ' برد · ' + l + ' باخت',
+    vsNeedClubId: 'آیدی باشگاه را بنویس',
     closeBtn: 'بستن',
     menuQuick: 'بازی با ربات‌ها',
     menuQuickSub: 'شروع فوری — تمرین و سرگرمی',
@@ -4377,6 +4731,51 @@ const STR = {
     felt9: 'Red Floral',
     felt10: 'Deep Navy',
     felt11: 'Original',
+    back1: 'Plum Diamonds',
+    back2: 'Gold Lattice',
+    back3: 'Sunburst',
+    back4: 'Rings',
+    back5: 'Vine',
+    back6: 'Geometric',
+    backSection: 'Card back',
+    watchBtn: 'Watch',
+    errSocialNotInGame: 'Not in a game right now',
+    errClubPollActive: 'A poll is already running',
+    errClubNoPoll: 'There is no poll',
+    errClubPollClosed: 'The poll is closed',
+    errClubVsPending: 'A challenge is already pending',
+    errClubVsPlayers: 'The players are not valid',
+    errClubVsNone: 'There is no challenge',
+    errClubVsStartFail: 'The match could not start',
+    rematchBtn: 'Rematch',
+    rematchAccept: 'Accept',
+    rematchDecline: 'Decline',
+    rematchOffer: (name) => name + ' wants a rematch',
+    rematchDeclinedToast: 'A player declined',
+    rematchLeftToast: 'A player left',
+    rematchExpiredToast: 'Time expired',
+    statPlayed: 'Played',
+    statWon: 'Won',
+    statLost: 'Lost',
+    leadersTitle: 'Weekly best',
+    leadersEmpty: 'No wins yet this week',
+    pollTitle: 'Poll',
+    pollQuestionPh: 'Write the question…',
+    pollOptionPh: (n) => 'Option ' + n,
+    pollSubmit: 'Create',
+    pollClose: 'Close',
+    pollClosedTag: 'Closed',
+    pollNeedTwo: 'Write at least two options',
+    vsChallengeBtn: 'Play another club',
+    vsClubIdPh: 'Other club ID…',
+    vsPickTwo: 'Pick 2 players',
+    vsSendBtn: 'Send',
+    vsInvitedFrom: (club) => 'Challenge from ' + club,
+    vsDeclined: 'The other club declined',
+    vsFailed: 'The match could not start',
+    vsStarted: 'Match started!',
+    vsRecordLine: (w, l) => 'Inter-club: ' + w + ' W · ' + l + ' L',
+    vsNeedClubId: 'Enter the club ID',
     closeBtn: 'Close',
     menuQuick: 'Play with Bots',
     menuQuickSub: 'Instant start — practice & fun',
@@ -4695,7 +5094,7 @@ function applyI18n() {
   document.title = T('docTitle');
   const ltr = LANG === 'en';
   ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-settings', 'ov-exit', 'ov-join', 'ov-install',
-   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-clubseatreqs', 'scr-picker', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu', 'ov-feltpick', 'ov-feltview']
+   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-clubseatreqs', 'scr-picker', 'scr-leaders', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu', 'ov-feltpick', 'ov-feltview', 'ov-backpick', 'ov-backview', 'ov-pollcreate', 'ov-clubvs', 'ov-clubvsinv']
     .forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.setAttribute('dir', ltr ? 'ltr' : 'rtl');
@@ -4882,6 +5281,25 @@ function applyI18n() {
   aria('#btn-felt-edit', 'setFieldEdit');
   aria('#btn-feltpick-x', 'closeBtn');
   aria('#btn-feltview-x', 'closeBtn');
+  set('#pf-stat-played-lbl', 'statPlayed');
+  set('#pf-stat-won-lbl', 'statWon');
+  set('#pf-stat-lost-lbl', 'statLost');
+  set('#btn-leaders', 'leadersTitle');
+  set('#ld-title', 'leadersTitle');
+  set('#ldnav-friends-lbl', 'navFriends');
+  set('#ldnav-clubs-lbl', 'navClubs');
+  set('#ldnav-home-lbl', 'navHome');
+  set('#ldnav-profile-lbl', 'navProfile');
+  set('#ldnav-chat-lbl', 'navChat');
+  aria('#btn-ld-back', 'frBack');
+  set('#btn-rematch', 'rematchBtn');
+  set('#btn-rematch-accept', 'rematchAccept');
+  set('#btn-rematch-decline', 'rematchDecline');
+  set('#btn-pv-watch', 'watchBtn');
+  set('#bp-title', 'backSection');
+  aria('#btn-back-edit', 'backSection');
+  aria('#btn-backpick-x', 'closeBtn');
+  aria('#btn-backview-x', 'closeBtn');
   set('.chat-title', 'chatTitle');
   aria('#btn-chat-close', 'closeBtn');
   set('.stk-label', 'stickersLbl');
@@ -5175,6 +5593,14 @@ function validFelt(n) {
   n = Number(n);
   return Number.isInteger(n) && n >= 1 && n <= 11 ? n : 11;
 }
+// Card backs (د کارت شا): six original CSS designs (.cback-1..6),
+// picked in Settings exactly like the felts. profile.back is MY
+// choice; it rides the create frame, the server stamps it on the
+// room (state.back) and every back in the room renders with it.
+function validBack(n) {
+  n = Number(n);
+  return Number.isInteger(n) && n >= 1 && n <= 6 ? n : 1;
+}
 function loadProfile() {
   let p = null;
   try { p = JSON.parse(localStorage.getItem('tore.profile') || 'null'); } catch (e) { p = null; }
@@ -5186,6 +5612,7 @@ function loadProfile() {
     country: (typeof p.country === 'string' && p.country.trim()) ? p.country.trim() : 'افغانستان',
     photo: (typeof p.photo === 'string' && p.photo.startsWith('https://')) ? p.photo.slice(0, 300) : '',
     felt: validFelt(p.felt),
+    back: validBack(p.back),
   };
 }
 let profile = loadProfile();
@@ -8173,7 +8600,7 @@ function startPickedGame() {
   }
   closePicker();
   if (mode === 'bots') quickPlay = true;
-  connect(() => send({ type: 'create', ...(club ? { club } : {}), felt: validFelt(profile.felt), ...profilePayload() }));
+  connect(() => send({ type: 'create', ...(club ? { club } : {}), felt: validFelt(profile.felt), back: validBack(profile.back), ...profilePayload() }));
 }
 $('#btn-pk-close').onclick = () => closePicker();
 ['online', 'bots', 'room'].forEach((m) => {
@@ -8242,6 +8669,7 @@ function paintSettings() {
   const vr = $('#row-set-vibrate'); if (vr) vr.setAttribute('aria-checked', String(v));
   const cr = $('#row-set-chat'); if (cr) cr.setAttribute('aria-checked', String(c));
   paintFelts();
+  paintBacks();
 }
 // ----- settings: field edit (د لوبې ډګر سمول). The settings sheet
 // shows ONE preview of the selected carpet (profile pattern, owner
@@ -8298,6 +8726,62 @@ function openFeltView() {
   $('#ov-feltview').classList.add('show');
 }
 function closeFeltView() { $('#ov-feltview').classList.remove('show'); }
+// ----- settings: card-back edit (د کارت شا) — the felt pattern
+// mirrored exactly: ONE preview in the sheet (the pencil opens
+// the picker popup #ov-backpick with the six tiles; a tap there
+// selects + persists at once), tapping the preview opens the
+// large viewer #ov-backview. The choice rides my next CREATE;
+// backs already on a table never change mid-room. -----
+function paintBacks() {
+  const grid = $('#back-grid');
+  if (!grid) return;
+  const title = $('#st-backs-title');
+  if (title) title.textContent = T('backSection');
+  const bpTitle = $('#bp-title');
+  if (bpTitle) bpTitle.textContent = T('backSection');
+  const mine = validBack(profile.back);
+  const preview = $('#back-preview');
+  if (preview) {
+    preview.className = 'back-preview cback cback-' + mine;
+    preview.dataset.back = String(mine);
+    preview.setAttribute('aria-label', T('back' + mine));
+    const pnm = $('#back-preview-nm');
+    if (pnm) pnm.textContent = T('back' + mine);
+  }
+  grid.innerHTML = '';
+  for (let n = 1; n <= 6; n++) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'back-sw cback cback-' + n + (mine === n ? ' sel' : '');
+    b.dataset.back = String(n);
+    b.setAttribute('aria-label', T('back' + n));
+    b.setAttribute('aria-pressed', String(mine === n));
+    const chk = document.createElement('span');
+    chk.className = 'felt-check';
+    chk.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg>';
+    b.appendChild(chk);
+    const nm = document.createElement('span');
+    nm.className = 'felt-nm';
+    nm.textContent = T('back' + n);
+    b.appendChild(nm);
+    b.onclick = () => { profile.back = n; saveProfile(); paintBacks(); closeBackPick(); };
+    grid.appendChild(b);
+  }
+}
+function openBackPick() { paintBacks(); $('#ov-backpick').classList.add('show'); }
+function closeBackPick() { $('#ov-backpick').classList.remove('show'); }
+function openBackView() {
+  const tile = $('#back-view-tile');
+  if (tile) tile.className = 'bv-tile cback cback-' + validBack(profile.back);
+  $('#ov-backview').classList.add('show');
+}
+function closeBackView() { $('#ov-backview').classList.remove('show'); }
+// The back the table currently wears: the room creator's, carried
+// on every state push as state.back; outside a room (or from an
+// older host that sends none) my own profile back is the fallback.
+function currentBack() {
+  return (state && state.back != null) ? validBack(state.back) : validBack(profile.back);
+}
 // The felt the table currently wears — always the room creator's,
 // taken from the state push; before any state (or from an older
 // host that sends none) my own profile felt is the fallback.
@@ -8333,6 +8817,12 @@ $('#btn-feltpick-x').onclick = closeFeltPick;
 $('#btn-feltview-x').onclick = closeFeltView;
 $('#ov-feltpick').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeFeltPick(); });
 $('#ov-feltview').addEventListener('click', () => closeFeltView());
+$('#btn-back-edit').onclick = openBackPick;
+$('#back-preview').onclick = openBackView;
+$('#btn-backpick-x').onclick = closeBackPick;
+$('#btn-backview-x').onclick = closeBackView;
+$('#ov-backpick').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeBackPick(); });
+$('#ov-backview').addEventListener('click', () => closeBackView());
 $('#btn-st-lang-edit').onclick = () => { $('#st-langs').classList.toggle('hidden'); };
 function bindToggleRow(id, key, dflt, after) {
   const row = $(id);
@@ -8492,6 +8982,71 @@ function renderProfileStats() {
   const cn = $('#pf-stat-country');
   if (cn) cn.textContent = profile.country ? dispCountry(profile.country) : '';
 }
+// Match شمېرې (played / won / lost) + the weekly leaders ride one
+// social payload: {type:'s-stats'} -> {stats:{p,w,l}, leaders}.
+// The latest payload is cached; nothing cached yet reads as 0.
+function requestStats() {
+  connectSocial();
+  socialSend({ type: 's-stats' });
+}
+function paintMatchStats() {
+  const st = (statsCache && statsCache.stats) || {};
+  const setN = (sel, v) => { const el = $(sel); if (el) el.textContent = String(v || 0); };
+  setN('#pf-stat-played', st.p);
+  setN('#pf-stat-won', st.w);
+  setN('#pf-stat-lost', st.l);
+}
+// ---------- weekly leaders (د اونۍ غوره لوبغاړي) ----------
+function openLeaders() {
+  $('#scr-profile').classList.add('hidden');
+  $('#scr-leaders').classList.remove('hidden');
+  requestStats();
+  renderLeaders();
+}
+function closeLeaders() {
+  $('#scr-leaders').classList.add('hidden');
+  openProfile();
+}
+function renderLeaders() {
+  const box = $('#ld-list');
+  if (!box) return;
+  const title = $('#ld-title');
+  if (title) title.textContent = T('leadersTitle');
+  box.innerHTML = '';
+  const leaders = (statsCache && Array.isArray(statsCache.leaders)) ? statsCache.leaders : [];
+  if (!leaders.length) { box.appendChild(frEmpty(T('leadersEmpty'))); return; }
+  leaders.slice(0, 10).forEach((pl, i) => {
+    const row = document.createElement('div');
+    row.className = 'fr-row';
+    const rank = document.createElement('span');
+    rank.className = 'ld-rank';
+    rank.textContent = String(i + 1);
+    row.appendChild(rank);
+    const who = document.createElement('div');
+    who.className = 'fr-who';
+    who.appendChild(avatarEl(pl.name, pl.avatar, 38, pl.photo));
+    const meta = document.createElement('div');
+    meta.className = 'fr-meta';
+    const nm = document.createElement('div');
+    nm.className = 'fr-name';
+    nm.textContent = pl.name || T('playerName');
+    meta.appendChild(nm);
+    who.appendChild(meta);
+    row.appendChild(who);
+    const wins = document.createElement('span');
+    wins.className = 'ld-wins';
+    wins.textContent = String(pl.wins || 0) + ' ' + T('statWon');
+    row.appendChild(wins);
+    box.appendChild(row);
+  });
+}
+$('#btn-leaders').onclick = openLeaders;
+$('#btn-ld-back').onclick = closeLeaders;
+$('#ldnav-friends').onclick = () => openFriends();
+$('#ldnav-clubs').onclick = () => openClubs();
+$('#ldnav-home').onclick = () => { $('#scr-leaders').classList.add('hidden'); closeProfile(); };
+$('#ldnav-profile').onclick = () => openProfile();
+$('#ldnav-chat').onclick = () => openChats();
 function pfRenderGrid() {
   const grid = $('#pf-grid');
   grid.innerHTML = '';
@@ -8550,12 +9105,15 @@ function openProfile() {
   $('#pf-picker').classList.add('hidden');
   $('#pf-editbox').classList.add('hidden');
   renderProfileStats();
+  paintMatchStats();
+  requestStats();
   $('#scr-friends').classList.add('hidden');
   $('#scr-chats').classList.add('hidden');
   $('#scr-clubs').classList.add('hidden');
   $('#scr-clubpage').classList.add('hidden');
   $('#scr-clubmembers').classList.add('hidden');
   $('#scr-picker').classList.add('hidden');
+  $('#scr-leaders').classList.add('hidden');
   $('#scr-profile').classList.remove('hidden');
 }
 function closeProfile() { $('#scr-profile').classList.add('hidden'); }
@@ -8574,6 +9132,8 @@ $('#btn-profile-save').onclick = () => {
     avatar: (validAvatar(pfAvatar) && (pfAvatar !== 'google' || profile.photo)) ? pfAvatar : 'av1',
     country: $('#pf-country').value || 'افغانستان',
     photo: profile.photo || '',
+    felt: validFelt(profile.felt),
+    back: validBack(profile.back),
   };
   saveProfile();
   socialHello(); // the friends directory record follows the profile
@@ -8743,6 +9303,9 @@ function onMsg(msg) {
   } else if (msg.type === 'declared13') {
     const nm = state && state.seats[msg.seat] ? (dispName(state.seats[msg.seat]) || T('playerName')) : T('playerName');
     toast(T('declaredToast', nm));
+  } else if (msg.type === 'rematch-cancelled') {
+    toast(msg.reason === 'declined' ? T('rematchDeclinedToast')
+      : msg.reason === 'left' ? T('rematchLeftToast') : T('rematchExpiredToast'));
   } else if (msg.type === 'roomClosed') {
     // Clubs v8: a spectator whose watched lobby is cancelled
     // lands back in the club room, not the home menu.
@@ -8908,6 +9471,21 @@ function onSocialMsg(m) {
     renderChats();
     renderLobbyClubPanel();
     if (dmPeer && dmPeer.id === m.id) paintDmPeer();
+  } else if (m.type === 's-stats') {
+    statsCache = { stats: m.stats || null, leaders: m.leaders || [] };
+    paintMatchStats();
+    renderLeaders();
+  } else if (m.type === 's-watch-state') {
+    if (m.code) spectateGame(m.code);
+  } else if (m.type === 's-club-vs-invited') {
+    onClubVsInvited(m);
+  } else if (m.type === 's-club-vs-declined') {
+    toast(T('vsDeclined'));
+  } else if (m.type === 's-club-vs-failed') {
+    toast(T('vsFailed'));
+  } else if (m.type === 's-club-vs-start') {
+    toast(T('vsStarted'));
+    if (m.code) joinRoomWithCode(m.code);
   } else if (m.type === 's-club') {
     const prevCid = clubData && clubData.club ? clubData.club.cid : null;
     clubData = { club: m.club || null, invites: m.invites || [] };
@@ -9105,11 +9683,11 @@ function updateFriendsBadge() {
   const req = socialData ? socialData.incoming.length : 0;
   let un = 0;
   dmUnread.forEach((c) => { un += c; });
-  ['#nav-friends-badge', '#frnav-friends-badge', '#chnav-friends-badge', '#pfnav-friends-badge', '#clnav-friends-badge', '#cpnav-friends-badge', '#cmnav-friends-badge', '#srqnav-friends-badge', '#pknav-friends-badge'].forEach((sel) => {
+  ['#nav-friends-badge', '#frnav-friends-badge', '#chnav-friends-badge', '#pfnav-friends-badge', '#clnav-friends-badge', '#cpnav-friends-badge', '#cmnav-friends-badge', '#srqnav-friends-badge', '#pknav-friends-badge', '#ldnav-friends-badge'].forEach((sel) => {
     const b = $(sel);
     if (b) { b.textContent = faNum(req); b.classList.toggle('hidden', req === 0); }
   });
-  ['#nav-chat-badge', '#frnav-chat-badge', '#chnav-chat-badge', '#pfnav-chat-badge', '#clnav-chat-badge', '#cpnav-chat-badge', '#cmnav-chat-badge', '#srqnav-chat-badge', '#pknav-chat-badge'].forEach((sel) => {
+  ['#nav-chat-badge', '#frnav-chat-badge', '#chnav-chat-badge', '#pfnav-chat-badge', '#clnav-chat-badge', '#cpnav-chat-badge', '#cmnav-chat-badge', '#srqnav-chat-badge', '#pknav-chat-badge', '#ldnav-chat-badge'].forEach((sel) => {
     const b = $(sel);
     if (b) { b.textContent = faNum(un); b.classList.toggle('hidden', un === 0); }
   });
@@ -9138,6 +9716,7 @@ function openFriends(origin) {
   $('#scr-clubpage').classList.add('hidden');
   $('#scr-clubmembers').classList.add('hidden');
   $('#scr-picker').classList.add('hidden');
+  $('#scr-leaders').classList.add('hidden');
   $('#scr-friends').classList.remove('hidden');
   connectSocial();
   renderFriends();
@@ -9166,6 +9745,7 @@ function openChats() {
   $('#scr-clubpage').classList.add('hidden');
   $('#scr-clubmembers').classList.add('hidden');
   $('#scr-picker').classList.add('hidden');
+  $('#scr-leaders').classList.add('hidden');
   $('#scr-chats').classList.remove('hidden');
   connectSocial();
   renderChats();
@@ -9410,6 +9990,11 @@ $('#btn-pm-profile').onclick = () => {
   $('#pv-rel').textContent = rel === 'friend' ? T('frIsFriend')
     : rel === 'outgoing' ? T('frPending')
     : rel === 'incoming' ? T('frRespond') : '—';
+  const pvPerson = pmSeat.sid ? (socialPeople.get(pmSeat.sid) || null) : null;
+  const pvWatch = $('#btn-pv-watch');
+  pvWatch.textContent = T('watchBtn');
+  pvWatch.classList.toggle('hidden', !(pvPerson && pvPerson.ingame));
+  pvWatch.onclick = pvPerson ? () => requestWatch(pvPerson) : null;
   closePlayerMenu();
   $('#ov-playerview').classList.add('show');
 };
@@ -9590,12 +10175,16 @@ function renderFriends() {
   if (!socialData.friends.length) listBox.appendChild(frEmpty(T('frNoFriends')));
   socialData.friends.forEach((p) => {
     const actions = [frChatBtn(p)];
-    if (code) {
-      if (p.ingame || p.inlobby) {
-        // Holding ANY seat: disabled (greyed, never hidden). The
+    if (p.ingame) {
+      // In a game: a «تماشا» button — tap asks the social server
+      // for his room code (s-watch) and spectates the game (see
+      // requestWatch). No invite state applies to him.
+      actions.push(frWatchBtn(p));
+    } else if (code) {
+      if (p.inlobby) {
+        // Holding a lobby seat: disabled (greyed, never hidden). The
         // bright SVG gamepad ALONE is the visible label (owner
-        // orders 2026-11-08 + 2026-11-09); the matching wording —
-        // in a match, or in a lobby (owner order 2026-11-09) —
+        // orders 2026-11-08 + 2026-11-09); the matching wording
         // lives on as the button's title/aria-label. The server
         // rejects such invites too.
         actions.push(frBusyBtn(p));
@@ -9957,6 +10546,7 @@ function openClubs() {
   $('#scr-clubpage').classList.add('hidden');
   $('#scr-clubmembers').classList.add('hidden');
   $('#scr-clubseatreqs').classList.add('hidden');
+  $('#scr-leaders').classList.add('hidden');
   $('#scr-clubs').classList.remove('hidden');
   clubUnread = 0;
   clClubsDirty = false; // the entry query below settles any missed change
@@ -9976,7 +10566,7 @@ function closeClubs() {
 function updateClubsBadge() {
   let n = clubUnread;
   if (clubData && !clubData.club) n += (clubData.invites || []).length;
-  ['#nav-clubs-badge', '#frnav-clubs-badge', '#chnav-clubs-badge', '#pfnav-clubs-badge', '#clnav-clubs-badge', '#cpnav-clubs-badge', '#cmnav-clubs-badge', '#srqnav-clubs-badge'].forEach((sel) => {
+  ['#nav-clubs-badge', '#frnav-clubs-badge', '#chnav-clubs-badge', '#pfnav-clubs-badge', '#clnav-clubs-badge', '#cpnav-clubs-badge', '#cmnav-clubs-badge', '#srqnav-clubs-badge', '#ldnav-clubs-badge'].forEach((sel) => {
     const b = $(sel);
     if (b) { b.textContent = faNum(n); b.classList.toggle('hidden', n === 0); }
   });
@@ -10520,6 +11110,186 @@ function renderSeatReqsPage() {
     box.appendChild(row);
   }
 }
+// ---------- club polls (رایه‌اچونه) ----------
+// The poll card lives in the room's FIXED zone directly under
+// the announcement box — only the messages scroll. club.poll
+// rides every s-club push: {q, options, counts, total, open,
+// by, myVote}; a tap on an option row votes while it is open.
+function renderClubPoll(c) {
+  const card = $('#cl-poll');
+  if (!card) return;
+  const isMgr = clubIsManager(c);
+  const createBtn = $('#btn-poll-create');
+  if (createBtn) {
+    createBtn.classList.toggle('hidden', !isMgr);
+    createBtn.textContent = '🗳 ' + T('pollTitle');
+  }
+  const vsBtn = $('#btn-cl-vs');
+  if (vsBtn) {
+    vsBtn.classList.toggle('hidden', !isMgr);
+    vsBtn.textContent = '⚔ ' + T('vsChallengeBtn');
+  }
+  const poll = c && c.poll;
+  card.classList.toggle('hidden', !poll);
+  if (!poll) return;
+  $('#cl-poll-q').textContent = poll.q || '';
+  const box = $('#cl-poll-opts');
+  box.innerHTML = '';
+  const total = poll.total || 0;
+  (poll.options || []).forEach((opt, idx) => {
+    const counts = (poll.counts || [])[idx] || 0;
+    const pct = total ? Math.round((counts / total) * 100) : 0;
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'cl-poll-opt' + (poll.myVote === idx ? ' mine' : '');
+    row.disabled = !poll.open;
+    const fill = document.createElement('span');
+    fill.className = 'cl-poll-fill';
+    fill.style.width = pct + '%';
+    row.appendChild(fill);
+    const lbl = document.createElement('span');
+    lbl.className = 'cl-poll-lbl';
+    lbl.textContent = opt;
+    row.appendChild(lbl);
+    const n = document.createElement('span');
+    n.className = 'cl-poll-n';
+    n.textContent = String(counts) + ' · ' + pct + '%';
+    row.appendChild(n);
+    row.onclick = () => { if (poll.open) socialSend({ type: 's-club-poll-vote', idx }); };
+    box.appendChild(row);
+  });
+  const closedTag = $('#cl-poll-closedtag');
+  closedTag.textContent = T('pollClosedTag');
+  closedTag.classList.toggle('hidden', !!poll.open);
+  const closeBtn = $('#btn-poll-close');
+  closeBtn.textContent = T('pollClose');
+  closeBtn.classList.toggle('hidden', !(poll.open && isMgr));
+}
+$('#btn-poll-close').onclick = () => socialSend({ type: 's-club-poll-close' });
+function openPollCreate() {
+  $('#pc-title').textContent = T('pollTitle');
+  const q = $('#pc-q');
+  q.placeholder = T('pollQuestionPh');
+  q.value = '';
+  document.querySelectorAll('.pc-opt').forEach((inp, i) => {
+    inp.placeholder = T('pollOptionPh', i + 1);
+    inp.value = '';
+  });
+  $('#btn-pc-create').textContent = T('pollSubmit');
+  $('#btn-pc-cancel').textContent = T('clCancel');
+  $('#ov-pollcreate').classList.add('show');
+}
+function closePollCreate() { $('#ov-pollcreate').classList.remove('show'); }
+$('#btn-poll-create').onclick = openPollCreate;
+$('#btn-pc-cancel').onclick = closePollCreate;
+$('#ov-pollcreate').addEventListener('click', (e) => { if (e.target === e.currentTarget) closePollCreate(); });
+$('#btn-pc-create').onclick = () => {
+  const q = $('#pc-q').value.trim();
+  if (!q) { $('#pc-q').focus(); return; }
+  const options = Array.prototype.map.call(document.querySelectorAll('.pc-opt'), (i) => i.value.trim()).filter(Boolean);
+  if (options.length < 2) { toast(T('pollNeedTwo')); return; }
+  socialSend({ type: 's-club-poll-create', q, options });
+  closePollCreate();
+};
+
+// ---------- club-vs-club (د بل کلب سره لوبه) ----------
+// One picker component serves both popups: my club's ONLINE
+// members (s-presence keeps the member records' online flags
+// fresh) with exactly-2 checkbox selection; the challenger is
+// preselected when he is online.
+function onlineClubMembers() {
+  const c = roomClub();
+  if (!c) return [];
+  return (c.members || []).filter((m) => m.online);
+}
+function buildVsPicker(box, sel) {
+  if (!box) return;
+  box.innerHTML = '';
+  const mems = onlineClubMembers();
+  if (!mems.length) { box.appendChild(frEmpty(T('clNoClubMembers'))); return; }
+  mems.forEach((m) => {
+    const chk = document.createElement('button');
+    chk.type = 'button';
+    chk.className = 'cv-check';
+    chk.textContent = sel.has(m.id) ? '☑' : '☐';
+    chk.setAttribute('aria-label', T('vsPickTwo'));
+    chk.onclick = () => {
+      if (sel.has(m.id)) sel.delete(m.id);
+      else if (sel.size < 2) sel.add(m.id);
+      buildVsPicker(box, sel);
+    };
+    box.appendChild(personRow(m, [chk]));
+  });
+}
+let vsSel = new Set();
+function openClubVs() {
+  const c = roomClub();
+  if (!clubIsManager(c)) return;
+  vsSel = new Set();
+  if ((c.members || []).some((m) => m.id === socialMe && m.online)) vsSel.add(socialMe);
+  $('#cv-title').textContent = T('vsChallengeBtn');
+  const inp = $('#cv-clubid');
+  inp.placeholder = T('vsClubIdPh');
+  inp.value = '';
+  $('#cv-pick-lbl').textContent = T('vsPickTwo');
+  $('#btn-cv-send').textContent = T('vsSendBtn');
+  $('#btn-cv-cancel').textContent = T('clCancel');
+  buildVsPicker($('#cv-pick'), vsSel);
+  $('#ov-clubvs').classList.add('show');
+}
+function closeClubVs() { $('#ov-clubvs').classList.remove('show'); }
+$('#btn-cl-vs').onclick = openClubVs;
+$('#btn-cv-cancel').onclick = closeClubVs;
+$('#ov-clubvs').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeClubVs(); });
+$('#btn-cv-send').onclick = () => {
+  const club = $('#cv-clubid').value.trim();
+  if (!club) { toast(T('vsNeedClubId')); $('#cv-clubid').focus(); return; }
+  if (vsSel.size !== 2) { toast(T('vsPickTwo')); return; }
+  socialSend({ type: 's-club-vs-challenge', club, players: Array.from(vsSel) });
+  closeClubVs();
+};
+// The incoming challenge (managers of the challenged club only):
+// the challenger club's name + their two players, then MY two
+// picks and the reply — accept starts the server's room, whose
+// code comes back as s-club-vs-start and joins by code.
+let vsInv = null;
+let vsInvSel = new Set();
+function onClubVsInvited(m) {
+  const c = roomClub();
+  if (!clubIsManager(c)) return;
+  vsInv = m;
+  vsInvSel = new Set();
+  if ((c.members || []).some((x) => x.id === socialMe && x.online)) vsInvSel.add(socialMe);
+  const fc = m.fromClub || {};
+  const fcName = (typeof fc === 'object' ? (fc.name || fc.cid) : fc) || '';
+  $('#cvi-title').textContent = T('vsInvitedFrom', String(fcName));
+  const names = (m.players || []).map((pl) => {
+    if (pl && typeof pl === 'object') return pl.name || '';
+    const pp = socialPeople.get(pl);
+    return (pp && pp.name) || String(pl || '');
+  }).filter(Boolean);
+  $('#cvi-players').textContent = names.join(' · ');
+  $('#cvi-pick-lbl').textContent = T('vsPickTwo');
+  $('#btn-cvi-accept').textContent = T('frAccept');
+  $('#btn-cvi-decline').textContent = T('frReject');
+  buildVsPicker($('#cvi-pick'), vsInvSel);
+  $('#ov-clubvsinv').classList.add('show');
+}
+function closeClubVsInv() { $('#ov-clubvsinv').classList.remove('show'); vsInv = null; }
+$('#btn-cvi-accept').onclick = () => {
+  if (!vsInv) return;
+  if (vsInvSel.size !== 2) { toast(T('vsPickTwo')); return; }
+  const fc = vsInv.fromClub || {};
+  socialSend({ type: 's-club-vs-reply', club: (typeof fc === 'object' ? fc.cid : fc), accept: true, players: Array.from(vsInvSel) });
+  closeClubVsInv();
+};
+$('#btn-cvi-decline').onclick = () => {
+  if (!vsInv) return;
+  const fc = vsInv.fromClub || {};
+  socialSend({ type: 's-club-vs-reply', club: (typeof fc === 'object' ? fc.cid : fc), accept: false, players: [] });
+  closeClubVsInv();
+};
+
 function renderClubRoom() {
   const c = roomClub();
   if (!c) return;
@@ -10569,6 +11339,7 @@ function renderClubRoom() {
   else { annText.textContent = T('clAnnounceEmpty'); annText.classList.add('dim'); }
   $('#cl-annbar').classList.toggle('canedit', c.myRole === 'owner' || c.myRole === 'deputy');
   trackClubJoins(c);
+  renderClubPoll(c);
   renderClubChat();
   pullClubGame(c); // clubs v8: the game button's live badge state
   cv.enter();
@@ -10623,6 +11394,14 @@ function renderClubPage() {
   $('#cp-name').textContent = c.name || '';
   $('#cp-id-num').textContent = c.cid;
   $('#cp-count').textContent = T('clMemberCount', c.count);
+  const vsRec = (c.clubSummary && c.clubSummary.vsRecord) || c.vsRecord || null;
+  let vsW = 0, vsL = 0;
+  if (vsRec) Object.keys(vsRec).forEach((k) => { vsW += (vsRec[k] && vsRec[k].w) || 0; vsL += (vsRec[k] && vsRec[k].l) || 0; });
+  const vsEl = $('#cp-vsrecord');
+  if (vsEl) {
+    vsEl.textContent = T('vsRecordLine', faNum(vsW), faNum(vsL));
+    vsEl.classList.toggle('hidden', !(vsW + vsL));
+  }
   const cd = new Date(c.created);
   $('#cl-created').textContent = T('clCreated', cd.getFullYear() + '/' + (cd.getMonth() + 1) + '/' + cd.getDate());
   const desc = $('#cl-desc');
@@ -12096,7 +12875,7 @@ function launchCollection(seat, col) {
   pileShown[seat] = col.target;
   renderPileRow(seat);
   const row = $('#pile-' + relPos(seat));
-  const backEl = row ? row.querySelector('img:last-child') : null;
+  const backEl = row ? row.querySelector('.pileback:last-child') : null;
   if (!backEl) { settleCollect(seat); return; }
   backEl.style.visibility = 'hidden';
   col.backEl = backEl;
@@ -12157,12 +12936,10 @@ function runCollectFlight(seat, col, rects, landing) {
       f.style.height = cardH + 'px';
       faces.appendChild(f);
     });
-    const backImg = document.createElement('img');
-    backImg.src = ASSET('cards/back.png');
-    backImg.alt = '';
-    backImg.className = 'collectbackface';
+    const backFace = document.createElement('div');
+    backFace.className = 'collectbackface cback cback-' + currentBack();
     inner.appendChild(faces);
-    inner.appendChild(backImg);
+    inner.appendChild(backFace);
     stack.appendChild(inner);
     document.body.appendChild(stack);
     col.clones.push(stack);
@@ -12350,7 +13127,8 @@ function teamLabel(team) {
 // No container, no label, no count — just the backs.
 function pileRowHTML(count) {
   let html = '';
-  for (let i = 0; i < count; i++) html += '<img src="' + ASSET('cards/back.png') + '" alt="">';
+  const bk = ' cback-' + currentBack();
+  for (let i = 0; i < count; i++) html += '<div class="pileback cback' + bk + '"></div>';
   return html;
 }
 
@@ -12401,6 +13179,11 @@ function render(st) {
   $('#scr-game').classList.toggle('spectating', !!spectating);
   $('#spec-chip').classList.toggle('hidden', !spectating);
   if (spectating) $('#spec-chip-txt').textContent = T('clWatching');
+  const vsTagEl = $('#vs-tag');
+  if (vsTagEl) {
+    vsTagEl.classList.toggle('hidden', !st.vs);
+    if (st.vs) vsTagEl.textContent = ((st.vs.a && st.vs.a.name) || '') + ' ⚔ ' + ((st.vs.b && st.vs.b.name) || '');
+  }
   const myTeam = mySeat % 2, them = 1 - myTeam;
 
   // Scoreboard headline = the BANKED tawan (جمع‌شده) per the user's order —
@@ -12622,6 +13405,7 @@ function render(st) {
   if (st.phase === 'matchEnd' && prevPhase !== 'matchEnd' && st.matchWinner === myTeam) buzz([45, 40, 45]);
   prevPhase = st.phase;
   $('#ov-match').classList.toggle('show', st.phase === 'matchEnd');
+  paintRematch(st);
   if (st.phase === 'matchEnd') {
     $('#ov-match-title').textContent = st.matchWinner === myTeam ? T('matchWinTitle') : T('matchLoseTitle');
     $('#ov-f-us').textContent = faNum(st.bankedTawan ? st.bankedTawan[myTeam] : 0);
@@ -12648,6 +13432,65 @@ $('#ov-round').addEventListener('click', () => {
   if (ovRoundNo >= 0) ovRoundDismissed = ovRoundNo;
   $('#ov-round').classList.remove('show');
 });
+
+// ---------- rematch (بیا لوبه) ----------
+// The match-end card's rematch button is for seated humans (never
+// spectators). The standing offer rides state.rematch:
+// {bySeat, expiresIn, acceptedSeats, totalHumans} — the offer bar
+// shows the initiator, the accepted count and a countdown that
+// ticks locally between state pushes. A reply goes out as
+// {type:'rematch-reply', accept}; a cancelled offer arrives as
+// {type:'rematch-cancelled', reason} and toasts by reason.
+let rematchSent = false;    // I already asked (my button is spent)
+let rematchReplied = false; // I already answered the standing offer
+let rematchEndsAt = 0;
+let rematchTimer = null;
+function paintRematch(st) {
+  const btn = $('#btn-rematch');
+  const bar = $('#ovm-rematch');
+  if (!btn || !bar) return;
+  if (!st || st.phase !== 'matchEnd') {
+    rematchSent = false;
+    rematchReplied = false;
+    if (rematchTimer) { clearInterval(rematchTimer); rematchTimer = null; }
+    bar.classList.add('hidden');
+    return;
+  }
+  const seated = !spectating && mySeat !== null && mySeat !== undefined;
+  btn.classList.toggle('hidden', !seated);
+  btn.disabled = rematchSent || !!st.rematch;
+  const rm = st.rematch;
+  if (!rm) {
+    bar.classList.add('hidden');
+    if (rematchTimer) { clearInterval(rematchTimer); rematchTimer = null; }
+    return;
+  }
+  bar.classList.remove('hidden');
+  rematchEndsAt = Date.now() + (rm.expiresIn || 0) * 1000;
+  if (!rematchTimer) rematchTimer = setInterval(() => { if (state) paintRematchInfo(state); }, 500);
+  paintRematchInfo(st);
+  const accepted = (rm.acceptedSeats || []).includes(mySeat);
+  const showReply = seated && rm.bySeat !== mySeat && !accepted && !rematchReplied;
+  $('#btn-rematch-accept').classList.toggle('hidden', !showReply);
+  $('#btn-rematch-decline').classList.toggle('hidden', !showReply);
+}
+function paintRematchInfo(st) {
+  const rm = st && st.rematch;
+  const info = $('#ovm-rematch-info');
+  if (!rm || !info) return;
+  const by = st.seats && st.seats[rm.bySeat] ? dispName(st.seats[rm.bySeat]) : T('playerName');
+  const secs = Math.max(0, Math.round((rematchEndsAt - Date.now()) / 1000));
+  info.textContent = T('rematchOffer', by) + ' · ' +
+    (rm.acceptedSeats || []).length + '/' + (rm.totalHumans || 0) + ' · ' + secs;
+}
+$('#btn-rematch').onclick = () => {
+  rematchSent = true;
+  const b = $('#btn-rematch');
+  if (b) b.disabled = true;
+  send({ type: 'rematch' });
+};
+$('#btn-rematch-accept').onclick = () => { rematchReplied = true; send({ type: 'rematch-reply', accept: true }); if (state) paintRematch(state); };
+$('#btn-rematch-decline').onclick = () => { rematchReplied = true; send({ type: 'rematch-reply', accept: false }); if (state) paintRematch(state); };
 
 function renderLobby(st) {
   $('#lobby-code').textContent = st.code.split('').join(' ');
@@ -12730,6 +13573,8 @@ let clubGame = null;
 let clubGamePullCid = null; // the club the badge state was last pulled for
 let spectating = false;     // I am watching a club game (no seat, no hand)
 let specCode = null;
+let spectateReturn = 'club'; // where exitSpectate lands: 'club' | 'friends' | 'home'
+let statsCache = null;       // last s-stats payload {stats:{p,w,l}, leaders:[...]}
 
 function paintClubGameBtn() {
   const btn = $('#btn-cl-game');
@@ -12770,11 +13615,41 @@ function hideClubScreens() {
 }
 
 function spectateClubGame(code) {
+  spectateReturn = 'club';
+  spectateGame(code);
+}
+// The generic watch entry (club spectate AND the friends «تماشا»):
+// the same game-socket spectate flow; spectateReturn remembers
+// the screen the watcher came from and exitSpectate lands there.
+function spectateGame(code) {
   hideClubScreens();
+  // The watch can also start from the social screens (friends list /
+  // a friend's profile): those paint above the table and show()
+  // only manages home/lobby/game, so hide them here too —
+  // exitSpectate reopens the right one from spectateReturn.
+  ['scr-friends', 'scr-chats', 'scr-dm', 'scr-profile', 'scr-picker', 'scr-leaders'].forEach((s) => {
+    const el = document.getElementById(s);
+    if (el) el.classList.add('hidden');
+  });
+  $('#ov-playerview').classList.remove('show');
   spectating = true;
   specCode = code;
   intentionalClose = false;
   connect(() => send({ type: 'spectate', code, ...profilePayload() }));
+}
+// A friend's «تماشا»: ask the social server for his room code;
+// the s-watch-state answer carries it back (an s-error
+// socialNotInGame toasts «هغه اوس په لوبه کې نه دی» instead).
+function requestWatch(p) {
+  if (!p || !p.id) return;
+  spectateReturn = !$('#scr-friends').classList.contains('hidden') ? 'friends' : 'home';
+  connectSocial();
+  socialSend({ type: 's-watch', to: p.id });
+}
+function frWatchBtn(p) {
+  const b = frBtn(T('watchBtn'), 'primary', () => requestWatch(p));
+  b.dataset.act = 'watch';
+  return b;
 }
 
 // Leaving the watch: the socket closes (a spectator holds no
@@ -12782,8 +13657,10 @@ function spectateClubGame(code) {
 // the watch started from comes back.
 function exitSpectate() {
   const was = spectating;
+  const ret = spectateReturn;
   spectating = false;
   specCode = null;
+  spectateReturn = 'club';
   if (!was) return;
   intentionalClose = true;
   if (ws) { try { ws.close(); } catch (e) { /* gone */ } ws = null; }
@@ -12795,6 +13672,8 @@ function exitSpectate() {
   $('#scr-lobby').classList.add('hidden');
   $('#scr-game').classList.add('hidden');
   $('#spec-chip').classList.add('hidden');
+  if (ret === 'friends') { openFriends(); return; }
+  if (ret === 'home') { show('scr-home'); return; }
   clRoomView = true;
   $('#scr-clubs').classList.remove('hidden');
   renderClubs();
@@ -12806,8 +13685,10 @@ function renderLobbyClub(st) {
   const btn = $('#btn-lobby-club');
   $('#lobby-club-lbl').textContent = T('clClubMembers');
   const isClubLobby = !!(st && st.club && st.club.cid);
-  tag.classList.toggle('hidden', !isClubLobby);
-  if (isClubLobby) tag.textContent = '🏆 ' + T('clClubGame') + ' · ' + (st.club.name || '');
+  const isVsLobby = !!(st && st.vs);
+  tag.classList.toggle('hidden', !isClubLobby && !isVsLobby);
+  if (isVsLobby) tag.textContent = ((st.vs.a && st.vs.a.name) || '') + ' ⚔ ' + ((st.vs.b && st.vs.b.name) || '');
+  else if (isClubLobby) tag.textContent = '🏆 ' + T('clClubGame') + ' · ' + (st.club.name || '');
   // The invite panel belongs to the room CREATOR (seat = host)
   // — and, since v9.2, to any MANAGER of the room's club who is
   // seated in the lobby (a deputy who joined the founder's club
