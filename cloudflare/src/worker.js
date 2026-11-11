@@ -24,6 +24,18 @@
  *                                 served no-cache so updates land at
  *                                 once; the icons are edge-cached
  *                                 (PWA_URL overrides the base URL).
+ *   GET  /cards/<face>.png        the deck faces + back.png,
+ *   GET  /carpets/feltN.jpg       the eleven table-carpet photos,
+ *   GET  /carpets/thumbs/feltN.jpg  their picker thumbnails, and
+ *   GET  /carpet.jpg              the original carpet — the game's
+ *                                 IMAGE files (speed pass 2026-11-11):
+ *                                 separate files in this repo's
+ *                                 cloudflare/cards|carpets folders,
+ *                                 public + edge-cached like the
+ *                                 stickers, so the client bundle is
+ *                                 code-only and a phone downloads
+ *                                 each image once (CARDS_URL /
+ *                                 CARPETS_URL override the bases).
  *   GET  /ws                      WebSocket upgrade → GameServer DO
  *   GET  /turn-credentials        TURN credentials for game voice
  *                                 (session required, same check as
@@ -40,17 +52,22 @@
  *   GET  /privacy                 privacy policy page (for OAuth consent)
  *   GET  /data-deletion           data deletion instructions page (for Facebook)
  *
- * The client bundle is the SAME self-contained page the Node build
- * serves, in its Cloudflare flavour (built by ../build-deploy.js +
+ * The client bundle is the SAME page the Node build serves, in its
+ * Cloudflare flavour (built by ../build-deploy.js +
  * scripts/build-client.mjs → cloudflare/dist-client.html). There is
  * NO KV: the Worker fetches that committed file from this repo's own
  * GitHub raw URL and keeps a copy in the edge cache (Cache API), so
  * publishing a client update is just "rebuild + commit + push". A
  * fetched copy is only served/cached after a completeness check
- * (> 3,000,000 bytes, ends with </html>) — a failed or truncated
+ * (> CLIENT_MIN_BYTES, ends with </html>) — a failed or truncated
  * fetch serves a short "game is updating" page, never a half page.
  * The source URL is one constant (CLIENT_URL_DEFAULT); the env var
  * CLIENT_URL overrides it (local testing against a static server).
+ * Since the speed pass the bundle is CODE-ONLY (~0.8 MB — the images
+ * are the separate routes above), and serveClient answers it with a
+ * strong ETag derived from the ?v= token: the browser still sends
+ * Cache-Control: no-cache (revalidate every load), but a matching
+ * If-None-Match now gets a bodyless 304 instead of the whole page.
  */
 
 import * as auth from './auth.js';
@@ -61,18 +78,25 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261111-popui';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261111-speed';
 const STICKER_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/stickers/';
 const COVER_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/covers/';
 const PWA_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/';
-const CLIENT_MIN_BYTES = 2_500_000; // the real bundle is ~2.8 MB (was ~3.1 MB until the tabnew reskin retired the CSS carpet's second copy)
+const CARDS_URL_BASE_DEFAULT =
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/cards/';
+const CARPETS_URL_BASE_DEFAULT =
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/carpets/';
+const CLIENT_MIN_BYTES = 500_000; // speed pass: the bundle is code-only now (~0.82 MB; was 13.8 MB with the images inlined)
 const CLIENT_CACHE_TTL = 86400; // seconds the EDGE keeps the client copy —
 // the browser never gets this TTL: serveClient hands the browser
 // `Cache-Control: no-cache` so it revalidates `/` on every load and
 // picks up a new build immediately (the edge copy makes that cheap).
+// The revalidation is cheap for the browser too: serveClient sends a
+// strong ETag (from the ?v= token) and answers If-None-Match with a
+// bodyless 304 (speed pass).
 
 function updatingPage(note) {
   return `<!doctype html>
@@ -127,14 +151,40 @@ function dataDeletionPage() {
 </body></html>`;
 }
 
-async function serveClient(env) {
+// The shell's strong ETag derives from the ?v= token of the client
+// source URL: every client rebuild bumps ?v= (standing rule), so the
+// token IS the bundle version. A URL without ?v= falls back to the
+// URL itself. (304 flow added in the speed pass.)
+function clientETag(src) {
+  const m = /[?&]v=([^&]+)/.exec(src);
+  return '"tore-' + (m ? m[1] : encodeURIComponent(src).slice(0, 40)) + '"';
+}
+function ifNoneMatchHits(request, etag) {
+  const inm = request.headers.get('If-None-Match');
+  if (!inm) return false;
+  return inm.split(',').some((t) => {
+    const tag = t.trim().replace(/^W\//, '');
+    return tag === '*' || tag === etag;
+  });
+}
+
+async function serveClient(request, env) {
   const src = env.CLIENT_URL || CLIENT_URL_DEFAULT;
+  const etag = clientETag(src);
+  const notModified = () => new Response(null, {
+    status: 304,
+    headers: { 'ETag': etag, 'Cache-Control': 'no-cache' },
+  });
   const cacheKey = new Request(src, { method: 'GET' });
   let cache = null;
   try {
     cache = caches.default;
     const hit = await cache.match(cacheKey);
     if (hit) {
+      // The browser revalidates on every load (no-cache below), but
+      // with the ETag that revalidation is free when nothing changed:
+      // a matching If-None-Match gets a bodyless 304.
+      if (ifNoneMatchHits(request, etag)) return notModified();
       // Re-head the edge copy for the browser: same body/status and
       // Content-Type, but `Cache-Control: no-cache` — the browser must
       // revalidate `/` on every load, so a freshly deployed build is
@@ -143,6 +193,7 @@ async function serveClient(env) {
       // busted THIS edge copy, never the browser's.)
       const headers = new Headers(hit.headers);
       headers.set('Cache-Control', 'no-cache');
+      headers.set('ETag', etag);
       return new Response(hit.body, {
         status: hit.status,
         statusText: hit.statusText,
@@ -168,11 +219,15 @@ async function serveClient(env) {
           },
         });
         if (cache) { try { await cache.put(cacheKey, edgePage); } catch { /* serve anyway */ } }
-        // …but the response handed to the browser revalidates always.
+        // …but the response handed to the browser revalidates always —
+        // and if this very request already carries the current ETag,
+        // it needs no body at all.
+        if (ifNoneMatchHits(request, etag)) return notModified();
         return new Response(buf, {
           headers: {
             'Content-Type': 'text/html; charset=utf-8',
             'Cache-Control': 'no-cache',
+            'ETag': etag,
           },
         });
       }
@@ -243,6 +298,41 @@ async function serveCover(env, name) {
         });
         if (cache) { try { await cache.put(cacheKey, jpg.clone()); } catch { /* serve anyway */ } }
         return jpg;
+      }
+    }
+  } catch { /* fall through to 404 */ }
+  return new Response('not found', { status: 404 });
+}
+
+// The game IMAGE files (speed pass): deck faces, felt photos and
+// their thumbnails, the original carpet. Static files in the repo
+// (cloudflare/cards/, cloudflare/carpets/, cloudflare/carpet.jpg),
+// served exactly like the stickers/covers — public, edge-cached,
+// long browser cache. One generic fetcher: base + repo-relative
+// path + content type.
+async function serveRepoAsset(env, base, rel, contentType) {
+  const src = base + rel;
+  const cacheKey = new Request(src, { method: 'GET' });
+  let cache = null;
+  try {
+    cache = caches.default;
+    const hit = await cache.match(cacheKey);
+    if (hit) return hit;
+  } catch { cache = null; }
+
+  try {
+    const res = await fetch(src, { headers: { 'User-Agent': 'tore-game-worker' } });
+    if (res.ok) {
+      const buf = await res.arrayBuffer();
+      if (buf.byteLength > 0) {
+        const file = new Response(buf, {
+          headers: {
+            'Content-Type': contentType,
+            'Cache-Control': 'public, max-age=' + CLIENT_CACHE_TTL,
+          },
+        });
+        if (cache) { try { await cache.put(cacheKey, file.clone()); } catch { /* serve anyway */ } }
+        return file;
       }
     }
   } catch { /* fall through to 404 */ }
@@ -504,6 +594,30 @@ export default {
       return servePwaText(env, 'apple-touch-icon.png', 'image/png');
     }
 
+    if (path.startsWith('/cards/') && request.method === 'GET') {
+      // Deck faces + the back: only the known 53 files exist.
+      // Public like the stickers — no session needed to load one.
+      const name = path.slice('/cards/'.length);
+      if (/^([2-9TJQKA][CDHS]|back)\.png$/.test(name)) {
+        return serveRepoAsset(env, env.CARDS_URL || CARDS_URL_BASE_DEFAULT, name, 'image/png');
+      }
+      return new Response('not found', { status: 404 });
+    }
+
+    if (path.startsWith('/carpets/') && request.method === 'GET') {
+      // The eleven felt photos and their picker thumbnails.
+      const rest = path.slice('/carpets/'.length);
+      if (/^(thumbs\/)?felt([1-9]|1[01])\.jpg$/.test(rest)) {
+        return serveRepoAsset(env, env.CARPETS_URL || CARPETS_URL_BASE_DEFAULT, rest, 'image/jpeg');
+      }
+      return new Response('not found', { status: 404 });
+    }
+
+    if (path === '/carpet.jpg' && request.method === 'GET') {
+      // The original carpet (JS preload legacy path; ASSET-rooted).
+      return serveRepoAsset(env, env.PWA_URL || PWA_URL_BASE_DEFAULT, 'carpet.jpg', 'image/jpeg');
+    }
+
     if (path === '/club-cover' && request.method === 'POST') {
       // A club owner uploads his club's cover photo. The bytes go
       // to the social DO, which stores them under the club id and
@@ -636,7 +750,7 @@ export default {
           });
         }
       }
-      return serveClient(env);
+      return serveClient(request, env);
     }
 
     return new Response('not found', { status: 404 });
