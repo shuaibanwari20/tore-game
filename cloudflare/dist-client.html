@@ -4876,6 +4876,7 @@ function joinRoomWithCode(code) {
   joinInFlight = true;
   const b = $('#btn-join'); if (b) b.disabled = true;
   joinFlightTimer = setTimeout(endJoinFlight, 10000);
+  setCameFromClub(null); // v9.3: a code/invite-joined room is not my club creation
   connect(() => send({ type: 'join', code, ...profilePayload() }));
 }
 $('#btn-join').onclick = () => joinRoomWithCode($('#inp-code').value);
@@ -4900,7 +4901,13 @@ $('#btn-leavelobby').onclick = () => {
   if (spectating) { exitSpectate(); return; } // clubs v8: a watcher just stops watching
   const st = state;
   const mine = roomClub();
-  const backToClub = !!(st && st.club && st.club.cid && mine && mine.cid === st.club.cid);
+  // v9.3: the room's club stamp is the primary word; the
+  // cameFromClub memory (armed when this room's picker opened
+  // inside my club) is the fallback — either way the landing
+  // club must be MY OWN club.
+  const backToClub = !!(mine && ((st && st.club && st.club.cid && mine.cid === st.club.cid) ||
+    (cameFromClubCid && mine.cid === cameFromClubCid)));
+  setCameFromClub(null); // consumed by this exit either way
   if (micOn) stopMic(); // no live mic rides onto the landing screen
   send({ type: 'leave' });
   intentionalClose = true;
@@ -7629,6 +7636,27 @@ let pkClubCid = null;
 // invite. Pickers opened from the home doors set it false, so
 // ordinary rooms stay unstamped exactly as before.
 let pkFromClub = false;
+// Clubs v9.3: the club the current room was entered FROM —
+// armed when the picker opens in club context (the managers'
+// golden button) and kept across the lobby (sessionStorage, so
+// a webview reload mid-lobby cannot lose it). The lobby exit's
+// landing consults it as a FALLBACK: the room's own club stamp
+// stays the primary word, but a room that somehow carries no
+// stamp (v9.3's root cause: the deployed game host predated the
+// stamp call entirely, so club-made rooms were silently
+// stamp-less) still lands its creator back in his club room.
+// Landing is a UI choice and grants nothing server-side. It is
+// cleared when the picker opens from the home doors, when a
+// room is joined by code/invite, and once an exit consumes it.
+let cameFromClubCid = null;
+try { cameFromClubCid = sessionStorage.getItem('tore.fromclub') || null; } catch (e) { /* storage unavailable */ }
+function setCameFromClub(cid) {
+  cameFromClubCid = cid || null;
+  try {
+    if (cameFromClubCid) sessionStorage.setItem('tore.fromclub', cameFromClubCid);
+    else sessionStorage.removeItem('tore.fromclub');
+  } catch (e) { /* storage unavailable */ }
+}
 // The shelf art is the game's REAL faces (cardEl → the same
 // ASSET() map as the table): توره wears the fan of its story —
 // Q♠ (ماتکه کالا) in front of a heart and the 10♦ — while حکم
@@ -7682,6 +7710,7 @@ function openPicker(mode, clubCid) {
   pkMode = mode || 'online';
   pkClubCid = clubCid || null;
   pkFromClub = !!clubCid;
+  setCameFromClub(clubCid || null); // v9.3: the club button arms it, the home doors clear it
   paintPickerTabs();
   $('#scr-picker').classList.remove('hidden');
   pkGo(0, false);
@@ -8133,6 +8162,7 @@ function onMsg(msg) {
     if (spectating) { exitSpectate(); toast(T('roomCancelled')); return; }
     // The host cancelled the waiting room: drop the saved session so
     // «ادامهٔ بازی» cannot resurrect it, say why, and go to the menu.
+    setCameFromClub(null); // v9.3: the room is gone; its entry memory dies with it
     localStorage.removeItem('tore.session');
     session = null;
     updateContinue();
