@@ -7616,6 +7616,15 @@ let pkMode = 'online';
 // grants nothing) and the picker's ✖ falls back onto the club
 // room underneath it instead of the home menu.
 let pkClubCid = null;
+// Clubs v9.2: a second, independent record that this picker was
+// opened FROM THE CLUB ROOM (the managers' golden game button).
+// startPickedGame falls back to it (via my own club + manager
+// role, re-read at create time) when pkClubCid itself was lost
+// on the way — the owner's live report 2026-11-10: a club-made
+// game whose lobby carried no club stamp, no tag, no club
+// invite. Pickers opened from the home doors set it false, so
+// ordinary rooms stay unstamped exactly as before.
+let pkFromClub = false;
 // The shelf art is the game's REAL faces (cardEl → the same
 // ASSET() map as the table): توره wears the fan of its story —
 // Q♠ (ماتکه کالا) in front of a heart and the 10♦ — while حکم
@@ -7668,6 +7677,7 @@ function pkGo(i, smooth) {
 function openPicker(mode, clubCid) {
   pkMode = mode || 'online';
   pkClubCid = clubCid || null;
+  pkFromClub = !!clubCid;
   paintPickerTabs();
   $('#scr-picker').classList.remove('hidden');
   pkGo(0, false);
@@ -7675,11 +7685,20 @@ function openPicker(mode, clubCid) {
 }
 function closePicker() {
   pkClubCid = null;
+  pkFromClub = false;
   $('#scr-picker').classList.add('hidden');
 }
 function startPickedGame() {
   const mode = pkMode;
-  const club = pkClubCid;
+  // Clubs v9.2: the club rides the create from the picker's club
+  // context — pkClubCid first, and (if it was lost on the way)
+  // the from-club flag re-derives it from my own club while I am
+  // still its manager. The server verifies the stamp either way.
+  let club = pkClubCid;
+  if (!club && pkFromClub) {
+    const mine = roomClub();
+    if (mine && clubIsManager(mine)) club = mine.cid;
+  }
   closePicker();
   if (mode === 'bots') quickPlay = true;
   connect(() => send({ type: 'create', ...(club ? { club } : {}), ...profilePayload() }));
@@ -12135,10 +12154,14 @@ function renderLobbyClub(st) {
   tag.classList.toggle('hidden', !isClubLobby);
   if (isClubLobby) tag.textContent = '🏆 ' + T('clClubGame') + ' · ' + (st.club.name || '');
   // The invite panel belongs to the room CREATOR (seat = host)
-  // and only while the room's club is his own club.
+  // — and, since v9.2, to any MANAGER of the room's club who is
+  // seated in the lobby (a deputy who joined the founder's club
+  // game can pull clubmates in too) — only while the room's club
+  // is his own club. The panel lists the club's members either
+  // way (roomClub() is the same club) and invites ride s-invite.
   const mine = roomClub();
-  const canInvite = isClubLobby && !spectating && mySeat === st.hostSeat &&
-    !!mine && mine.cid === st.club.cid;
+  const canInvite = isClubLobby && !spectating && !!mine && mine.cid === st.club.cid &&
+    (mySeat === st.hostSeat || clubIsManager(mine));
   btn.classList.toggle('hidden', !canInvite);
   if (!canInvite) closeLobbyClubPanel();
 }
