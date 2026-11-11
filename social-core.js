@@ -36,7 +36,8 @@
  * s-search-result, s-requested, s-dm, s-dm-history, s-invited,
  * s-invite-result, s-error (codes: socialBlocked, socialNotFriends,
  * socialDuplicate, socialRate, socialOffline, socialNotInRoom,
- * socialNotFound, socialInGame, socialBusy, socialCooldown).
+ * socialNotFound, socialInGame, socialBusy, socialCooldown,
+ * socialNotInGame).
  *
  * Clubs (کلبونه, 2026-11-09 — spec: CLUBS-PROMPT.md): one club per
  * player; a club has a permanent unique 6-digit ID, a name, an
@@ -58,7 +59,9 @@
  * Protocol (server -> client): s-club (full state), 
  * s-club-search-result, s-club-chat, s-club-invited, s-error
  * (codes: clubInClub, clubNotFound, clubFull, clubDuplicate,
- * clubNoPerm, clubOwner, clubSelf, clubBlocked).
+ * clubNoPerm, clubOwner, clubSelf, clubBlocked, clubPollActive,
+ * clubNoPoll, clubPollClosed, clubVsPlayers, clubVsPending,
+ * clubVsNone, clubVsStartFail).
  *
  * Clubs v2 (2026-11-09 — CLUBS-PROMPT.md v2, Ludo Star club UX):
  * the club record grows a COVER (id from a built-in gallery — the
@@ -76,7 +79,7 @@
  * country filter is an exact match on the stored country ('' =
  * global). 'mine' returns my club + the clubs I liked. The public
  * page reads s-club-view {club} (summary + member preview).
- * The club room is also a VOICE room: 8 mic seats per club,
+ * The club room is also a VOICE room: 10 mic seats per club,
  * tracked in the core as RUNTIME-ONLY state (never persisted) —
  * s-club-voice {action:'join'|'leave'} enters/leaves the room,
  * s-club-seat {seat} sits (members only; a taken seat rejects
@@ -108,6 +111,27 @@
  * join / leave / kick / transfer / custom cover) broadcasts the
  * payload-free s-clubs-changed {v} to ALL online players through
  * _clubsChanged(); clients re-run their current discover query.
+ *
+ * Clubs v8 — CLUB GAMES (2026-11-10, CLUBS-PROMPT.md v8): a
+ * golden game button sits in the club room for EVERY member.
+ * Managers (owner + deputies) tap it to open the game picker in
+ * club context and create a room OF the club; ordinary members
+ * tap it to SPECTATE the club's active game (see the hosts for
+ * the spectator stream). The core's part: (1) clubGameClub(id,
+ * cid) — the game hosts call it at room-create time; only a
+ * VERIFIED manager of that club gets {cid, name} back, so a
+ * client-sent club id is never trusted on its own and a plain
+ * member / non-member can never stamp a room. (2) clubMembership
+ * (id, cid) — the hosts admit spectators by it. (3) The active-
+ * game badge: the host hook clubGameLookup(cid) -> {code, phase}
+ * | null answers which room (if any) is this club's live game;
+ * members pull it with s-club-game {club} (own club only — the
+ * reply is the empty state for any other club) and the hosts
+ * push fresh state to all online members via clubGameChanged
+ * (cid) whenever a club game appears, starts, ends or dissolves
+ * (s-club-game-state {club, code, phase}).
+ * Protocol additions (client -> server): s-club-game.
+ * Protocol additions (server -> client): s-club-game-state.
  *
  * Invite rules (2026-11-08, extended 2026-11-09): a target holding
  * ANY seat cannot be invited — a started match (host hook
@@ -155,6 +179,20 @@
  * left is sitting in a mic seat, through the owner-approved
  * seat-request list. Protocol addition (client -> server):
  * s-club-enter.
+ *
+ * Clubs v9 — TEN SEATS (2026-11-10, CLUBS-PROMPT.md v9): the
+ * room's mic seats grow from 8 to 10 (CLUB_SEATS) and shrink on
+ * screen, so the seat block takes two even rows of five and the
+ * chat feed below it gains the freed height. Every seat rule is
+ * unchanged — request + owner approval, rank-bounded seat kick,
+ * mic-off keeps the seat — only the count moved; all seat paths
+ * already bound-check against CLUB_SEATS, so the constant is
+ * the whole server change. Stored-state safety: seats are
+ * runtime-only and never persisted, but a legacy club record
+ * that still carries a `seats` array (written when the room
+ * had 8 chairs) is normalized on load — occupants keep their
+ * indices, the new chairs pad in empty — so no reader ever
+ * sees the old length (see loadClubs).
  */
 'use strict';
 
@@ -178,9 +216,17 @@ const CLUB_EMBLEMS = ['trophy', 'shield', 'star', 'crown', 'gem', 'crescent', 'f
 // id, and coverV (bumped on every upload) busts its cache.
 const CLUB_COVERS = ['mountains', 'mosque', 'caravan', 'pomegranate', 'city', 'carpet', 'eagle', 'river', 'tent', 'trophy'];
 const CLUB_COVER_CUSTOM = 'custom';
-const CLUB_CATEGORIES = ['social', 'game', 'family'];
+const CLUB_CATEGORIES = ['social', 'game', 'family', 'fun'];
+// Clubs v7: a club carries a display LANGUAGE (the creator's UI
+// language at creation, editable in the profile popup) — one of
+// the three UI languages, defaulting to Pashto like the app.
+const CLUB_LANGS = ['ps', 'fa', 'en'];
 const CLUB_ANN_MAX = 200;
-const CLUB_SEATS = 8;
+// Clubs v9: 10 mic seats per club (was 8 through v8) — two rows
+// of five on screen. Every seat path bound-checks against this
+// constant, and loadClubs pads any legacy 8-entry stored seat
+// array up to this length.
+const CLUB_SEATS = 10;
 // Seat requests (owner order 2026-11-09, reshaped the same day):
 // a member who wants a mic seat asks the club OWNER, who approves
 // or rejects. There is NO popup and NO timeout: the request WAITS
@@ -191,11 +237,109 @@ const CLUB_SEATS = 8;
 // the CLUB entirely (leave / kick / dissolve — someone no longer
 // in the club must never appear in the list), or when the club
 // dissolves.
+// Social core batch (2026-11-11 — stats / watch / polls /
+// club-vs-club):
+// STATS: every identity owns a lifetime match record
+// {p, w, l, weeks:{weekKey -> wins}} in this.stats, persisted
+// with the social state (serialize/load). Hosts call
+// recordMatchEnd([{id, won}]) for HUMAN players only at match
+// end; the core bumps p, w/l and the current Kabul week's win
+// count (week keys: the timestamp shifted +4:30, then the ISO
+// Monday-week id, e.g. '2026-W46'; each record keeps only its
+// newest 8 week keys), persists, and pushes
+// s-stats {stats, leaders} to every involved player who is
+// online. statsOf(id) is the {p,w,l} view (zeros by default);
+// weeklyLeaders(limit) ranks the CURRENT Kabul week (wins >= 1,
+// wins desc, total wins desc, then name). Clients pull the same
+// payload with s-stats -> s-stats {stats, leaders}; s-init
+// carries both fields too.
+// SPECTATE FRIENDS: canWatch(id, seatIds) is true when any seat
+// is held by a friend of id or by a member of id's club.
+// s-watch {to} asks to watch a friend/clubmate's live MATCH:
+// a blocked relation rejects socialBlocked, a stranger rejects
+// socialNotFriends, and the host hook watchLookup(to) must
+// return {code} for a live match (anything else rejects
+// socialNotInGame); success replies s-watch-state {to, code}.
+// LOBBIES ARE NOT WATCHABLE — watchLookup only ever names a
+// started match, so a lobby seat yields socialNotInGame.
+// CLUB SEARCH: s-club-search keeps its exact-ID behaviour and
+// ALSO matches club names by case-insensitive substring; the
+// two result sets merge, dedupe by club and cap at 20, in the
+// unchanged s-club-search-result {q, results:[clubSummary]}
+// payload.
+// CLUB POLLS: a club record carries `poll` (null when none):
+// {q, options:[str], votes:{playerId -> idx}, by, ts, open}.
+// s-club-poll-create {q, options} is managers-only (clubNoPerm;
+// the creator must be a member of his own club by the one-club
+// rule); q trims to 1..120 chars, options are 2..4 entries each
+// trimming to 1..40 non-empty chars, and an already-open poll
+// rejects clubPollActive. s-club-poll-vote {idx} is any member:
+// no poll rejects clubNoPoll, a closed poll rejects
+// clubPollClosed, and a vote may be CHANGED while the poll is
+// open. s-club-poll-close is the poll's creator (poll.by) or
+// any manager; it sets open=false. Every poll mutation persists
+// the clubs and re-ships the full club state to all members
+// through fanClub (the announcement fanout), and clubView ships
+// the poll per recipient as {q, options, counts, total, open,
+// by, myVote} with counts/total derived from the votes.
+// CLUB-VS-CLUB: a club record carries `vsRecord` — a map of
+// otherCid -> {w, l} from THIS club's perspective — shipped in
+// clubSummary. Challenges are RUNTIME-ONLY (this.vsChallenges,
+// keyed reqKey(fromCid, toCid)): s-club-vs-challenge
+// {club, players:[id, id]} is a manager of the sender's club
+// naming exactly 2 DISTINCT current members of his own club
+// (clubVsPlayers); the target must exist (clubNotFound) and
+// not be his own club (clubSelf), and no challenge may already
+// pend between the pair in EITHER direction (clubVsPending).
+// Online managers of the target club get s-club-vs-invited
+// {fromClub, from, players}. s-club-vs-reply
+// {club, accept, players} is a manager of the TARGET club
+// answering a pending challenge (none pending rejects
+// clubVsNone). A decline deletes it and tells the challenger's
+// online managers s-club-vs-declined {club}. An accept
+// validates its own 2 distinct members (clubVsPlayers) and
+// calls the host hook vsStartMatch({clubA, clubB, playersA,
+// playersB}) -> {code} | null: on success the challenge is
+// deleted and all four players (when online) get
+// s-club-vs-start {code, clubA:{cid,name}, clubB:{cid,name}};
+// on failure (null/throw) the challenge is deleted, the
+// replier gets clubVsStartFail and the challenger's managers
+// get s-club-vs-failed {club}. Hosts call recordVsResult(cidA,
+// cidB, winnerCid) at match end: both clubs' vsRecord entries
+// update (winner w++, loser l++ on each side's map), the clubs
+// persist, and both clubs' members get the fresh club state
+// through fanClub.
+// Protocol additions (client -> server): s-stats, s-watch,
+// s-club-poll-create, s-club-poll-vote, s-club-poll-close,
+// s-club-vs-challenge, s-club-vs-reply.
+// Protocol additions (server -> client): s-stats,
+// s-watch-state, s-club-vs-invited, s-club-vs-declined,
+// s-club-vs-start, s-club-vs-failed, s-error (new codes:
+// socialNotInGame, clubPollActive, clubNoPoll, clubPollClosed,
+// clubVsPlayers, clubVsPending, clubVsNone, clubVsStartFail).
+//
 // Club LEVEL is derived from the member count, never stored:
 // Lv1 = 1–9, Lv2 = 10–19, Lv3 = 20–29, Lv4 = 30–39, Lv5 = 40–50.
 function clubLevel(count) {
   const n = Math.max(1, Math.floor(Number(count) || 0));
   return Math.min(5, 1 + Math.floor(n / 10));
+}
+
+// Kabul week key: shift the timestamp by +4:30 (Afghanistan
+// Time), then take the ISO Monday-week id of the shifted date,
+// e.g. '2026-W46'. The shifted date's UTC fields ARE the Kabul
+// wall clock, so all math below runs in UTC on those fields.
+function kabulWeekKey(ts) {
+  const shifted = new Date((typeof ts === 'number' ? ts : Date.now()) + 4.5 * 3600 * 1000);
+  const date = new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()));
+  const dayNum = (date.getUTCDay() + 6) % 7; // Monday = 0 … Sunday = 6
+  date.setUTCDate(date.getUTCDate() - dayNum + 3); // this week's Thursday decides the ISO year
+  const isoYear = date.getUTCFullYear();
+  const first = new Date(Date.UTC(isoYear, 0, 4));
+  const firstDayNum = (first.getUTCDay() + 6) % 7;
+  first.setUTCDate(first.getUTCDate() - firstDayNum + 3); // the first Thursday of the ISO year
+  const week = 1 + Math.round((date - first) / (7 * 24 * 3600 * 1000));
+  return isoYear + '-W' + String(week).padStart(2, '0');
 }
 
 // ---- profile field hygiene (mirrors the game servers' rules) ------
@@ -223,6 +367,8 @@ function reqKey(from, to) { return from + '\n' + to; }
 class SocialCore {
   constructor(hooks) {
     this.hooks = hooks || {};
+    this.stats = new Map();     // id -> {p,w,l,weeks:{weekKey -> wins}} (match stats, persisted with social state)
+    this.vsChallenges = new Map(); // reqKey(fromCid,toCid) -> {fromClub,toClub,by,players:[id,id],ts} (runtime only)
     this.directory = new Map(); // id -> {id,name,avatar,photo,country,uid,lastSeen}
     this.friends = new Map();   // id -> Set<id> (always mutual)
     this.blocked = new Map();   // id -> Set<id> (one direction: I blocked them)
@@ -270,6 +416,7 @@ class SocialCore {
       blocked: sets(this.blocked),
       requests: [...this.requests.values()],
       dm: Object.fromEntries(this.dm),
+      stats: Object.fromEntries(this.stats),
     };
   }
   load(data) {
@@ -280,6 +427,7 @@ class SocialCore {
     this.blocked = sets(data.blocked);
     this.requests = new Map((Array.isArray(data.requests) ? data.requests : []).map((r) => [reqKey(r.from, r.to), r]));
     this.dm = new Map(Object.entries(data.dm || {}));
+    this.stats = new Map(Object.entries(data.stats || {}));
   }
   _persist() { if (this.hooks.persist) { try { this.hooks.persist(this.serialize()); } catch (e) { /* host logs */ } } }
   // Clubs persist through their OWN hook so the DO host can store
@@ -303,10 +451,30 @@ class SocialCore {
       if (typeof c.coverV !== 'number' || !(c.coverV >= 0)) c.coverV = 0;
       if (typeof c.country !== 'string') c.country = '';
       if (!CLUB_CATEGORIES.includes(c.category)) c.category = 'social';
+      if (!CLUB_LANGS.includes(c.lang)) c.lang = 'ps';
       if (!Array.isArray(c.likes)) c.likes = [];
       if (typeof c.announcement !== 'string') c.announcement = '';
+      // Social batch migration: records written before polls /
+      // club-vs-club lack `poll` / `vsRecord` — fill the defaults
+      // in place (null poll, empty record map).
+      if (c.poll === undefined) c.poll = null;
+      if (!c.vsRecord || typeof c.vsRecord !== 'object' || Array.isArray(c.vsRecord)) c.vsRecord = {};
       if (typeof c.desc !== 'string') c.desc = '';
       if (!Array.isArray(c.members)) c.members = [];
+      // Clubs v9 stored-state safety: a legacy record may carry
+      // a `seats` array written when the room had 8 chairs.
+      // Normalize it to exactly CLUB_SEATS entries — occupants
+      // keep their indices, anything past the old end (or not a
+      // player id) pads in empty — so the stored shape can never
+      // resurrect the old seat count. Membership, invites and
+      // chat live outside this field and are untouched.
+      if (Array.isArray(c.seats)) {
+        const padded = new Array(CLUB_SEATS).fill(null);
+        for (let i = 0; i < Math.min(c.seats.length, CLUB_SEATS); i++) {
+          if (typeof c.seats[i] === 'string' && c.seats[i]) padded[i] = c.seats[i];
+        }
+        c.seats = padded;
+      }
     }
     // Legacy snapshots may still carry a `requests` array (the
     // deleted join-request flow): it is ignored on purpose —
@@ -439,6 +607,91 @@ class SocialCore {
   refresh(id) { if (this.isOnline(id)) this._send(id, { type: 's-friends', ...this.listsFor(id) }); }
   refreshBoth(a, b) { this.refresh(a); if (b !== a) this.refresh(b); }
 
+  // ---------- match stats (features 5+6) ----------
+  // Lifetime {p,w,l} plus a per-Kabul-week win count (the weekly
+  // leaderboard's raw material). Hosts feed HUMAN finishers only
+  // through recordMatchEnd; the pull path is s-stats.
+  statsOf(id) {
+    const r = this.stats.get(id);
+    if (!r) return { p: 0, w: 0, l: 0 };
+    return { p: r.p || 0, w: r.w || 0, l: r.l || 0 };
+  }
+  weeklyLeaders(limit) {
+    const key = kabulWeekKey(Date.now());
+    const n = (Number.isInteger(limit) && limit > 0) ? limit : 10;
+    const rows = [];
+    for (const [pid, r] of this.stats) {
+      if (!r || !r.weeks) continue;
+      const wins = r.weeks[key] || 0;
+      if (!(wins >= 1)) continue;
+      const d = this.directory.get(pid);
+      rows.push({
+        id: pid,
+        name: d ? d.name : '',
+        avatar: d ? d.avatar : 'av1',
+        photo: d ? d.photo : '',
+        wins,
+        totalWins: r.w || 0,
+      });
+    }
+    rows.sort((a, b) => (b.wins - a.wins) || (b.totalWins - a.totalWins) || a.name.localeCompare(b.name));
+    return rows.slice(0, n).map((r) => ({ id: r.id, name: r.name, avatar: r.avatar, photo: r.photo, wins: r.wins }));
+  }
+  recordMatchEnd(entries) {
+    if (!Array.isArray(entries) || !entries.length) return;
+    const key = kabulWeekKey(Date.now());
+    const involved = [];
+    for (const e of entries) {
+      if (!e || typeof e.id !== 'string' || !e.id) continue;
+      let r = this.stats.get(e.id);
+      if (!r || typeof r !== 'object') { r = { p: 0, w: 0, l: 0, weeks: {} }; this.stats.set(e.id, r); }
+      if (!r.weeks || typeof r.weeks !== 'object') r.weeks = {};
+      r.p = (r.p || 0) + 1;
+      if (e.won) { r.w = (r.w || 0) + 1; r.weeks[key] = (r.weeks[key] || 0) + 1; }
+      else r.l = (r.l || 0) + 1;
+      // Prune: keep only the newest 8 distinct week keys (the
+      // zero-padded ISO ids sort chronologically as strings).
+      const keys = Object.keys(r.weeks).sort();
+      while (keys.length > 8) delete r.weeks[keys.shift()];
+      involved.push(e.id);
+    }
+    if (!involved.length) return;
+    this._persist();
+    const leaders = this.weeklyLeaders(10);
+    for (const pid of involved) {
+      if (this.isOnline(pid)) this._send(pid, { type: 's-stats', stats: this.statsOf(pid), leaders });
+    }
+  }
+  statsReply(id) {
+    this._send(id, { type: 's-stats', stats: this.statsOf(id), leaders: this.weeklyLeaders(10) });
+  }
+
+  // ---------- spectate friends (feature 3) ----------
+  // A seat list is watchable BY id when any seat belongs to a
+  // friend of id or to a member of id's own club. The hosts use
+  // this to admit spectators; the message path below resolves a
+  // single target to a live match through the host hook.
+  canWatch(id, seatIds) {
+    if (!Array.isArray(seatIds)) return false;
+    const myClub = this.clubOf.get(id) || null;
+    return seatIds.some((sid) => typeof sid === 'string' && sid !== id
+      && (this.areFriends(id, sid) || (!!myClub && this.clubOf.get(sid) === myClub)));
+  }
+  watch(id, to) {
+    if (typeof to !== 'string' || to === id) return this._error(id, 'socialNotFriends');
+    if (this.blockedEither(id, to)) return this._error(id, 'socialBlocked');
+    // The target must be a friend or a clubmate — strangers are
+    // never watchable, and lobbies are not watchable at all (the
+    // hook below only ever names a live MATCH).
+    if (!this.areFriends(id, to) && !this.sameClub(id, to)) return this._error(id, 'socialNotFriends');
+    let hit = null;
+    if (typeof this.hooks.watchLookup === 'function') {
+      try { hit = this.hooks.watchLookup(to); } catch (e) { hit = null; }
+    }
+    if (!hit || typeof hit.code !== 'string' || !hit.code) return this._error(id, 'socialNotInGame');
+    this._send(id, { type: 's-watch-state', to, code: hit.code });
+  }
+
   // ---------- relations ----------
   areFriends(a, b) { const s = this.friends.get(a); return !!s && s.has(b); }
   blockedEither(a, b) {
@@ -489,7 +742,7 @@ class SocialCore {
       lastSeen: Date.now(),
     });
     this._persist();
-    this._send(id, { type: 's-init', me: id, uid: uid || null, ...this.listsFor(id) });
+    this._send(id, { type: 's-init', me: id, uid: uid || null, ...this.listsFor(id), stats: this.statsOf(id), leaders: this.weeklyLeaders(10) });
     this.refreshClub(id, true); // the clubs state rides right behind the init
   }
 
@@ -507,9 +760,12 @@ class SocialCore {
       case 's-dm-history': return this.dmHistory(id, msg.with);
       case 's-invite': return this.invite(id, msg.to, msg.code);
       case 's-invite-reply': return this.inviteReply(id, msg.from, msg.code, msg.accept);
+      case 's-stats': return this.statsReply(id);
+      case 's-watch': return this.watch(id, msg.to);
       case 's-club-create': return this.clubCreate(id, msg);
       case 's-club-search': return this.clubSearch(id, msg.q);
       case 's-club-enter': return this.clubEnter(id, msg.club);
+      case 's-club-game': return this.clubGameQuery(id, msg.club);
       case 's-club-invite': return this.clubInvite(id, msg.to);
       case 's-club-invite-reply': return this.clubInviteReply(id, msg.club, msg.accept);
       case 's-club-leave': return this.clubLeave(id);
@@ -523,6 +779,11 @@ class SocialCore {
       case 's-club-view': return this.clubViewPublic(id, msg.club);
       case 's-club-like': return this.clubLike(id, msg.club);
       case 's-club-announce': return this.clubAnnounce(id, msg.text);
+      case 's-club-poll-create': return this.clubPollCreate(id, msg.q, msg.options);
+      case 's-club-poll-vote': return this.clubPollVote(id, msg.idx);
+      case 's-club-poll-close': return this.clubPollClose(id);
+      case 's-club-vs-challenge': return this.clubVsChallenge(id, msg.club, msg.players);
+      case 's-club-vs-reply': return this.clubVsReply(id, msg.club, msg.accept, msg.players);
       case 's-club-voice': return this.clubVoiceSet(id, msg.action);
       case 's-club-seat': return this.clubSeatSit(id, msg.seat);
       case 's-club-mic': return this.clubMicSet(id, msg.on === true);
@@ -650,6 +911,44 @@ class SocialCore {
     this._send(id, { type: 's-dm-history', with: withId, messages: thread });
   }
 
+  // The invite's SOURCE, attached to every s-invited so the
+  // receiver can always tell where an invite comes from (owner
+  // order 2026-11-11: the popup must show whether it is from the
+  // club president or from somewhere else). Derived HERE from the
+  // club RECORD and the friends graph — never from anything the
+  // sending client claimed: a shared club (both are members of the
+  // same club record) reports the inviter's role in it (owner /
+  // deputy / plain member) plus the club name; anything else is a
+  // plain friend invite.
+  inviteSource(id, to, code) {
+    const srcOf = (club, role) => ({
+      kind: role === 'owner' ? 'clubOwner' : role === 'deputy' ? 'clubDeputy' : 'clubMember',
+      club: club.name,
+    });
+    // 1) The room's own club: when this lobby is a club game, the
+    // inviter's role in THAT club is the truest source (it names
+    // the club president even for a receiver who is not himself a
+    // member). The host reports the stamp; the role still comes
+    // from the club record here.
+    if (code && typeof this.hooks.inviteRoomClub === 'function') {
+      try {
+        const rc = this.hooks.inviteRoomClub(id, code);
+        const club = rc && rc.cid ? this.clubs.get(this._normCid(rc.cid)) : null;
+        const role = club ? this._clubRole(club, id) : null;
+        if (club && role) return srcOf(club, role);
+      } catch (e) { /* fall through to the shared-club source */ }
+    }
+    // 2) A club both players belong to: the inviter's role in it.
+    const cid = this.clubOf.get(id);
+    const club = cid ? this.clubs.get(cid) : null;
+    if (club) {
+      const role = this._clubRole(club, id);
+      if (role && this._clubRole(club, to)) return srcOf(club, role);
+    }
+    // 3) No club relation at all: a plain friend invite.
+    return { kind: 'friend' };
+  }
+
   invite(id, to, code) {
     code = (typeof code === 'string' ? code : '').toUpperCase().trim().slice(0, 8);
     if (typeof to !== 'string' || to === id || !code) return;
@@ -709,7 +1008,7 @@ class SocialCore {
     if (this.pendingInvites.size > 200) {
       for (const [k, t] of this.pendingInvites) if (now - t >= INVITE_PENDING_MS) this.pendingInvites.delete(k);
     }
-    this._send(to, { type: 's-invited', from: this.person(id), code });
+    this._send(to, { type: 's-invited', from: this.person(id), code, src: this.inviteSource(id, to, code) });
   }
 
   inviteReply(id, from, code, accept) {
@@ -770,6 +1069,9 @@ class SocialCore {
   _cleanCategory(v) {
     return (typeof v === 'string' && CLUB_CATEGORIES.includes(v)) ? v : 'social';
   }
+  _cleanClubLang(v) {
+    return (typeof v === 'string' && CLUB_LANGS.includes(v)) ? v : 'ps';
+  }
   _cleanClubCountry(v) {
     return cleanCountry(typeof v === 'string' ? v : '');
   }
@@ -800,11 +1102,26 @@ class SocialCore {
       coverV: (typeof club.coverV === 'number' && club.coverV > 0) ? club.coverV : 0,
       country: typeof club.country === 'string' ? club.country : '',
       category: CLUB_CATEGORIES.includes(club.category) ? club.category : 'social',
+      lang: CLUB_LANGS.includes(club.lang) ? club.lang : 'ps',
       level: clubLevel(club.members.length),
       likes: Array.isArray(club.likes) ? club.likes.length : 0,
       liked: forId ? (Array.isArray(club.likes) && club.likes.includes(forId)) : false,
       announcement: typeof club.announcement === 'string' ? club.announcement : '',
       owner: club.owner, ownerName: owner ? owner.name : '',
+      // Clubs v7.1: the founder's profile rides the summary too —
+      // the owner exit menu's header wears HIM (avatar/photo +
+      // name), not the club emblem; directory-sourced like
+      // ownerName, so it stays fresh across profile changes and
+      // untouched by club renames.
+      ownerAvatar: owner ? owner.avatar : 'av1', ownerPhoto: owner ? owner.photo : '',
+      // Club-vs-club record (this club's perspective); shipped as
+      // a plain copy so a summary reader can never mutate state.
+      vsRecord: (club.vsRecord && typeof club.vsRecord === 'object' && !Array.isArray(club.vsRecord))
+        ? Object.fromEntries(Object.entries(club.vsRecord).map(([k, v]) => [k, {
+          w: (v && typeof v.w === 'number') ? v.w : 0,
+          l: (v && typeof v.l === 'number') ? v.l : 0,
+        }]))
+        : {},
       count: club.members.length, created: club.created, relation,
     };
   }
@@ -833,6 +1150,27 @@ class SocialCore {
     const room = this.clubVoice.get(cid);
     return room ? [...room] : [];
   }
+  // The poll as ONE recipient sees it: the stored record's
+  // public fields plus the derived counts/total and the
+  // recipient's own vote (clubView assembles the room state, so
+  // the poll ships through it — and through clubPayload, which
+  // wraps clubView — with a per-recipient myVote).
+  _clubPollView(club, forId) {
+    const poll = club && club.poll;
+    if (!poll || typeof poll !== 'object' || !Array.isArray(poll.options)) return null;
+    const counts = poll.options.map(() => 0);
+    const votes = (poll.votes && typeof poll.votes === 'object') ? poll.votes : {};
+    for (const idx of Object.values(votes)) {
+      if (Number.isInteger(idx) && idx >= 0 && idx < counts.length) counts[idx]++;
+    }
+    const myVote = (Object.prototype.hasOwnProperty.call(votes, forId) && Number.isInteger(votes[forId]))
+      ? votes[forId] : null;
+    return {
+      q: poll.q, options: [...poll.options], counts,
+      total: counts.reduce((a, b) => a + b, 0),
+      open: poll.open === true, by: poll.by, myVote,
+    };
+  }
   clubView(forId, withChat) {
     const club = this._clubOf(forId);
     if (!club) return null;
@@ -842,6 +1180,7 @@ class SocialCore {
     const view = {
       ...this.clubSummary(club, forId),
       myRole: this._clubRole(club, forId),
+      poll: this._clubPollView(club, forId),
       members,
       seats: this._clubSeatsView(club.cid),
       voice: this._clubVoiceIds(club.cid),
@@ -893,7 +1232,12 @@ class SocialCore {
 
   clubCreate(id, msg) {
     if (this.clubOf.has(id)) return this._error(id, 'clubInClub');
-    const name = this._cleanClubName(msg && msg.name);
+    // Clubs v7 (one-tap create): the client sends the player's
+    // own profile name, but a missing/short name is NOT an error
+    // any more — it falls back to the creator's directory name,
+    // so a one-tap create can never fail on the name.
+    let name = this._cleanClubName(msg && msg.name);
+    if (name.length < 2) name = this._cleanClubName((this.directory.get(id) || {}).name || '');
     if (name.length < 2) return this._error(id, 'clubBadName');
     const cid = this._newClubId();
     if (!cid) return this._error(id, 'clubFull');
@@ -910,8 +1254,11 @@ class SocialCore {
         ? this._cleanClubCountry(msg.country)
         : ((this.directory.get(id) || {}).country || ''),
       category: this._cleanCategory(msg && msg.category),
+      lang: this._cleanClubLang(msg && msg.lang),
       likes: [],
       announcement: '',
+      poll: null,
+      vsRecord: {},
       owner: id, created: Date.now(),
       members: [{ id, role: 'owner', ts: Date.now() }],
     };
@@ -929,16 +1276,25 @@ class SocialCore {
     const raw = (typeof q === 'string' ? q : '').trim().slice(0, 40);
     const out = [];
     if (raw) {
-      if (/^\d+$/.test(raw)) {
-        const club = this.clubs.get(raw.slice(0, 6));
-        if (club && !this.blockedEither(id, club.owner)) out.push(this.clubSummary(club, id));
-      } else {
-        const needle = raw.toLowerCase();
-        const hits = [...this.clubs.values()]
-          .filter((c) => c.name.toLowerCase().includes(needle) && !this.blockedEither(id, c.owner));
-        hits.sort((a, b) => (b.members.length - a.members.length) || a.name.localeCompare(b.name));
-        for (const c of hits.slice(0, 20)) out.push(this.clubSummary(c, id));
-      }
+      const seen = new Set();
+      const push = (club) => {
+        if (!club || seen.has(club.cid) || out.length >= 20) return;
+        if (this.blockedEither(id, club.owner)) return;
+        seen.add(club.cid);
+        out.push(this.clubSummary(club, id));
+      };
+      // Today's ID behaviour, kept: an all-digits query names a
+      // club EXACTLY by its 6-digit ID, and that hit leads.
+      if (/^\d+$/.test(raw)) push(this.clubs.get(raw.slice(0, 6)));
+      // Feature 7: name matches ride the SAME query — a
+      // case-insensitive substring on the club name, biggest
+      // clubs first — merged behind the ID hit, deduped by club
+      // and capped at 20, in the unchanged result payload.
+      const needle = raw.toLowerCase();
+      const hits = [...this.clubs.values()]
+        .filter((c) => c.name.toLowerCase().includes(needle) && !this.blockedEither(id, c.owner));
+      hits.sort((a, b) => (b.members.length - a.members.length) || a.name.localeCompare(b.name));
+      for (const c of hits) push(c);
     }
     this._send(id, { type: 's-club-search-result', q: raw, results: out });
   }
@@ -958,6 +1314,80 @@ class SocialCore {
     if (this.blockedEither(id, club.owner)) return this._error(id, 'clubBlocked');
     if (club.members.length >= CLUB_CAP) return this._error(id, 'clubFull');
     this._joinClub(id, club);
+  }
+
+  // ---- clubs v8: club games (see the header note) ----
+  // Clubs v9.2 (owner's live report 2026-11-10): the club id a
+  // client sends is normalized LENIENTLY here — a numeric id (a
+  // webview / storage round-trip can lose the string type) means
+  // the same club as its string form. The old strict typeof check
+  // silently dropped the stamp for such a frame: the room was
+  // created, but its lobby wore no club tag and no club-invite
+  // button. The club RECORD (its member list) is the source of
+  // truth for the manager check; the clubOf index is only a
+  // cache of it and is healed when the two disagree.
+  _normCid(v) {
+    if (typeof v === 'number' && Number.isFinite(v)) v = String(Math.trunc(v));
+    return (typeof v === 'string' ? v : '').replace(/\D/g, '').slice(0, 6);
+  }
+
+  // The ONLY way a room earns its club stamp: the asking player
+  // must be a manager (owner or deputy) of the club AND it must
+  // be his own club (one-club rule). Returns {cid, name} or null.
+  clubGameClub(id, cidRaw) {
+    const cid = this._normCid(cidRaw);
+    if (!cid) return null;
+    const club = this.clubs.get(cid);
+    if (!club || !this._clubManager(club, id)) return null;
+    if (this.clubOf.get(id) !== cid) this.clubOf.set(id, cid); // heal a stale index from the record
+    return { cid: club.cid, name: club.name };
+  }
+
+  // A player's role in a club (or null) — the game hosts admit
+  // club members as spectators of a club game by this.
+  clubMembership(id, cidRaw) {
+    const cid = this._normCid(cidRaw);
+    const club = cid ? this.clubs.get(cid) : null;
+    if (!club) return null;
+    return this._clubRole(club, id);
+  }
+
+  // The live club-game state for one club, from the host hook:
+  // {code, phase} while a room stamped with this club waits or
+  // plays, else nulls.
+  _clubGameState(cid) {
+    const hit = (typeof this.hooks.clubGameLookup === 'function')
+      ? this.hooks.clubGameLookup(cid) : null;
+    return {
+      type: 's-club-game-state', club: cid,
+      code: hit && typeof hit.code === 'string' ? hit.code : null,
+      phase: hit && typeof hit.phase === 'string' ? hit.phase : null,
+    };
+  }
+
+  // s-club-game {club}: a member pulls his OWN club's game
+  // state for the room button's live badge. Any other club is
+  // answered with the empty state — its game is never leaked.
+  clubGameQuery(id, cidRaw) {
+    const cid = this._normCid(cidRaw);
+    if (!cid) return;
+    const club = this.clubs.get(cid);
+    if (!club || !this._clubRole(club, id)) {
+      this._send(id, { type: 's-club-game-state', club: cid, code: null, phase: null });
+      return;
+    }
+    if (this.clubOf.get(id) !== cid) this.clubOf.set(id, cid); // heal a stale index from the record
+    this._send(id, this._clubGameState(cid));
+  }
+
+  // Host-called whenever a club game appears, starts, ends or
+  // dissolves: every online member gets the fresh badge state.
+  clubGameChanged(cidRaw) {
+    const cid = this._normCid(cidRaw);
+    const club = cid ? this.clubs.get(cid) : null;
+    if (!club) return;
+    const st = this._clubGameState(cid);
+    for (const m of club.members) if (this.isOnline(m.id)) this._send(m.id, st);
   }
 
   clubInvite(id, to) {
@@ -1076,7 +1506,14 @@ class SocialCore {
   clubEdit(id, msg) {
     const club = this._clubOf(id);
     if (!club) return;
-    if (this._clubRole(club, id) !== 'owner') return this._error(id, 'clubNoPerm');
+    // Clubs v7: the edit surface is the profile popup, and its
+    // permission is the MANAGER right (owner + deputy) — the
+    // same right the announcement has always carried
+    // (clubAnnounce). Plain members are still rejected. (The
+    // deleted settings-page form was owner-only; the popup spec
+    // names owner + deputies, so the endpoint follows the
+    // announcement rule it now shares a form with.)
+    if (!this._clubManager(club, id)) return this._error(id, 'clubNoPerm');
     if (!msg || typeof msg !== 'object') return;
     if (typeof msg.name === 'string') {
       const name = this._cleanClubName(msg.name);
@@ -1096,6 +1533,10 @@ class SocialCore {
     }
     if (typeof msg.country === 'string') club.country = this._cleanClubCountry(msg.country);
     if (typeof msg.category === 'string') club.category = this._cleanCategory(msg.category);
+    if (typeof msg.lang === 'string') club.lang = this._cleanClubLang(msg.lang);
+    // The popup's اعلان field rides the same save (cleaned with
+    // the announcement rule; the room box keeps s-club-announce).
+    if (typeof msg.announcement === 'string') club.announcement = this._cleanAnnouncement(msg.announcement);
     this._persistClubs();
     this.fanClub(club.cid);
     this._clubsChanged(); // name/cover/country/category are discovery fields
@@ -1261,6 +1702,158 @@ class SocialCore {
     club.announcement = this._cleanAnnouncement(text);
     this._persistClubs();
     this.fanClub(club.cid);
+  }
+
+  // ---------- club polls (feature 10) ----------
+  // One poll per club, stored on the record; the derived view
+  // ships through clubView (see _clubPollView). Every mutation
+  // persists and re-ships the full club state to all members
+  // through fanClub — the SAME fanout clubAnnounce uses — so an
+  // open club room repaints live.
+  clubPollCreate(id, q, options) {
+    const club = this._clubOf(id);
+    if (!club || !this._clubManager(club, id)) return this._error(id, 'clubNoPerm');
+    if (club.poll && club.poll.open) return this._error(id, 'clubPollActive');
+    const question = (typeof q === 'string' ? q : '').replace(/\s+/g, ' ').trim();
+    if (question.length < 1 || question.length > 120) return;
+    if (!Array.isArray(options) || options.length < 2 || options.length > 4) return;
+    const opts = options.map((o) => (typeof o === 'string' ? o : '').replace(/\s+/g, ' ').trim());
+    if (opts.some((o) => o.length < 1 || o.length > 40)) return;
+    club.poll = { q: question, options: opts, votes: {}, by: id, ts: Date.now(), open: true };
+    this._persistClubs();
+    this.fanClub(club.cid);
+  }
+  clubPollVote(id, idx) {
+    const club = this._clubOf(id);
+    if (!club) return this._error(id, 'clubNoPerm');
+    const poll = club.poll;
+    if (!poll) return this._error(id, 'clubNoPoll');
+    if (!poll.open) return this._error(id, 'clubPollClosed');
+    idx = Number(idx);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= poll.options.length) return;
+    if (!poll.votes || typeof poll.votes !== 'object') poll.votes = {};
+    poll.votes[id] = idx; // changing a vote while open is allowed
+    this._persistClubs();
+    this.fanClub(club.cid);
+  }
+  clubPollClose(id) {
+    const club = this._clubOf(id);
+    if (!club) return this._error(id, 'clubNoPerm');
+    const poll = club.poll;
+    if (!poll) return this._error(id, 'clubNoPoll');
+    // The creator closes his own poll; any manager closes any.
+    if (poll.by !== id && !this._clubManager(club, id)) return this._error(id, 'clubNoPerm');
+    if (!poll.open) return; // already closed — nothing changes
+    poll.open = false;
+    this._persistClubs();
+    this.fanClub(club.cid);
+  }
+
+  // ---------- club-vs-club (feature 11) ----------
+  // Challenges live ONLY in memory (this.vsChallenges): a restart
+  // drops a pending challenge rather than resurrecting a stale
+  // one. The durable half is vsRecord on each club record,
+  // updated by recordVsResult when a vs match ends.
+  _vsPairPlayers(club, players) {
+    // Exactly 2 DISTINCT current members of `club`, or null.
+    if (!Array.isArray(players) || players.length !== 2) return null;
+    const [a, b] = players;
+    if (typeof a !== 'string' || typeof b !== 'string' || a === b) return null;
+    if (!this._clubRole(club, a) || !this._clubRole(club, b)) return null;
+    return [a, b];
+  }
+  _sendClubManagers(club, msg) {
+    for (const m of club.members) {
+      if ((m.role === 'owner' || m.role === 'deputy') && this.isOnline(m.id)) this._send(m.id, msg);
+    }
+  }
+  clubVsChallenge(id, targetRaw, players) {
+    const fromClub = this._clubOf(id);
+    if (!fromClub || !this._clubManager(fromClub, id)) return this._error(id, 'clubNoPerm');
+    const targetCid = this._normCid(targetRaw);
+    const target = targetCid ? this.clubs.get(targetCid) : null;
+    if (!target) return this._error(id, 'clubNotFound');
+    if (target.cid === fromClub.cid) return this._error(id, 'clubSelf');
+    const pair = this._vsPairPlayers(fromClub, players);
+    if (!pair) return this._error(id, 'clubVsPlayers');
+    // One pending challenge per PAIR of clubs, either direction.
+    if (this.vsChallenges.has(reqKey(fromClub.cid, target.cid))
+      || this.vsChallenges.has(reqKey(target.cid, fromClub.cid))) {
+      return this._error(id, 'clubVsPending');
+    }
+    this.vsChallenges.set(reqKey(fromClub.cid, target.cid), {
+      fromClub: fromClub.cid, toClub: target.cid, by: id, players: pair, ts: Date.now(),
+    });
+    this._sendClubManagers(target, {
+      type: 's-club-vs-invited',
+      fromClub: this.clubSummary(fromClub),
+      from: this.person(id),
+      players: pair.map((p) => this.person(p)),
+    });
+  }
+  clubVsReply(id, fromRaw, accept, players) {
+    const target = this._clubOf(id); // the replier's club IS the challenged (target) club
+    if (!target || !this._clubManager(target, id)) return this._error(id, 'clubNoPerm');
+    const fromCid = this._normCid(fromRaw);
+    const key = reqKey(fromCid, target.cid);
+    const pending = fromCid ? this.vsChallenges.get(key) : null;
+    if (!pending) return this._error(id, 'clubVsNone');
+    const fromClub = this.clubs.get(fromCid) || null;
+    if (!accept) {
+      this.vsChallenges.delete(key);
+      if (fromClub) this._sendClubManagers(fromClub, { type: 's-club-vs-declined', club: this.clubSummary(target) });
+      return;
+    }
+    const pairB = this._vsPairPlayers(target, players);
+    if (!pairB) return this._error(id, 'clubVsPlayers'); // the challenge stays pending — they may retry
+    const pairA = [...pending.players];
+    let result = null;
+    if (typeof this.hooks.vsStartMatch === 'function') {
+      try {
+        result = this.hooks.vsStartMatch({ clubA: fromCid, clubB: target.cid, playersA: pairA, playersB: pairB });
+      } catch (e) { result = null; }
+    }
+    this.vsChallenges.delete(key); // success AND failure both spend the challenge
+    if (result && typeof result.code === 'string' && result.code) {
+      const msg = {
+        type: 's-club-vs-start', code: result.code,
+        clubA: { cid: fromCid, name: fromClub ? fromClub.name : '' },
+        clubB: { cid: target.cid, name: target.name },
+      };
+      for (const pid of [...pairA, ...pairB]) if (this.isOnline(pid)) this._send(pid, msg);
+      return;
+    }
+    this._error(id, 'clubVsStartFail');
+    if (fromClub) this._sendClubManagers(fromClub, { type: 's-club-vs-failed', club: this.clubSummary(target) });
+  }
+  // Host-called at a vs match's end: both clubs' vsRecord maps
+  // gain the result from their own perspective, the clubs
+  // persist, and both clubs' members get the fresh club state
+  // (the same fanClub fanout the polls use).
+  recordVsResult(cidARaw, cidBRaw, winnerRaw) {
+    const cidA = this._normCid(cidARaw);
+    const cidB = this._normCid(cidBRaw);
+    const winnerCid = this._normCid(winnerRaw);
+    if (!cidA || !cidB || cidA === cidB) return;
+    if (winnerCid !== cidA && winnerCid !== cidB) return;
+    const clubA = this.clubs.get(cidA);
+    const clubB = this.clubs.get(cidB);
+    if (!clubA || !clubB) return;
+    const bump = (club, otherCid, won) => {
+      if (!club.vsRecord || typeof club.vsRecord !== 'object' || Array.isArray(club.vsRecord)) club.vsRecord = {};
+      const cur = club.vsRecord[otherCid];
+      const entry = {
+        w: (cur && typeof cur.w === 'number') ? cur.w : 0,
+        l: (cur && typeof cur.l === 'number') ? cur.l : 0,
+      };
+      if (won) entry.w++; else entry.l++;
+      club.vsRecord[otherCid] = entry;
+    };
+    bump(clubA, cidB, winnerCid === cidA);
+    bump(clubB, cidA, winnerCid === cidB);
+    this._persistClubs();
+    this.fanClub(cidA);
+    this.fanClub(cidB);
   }
 
   // ---------- club voice room (runtime only) ----------
@@ -1485,4 +2078,4 @@ class SocialCore {
   }
 }
 
-module.exports = { SocialCore, INVITE_COOLDOWN_MS, INVITE_PENDING_MS, CLUB_CAP, CLUB_EMBLEMS, CLUB_COVERS, CLUB_COVER_CUSTOM, CLUB_CATEGORIES, CLUB_SEATS, clubLevel };
+module.exports = { SocialCore, INVITE_COOLDOWN_MS, INVITE_PENDING_MS, CLUB_CAP, CLUB_EMBLEMS, CLUB_COVERS, CLUB_COVER_CUSTOM, CLUB_CATEGORIES, CLUB_LANGS, CLUB_SEATS, clubLevel };
