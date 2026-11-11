@@ -40,7 +40,7 @@
   // too. (The standalone gate page in src/gate-page.js is the primary
   // sign-in surface and has the full switcher.)
   var GATE_STR = {
-    ps: { sub: 'څلور کسيزه ورق لوبه — دوه ټیمه، دوه پر دوه', prompt: 'لوبې ته د ننوتلو لپاره لومړی په خپل حساب ننوځه', google: 'په ګوګل ننوځه', fb: 'په فېسبوک ننوځه', err: 'ننوتل ناکام شول؛ بیا هڅه وکړه' },
+    ps: { sub: 'څلور کسيزه ورق لوبه — دوه ټیمه، دوه پر دوه', prompt: 'لوبې ته د ننوتلو لپاره لومړی په خپل حساب ننوځه', google: 'په ګوګل ننوځه', fb: 'په فېسبوک ننوځه', err: 'ننوتل ونه شول؛ بیا هڅه وکړه' },
     fa: { sub: 'بازی ورق چهار نفره — دو تیم، دو به دو', prompt: 'برای وارد شدن به بازی، اول با حساب خود وارد شو', google: 'ورود با گوگل', fb: 'ورود با فیسبوک', err: 'ورود ناموفق بود؛ دوباره تلاش کن' },
     en: { sub: 'Four-player card game — two teams, two vs two', prompt: 'Sign in with your account to enter the game', google: 'Sign in with Google', fb: 'Sign in with Facebook', err: 'Sign-in failed; please try again' }
   };
