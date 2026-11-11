@@ -13,6 +13,17 @@
  *                                 same pattern as the client bundle
  *                                 (STICKERS_URL overrides the base URL
  *                                 for local testing).
+ *   GET  /manifest.webmanifest    the PWA manifest, /sw.js the PWA
+ *   GET  /sw.js                   service worker, /icons/*.png and
+ *   GET  /icons/<name>            /apple-touch-icon.png the app icons
+ *   GET  /apple-touch-icon.png    — static files in this repo's
+ *                                 cloudflare/ folder, public like the
+ *                                 stickers (an install prompt must be
+ *                                 able to fetch them without a
+ *                                 session). sw.js + the manifest are
+ *                                 served no-cache so updates land at
+ *                                 once; the icons are edge-cached
+ *                                 (PWA_URL overrides the base URL).
  *   GET  /ws                      WebSocket upgrade → GameServer DO
  *   GET  /turn-credentials        TURN credentials for game voice
  *                                 (session required, same check as
@@ -50,11 +61,13 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261111-exitfix';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261111-pwa';
 const STICKER_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/stickers/';
 const COVER_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/covers/';
+const PWA_URL_BASE_DEFAULT =
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/';
 const CLIENT_MIN_BYTES = 2_500_000; // the real bundle is ~2.8 MB (was ~3.1 MB until the tabnew reskin retired the CSS carpet's second copy)
 const CLIENT_CACHE_TTL = 86400; // seconds the EDGE keeps the client copy —
 // the browser never gets this TTL: serveClient hands the browser
@@ -236,6 +249,66 @@ async function serveCover(env, name) {
   return new Response('not found', { status: 404 });
 }
 
+// The PWA statics: manifest.webmanifest + sw.js + the app icons,
+// static files in the repo (cloudflare/manifest.webmanifest,
+// cloudflare/sw.js, cloudflare/icons/*.png,
+// cloudflare/apple-touch-icon.png), served from the same raw-URL
+// pattern as the stickers — public, no session (the browser fetches
+// the manifest and the worker script outside the game's sign-in
+// flow). Two serving flavours:
+//   - sw.js + manifest: fetched fresh on every request and handed
+//     to the browser as no-cache. A service worker whose bytes are
+//     stuck in an edge cache for a day ships its fixes a day late,
+//     and the file is tiny — freshness beats caching here.
+//   - icons: edge-cached with the long TTL like the stickers; the
+//     browser also gets the long TTL (icon art changes rarely, and
+//     a change ships under a bumped ?v= on the client bundle that
+//     references the same stable URLs — acceptable for Phase 0).
+async function servePwaText(env, name, contentType) {
+  const src = (env.PWA_URL || PWA_URL_BASE_DEFAULT) + name;
+  try {
+    const res = await fetch(src, { headers: { 'User-Agent': 'tore-game-worker' } });
+    if (res.ok) {
+      const buf = await res.arrayBuffer();
+      if (buf.byteLength > 0) {
+        return new Response(buf, {
+          headers: { 'Content-Type': contentType, 'Cache-Control': 'no-cache' },
+        });
+      }
+    }
+  } catch { /* fall through to 404 */ }
+  return new Response('not found', { status: 404 });
+}
+
+async function servePwaIcon(env, name) {
+  const src = (env.PWA_URL || PWA_URL_BASE_DEFAULT) + 'icons/' + name;
+  const cacheKey = new Request(src, { method: 'GET' });
+  let cache = null;
+  try {
+    cache = caches.default;
+    const hit = await cache.match(cacheKey);
+    if (hit) return hit;
+  } catch { cache = null; }
+
+  try {
+    const res = await fetch(src, { headers: { 'User-Agent': 'tore-game-worker' } });
+    if (res.ok) {
+      const buf = await res.arrayBuffer();
+      if (buf.byteLength > 0) {
+        const png = new Response(buf, {
+          headers: {
+            'Content-Type': 'image/png',
+            'Cache-Control': 'public, max-age=' + CLIENT_CACHE_TTL,
+          },
+        });
+        if (cache) { try { await cache.put(cacheKey, png.clone()); } catch { /* serve anyway */ } }
+        return png;
+      }
+    }
+  } catch { /* fall through to 404 */ }
+  return new Response('not found', { status: 404 });
+}
+
 /**
  * Short-lived TURN credentials for game voice, from the game's OWN
  * relay account — a dedicated relay is far stronger than the public
@@ -409,6 +482,26 @@ export default {
       const name = path.slice('/covers/'.length);
       if (/^(mountains|mosque|caravan|pomegranate|city|carpet|eagle|river|tent|trophy)\.jpg$/.test(name)) return serveCover(env, name);
       return new Response('not found', { status: 404 });
+    }
+
+    if (request.method === 'GET' && path === '/manifest.webmanifest') {
+      return servePwaText(env, 'manifest.webmanifest', 'application/manifest+json; charset=utf-8');
+    }
+
+    if (request.method === 'GET' && path === '/sw.js') {
+      // The service worker script itself: root path = root scope.
+      return servePwaText(env, 'sw.js', 'text/javascript; charset=utf-8');
+    }
+
+    if (request.method === 'GET' && path.startsWith('/icons/')) {
+      // PWA app icons: only the generated set exists.
+      const name = path.slice('/icons/'.length);
+      if (/^icon-(192|512|512-maskable)\.png$/.test(name)) return servePwaIcon(env, name);
+      return new Response('not found', { status: 404 });
+    }
+
+    if (request.method === 'GET' && path === '/apple-touch-icon.png') {
+      return servePwaText(env, 'apple-touch-icon.png', 'image/png');
     }
 
     if (path === '/club-cover' && request.method === 'POST') {
