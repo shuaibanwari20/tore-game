@@ -92,6 +92,16 @@ function cleanName(name) {
   const n = String(name || '').trim().slice(0, 20);
   return n || 'بازیکن';
 }
+// Table felts (قالین): the create frame carries the creator's felt
+// (integer 1..11). Anything else — missing, fractional, out of
+// range, a forged string — falls back to 11 (the default: felt 11,
+// the ORIGINAL cream carpet from the game's first build). The
+// felt is fixed at creation, persisted with the room snapshot, and
+// stamped on every state push so the whole room (spectators too)
+// plays on the creator's field.
+function cleanFelt(v) {
+  return (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 11) ? v : 11;
+}
 // Chat / voice relay — same rules as the Node server: chat is
 // PRESET-ONLY (no free text): {type:'chat', kind, value} is relayed
 // only when value is an exact member of the allowlist for its kind;
@@ -275,6 +285,7 @@ export class GameServer {
       }),
       trickHold: snap.trickHold || null,
       club: snap.club || null, // clubs v8: {cid, name} club-game stamp (spectators are runtime-only)
+      felt: cleanFelt(snap.felt), // creator's table felt; pre-felt snapshots revive as 11 (the original-carpet default)
       spectators: new Set(),
       match: null,
     };
@@ -294,6 +305,7 @@ export class GameServer {
       })),
       trickHold: room.trickHold,
       club: room.club || null,
+      felt: room.felt || 11,
       match: snapshotMatch(room.match),
     };
   }
@@ -902,6 +914,7 @@ export class GameServer {
       match: null,
       trickHold: null, // { plays: [{seat, card}...], winnerSeat } while a finished trick is displayed
       club: null, // clubs v8: {cid, name} when a club manager created this room as a club game
+      felt: 11, // the creator's table felt (1..11) — set from the create frame, fixed for the room's life
       spectators: new Set(), // clubs v8: receive-only sockets watching the public state
     };
     room.emit = (evt) => this._onMatchEvent(room, evt);
@@ -925,6 +938,7 @@ export class GameServer {
       phase: room.phase,
       code: room.code,
       club: room.club ? { cid: room.club.cid, name: room.club.name } : null,
+      felt: room.felt || 11,
       mySeat: seatIdx,
       hostSeat: this._hostSeat(room),
       target: G.BANK_LOSE_TARGET,
@@ -1217,6 +1231,7 @@ export class GameServer {
     switch (msg.type) {
       case 'create': {
         const room = this._createRoom();
+        room.felt = cleanFelt(msg.felt); // creator's felt, validated; fixed at creation, persisted below
         this._attachPlayer(ws, att, room, 0, displayName(msg, att.user), msg);
         // Clubs v8: a club stamp is granted ONLY by the social
         // core, which verifies the creator is a manager of that
