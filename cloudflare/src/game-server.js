@@ -47,6 +47,7 @@ const TRICK_PAUSE_MS = 1600;      // completed trick stays on the table before i
 const RECONNECT_GRACE_MS = 120000; // seat+hand kept for a reconnecting player
 const SPECTATOR_CAP = 20;          // clubs v8: watchers per club-game room
 const SWEEP_MS = 10000;           // seat-expiry sweep cadence (was setInterval)
+const REMATCH_OFFER_MS = 30000;   // a rematch offer lives 30 s, then expires
 
 const STORAGE_KEY = 'tore:v1'; // legacy single-blob snapshot (read + migrate, never written)
 const ROOM_KEY_PREFIX = 'tore:room:'; // one snapshot per room: tore:room:<CODE>
@@ -101,6 +102,13 @@ function cleanName(name) {
 // plays on the creator's field.
 function cleanFelt(v) {
   return (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 11) ? v : 11;
+}
+// Card backs: the create frame carries the creator's card-back
+// design (integer 1..6), validated exactly like the felt —
+// anything else falls back to 1. Fixed at creation, persisted
+// with the room snapshot, stamped on every state push.
+function cleanBack(v) {
+  return (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 6) ? v : 1;
 }
 // Chat / voice relay — same rules as the Node server: chat is
 // PRESET-ONLY (no free text): {type:'chat', kind, value} is relayed
@@ -286,6 +294,13 @@ export class GameServer {
       trickHold: snap.trickHold || null,
       club: snap.club || null, // clubs v8: {cid, name} club-game stamp (spectators are runtime-only)
       felt: cleanFelt(snap.felt), // creator's table felt; pre-felt snapshots revive as 11 (the original-carpet default)
+      back: cleanBack(snap.back), // creator's card back (1..6); pre-back snapshots revive as 1
+      vs: snap.vs || null, // club-vs-club stamp {a, b} (cids); team 0 = club A, team 1 = club B
+      vsNames: snap.vsNames || null, // {a, b} display names for the vs stamp
+      rematch: null, // runtime-only: a live rematch offer never survives a revive
+      // A revived FINISHED match already had its stats recorded
+      // before the snapshot was written — never record it twice.
+      statsRecorded: !!(snap.match && snap.match.finished),
       spectators: new Set(),
       match: null,
     };
@@ -306,6 +321,9 @@ export class GameServer {
       trickHold: room.trickHold,
       club: room.club || null,
       felt: room.felt || 11,
+      back: room.back || 1,
+      vs: room.vs || null,
+      vsNames: room.vsNames || null,
       match: snapshotMatch(room.match),
     };
   }
@@ -433,6 +451,14 @@ export class GameServer {
       room.match.startRound();
       this._broadcastState(room);
       this._pumpTurn(room);
+    } else if (t.kind === 'rematch') {
+      // Rematch offer expiry — armed through the same alarm
+      // scheduler as every other room timer (DO setTimeout is
+      // not reliable across hibernation; the alarm is).
+      if (room.rematch && Date.now() >= room.rematch.expires) {
+        this._cancelRematch(room, 'expired');
+        this._broadcastState(room);
+      }
     }
   }
 
@@ -445,11 +471,19 @@ export class GameServer {
     const now = Date.now();
     for (const room of [...this.rooms.values()]) {
       if (room.phase === 'lobby') continue;
+      // Rematch expiry backstop (the 'rematch' alarm timer is the
+      // primary mechanism; the sweep catches any offer whose
+      // timer was lost with an eviction).
+      if (room.rematch && now >= room.rematch.expires) {
+        this._cancelRematch(room, 'expired');
+        this._broadcastState(room);
+      }
       let changed = false;
       const goneSids = [];
       room.seats.forEach((s, i) => {
         if (s.kind === 'human' && !s.connected && s.disconnectAt &&
             now - s.disconnectAt > RECONNECT_GRACE_MS) {
+          if (room.rematch) this._cancelRematch(room, 'left'); // a seat expiring kills a live offer
           if (s.sid) goneSids.push(s.sid);
           s.kind = 'bot'; // bot takes over the seat and its hand
           s.avatar = null;
@@ -533,6 +567,12 @@ export class GameServer {
       verifyBusy: (id) => this._verifyBusy(id),
       // Clubs v8: the club's live game room, scanned from the room table.
       clubGameLookup: (cid) => this._clubGameLookup(cid),
+      // Friend spectate: the room a player is SEATED IN (playing /
+      // roundEnd / matchEnd), so the core can route a friend to
+      // watch it — {code} or null.
+      watchLookup: (id) => this._watchLookup(id),
+      // Club-vs-club: reserve a room for two clubs' chosen pairs.
+      vsStartMatch: (spec) => this._vsStartMatch(spec),
       coverBlobDelete: (cid) => { this._deleteCoverBlob(cid); },
     });
     const saved = await this.state.storage.get('social:v1').catch(() => null);
@@ -725,6 +765,7 @@ export class GameServer {
       });
       if (changed) {
         this._reapedRooms.add(room.code);
+        if (room.rematch) this._cancelRematch(room, 'left'); // a reaped seat kills a live offer
         this._broadcastState(room);
         const anyHuman = room.seats.some((s) => s.kind === 'human');
         if (!anyHuman) {
@@ -837,6 +878,178 @@ export class GameServer {
     }
   }
 
+  // ------------------------------------------ friend spectate lookup
+  // Social hook (watchLookup): the room this identity is SEATED
+  // in as a human while a match is on the table (playing /
+  // roundEnd / matchEnd) — {code} or null. The core pairs it
+  // with its friendship graph (canWatch) to admit friend
+  // spectators; the host only reports the seat.
+  _watchLookup(id) {
+    if (!id) return null;
+    for (const room of this.rooms.values()) {
+      if (room.phase !== 'playing' && room.phase !== 'roundEnd' && room.phase !== 'matchEnd') continue;
+      if (room.seats.some((s) => s.kind === 'human' && s.sid === id)) return { code: room.code };
+    }
+    return null;
+  }
+
+  // ------------------------------------------ club-vs-club (feature 11)
+  // Display name for a vs club stamp. The core's public summary
+  // (clubSummary) takes the club RECORD, not a cid, and the core
+  // exposes no cid→record getter — so resolve through the record
+  // when the in-process core instance exposes it, else fall back
+  // to the cid itself as the display name.
+  _vsClubName(core, cid, viewerId) {
+    try {
+      if (core && typeof core.clubSummary === 'function') {
+        let rec = null;
+        if (core.clubs && typeof core.clubs.get === 'function') rec = core.clubs.get(String(cid));
+        if (!rec && viewerId && typeof core.ownedClub === 'function') {
+          const own = core.ownedClub(viewerId);
+          if (own && String(own.cid) === String(cid)) rec = own;
+        }
+        if (rec) {
+          const s = core.clubSummary(rec, viewerId);
+          if (s && s.name) return s.name;
+          if (rec.name) return rec.name;
+        }
+      }
+    } catch { /* fall through to the cid */ }
+    return String(cid);
+  }
+
+  // Social hook (vsStartMatch): create a room reserved for two
+  // clubs' chosen pairs — seat0/seat2 = playersA (team 0 = club
+  // A), seat1/seat3 = playersB (team 1 = club B). Every one of
+  // the four ids must currently be FREE (not seated in any room;
+  // a reserved lobby seat counts as busy) or the whole request
+  // fails with null and no room is created. Reserved seats are
+  // kind 'human' with their sid set and connected=false; the
+  // join handler attaches each player to his reserved seat and
+  // rejects anyone else ('vsOnly'). The match auto-starts when
+  // all four reserved seats are connected (see _maybeStartVs).
+  _vsStartMatch(spec) {
+    try {
+      if (!spec || typeof spec !== 'object') return null;
+      const clubA = spec.clubA, clubB = spec.clubB;
+      const playersA = Array.isArray(spec.playersA) ? spec.playersA : [];
+      const playersB = Array.isArray(spec.playersB) ? spec.playersB : [];
+      if (!clubA || !clubB || playersA.length !== 2 || playersB.length !== 2) return null;
+      const ids = [...playersA, ...playersB];
+      if (ids.some((id) => typeof id !== 'string' || !id) || new Set(ids).size !== 4) return null;
+      for (const id of ids) {
+        for (const r of this.rooms.values()) {
+          if (r.seats.some((s) => s.kind === 'human' && s.sid === id)) return null;
+        }
+      }
+      const core = this.social || null;
+      const room = this._createRoom();
+      room.club = null; // a vs room is NOT a club game — it carries the vs stamp instead
+      room.vs = { a: clubA, b: clubB };
+      room.vsNames = {
+        a: this._vsClubName(core, clubA, playersA[0]),
+        b: this._vsClubName(core, clubB, playersB[0]),
+      };
+      const order = [playersA[0], playersB[0], playersA[1], playersB[1]];
+      order.forEach((pid, idx) => {
+        const seat = room.seats[idx];
+        seat.kind = 'human';
+        seat.sid = pid;
+        seat.connected = false;
+        seat.disconnectAt = null;
+        seat.token = randomHex(8);
+        // Name/profile from the social directory when the player
+        // has one; otherwise the name stays '' and the join fills it.
+        if (core && typeof core.person === 'function') {
+          try {
+            const p = core.person(pid);
+            if (p) {
+              if (p.name) seat.name = cleanName(p.name);
+              seat.avatar = cleanAvatar(p.avatar);
+              seat.country = cleanCountry(p.country);
+              seat.photo = seat.avatar === 'google' ? cleanPhoto(p.photo) : null;
+            }
+          } catch { /* directory is best-effort */ }
+        }
+      });
+      this._persistRoom(room); // durable before the core can hand the code out
+      this._syncBusyFor(room);
+      return { code: room.code };
+    } catch { return null; }
+  }
+
+  // A vs room starts itself the moment all four reserved seats
+  // are connected — checked after every join/reconnect.
+  _maybeStartVs(room) {
+    if (!room || !room.vs || room.phase !== 'lobby') return;
+    if (room.seats.every((s) => s.kind === 'human' && s.connected)) this._startMatch(room);
+  }
+
+  // ------------------------------------------------ rematch (feature 4)
+  _rematchHumans(room) {
+    const out = [];
+    room.seats.forEach((s, i) => { if (s.kind === 'human' && s.sid) out.push({ sid: s.sid, seat: i }); });
+    return out;
+  }
+  // Cancel a live offer: drop it, disarm its alarm timer, and
+  // tell every seat + spectator exactly once. Callers push the
+  // fresh state (every cancel site already broadcasts).
+  _cancelRematch(room, reason) {
+    if (!room || !room.rematch) return false;
+    room.rematch = null;
+    this._cancelTimers(room.code, 'rematch');
+    this._broadcastEvent(room, { type: 'rematch-cancelled', reason });
+    return true;
+  }
+  _expireRematchIfNeeded(room) {
+    if (room && room.rematch && Date.now() >= room.rematch.expires) {
+      this._cancelRematch(room, 'expired');
+      this._broadcastState(room);
+      return true;
+    }
+    return false;
+  }
+
+  // --------------------------------- stats + vs result (features 5 + 11)
+  // Called ONCE per finished match from the matchFinished event
+  // (room.statsRecorded is the guard; _startMatch clears it).
+  // Entries: one per human seat — won = the seat's team is the
+  // match winner (game.js: winner is the WINNING team index,
+  // the team that did NOT reach 210; team of a seat = seat % 2).
+  // For a vs room the winning team's club also scores the vs
+  // result (team 0 = club A, team 1 = club B). The core methods
+  // are called defensively (they land in a parallel workstream);
+  // on the DO the core may need its lazy async build, so the call
+  // is fire-and-forget.
+  _recordMatchStats(room) {
+    if (room.statsRecorded) return;
+    room.statsRecorded = true;
+    const m = room.match;
+    if (!m || !m.finished || (m.winner !== 0 && m.winner !== 1)) return;
+    const entries = [];
+    room.seats.forEach((s, i) => {
+      if (s.kind === 'human' && s.sid) entries.push({ id: s.sid, won: (i % 2) === m.winner });
+    });
+    const apply = (core) => {
+      if (!core) return;
+      try {
+        if (entries.length && typeof core.recordMatchEnd === 'function') {
+          const r = core.recordMatchEnd(entries);
+          if (r && typeof r.catch === 'function') r.catch(() => {});
+        }
+      } catch { /* social never breaks the game */ }
+      try {
+        if (room.vs && typeof core.recordVsResult === 'function') {
+          const winnerCid = m.winner === 0 ? room.vs.a : room.vs.b;
+          const r = core.recordVsResult(room.vs.a, room.vs.b, winnerCid);
+          if (r && typeof r.catch === 'function') r.catch(() => {});
+        }
+      } catch { /* social never breaks the game */ }
+    };
+    if (this.social) apply(this.social);
+    else this._ensureSocial().then(apply).catch(() => {});
+  }
+
   _attachment(ws) {
     try { return ws.deserializeAttachment(); } catch { return null; }
   }
@@ -915,6 +1128,11 @@ export class GameServer {
       trickHold: null, // { plays: [{seat, card}...], winnerSeat } while a finished trick is displayed
       club: null, // clubs v8: {cid, name} when a club manager created this room as a club game
       felt: 11, // the creator's table felt (1..11) — set from the create frame, fixed for the room's life
+      back: 1, // the creator's card back (1..6) — set from the create frame, fixed for the room's life
+      vs: null, // club-vs-club stamp {a, b} (cids) — only the social core's vsStartMatch hook sets it
+      vsNames: null, // {a, b} display names for the vs stamp
+      rematch: null, // runtime-only rematch offer {bySid, bySeat, expires, accepts:Set<sid>}
+      statsRecorded: false, // match-end stats guard: set when recorded, cleared when a new match starts
       spectators: new Set(), // clubs v8: receive-only sockets watching the public state
     };
     room.emit = (evt) => this._onMatchEvent(room, evt);
@@ -939,6 +1157,11 @@ export class GameServer {
       code: room.code,
       club: room.club ? { cid: room.club.cid, name: room.club.name } : null,
       felt: room.felt || 11,
+      back: room.back || 1,
+      vs: room.vs ? {
+        a: { cid: room.vs.a, name: (room.vsNames && room.vsNames.a) || room.vs.a },
+        b: { cid: room.vs.b, name: (room.vsNames && room.vsNames.b) || room.vs.b },
+      } : null,
       mySeat: seatIdx,
       hostSeat: this._hostSeat(room),
       target: G.BANK_LOSE_TARGET,
@@ -971,6 +1194,14 @@ export class GameServer {
       roundResult: (room.phase === 'roundEnd' || room.phase === 'matchEnd') ? last : null,
       matchWinner: room.match && room.match.finished ? room.match.winner : null,
       matchLoser: room.match && room.match.finished ? room.match.loser : null,
+      rematch: room.rematch ? {
+        bySeat: room.rematch.bySeat,
+        expiresIn: Math.max(0, Math.ceil((room.rematch.expires - Date.now()) / 1000)),
+        acceptedSeats: room.seats
+          .map((s, i) => (s.kind === 'human' && s.sid && room.rematch.accepts.has(s.sid)) ? i : -1)
+          .filter((i) => i >= 0),
+        totalHumans: room.seats.filter((s) => s.kind === 'human' && s.sid).length,
+      } : null,
     };
   }
 
@@ -1032,6 +1263,7 @@ export class GameServer {
       room.phase = 'matchEnd';
       this._cancelTimers(room.code, 'turn');
       this._cancelTimers(room.code, 'round');
+      this._recordMatchStats(room); // features 5+11: player stats + vs result, once per match
       this._broadcastState(room);
       this._syncClubGame(room); // clubs v8: the club game ended — the button badge clears
     }
@@ -1110,7 +1342,10 @@ export class GameServer {
 
   _startMatch(room) {
     this._cancelTimers(room.code, 'trick');
+    this._cancelTimers(room.code, 'rematch');
     room.trickHold = null;
+    room.rematch = null; // a fresh match (lobby start OR an accepted rematch) spends any offer
+    room.statsRecorded = false; // the new match earns its own stats record at its end
     const botDigits = ['1', '2', '3'];
     let botNo = 0;
     room.seats.forEach((s) => {
@@ -1232,6 +1467,7 @@ export class GameServer {
       case 'create': {
         const room = this._createRoom();
         room.felt = cleanFelt(msg.felt); // creator's felt, validated; fixed at creation, persisted below
+        room.back = cleanBack(msg.back); // creator's card back, validated the same way
         this._attachPlayer(ws, att, room, 0, displayName(msg, att.user), msg);
         // Clubs v8: a club stamp is granted ONLY by the social
         // core, which verifies the creator is a manager of that
@@ -1254,6 +1490,11 @@ export class GameServer {
         // (the core verifies from social state). Spectators hold
         // no seat, never count as busy, are capped per room, and
         // only ever receive the public state (_publicStateFor).
+        // Friend spectate (feature 3): a watcher the core vouches
+        // for — canWatch(watcher, the room's seated human ids),
+        // i.e. a friend of a seated player — is ALSO admitted,
+        // club room or not. canWatch lands in a parallel
+        // workstream: absent = false, called defensively.
         const code = String(msg.code || '').toUpperCase().trim();
         let room = this.rooms.get(code);
         if (!room) room = await this._loadRoom(code); // read-repair from storage
@@ -1261,7 +1502,12 @@ export class GameServer {
         room = this.rooms.get(code) || room;
         const core = await this._ensureSocial();
         const sid = this._joinSid(att, msg);
-        if (!room.club || !sid || !core.clubMembership(sid, room.club.cid)) {
+        let admitted = !!(room.club && sid && core.clubMembership(sid, room.club.cid));
+        if (!admitted && sid && typeof core.canWatch === 'function') {
+          const humanSeatSids = room.seats.filter((s) => s.kind === 'human' && s.sid).map((s) => s.sid);
+          try { admitted = !!core.canWatch(sid, humanSeatSids); } catch { admitted = false; }
+        }
+        if (!admitted) {
           return sendError(ws, 'تماشای این بازی فقط برای اعضای کلب است', 'spectateDenied');
         }
         if (!room.spectators) room.spectators = new Set();
@@ -1301,9 +1547,13 @@ export class GameServer {
           await this._persistRoom(room);
           this._sendRoomReply(ws, room, mine);
           this._broadcastState(room);
+          this._maybeStartVs(room); // a vs room starts when its 4th reserved seat connects
           if (room.phase === 'playing') this._pumpTurn(room);
           break;
         }
+        // Club-vs-club rooms seat ONLY their four reserved
+        // players — anyone else is refused outright.
+        if (room.vs) return sendError(ws, 'این بازی فقط برای بازیکنان دو کلب است', 'vsOnly');
         if (room.phase !== 'lobby') return sendError(ws, 'بازی این اتاق شروع شده است', 'gameStarted');
         const idx = room.seats.findIndex((s) => s.kind === 'empty');
         if (idx === -1) return sendError(ws, 'اتاق پر است', 'roomFull');
@@ -1342,6 +1592,7 @@ export class GameServer {
         await this._persistRoom(room);
         this._sendRoomReply(ws, room, idx);
         this._broadcastState(room);
+        this._maybeStartVs(room); // a token reconnect can be a vs room's 4th connection
         // A read-repaired in-match room may have lost its turn timer
         // with the in-memory state — re-arm it (cancels any duplicate).
         if (room.phase === 'playing') this._pumpTurn(room);
@@ -1351,6 +1602,9 @@ export class GameServer {
         const room = this.rooms.get(att.code);
         if (!room || room.phase !== 'lobby') return;
         if (att.seat !== this._hostSeat(room)) return sendError(ws, 'فقط میزبان می‌تواند بازی را شروع کند', 'hostOnly');
+        // A vs room starts ONLY when all four reserved seats are
+        // connected (it auto-starts then — see _maybeStartVs).
+        if (room.vs && !room.seats.every((s) => s.kind === 'human' && s.connected)) return;
         this._startMatch(room);
         this._syncClubGame(room); // clubs v8: the club game is now in progress
         break;
@@ -1368,6 +1622,7 @@ export class GameServer {
         if (!room) return;
         const seat = room.seats[att.seat];
         if (!seat || seat.kind !== 'human') return;
+        if (room.rematch) this._cancelRematch(room, 'left'); // a human leaving kills a live offer
         const leavingSid = seat.sid || null;
         const roomSids = room.seats.map((s) => s.sid).filter(Boolean);
         if (room.phase === 'lobby') {
@@ -1423,6 +1678,56 @@ export class GameServer {
         } catch {
           sendError(ws, 'الآن نمی‌توانی «13» بگویی', 'cannotDeclare13');
           send(ws, this._stateFor(room, att.seat));
+        }
+        break;
+      }
+      case 'rematch': {
+        // Feature 4: a seated human offers a rematch while the
+        // match-end screen is up. The initiator auto-accepts; a
+        // lone human restarts at once (nobody to wait for).
+        const room = this.rooms.get(att.code);
+        if (!room) return;
+        const seat = room.seats[att.seat];
+        if (!seat || seat.kind !== 'human' || !seat.sid) return;
+        this._expireRematchIfNeeded(room);
+        if (room.phase !== 'matchEnd' || room.rematch) return;
+        const humans = this._rematchHumans(room);
+        if (!humans.length) return;
+        if (humans.length === 1) { this._startMatch(room); break; }
+        room.rematch = {
+          bySid: seat.sid, bySeat: att.seat,
+          expires: Date.now() + REMATCH_OFFER_MS,
+          accepts: new Set([seat.sid]),
+        };
+        this._cancelTimers(room.code, 'rematch');
+        this._schedule('rematch', REMATCH_OFFER_MS, { code: room.code });
+        this._broadcastState(room);
+        break;
+      }
+      case 'rematch-reply': {
+        // Accept joins the offer (the last accept starts the new
+        // match in this same room, via the normal _startMatch
+        // path — seats/teams/names/felt/back/club/vs all kept,
+        // scores reset with the fresh Match). ANY decline cancels.
+        const room = this.rooms.get(att.code);
+        if (!room) return;
+        const seat = room.seats[att.seat];
+        if (!seat || seat.kind !== 'human' || !seat.sid) return;
+        this._expireRematchIfNeeded(room);
+        if (!room.rematch) return;
+        if (seat.sid === room.rematch.bySid) return; // the initiator already auto-accepted
+        if (!this._rematchHumans(room).some((h) => h.sid === seat.sid)) return;
+        if (msg.accept) {
+          room.rematch.accepts.add(seat.sid);
+          const humans = this._rematchHumans(room);
+          if (humans.length && humans.every((h) => room.rematch.accepts.has(h.sid))) {
+            this._startMatch(room); // clears the offer + its timer, pushes state, arms the turn
+          } else {
+            this._broadcastState(room);
+          }
+        } else {
+          this._cancelRematch(room, 'declined');
+          this._broadcastState(room);
         }
         break;
       }
