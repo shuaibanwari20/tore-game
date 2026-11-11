@@ -513,6 +513,9 @@ export class GameServer {
       persist: (data) => { this.state.storage.put('social:v1', data).catch(() => {}); },
       persistClubs: (data) => { this.state.storage.put('clubs:v1', data).catch(() => {}); },
       inviteRoomCheck: (id, code) => this._socialRoomCheck(id, code),
+      // Invite source badge (2026-11-11): the room's club stamp, so
+      // the core can name the inviter's role in the game's club.
+      inviteRoomClub: (id, code) => this._socialRoomClub(code),
       inGameCheck: (id) => this._isInGame(id),
       inLobbyCheck: (id) => this._isInLobby(id),
       verifyBusy: (id) => this._verifyBusy(id),
@@ -732,6 +735,11 @@ export class GameServer {
     ids.forEach((id) => { try { this.social.syncBusy(id); } catch { /* social never breaks the game */ } });
   }
 
+  _socialRoomClub(code) {
+    const room = this.rooms.get(code);
+    if (!room || !room.club) return null;
+    return { cid: room.club.cid, name: room.club.name };
+  }
   _socialRoomCheck(id, code) {
     const room = this.rooms.get(code);
     if (!room || room.phase !== 'lobby') return false;
