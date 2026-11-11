@@ -1,35 +1,33 @@
 #!/usr/bin/env node
 /*
- * build-deploy.js — build the self-contained deploy bundle.
+ * build-deploy.js — build the deploy bundle.
  *
- * deploy/server.js serves ONLY ./index.html from memory and 404s everything
- * else, so the bundle must carry every image inside the page. This script:
+ * deploy/server.js serves the client from files pinned beside it:
+ * ./index.html is the page, and since the SPEED PASS (2026-11-11)
+ * the game's images are separate cached FILES too — deploy/cards/,
+ * deploy/carpets/ (+ thumbs), deploy/carpet.jpg, exactly like the
+ * stickers/covers/PWA statics always were. NOTHING is inlined into
+ * the page anymore: the bundle used to carry 65 raster data URIs
+ * (~9.3 MB of base64 — the whole game was one 13.8 MB file that
+ * every open re-downloaded). This script:
  *
- *   1. Reads public/index.html (the client source; all JS image loads go
- *      through the ASSET() resolver — see public/index.html).
- *   2. Builds window.__ASSETS__: { 'carpet.jpg': dataURI, 'cards/<f>': dataURI,
- *      'carpets/<f>': dataURI } for public/carpet.jpg, EVERY file in
- *      public/cards/ (52 faces + back.png) and the eleven table-felt carpet
- *      PHOTOS in public/carpets/ (felt1..11.jpg — real medallion carpets
- *      plus felt 11, the ORIGINAL cream carpet from the first build,
- *      provenance in carpet-src/SOURCES.md), and injects it just before
- *      the main <script>.
- *   3. No markup/CSS raster reference exists anymore: the landing left
- *      the carpet in the 2026-11-09 ludomenu reskin and the game table
- *      left it in the 2026-11-11 tabnew reskin — both fields are pure
- *      CSS gradients, and the menu fans are real deck faces rendered by
- *      cardEl() through ASSET(). The carpet survives ONLY as an ASSET()
- *      map entry above (a JS preload still names it; nothing paints it).
- *   4. Copies game.js + bots.js into deploy/ (deploy/server.js is the
- *      deploy variant and is NOT overwritten; deploy/package.json neither).
- *   5. Asserts nothing in the bundle can trigger an external image request:
- *      outside the __ASSETS__ map and ASSET('…') lookups, no 'cards/' or
- *      'carpet.jpg' reference may remain.
- *      ONE deliberate exception: the chat GIF stickers are served as
- *      files (the stickers folder beside each host's server) so the
- *      bundle stays light. The client may reference them ONLY from
- *      stickerURL() — this script counts the references and scrubs
- *      that single construction before the assertion above.
+ *   1. Reads public/index.html (the client source; all JS image
+ *      loads go through the ASSET()/THUMB() resolvers — see
+ *      public/index.html) and writes it to deploy/index.html
+ *      unchanged.
+ *   2. Copies the image folders into deploy/: public/cards/ ->
+ *      deploy/cards/, public/carpets/ (incl. thumbs/) ->
+ *      deploy/carpets/, public/carpet.jpg -> deploy/carpet.jpg.
+ *   3. Copies game.js + bots.js + social-core.js + social-node.js
+ *      into deploy/ (deploy/server.js is the deploy variant and is
+ *      NOT overwritten; deploy/package.json neither).
+ *   4. Copies the PWA statics (manifest, sw.js, apple touch icon,
+ *      icons/) from public/ — as before.
+ *   5. Asserts the bundle carries NO raster data URI at all: the
+ *      only data URIs allowed are the 2 decorative SVG ones (the
+ *      clubs v6 night skyline + the card-back gold-star emblem —
+ *      self-contained CSS decor). Every ASSET()/THUMB() path the
+ *      client can name must exist as a copied file.
  *
  * Usage: node build-deploy.js
  */
@@ -41,109 +39,56 @@ const ROOT = __dirname;
 const PUB = path.join(ROOT, 'public');
 const DEPLOY = path.join(ROOT, 'deploy');
 
-const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg' };
-function dataURI(file) {
-  const mime = MIME[path.extname(file).toLowerCase()];
-  if (!mime) throw new Error('no mime for ' + file);
-  return 'data:' + mime + ';base64,' + fs.readFileSync(file).toString('base64');
+// ---- 1: the page, unchanged ------------------------------------------------
+const html = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8');
+if (html.includes('__ASSETS__')) {
+  throw new Error('client still references the retired __ASSETS__ inline map — images are files now');
 }
-
-// ---- 1+2: collect every asset the page can request -------------------------
-const assets = {};
-assets['carpet.jpg'] = dataURI(path.join(PUB, 'carpet.jpg'));
-const cardFiles = fs.readdirSync(path.join(PUB, 'cards'))
-  .filter((f) => /\.(png|jpe?g)$/i.test(f)).sort();
-for (const f of cardFiles) assets['cards/' + f] = dataURI(path.join(PUB, 'cards', f));
-const feltFiles = fs.readdirSync(path.join(PUB, 'carpets'))
-  .filter((f) => /\.(png|jpe?g)$/i.test(f)).sort();
-for (const f of feltFiles) assets['carpets/' + f] = dataURI(path.join(PUB, 'carpets', f));
-const assetCount = Object.keys(assets).length;
-if (assetCount !== 65) {
-  throw new Error('expected 65 assets (carpet + 53 cards + 11 felt photos), got ' + assetCount);
+const rasterURIs = (html.match(/data:image\/(?!svg\+xml)[a-z+]+;base64/g) || []).length;
+if (rasterURIs !== 0) {
+  throw new Error('expected 0 raster data URIs in the bundle (images are separate files), got ' + rasterURIs);
 }
-
-// ---- transform the page ----------------------------------------------------
-let html = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8');
-
-// 3a: RETIRED 2026-11-11 (tabnew reskin, ?v=20261111-tabnew): the game
-// table's field used to carry its own CSS carpet — the one CSS
-// url("carpet.jpg") reference outside ASSET(), inlined here so the
-// field painted immediately (late-asset flash fix). The owner-approved
-// reskin makes the felt pure CSS gradients, so no CSS image reference
-// remains to inline; the data-URI count check below now expects the
-// asset map alone. The carpet stays in the map (a JS preload names it).
-
-// 2: inject the asset map immediately before the main script.
-const anchor = "<script>\n'use strict';";
-if (!html.includes(anchor)) throw new Error('main <script> anchor not found');
-const inject = '<script>\n// ---- Inlined assets (build-deploy.js): deploy server serves only this page ----\n' +
-  'window.__ASSETS__ = ' + JSON.stringify(assets) + ';\n</script>\n';
-html = html.replace(anchor, inject + anchor);
-
-// ---- 5: prove the bundle cannot request an image from the server ----------
-// The stickers exception, checked on the raw page first: exactly ONE
-// sticker-path reference may exist — the stickerURL() construction —
-// and it must be there (a client without it has no stickers at all).
+const svgURIs = (html.match(/data:image\/svg\+xml/g) || []).length;
+if (svgURIs !== 2) {
+  // Two deliberate decorative SVG data URIs: the clubs v6 night
+  // skyline and the card-back gold-star emblem (features batch
+  // 2026-11-11, feature 15) — both self-contained CSS decor.
+  throw new Error('expected exactly 2 decorative SVG data URIs (club skyline + card-back emblem), got ' + svgURIs);
+}
+// The stickers exception stays: exactly ONE sticker-path reference
+// may exist — the stickerURL() construction.
 const stickerRefs = (html.match(/stickers\//g) || []).length;
 if (stickerRefs !== 1 || !html.includes("'/stickers/' + id + '.gif'")) {
   throw new Error('sticker files may be referenced ONLY from stickerURL() — found ' +
     stickerRefs + ' sticker path references');
 }
-// Remove the injected map, every ASSET('…') lookup and all comments (the
-// credits/comments legitimately NAME the files; only load sites matter).
-// Nothing image-like may remain afterwards.
-let scrubbed = html.replace(/window\.__ASSETS__ = \{.*?\};/s, '');
-scrubbed = scrubbed.replace(/\/stickers\//g, ''); // the one allowed external image path (see above)
-scrubbed = scrubbed.replace(/ASSET\('[^']*'\)/g, '').replace(/ASSET\("[^"]*"\)/g, '');
-scrubbed = scrubbed.replace(/ASSET\('cards\/' \+ [^)]*\)/g, ''); // dynamic face lookup
-scrubbed = scrubbed.replace(/ASSET\('carpets\/felt' \+ [^)]*\)/g, ''); // dynamic felt-photo lookup
-scrubbed = scrubbed.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-scrubbed = scrubbed.split('\n').map((line) => {
-  if (line.includes('data:')) return line; // data-URI lines (the asset map)
-  const i = line.search(/(^|\s)\/\//);
-  return i >= 0 ? line.slice(0, i) : line;
-}).join('\n');
-for (const bad of ['cards/', 'carpet.jpg', 'cards\\']) {
-  if (scrubbed.includes(bad)) {
-    throw new Error('bundle still references ' + bad + ' outside ASSET()/map — fix public/index.html');
-  }
-}
-const dataURIs = (html.match(/data:image\//g) || []).length;
-// One deliberate extra data URI: the clubs v6 night skyline is
-// an inline SVG in CSS — decorative and self-contained, so it
-// keeps the guarantee this count protects (no external image
-// request) while not being a raster asset.
-const svgURIs = (html.match(/data:image\/svg\+xml/g) || []).length;
-// The drawn-SVG table carpets (2026-11-11, one iteration) are GONE —
-// the felts are real carpet PHOTOS now and ride the asset map like
-// the cards, so they are counted by the asset check below, not here.
-if (svgURIs !== 2) {
-  // Two deliberate decorative SVG data URIs: the clubs v6 night
-  // skyline (above) and the card-back gold-star emblem (features
-  // batch 2026-11-11, feature 15) — both self-contained CSS decor,
-  // same guarantee as the skyline exception.
-  throw new Error('expected exactly 2 decorative SVG data URIs (club skyline + card-back emblem), got ' + svgURIs);
-}
-if (dataURIs - svgURIs !== assetCount) { // the asset map alone (CSS carpet retired with tabnew)
-  throw new Error('expected ' + assetCount + ' data URIs in bundle, got ' + dataURIs);
-}
 
-// ---- 4: write deploy/ -------------------------------------------------------
+// ---- 2-4: copy everything the hosts serve ----------------------------------
+function copyDir(srcDir, dstDir, filter) {
+  fs.mkdirSync(dstDir, { recursive: true });
+  let n = 0;
+  for (const f of fs.readdirSync(srcDir, { withFileTypes: true })) {
+    const s = path.join(srcDir, f.name), d = path.join(dstDir, f.name);
+    if (f.isDirectory()) n += copyDir(s, d, filter);
+    else if (!filter || filter(f.name)) { fs.copyFileSync(s, d); n++; }
+  }
+  return n;
+}
 fs.writeFileSync(path.join(DEPLOY, 'index.html'), html);
 for (const f of ['game.js', 'bots.js', 'social-core.js', 'social-node.js']) fs.copyFileSync(path.join(ROOT, f), path.join(DEPLOY, f));
 
-// The PWA statics ride as FILES beside the bundle (deploy/server.js
-// serves them from pinned routes, like the stickers): the manifest,
-// the service worker, the apple touch icon and the app icons. They
-// are copied, never inlined — a service worker or manifest inside
-// the page could not be fetched as its own URL at all.
-for (const f of ['manifest.webmanifest', 'sw.js', 'apple-touch-icon.png']) fs.copyFileSync(path.join(PUB, f), path.join(DEPLOY, f));
-const DEPLOY_ICONS = path.join(DEPLOY, 'icons');
-fs.mkdirSync(DEPLOY_ICONS, { recursive: true });
-for (const f of fs.readdirSync(path.join(PUB, 'icons')).filter((x) => /\.png$/i.test(x))) fs.copyFileSync(path.join(PUB, 'icons', f), path.join(DEPLOY_ICONS, f));
+const imgFiles = /\.(png|jpe?g)$/i;
+const nCards = copyDir(path.join(PUB, 'cards'), path.join(DEPLOY, 'cards'), (f) => imgFiles.test(f));
+const nCarpets = copyDir(path.join(PUB, 'carpets'), path.join(DEPLOY, 'carpets'), (f) => imgFiles.test(f));
+fs.copyFileSync(path.join(PUB, 'carpet.jpg'), path.join(DEPLOY, 'carpet.jpg'));
+if (nCards !== 53) throw new Error('expected 53 card files (52 faces + back.png), copied ' + nCards);
+if (nCarpets !== 22) throw new Error('expected 22 carpet files (11 full + 11 thumbs), copied ' + nCarpets);
 
-console.log('build-deploy: inlined ' + assetCount + ' assets (' +
-  cardFiles.length + ' card images + ' + feltFiles.length + ' felt photos + carpet in the map) = ' + dataURIs + ' data URIs (table felts are real carpet photos via ASSET())');
+for (const f of ['manifest.webmanifest', 'sw.js', 'apple-touch-icon.png']) fs.copyFileSync(path.join(PUB, f), path.join(DEPLOY, f));
+const nIcons = copyDir(path.join(PUB, 'icons'), path.join(DEPLOY, 'icons'), (f) => /\.png$/i.test(f));
+
+console.log('build-deploy: NO inlined assets (speed pass) — 0 raster data URIs, ' + svgURIs + ' decorative SVG data URIs');
 console.log('build-deploy: deploy/index.html = ' + Buffer.byteLength(html) + ' bytes');
+console.log('build-deploy: copied ' + nCards + ' cards -> deploy/cards/, ' + nCarpets + ' carpets (full+thumbs) -> deploy/carpets/, carpet.jpg -> deploy/');
 console.log('build-deploy: copied game.js, bots.js, social-core.js, social-node.js -> deploy/');
-console.log('build-deploy: copied manifest.webmanifest, sw.js, apple-touch-icon.png, icons/ -> deploy/');
+console.log('build-deploy: copied manifest.webmanifest, sw.js, apple-touch-icon.png, ' + nIcons + ' icons -> deploy/');
