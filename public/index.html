@@ -5255,18 +5255,50 @@ $('#btn-13').onclick = () => {
   send({ type: 'declare13' });
   $('#btn-13').classList.add('hidden'); // until the confirming state arrives
 };
-$('#btn-newgame').onclick = () => {
+// Leaving a game from the TABLE — the exit confirm below and the
+// match-end card's «نوې لوبه» — is an IN-APP teardown: the page
+// NEVER reloads (owner report 2026-11-11: confirming وتل mid-game
+// rebooted the whole app to the splash — the same complaint the
+// lobby exit had on 2026-11-10). The pieces are exactly the lobby
+// exit's: the mic stops first, the {type:'leave'} frame flushes
+// during the short delay (leaving is a SERVER act — mid-match,
+// playing / roundEnd / matchEnd, the seat goes to a bot at once
+// and the match plays on without me), the saved session is dropped
+// so neither the socket's auto-reconnect nor a later manual reload
+// can resurrect the room (boot resumes only a stored tore.session),
+// then the socket closes on purpose, voice is torn down and the
+// table overlays close. The landing is HOME.
+function leaveGameToHome() {
+  if (micOn) stopMic(); // no live mic rides onto the home screen
+  send({ type: 'leave' });
   intentionalClose = true;
   localStorage.removeItem('tore.session');
-  location.reload();
-};
+  session = null;
+  updateContinue();
+  setTimeout(() => {
+    if (ws) { try { ws.close(); } catch (e) { /* gone */ } ws = null; }
+    if (typeof peers !== 'undefined') Object.keys(peers).forEach((s) => closePeer(+s, 'teardown'));
+    Object.keys(voiceSeats).forEach((k) => delete voiceSeats[k]);
+    state = null;
+    mySeat = null;
+    ovRoundDismissed = -1; // a future match's summaries show again
+    closeChatPanel();
+    closeLobbyClubPanel();
+    $('#ov-exit').classList.remove('show');
+    $('#ov-round').classList.remove('show');
+    $('#ov-match').classList.remove('show');
+    show('scr-home');
+  }, 200);
+}
+// «نوې لوبه» on the match-end card: the match is over and there is
+// no rematch frame — the old code dropped the session and reloaded
+// to the menu; the same leave now lands home in-app, and a fresh
+// game starts from there exactly as it did after the reload.
+$('#btn-newgame').onclick = () => leaveGameToHome();
 // Exit (this button replaced «اصلي مینو»): a bare tap NEVER leaves —
 // a confirmation popup asks first, and cancelling changes nothing at
-// all (no message is sent, the game is untouched). Confirming sends
-// {type:'leave'}: in the lobby that is the room leave above; mid-match
-// (playing / roundEnd / matchEnd) the server hands the seat to a bot
-// at once and the match plays on without me. The saved session is
-// dropped and the page reloads home, which also tears voice down.
+// all (no message is sent, the game is untouched). Confirming runs
+// the in-app leave above — home, with no reload and no splash.
 function openExit() { $('#ov-exit').classList.add('show'); }
 function closeExit() { $('#ov-exit').classList.remove('show'); }
 $('#btn-leave').onclick = () => {
@@ -5277,12 +5309,7 @@ $('#btn-exit-cancel').onclick = closeExit;
 $('#ov-exit').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeExit(); });
 $('#btn-exit-confirm').onclick = () => {
   closeExit();
-  send({ type: 'leave' });
-  intentionalClose = true;
-  localStorage.removeItem('tore.session');
-  session = null;
-  if (typeof peers !== 'undefined') Object.keys(peers).forEach((s) => closePeer(+s, 'teardown'));
-  setTimeout(() => location.reload(), 200);
+  leaveGameToHome();
 };
 // ---------- in-room chat (preset-only) ----------
 // There is NO free text in Tore chat: the panel offers the preset
