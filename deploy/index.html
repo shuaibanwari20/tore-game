@@ -349,8 +349,15 @@
   /* CARDSFIX: the slim deck-loading hint over the table shell —
      shown only when a table-entry face gate runs past ~300 ms
      (cold cache, slow network); pointer-events none so seats and
-     scores underneath stay live. */
-  #cardloader { position: fixed; left: 50%; top: 132px; transform: translateX(-50%);
+     scores underneath stay live.
+     POSITION (owner order 2026-11-11, later): ABOVE the top avatar,
+     centred in the band between the score strip and the top seat.
+     Measured at 390x844 AND 390x932 (identical header geometry):
+     score strip bottom 47.4, top avatar top 105.4 — a 58 px band;
+     the pill is 47 px tall, so top:53px centres it (53..100),
+     clearing the strip by 5.6 px and the avatar by 5.4 px, and its
+     centred span (124..266) never reaches the exit button (336..). */
+  #cardloader { position: fixed; left: 50%; top: 53px; transform: translateX(-50%);
     z-index: 65; display: flex; align-items: center; gap: 9px; pointer-events: none;
     background: linear-gradient(180deg, rgba(109,17,96,.96), rgba(43,6,54,.96));
     border: 1.5px solid rgba(255,183,224,.55); border-radius: 999px; padding: 8px 16px;
@@ -903,16 +910,19 @@
   /* DM-on-table gating: the friends-page 💬 is dimmed while the
      friend is not in a match (a tap only toasts why). */
   .fr-act.fr-chatbtn-off { opacity: .38; filter: saturate(.35); }
-  /* DM-on-table overlay: bubbles at the table's top-left, below
-     the score strip, clear of the seats and the trick area. The
-     container never takes touches; each bubble takes its own
-     (tap = dismiss). */
-  #dm-overlay { position: absolute; top: 96px; left: 10px; z-index: 26; display: flex; flex-direction: column; gap: 6px; max-width: 252px; pointer-events: none; }
-  .dm-bubble { pointer-events: auto; display: flex; gap: 8px; align-items: flex-start; background: rgba(43,6,54,.93); border: 1.5px solid rgba(255,215,94,.55); border-radius: 14px; padding: 8px 10px; box-shadow: 0 4px 14px rgba(0,0,0,.5); cursor: pointer; animation: dmbub .18s ease-out; }
-  .dm-bubble .dm-av { flex: none; line-height: 0; }
+  /* DM-on-table overlay (owner restyle 2026-11-11, later): NO box —
+     the message is bare elements on the felt (avatar + gold name +
+     white text, strong text-shadow for readability on any carpet),
+     directly UNDER the score strip (strip bottom measures 47.4, so
+     top:51px leaves the ~4 px gap he asked for), left-anchored,
+     clear of the top avatar (top 105.4). The container never takes
+     touches; each bubble takes its own (tap = dismiss). */
+  #dm-overlay { position: absolute; top: 51px; left: 10px; z-index: 26; display: flex; flex-direction: column; gap: 6px; max-width: 252px; pointer-events: none; }
+  .dm-bubble { pointer-events: auto; display: flex; gap: 8px; align-items: flex-start; padding: 0; cursor: pointer; animation: dmbub .18s ease-out; }
+  .dm-bubble .dm-av { flex: none; line-height: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,.65)); }
   .dm-bubble .dm-txt { min-width: 0; }
-  .dm-bubble .dm-name { color: #ffd75e; font-weight: 800; font-size: 12.5px; line-height: 1.25; }
-  .dm-bubble .dm-body { color: #fff; font-size: 13.5px; line-height: 1.35; word-break: break-word; }
+  .dm-bubble .dm-name { color: #ffd75e; font-weight: 800; font-size: 12.5px; line-height: 1.25; text-shadow: 0 1px 3px rgba(0,0,0,.95), 0 0 10px rgba(0,0,0,.6); }
+  .dm-bubble .dm-body { color: #fff; font-size: 13.5px; line-height: 1.35; word-break: break-word; text-shadow: 0 1px 3px rgba(0,0,0,.95), 0 0 10px rgba(0,0,0,.6); }
   @keyframes dmbub { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
   /* icon-only BUSY button (owner order 2026-11-09): the 🎮 emoji
      rendered muddy-dark on the dark button (and the generic
