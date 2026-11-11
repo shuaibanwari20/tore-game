@@ -86,9 +86,9 @@
      felts, then drawn Afghan patterns, both rejected: «find real
      carpets like these»). JS paints the photo: applyTableFelt()
      sets #scr-game's background-image from ASSET('carpets/feltN
-     .jpg') — a data URI in the bundle, the plain file in dev — and
-     paintFelts() paints the same photos into the settings
-     swatches. The table wears the ROOM CREATOR's carpet: the
+     .jpg') — a separate cached FILE since the speed pass — and
+     paintFelts() paints the THUMB variants into the settings
+     preview + picker swatches. The table wears the ROOM CREATOR's carpet: the
      create frame carries profile.felt, the servers stamp it on
      the room and every state push carries it back, so all four
      players (and spectators) play on the creator's carpet. The
@@ -486,7 +486,7 @@
      carpet wait simply finds nothing and the build's one remaining
      CSS carpet reference is the game table's. The card fans were
      inline SVG until ludomenu11; they are real deck faces now,
-     rendered by renderMenuFans() from the same ASSET() map as the
+     rendered by renderMenuFans() from the same ASSET() files as the
      table cards. */
   #scr-home {
     position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 10;
@@ -5388,26 +5388,26 @@ function cardTitle(c) {
   return STR[LANG].ranks[c.slice(0, -1)] + ' ' + STR[LANG].suits[suitOf(c)];
 }
 // ---------- asset resolver ----------
-// Every JS-loaded image goes through ASSET(). (The landing's carpet and
-// hero fan are the one exception: plain CSS/<img> markup, so they are in
-// the first paint — build-deploy.js inlines those references too.)
-// In the bundle, build-deploy.js injects window.__ASSETS__ mapping each relative
-// path ('carpet.jpg', 'cards/<code>.png', 'cards/back.png') to a data URI,
-// because the deploy server serves ONLY the page itself. In plain mode
-// (served from public/) no map is injected and paths pass through as-is.
-const __ASSETS__ = window.__ASSETS__ || {};
-function ASSET(u) { return __ASSETS__[u] || u; }
+// Every JS-loaded image goes through ASSET(). Since the speed pass
+// (2026-11-11) the images are SEPARATE FILES, served by every host
+// from pinned routes with a long cache (Worker: /cards/, /carpets/,
+// /carpet.jpg; Node hosts likewise) — nothing is inlined into the
+// page anymore. ASSET() therefore just roots the relative path at
+// the origin: 'cards/<code>.png' -> '/cards/<code>.png'.
+// THUMB(u) is the small variant of a felt photo (picker grid +
+// settings preview): 'carpets/feltN.jpg' -> '/carpets/thumbs/feltN.jpg'.
+function ASSET(u) { return '/' + u; }
+function THUMB(u) { return '/' + u.replace('carpets/', 'carpets/thumbs/'); }
 
-// Real deck faces: cards/<code>.png (Byron Knoll public-domain deck).
-// Preload the carpet + the eleven felt photos + every face + the back
-// so play never waits on images.
-(function preloadAssets() {
-  const bg = new Image(); bg.src = ASSET('carpet.jpg');
-  for (let n = 1; n <= 11; n++) { const f = new Image(); f.src = ASSET('carpets/felt' + n + '.jpg'); }
-  ['H', 'D', 'C', 'S'].forEach((s) => ['A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K']
-    .forEach((r) => { const i = new Image(); i.src = ASSET('cards/' + r + s + '.png'); }));
-  const bk = new Image(); bk.src = ASSET('cards/back.png');
-})();
+// LAZY LOADING (speed pass): nothing image-heavy is preloaded at page
+// load — the home screen used to pull all eleven felt photos eagerly.
+// What loads, loads when it is needed: the menu fans are four real
+// faces rendered by renderMenuFans(); the picker/settings thumbs load
+// when paintFelts() runs (settings/picker open); the table felt loads
+// when the room state arrives (applyTableFelt); deck faces load when
+// cards are dealt (cardEl). ONE exception, kicked off from the home
+// screen below: my OWN profile felt (full) warms in the background so
+// my own table never waits for it.
 function cardEl(code, extraClass) {
   const d = document.createElement('div');
   d.className = 'pcard' + (extraClass ? ' ' + extraClass : '');
@@ -8575,7 +8575,7 @@ function setCameFromClub(cid) {
   } catch (e) { /* storage unavailable */ }
 }
 // The shelf art is the game's REAL faces (cardEl → the same
-// ASSET() map as the table): توره wears the fan of its story —
+// ASSET() files as the table): توره wears the fan of its story —
 // Q♠ (ماتکه کالا) in front of a heart and the 10♦ — while حکم
 // and کش get their own faces.
 function renderPickerArt() {
@@ -8742,7 +8742,9 @@ function paintFelts() {
   const mine = validFelt(profile.felt);
   const preview = $('#felt-preview');
   if (preview) {
-    preview.style.backgroundImage = 'url("' + ASSET('carpets/felt' + mine + '.jpg') + '")';
+    // Settings preview = the THUMB variant (speed pass): the sheet
+    // paints instantly; the full photo is only for the table/viewer.
+    preview.style.backgroundImage = 'url("' + THUMB('carpets/felt' + mine + '.jpg') + '")';
     preview.dataset.felt = String(mine);
     preview.setAttribute('aria-label', T('felt' + mine));
     const pnm = $('#felt-preview-nm');
@@ -8754,7 +8756,9 @@ function paintFelts() {
     b.type = 'button';
     b.className = 'felt-sw' + (mine === n ? ' sel' : '');
     b.dataset.felt = String(n);
-    b.style.backgroundImage = 'url("' + ASSET('carpets/felt' + n + '.jpg') + '")';
+    // Picker swatches = THUMB variants (speed pass): 11 small files
+    // (~0.5 MB total) instead of 11 full photos (~4.5 MB).
+    b.style.backgroundImage = 'url("' + THUMB('carpets/felt' + n + '.jpg') + '")';
     b.setAttribute('aria-label', T('felt' + n));
     b.setAttribute('aria-pressed', String(mine === n));
     const chk = document.createElement('span');
@@ -9217,10 +9221,14 @@ async function initSessionUser() {
 }
 
 // The landing's carpet is plain CSS markup; its menu fans are real
-// card faces rendered by renderMenuFans() below (the faces ride the
-// same ASSET() map as the table, preloaded at script parse).
+// card faces rendered by renderMenuFans() below (the faces are FILES
+// now — see ASSET() — loaded when the fans render).
 (function dressHome() {
   renderMenuFans();
+  // Speed pass: the home screen is up — warm MY OWN profile felt
+  // (full version) in the background so a table I create paints its
+  // carpet instantly. Nothing else is preloaded (lazy law above).
+  try { const wf = new Image(); wf.src = ASSET('carpets/felt' + validFelt(profile.felt) + '.jpg'); } catch { /* warm-up only */ }
   renderPickerArt();
   applyI18n();
   // Language is on the page: the splash veil may lift now (it also
