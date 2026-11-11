@@ -132,7 +132,9 @@ function verifyBusySid(id) {
         clearTimeout(room.turnTimer);
         clearTimeout(room.roundTimer);
         clearTimeout(room.trickTimer);
+        sendToSpectators(room, { type: 'roomClosed', code: 'roomCancelled' });
         rooms.delete(room.code);
+        syncClubGame(room);
       }
     }
   }
@@ -149,10 +151,38 @@ const social = createNodeSocial({
     const room = rooms.get(code);
     return !!room && room.phase === 'lobby';
   },
+  // Invite source badge (2026-11-11): the room's club stamp.
+  roomClub: (id, code) => {
+    const room = rooms.get(code);
+    return room && room.club ? { cid: room.club.cid, name: room.club.name } : null;
+  },
   inGameCheck: sidInGame,
   inLobbyCheck: sidInLobby,
   verifyBusy: verifyBusySid,
+  // Clubs v8: the club's live game room, scanned from the room
+  // table (a matchEnd room is finished — it no longer counts).
+  clubGameLookup: (cid) => lookupClubGame(cid),
 });
+
+// ------------------------------------------------------------ club games (v8)
+// A room stamped as a club game (room.club = {cid, name}, granted
+// ONLY by social.core.clubGameClub at create time) is findable by
+// its club while it waits or plays — the club room's game button
+// badges it and routes member spectators to it.
+const CLUB_GAME_PHASES = ['lobby', 'playing', 'roundEnd'];
+function lookupClubGame(cid) {
+  for (const room of rooms.values()) {
+    if (room.club && room.club.cid === cid && CLUB_GAME_PHASES.includes(room.phase)) {
+      return { code: room.code, phase: room.phase };
+    }
+  }
+  return null;
+}
+function syncClubGame(room) {
+  if (room && room.club) {
+    try { social.core.clubGameChanged(room.club.cid); } catch (e) { /* social never breaks the game */ }
+  }
+}
 
 // ------------------------------------------------ uploaded club covers
 // POST /club-cover — a club owner uploads his club's cover photo.
@@ -229,6 +259,9 @@ function createRoom() {
     roundTimer: null,
     trickTimer: null,
     trickHold: null, // { plays: [{seat, card}...], winnerSeat } while a finished trick is displayed
+    club: null, // clubs v8: {cid, name} when a club manager created this room as a club game
+    felt: 11, // the creator's table felt (1..11) — set from the create frame, fixed for the room's life
+    spectators: new Set(), // clubs v8: receive-only sockets watching the public state
   };
   room.emit = (evt) => onMatchEvent(room, evt);
   rooms.set(room.code, room);
@@ -261,6 +294,8 @@ function stateFor(room, seatIdx) {
     type: 'state',
     phase: room.phase,
     code: room.code,
+    club: room.club ? { cid: room.club.cid, name: room.club.name } : null,
+    felt: room.felt || 11,
     mySeat: seatIdx,
     hostSeat: hostSeat(room),
     target: G.BANK_LOSE_TARGET,
@@ -293,10 +328,36 @@ function stateFor(room, seatIdx) {
   };
 }
 
+// Clubs v8 — the SPECTATOR state: the full public table (seats,
+// badges, trick, won piles, scores, turn) with every hand
+// stripped. Built from a seat's push with the private fields
+// blanked — hand [], legal [], no declare-13, mySeat -1. The
+// roundResult rides along: game.js history carries only round
+// aggregates (tawan/banked counts), never a card in hand.
+function publicStateFor(room) {
+  const st = stateFor(room, 0);
+  st.mySeat = -1;
+  st.spectator = true;
+  st.hand = [];
+  st.legal = [];
+  st.canDeclare13 = false;
+  return st;
+}
+
+const SPECTATOR_CAP = 20;
+function sendToSpectators(room, obj) {
+  if (!room.spectators || !room.spectators.size) return;
+  for (const sws of [...room.spectators]) {
+    if (sws.readyState === sws.OPEN) send(sws, obj);
+    else room.spectators.delete(sws);
+  }
+}
+
 function broadcastState(room) {
   room.seats.forEach((s, i) => {
     if (s.kind === 'human' && s.connected && s.ws) send(s.ws, stateFor(room, i));
   });
+  sendToSpectators(room, publicStateFor(room));
   // Every state push is a chance for a seat's busy flag to have
   // flipped (room create/join/leave, match start, round/match end,
   // seat conversion…): the social core pushes fresh friend lists
@@ -309,6 +370,10 @@ function broadcastEvent(room, obj) {
   room.seats.forEach((s) => {
     if (s.kind === 'human' && s.connected && s.ws) send(s.ws, obj);
   });
+  // Public table events (takan, declared 13, preset chat, voice
+  // flags) are part of what a spectator watches — hands never
+  // ride events, so the fan-out is safe as-is.
+  sendToSpectators(room, obj);
 }
 
 function onMatchEvent(room, evt) {
@@ -336,6 +401,7 @@ function onMatchEvent(room, evt) {
     clearTimeout(room.turnTimer);
     clearTimeout(room.roundTimer);
     broadcastState(room);
+    syncClubGame(room); // clubs v8: the club game ended — the button badge clears
   }
   // cardPlayed / trickWon need no immediate push: state is pushed after
   // every completed play() call in doPlay().
@@ -532,6 +598,13 @@ function attachPlayer(ws, room, seatIdx, name, prof) {
 }
 
 function onDisconnect(ws) {
+  // Clubs v8: a spectator holds no seat — just leave the watch list.
+  if (ws._spectator) {
+    const sroom = rooms.get(ws._roomCode);
+    if (sroom && sroom.spectators) sroom.spectators.delete(ws);
+    ws._spectator = false;
+    return;
+  }
   const room = rooms.get(ws._roomCode);
   if (!room) return;
   const seat = room.seats[ws._seat];
@@ -582,7 +655,9 @@ setInterval(() => {
       clearTimeout(room.turnTimer);
       clearTimeout(room.roundTimer);
       clearTimeout(room.trickTimer);
+      sendToSpectators(room, { type: 'roomClosed', code: 'roomCancelled' });
       rooms.delete(room.code);
+      syncClubGame(room);
     }
   }
 }, 10000);
@@ -633,10 +708,56 @@ wss.on('connection', (ws, req) => {
 });
 
 function handleMessage(ws, msg) {
+  // Clubs v8: a SPECTATOR socket is receive-only. It may leave;
+  // every other frame (play, chat, rtc, start, …) is dropped here
+  // so a spectator can never act on the room it watches.
+  if (ws._spectator) {
+    if (msg.type === 'leave') {
+      const room = rooms.get(ws._roomCode);
+      if (room && room.spectators) room.spectators.delete(ws);
+      ws._spectator = false;
+      ws._roomCode = undefined;
+      try { ws.close(); } catch (e) { /* gone */ }
+    }
+    return;
+  }
   switch (msg.type) {
     case 'create': {
       const room = createRoom();
+      room.felt = cleanFelt(msg.felt); // creator's felt, validated; fixed at creation
+      // Clubs v8: a club stamp is granted ONLY by the social
+      // core, which verifies the creator is a manager of that
+      // club — a forged club id in the create frame earns nothing.
+      if (msg.club) {
+        const cg = social.core.clubGameClub(joinSid(msg), msg.club);
+        if (cg) room.club = cg;
+      }
       attachPlayer(ws, room, 0, cleanName(msg.name), msg);
+      syncClubGame(room);
+      break;
+    }
+    case 'spectate': {
+      // Clubs v8 — spectating is a CLUB feature: the room must be
+      // a club game and the watcher a member of that club (the
+      // core verifies from social state). Spectators hold no
+      // seat, never count as busy, are capped per room, and only
+      // ever receive the public state (publicStateFor).
+      const room = rooms.get(String(msg.code || '').toUpperCase().trim());
+      if (!room) return sendError(ws, 'اتاق پیدا نشد — کد را بررسی کن', 'roomNotFound');
+      const sid = joinSid(msg);
+      if (!room.club || !sid || !social.core.clubMembership(sid, room.club.cid)) {
+        return sendError(ws, 'تماشای این بازی فقط برای اعضای کلب است', 'spectateDenied');
+      }
+      if (!room.spectators) room.spectators = new Set();
+      if (!room.spectators.has(ws) && room.spectators.size >= SPECTATOR_CAP) {
+        return sendError(ws, 'تعداد تماشاچیان پر است', 'spectatorFull');
+      }
+      room.spectators.add(ws);
+      ws._spectator = true;
+      ws._roomCode = room.code;
+      ws._seat = undefined;
+      send(ws, { type: 'spectating', code: room.code });
+      send(ws, publicStateFor(room));
       break;
     }
     case 'join': {
@@ -692,6 +813,7 @@ function handleMessage(ws, msg) {
       if (!room || room.phase !== 'lobby') return;
       if (ws._seat !== hostSeat(room)) return sendError(ws, 'فقط میزبان می‌تواند بازی را شروع کند', 'hostOnly');
       startMatch(room);
+      syncClubGame(room); // clubs v8: the club game is now in progress
       break;
     }
     case 'leave': {
@@ -716,10 +838,12 @@ function handleMessage(ws, msg) {
               send(s.ws, { type: 'roomClosed', code: 'roomCancelled' });
             }
           });
+          sendToSpectators(room, { type: 'roomClosed', code: 'roomCancelled' });
           clearTimeout(room.turnTimer);
           clearTimeout(room.roundTimer);
           clearTimeout(room.trickTimer);
           rooms.delete(room.code);
+          syncClubGame(room); // clubs v8: the club game dissolved — badge clears
           syncBusyFor(null, roomSids);
         } else {
           room.seats[ws._seat] = emptySeat();
@@ -834,6 +958,16 @@ function handleMessage(ws, msg) {
 function cleanName(name) {
   const n = String(name || '').trim().slice(0, 20);
   return n || 'بازیکن';
+}
+
+// Table felts (قالین): the create frame carries the creator's felt
+// (integer 1..11). Anything else — missing, fractional, out of
+// range, a forged string — falls back to 11 (the default: felt 11,
+// the ORIGINAL cream carpet from the game's first build). The
+// felt is fixed at creation; stateFor stamps it on every push so
+// the whole room plays on the creator's field.
+function cleanFelt(v) {
+  return (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 11) ? v : 11;
 }
 
 httpServer.listen(PORT, () => {
