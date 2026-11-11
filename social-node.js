@@ -41,6 +41,11 @@ function createNodeSocial(opts) {
     inviteRoomCheck(id, code) {
       return opts.roomCheck ? !!opts.roomCheck(id, code) : false;
     },
+    // Invite source badge (2026-11-11): the room's club stamp
+    // ({cid, name} | null) for the core's inviteSource derivation.
+    inviteRoomClub(id, code) {
+      return opts.roomClub ? opts.roomClub(id, code) : null;
+    },
     inGameCheck(id) {
       return opts.inGameCheck ? !!opts.inGameCheck(id) : false;
     },
@@ -49,6 +54,19 @@ function createNodeSocial(opts) {
     },
     verifyBusy(id) {
       return opts.verifyBusy ? opts.verifyBusy(id) : undefined;
+    },
+    // clubs v8: the club's live game room ({code, phase} | null),
+    // scanned from the host's room table.
+    clubGameLookup(cid) {
+      return opts.clubGameLookup ? opts.clubGameLookup(cid) : null;
+    },
+    // features batch (2026-11-11): friend spectate lookup + the
+    // club-vs-club match starter, supplied by the game host.
+    watchLookup(id) {
+      return opts.watchLookup ? opts.watchLookup(id) : null;
+    },
+    vsStartMatch(spec) {
+      return opts.vsStartMatch ? opts.vsStartMatch(spec) : null;
     },
     inviteCooldownMs: (typeof opts.inviteCooldownMs === 'number') ? opts.inviteCooldownMs : undefined,
   });
