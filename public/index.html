@@ -62,17 +62,28 @@
   .legend b { color: #ffd75e; }
   .red { color: #d7263d; } .blk { color: #1c2430; }
 
-  /* ---------- game screen: Afghan carpet ---------- */
+  /* ---------- game screen: Ludo purple felt ----------
+     RESKIN (owner order 2026-11-11; proof approved by him the same
+     day, ?v=20261111-tabnew): the table leaves the Afghan carpet
+     photo for the shell's purple family — a deep-plum felt with a
+     soft magenta radial glow at the centre, the shell's 34px
+     diamond lattice and the wine-plum gradient, calm enough that
+     cards and trick slots read clearly. The build's old CSS-carpet
+     needle/count check was retired with the carpet (build-deploy.js
+     step 3a); the carpet stays in the ASSET() map (a preload names
+     it) but nothing paints it anymore. */
   #scr-game {
     position: fixed; inset: 0; height: 100dvh; z-index: 10;
     display: flex; flex-direction: column; overflow: hidden;
     padding: 10px;
-    background-color: #a97e4f; /* warm brown fallback while the carpet photo loads */
+    background-color: #2a0a52; /* deep plum base while the gradient paints */
     background-image:
-      linear-gradient(rgba(96,58,16,.10), rgba(64,36,8,.22)),
-      url("carpet.jpg");
-    background-size: cover, cover;
-    background-position: center, center;
+      radial-gradient(ellipse 95% 58% at 50% 44%, rgba(240,86,159,.22) 0%, rgba(240,86,159,0) 68%),
+      linear-gradient(45deg, rgba(255,255,255,.03) 1px, transparent 1.3px),
+      linear-gradient(-45deg, rgba(255,255,255,.03) 1px, transparent 1.3px),
+      linear-gradient(180deg, #2a0a52 0%, #57105e 32%, #75135c 56%, #4a0a48 80%, #1c0530 100%);
+    background-size: 100% 100%, 34px 34px, 34px 34px, 100% 100%;
+    background-repeat: no-repeat, repeat, repeat, no-repeat;
   }
   /* ---------- compact header: two-line score strip on TOP, the exit-
      button row BELOW it (owner order 2026-11-07 — the strip moved up,
@@ -80,7 +91,8 @@
      themselves so the total header height stays unchanged) ---------- */
   .ghead { display: flex; gap: 6px; align-items: center; min-height: 31px; margin-bottom: 6px; }
   /* Exit is an ICON button (owner order 2026-11-07): the old «وتل» text
-     pill became a bigger dark-red pill with a gold ring and a DOOR exit
+     pill became a bigger glossy pill with a gold ring and a DOOR exit
+     (dark-red until the 2026-11-11 table reskin, glossy plum since)
      glyph (tall frame, ajar leaf with panels + knob, bold arrow leaving
      through the opening — door is the subject, arrow secondary); the
      accessible name still comes from the exitGame STR
@@ -89,20 +101,25 @@
      total header span at the same 83 px. */
   .exitbtn {
     width: 44px; height: 44px; margin: 0; padding: 0; flex: 0 0 auto;
-    background: linear-gradient(#7d2231, #4d1019); color: #ffe9c9;
-    border: 1px solid #d9b380; border-radius: 13px;
-    box-shadow: 0 2px 6px rgba(0,0,0,.4), 0 0 0 2px rgba(238,201,95,.35);
+    background: linear-gradient(180deg, #8e1a63, #57105e 55%, #3d0a54); color: #ffe9c9;
+    border: 1px solid rgba(255,183,224,.55); border-radius: 13px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.3), 0 0 0 2px rgba(238,201,95,.30);
     display: flex; align-items: center; justify-content: center; cursor: pointer;
   }
   .exitbtn svg { width: 26px; height: 26px; stroke: #ffd75e; stroke-width: 2.1; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  /* the door leaf's inset panels were filled dark maroon (#57121f)
+     for the old red button; on the plum button they read as deep
+     plum shadow instead (CSS fill overrides the attribute). */
+  .exitbtn svg [fill="#57121f"] { fill: #2a0a52; }
   .exitbtn:active { transform: scale(.95); }
   /* The partner seat is no longer a bar in this header row — it is a
      floating badge inside the table (see .seatbadge below). This row
      keeps only the exit button. */
   .scorestrip {
     display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px;
-    background: rgba(26,16,5,.85); border: 1px solid rgba(217,179,128,.65);
+    background: linear-gradient(180deg, rgba(52,10,74,.94), rgba(30,4,48,.94)); border: 1px solid rgba(255,183,224,.45);
     border-radius: 10px; padding: 2px 10px 2px; margin-bottom: 2px; color: #f5e7c6;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 2px 8px rgba(0,0,0,.35);
   }
   .ss-team { display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 0; }
   .ss-line1 { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; line-height: 1.1; }
@@ -172,7 +189,7 @@
   .collectfaces .pcard { position: absolute; margin: 0; }
   .collectbackface { transform: rotateY(180deg); width: 100%; height: 100%; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.45); }
 
-  /* ---------- table (carpet shows through) ---------- */
+  /* ---------- table (the purple felt shows through) ---------- */
   .table { position: relative; flex: 1 1 auto; min-height: 170px; margin: 2px 0 0; }
   /* ---------- floating seat badges (approved design) ----------
      No player bars: each seat is just a circular avatar (~52px, thin
@@ -198,7 +215,8 @@
   .seatbadge .badgename {
     display: flex; align-items: center; gap: 4px; max-width: 170px;
     font-size: 12.5px; font-weight: 700; line-height: 1.5; color: #f5e7c6;
-    background: rgba(26,16,5,.55); border-radius: 999px; padding: 1px 9px;
+    background: rgba(43,6,54,.78); border: 1px solid rgba(255,183,224,.28); border-radius: 999px; padding: 1px 9px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.4);
   }
   /* The pill shows the FIRST name only (see badgeName()) and sizes to
      its content; if a first name is still too long, plaintext bidi
@@ -304,14 +322,27 @@
   .iconbtn:active { transform: scale(.95); }
   .iconbtn.on { background: linear-gradient(#ffd75e, #e0a92c); border-color: #fff0b3; box-shadow: 0 0 0 2px rgba(255,215,94,.45), 0 2px 8px rgba(0,0,0,.4); }
   .iconbtn.on svg { stroke: #4a2c07; }
+  /* the TABLE's action row in the Ludo family (2026-11-11 reskin
+     proof): glossy purple/dark discs with gold glyphs, scoped to
+     #scr-game so the lobby keeps the shared base look. The .on
+     gold fill is re-asserted at the same specificity — it keeps
+     carrying the active state (speaker listening / mic live). */
+  #scr-game .iconbtn {
+    background: linear-gradient(180deg, rgba(109,17,96,.96), rgba(43,6,54,.96));
+    border: 1px solid rgba(255,183,224,.5);
+    box-shadow: 0 2px 6px rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.22);
+  }
+  #scr-game .iconbtn.on { background: linear-gradient(#ffd75e, #e0a92c); border-color: #fff0b3; box-shadow: 0 0 0 2px rgba(255,215,94,.45), 0 2px 8px rgba(0,0,0,.4); }
   /* speaker button: sound waves show while listening is ON, the
      slash shows while it is OFF (the .on class carries the gold). */
   .spkbtn:not(.on) .spk-waves { display: none; }
   .spkbtn.on .spk-slash { display: none; }
 
   /* ---------- in-room chat panel ----------
-     Slides up from the bottom over the table, in the game's dark/gold
-     language. PRESET-ONLY: the quick phrases (24, in a swipe pager),
+     Slides up from the bottom over the table, in the shell's
+     plum/purple family (deep-plum sheet, dark-plum phrase chips,
+     pink-lavender accents — 2026-11-11 table reskin proof; it wore
+     the carpet-era dark brown until then). PRESET-ONLY: the quick phrases (24, in a swipe pager),
      the GIF stickers (16, in their own swipe pager) and the emojis
      (20, in a third swipe pager pinned at the panel's bottom) — no
      free text, no message history, no input.
@@ -321,9 +352,9 @@
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 55;
     max-width: 520px; margin: 0 auto; max-height: 64vh; max-height: 64dvh;
     display: flex; flex-direction: column; overflow: hidden;
-    background: linear-gradient(rgba(26,16,5,.985), rgba(26,16,5,.96));
-    border-top: 2px solid #d9b380; border-radius: 18px 18px 0 0;
-    box-shadow: 0 -8px 30px rgba(0,0,0,.55); color: #f5e7c6;
+    background: linear-gradient(180deg, rgba(84,18,110,.985), rgba(43,6,54,.97));
+    border-top: 2px solid rgba(255,183,224,.55); border-radius: 18px 18px 0 0;
+    box-shadow: 0 -8px 30px rgba(0,0,0,.55); color: #fdf3ff;
     transform: translateY(105%); transition: transform .28s ease;
   }
   #chatpanel.open { transform: translateY(0); }
@@ -346,9 +377,13 @@
   .chat-title { font-size: 16px; font-weight: 800; color: #ffd75e; }
   #btn-chat-close {
     width: 32px; height: 32px; margin: 0; padding: 0; border-radius: 50%;
-    border: 1px solid #d9b380; background: rgba(255,255,255,.06); color: #ffe9c9;
+    border: 2px solid rgba(255,255,255,.4); color: #fff;
+    background: radial-gradient(circle at 35% 27%, #ff9a86, #f03434 52%, #b30d0d 88%);
+    box-shadow: inset 0 2px 3px rgba(255,255,255,.6), inset 0 -4px 7px rgba(90,0,0,.5), 0 3px 8px rgba(0,0,0,.45);
     font-size: 14px; font-family: inherit; cursor: pointer; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
   }
+  #btn-chat-close:active { transform: scale(.92); }
   /* Phrases, stickers and emojis are INDEPENDENT horizontal swipe
      pagers (owner order 2026-11-07): each pager scrolls sideways with
      scroll-snap, one full page per stop, with dot indicators under
@@ -369,25 +404,25 @@
   .pager-track { display: flex; }
   .pager-track > .page { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
   .pager-dots { display: flex; justify-content: center; gap: 6px; padding: 5px 0 0; }
-  .pager-dots .pdot { width: 7px; height: 7px; border-radius: 50%; background: rgba(245,231,198,.28); transition: background .15s; }
+  .pager-dots .pdot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,217,243,.30); transition: background .15s; }
   .pager-dots .pdot.on { background: #ffd75e; }
   .chat-quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 8px 12px 2px; }
   .qphrase {
     margin: 0; padding: 7px 4px; font-size: 13.5px; font-weight: 700; font-family: inherit;
-    color: #ffe9c9; background: rgba(255,255,255,.07); border: 1px solid rgba(217,179,128,.45);
+    color: #ffe9f8; background: rgba(24,3,38,.52); border: 1px solid rgba(255,183,224,.42);
     border-radius: 999px; cursor: pointer;
   }
-  .qphrase:active { transform: scale(.96); background: rgba(255,215,94,.25); }
+  .qphrase:active { transform: scale(.96); background: rgba(255,215,94,.28); }
   /* GIF stickers: served as files from the stickers folder (never
      inlined — the bundle stays light), shown as a 4-wide tile grid. */
-  .stk-label { padding: 9px 12px 0; font-size: 13px; font-weight: 800; color: #ffd75e; }
+  .stk-label { padding: 9px 12px 0; font-size: 13px; font-weight: 800; color: #ffd9f3; }
   .chat-stickers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 6px 12px 2px; }
   .qsticker {
     margin: 0; padding: 4px; cursor: pointer; font-family: inherit;
-    background: rgba(255,255,255,.07); border: 1px solid rgba(217,179,128,.45); border-radius: 14px;
+    background: rgba(24,3,38,.45); border: 1px solid rgba(255,183,224,.42); border-radius: 14px;
   }
   .qsticker img { width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; display: block; border-radius: 9px; pointer-events: none; }
-  .qsticker:active { transform: scale(.94); background: rgba(255,215,94,.25); }
+  .qsticker:active { transform: scale(.94); background: rgba(255,215,94,.28); }
   .chat-emojis { display: flex; justify-content: space-between; padding: 7px 12px 2px; }
   .qemoji { margin: 0; padding: 2px; background: none; border: 0; font-size: 24px; line-height: 1.2; cursor: pointer; font-family: inherit; }
   .qemoji:active { transform: scale(1.25); }
@@ -636,9 +671,9 @@
     position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 30;
     overflow-x: hidden;
     /* The home screen's dark emerald veil, without the carpet photo:
-       build-deploy.js inlines exactly one CSS carpet reference
-       (the game table — home left the carpet in the ludomenu
-       reskin), so these screens wear the veil colour alone. */
+       no CSS carpet reference exists anywhere anymore (home left it
+       in the ludomenu reskin, the game table in the tabnew reskin),
+       so these screens wear the veil colour alone. */
     background:
       linear-gradient(180deg, rgba(3,26,18,.97), rgba(4,32,22,.94) 30%, rgba(4,30,20,.95) 65%, rgba(2,20,13,.99)),
       radial-gradient(ellipse at top, #1d6a3c 0%, #0d3b21 70%, #082a17 100%);
@@ -1947,8 +1982,9 @@
      green glossy «خوندي کول» gloss on the confirm button, and a
      dark-plum cancel like the card's dark fields. Every
      askConfirm caller (dissolve / member leave / unfriend /
-     block / kick / transfer) inherits it; the bespoke table-exit
-     #ov-exit keeps the table's own panel. --- */
+     block / kick / transfer) inherits it. (The bespoke table-exit
+     #ov-exit joined the same family in the 2026-11-11 batch —
+     see its own block right below.) --- */
   #ov-confirm .panel { border: 2px solid rgba(255,183,224,.4); border-radius: 22px; color: #fff;
     background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
     box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
@@ -1962,6 +1998,29 @@
     box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -5px 9px rgba(10,80,0,.4), 0 7px 16px rgba(20,90,0,.5);
     text-shadow: 0 1px 3px rgba(0,60,0,.5); }
   #ov-confirm #btn-cf-no { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 800; color: #ffd9f3;
+    background: rgba(43,6,54,.55); border: 1.5px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 9px rgba(0,0,0,.45); }
+  /* --- table-exit confirm (#ov-exit) in the CLUB UI language
+     (owner order 2026-11-11, same proof batch as the table
+     reskin): the bespoke exit popup was the last brown panel —
+     it never joined the shared askConfirm family, so it now
+     mirrors the «پروفایل سمول» card exactly like #ov-confirm
+     above: magenta gradient card, green glossy وتل, dark-plum
+     لغوه. Ids, the confirm flow and the bot-takes-his-seat
+     behaviour are untouched. --- */
+  #ov-exit .panel { border: 2px solid rgba(255,183,224,.4); border-radius: 22px; color: #fff;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
+    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
+    padding: 18px 16px 14px; }
+  #ov-exit .panel h2 { color: #fff; font-size: 21px; margin: 0 0 8px; text-shadow: 0 2px 4px rgba(0,0,0,.45); }
+  #ov-exit .exit-body { color: #ffd9f3; opacity: 1; line-height: 1.6; margin: 0 0 2px; }
+  #ov-exit .pf-btns { margin-top: 14px; }
+  #ov-exit #btn-exit-confirm { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 900; color: #fff;
+    background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
+    border: 2px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -5px 9px rgba(10,80,0,.4), 0 7px 16px rgba(20,90,0,.5);
+    text-shadow: 0 1px 3px rgba(0,60,0,.5); }
+  #ov-exit #btn-exit-cancel { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 800; color: #ffd9f3;
     background: rgba(43,6,54,.55); border: 1.5px solid rgba(255,255,255,.4);
     box-shadow: inset 0 2px 9px rgba(0,0,0,.45); }
   /* --- join-by-code (#ov-join) in the CLUB UI language
