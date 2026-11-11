@@ -1,9 +1,11 @@
 'use strict';
 /**
  * TORE (توره) — authoritative game server.
- * Node + ws. Serves the self-contained client (./index.html — every image
- * inlined as a data URI, no public/ folder needed) and runs all game rules
- * through game.js (the same module sim.js tests). Clients only render.
+ * Node + ws. Serves the client (./index.html) plus its image FILES
+ * (./cards/, ./carpets/, ./carpet.jpg — separate cached files since
+ * the speed pass; nothing is inlined into the page anymore) and runs
+ * all game rules through game.js (the same module sim.js tests).
+ * Clients only render.
  *
  * Run:  PORT=3000 node server.js     (PORT env, default 3000)
  */
@@ -30,6 +32,8 @@ const INDEX_HTML = fs.readFileSync(path.join(__dirname, 'index.html'));
 const STICKERS_DIR = path.join(__dirname, 'stickers');
 const COVERS_DIR = path.join(__dirname, 'covers');
 const ICONS_DIR = path.join(__dirname, 'icons');
+const CARDS_DIR = path.join(__dirname, 'cards');
+const CARPETS_DIR = path.join(__dirname, 'carpets');
 
 const httpServer = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
@@ -81,6 +85,43 @@ const httpServer = http.createServer((req, res) => {
     if (pinned && fs.existsSync(pinned)) {
       res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' });
       return fs.createReadStream(pinned).pipe(res);
+    }
+    res.writeHead(404); return res.end('not found');
+  }
+  // The game IMAGE files (speed pass): the deck faces, the felt
+  // photos (+ their picker thumbs) and the original carpet — copied
+  // here by build-deploy.js from public/. Pinned to the known file
+  // sets, long-cached like the stickers: after the first download a
+  // phone never pulls them again (the service worker caches them
+  // too). The page itself references them only via ASSET()/THUMB().
+  if (url.startsWith('/cards/')) {
+    const name = url.slice('/cards/'.length);
+    if (/^([2-9TJQKA][CDHS]|back)\.png$/.test(name)) {
+      const full = path.join(CARDS_DIR, name);
+      if (fs.existsSync(full)) {
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' });
+        return fs.createReadStream(full).pipe(res);
+      }
+    }
+    res.writeHead(404); return res.end('not found');
+  }
+  if (url.startsWith('/carpets/')) {
+    const rest = url.slice('/carpets/'.length);
+    const m = rest.match(/^(thumbs\/)?felt([1-9]|1[01])\.jpg$/);
+    if (m) {
+      const full = path.join(CARPETS_DIR, rest);
+      if (fs.existsSync(full)) {
+        res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400' });
+        return fs.createReadStream(full).pipe(res);
+      }
+    }
+    res.writeHead(404); return res.end('not found');
+  }
+  if (url === '/carpet.jpg') {
+    const full = path.join(__dirname, 'carpet.jpg');
+    if (fs.existsSync(full)) {
+      res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400' });
+      return fs.createReadStream(full).pipe(res);
     }
     res.writeHead(404); return res.end('not found');
   }
