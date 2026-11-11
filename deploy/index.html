@@ -1917,15 +1917,19 @@
   #scr-profile .pf-card .pf-idnum { color: #fff; background: rgba(0,0,0,.28); border-radius: 9px;
     font-size: 20px; letter-spacing: 3px; padding: 4px 12px; }
   /* --- settings: the card --- */
+  /* .st-wrap takes the panel's overlay box so the close ribbon can live
+     OUTSIDE the scrolling panel (owner order 2026-11-11) without the
+     panel's overflow-y:auto clipping it. */
+  #ov-settings .st-wrap { position: relative; width: 100%; max-width: 420px; }
   #ov-settings .panel { position: relative; border: 3px solid #f0b93e; border-radius: 22px; color: #fff;
     background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
     box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
     padding: 22px 16px 16px; text-align: start;
-    max-height: calc(100dvh - 32px); overflow-y: auto; }
+    max-height: calc(100dvh - 64px); overflow-y: auto; }
   #ov-settings .panel h2 { color: #fff; text-align: center; font-size: 23px; margin-bottom: 12px;
     text-shadow: 0 2px 4px rgba(0,0,0,.45); }
-  .st-ribbon { position: absolute; top: -17px; inset-inline-start: 16px; width: 44px; height: 54px; margin: 0;
-    padding: 0 0 10px; cursor: pointer; border: 0; z-index: 2;
+  .st-ribbon { position: absolute; top: -27px; inset-inline-start: 16px; width: 44px; height: 54px; margin: 0;
+    padding: 0 0 10px; cursor: pointer; border: 0; z-index: 3;
     background: linear-gradient(180deg, #ff9a44, #f06414 58%, #d94e06);
     clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
     box-shadow: 0 4px 8px rgba(0,0,0,.4);
@@ -1961,11 +1965,12 @@
     stroke-linecap: round; stroke-linejoin: round; opacity: 0; transform: scale(.55);
     transition: opacity .15s, transform .15s; filter: drop-shadow(0 1px 2px rgba(0,60,0,.65)); }
   .st-check.on svg { opacity: 1; transform: scale(1); }
-  /* --- settings: field-edit section (د لوبې ډګر سمول) — a grid of
-     eleven felt swatches; each swatch IS a mini-preview (paintFelts()
-     paints the same carpet photo into it). The player's choice
-     wears a gold ring + check disc; tapping selects + persists
-     at once. */
+  /* --- settings: field-edit section (د لوبې ډګر سمول) — the grid of
+     eleven felt swatches now lives in the picker popup (#ov-feltpick);
+     each swatch IS a mini-preview (paintFelts() paints the same
+     carpet photo into it). The player's choice wears a gold ring +
+     check disc; tapping selects + persists at once. The settings
+     sheet itself shows a single preview (see .felt-single below). */
   .st-felts { margin-top: 12px; background: rgba(43,6,54,.55); border-radius: 16px;
     padding: 10px 10px 11px; box-shadow: inset 0 2px 8px rgba(0,0,0,.35); }
   .st-felts-title { font-size: 16.5px; font-weight: 700; color: #fff; padding: 1px 4px 9px; }
@@ -1988,6 +1993,37 @@
   .felt-sw .felt-check svg { width: 12px; height: 12px; stroke: #33270a; stroke-width: 3.6;
     fill: none; stroke-linecap: round; stroke-linejoin: round; }
   .felt-sw.sel .felt-check { display: flex; }
+  /* --- settings field-edit, single preview (owner order 2026-11-11):
+     the settings section shows ONE centred preview of the selected
+     carpet with the profile-style pencil on its corner; the pencil
+     opens the picker popup (#ov-feltpick, the full grid above), and
+     tapping the preview itself opens the large viewer (#ov-feltview). */
+  .felt-single { position: relative; width: 200px; margin: 2px auto 0; }
+  .felt-preview { position: relative; width: 200px; height: 262px; margin: 0; padding: 0;
+    overflow: hidden; border: 2px solid #ffd75e; border-radius: 14px; cursor: pointer;
+    display: flex; align-items: flex-end; justify-content: center;
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+    box-shadow: 0 0 0 2px rgba(255,215,94,.35), 0 6px 16px rgba(0,0,0,.45),
+      inset 0 2px 6px rgba(255,255,255,.12); }
+  .felt-preview:active { transform: scale(.98); }
+  .felt-preview .felt-nm { width: 100%; padding: 3px 1px 4px; text-align: center;
+    font-size: 11.5px; font-weight: 700; line-height: 1.3; color: #fff;
+    background: rgba(0,0,0,.48); text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  .felt-pencil { position: absolute; top: -12px; inset-inline-end: -12px; z-index: 2; }
+  /* --- carpet picker popup: Ludo magenta card + the standard ✖ --- */
+  #ov-feltpick .fp-wrap { position: relative; width: 100%; max-width: 420px; }
+  #ov-feltpick .panel { position: relative; border: 3px solid #f0b93e; border-radius: 22px; color: #fff;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
+    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
+    padding: 22px 16px 16px; text-align: start;
+    max-height: calc(100dvh - 64px); overflow-y: auto; }
+  #ov-feltpick .panel h2 { color: #fff; text-align: center; font-size: 21px; margin-bottom: 12px;
+    text-shadow: 0 2px 4px rgba(0,0,0,.45); }
+  /* --- carpet large viewer: dark backdrop, the carpet big --- */
+  #ov-feltview { background: rgba(0,0,0,.92); }
+  #ov-feltview .fv-img { width: 92vw; max-width: 430px; height: 78dvh;
+    background-size: contain; background-position: center; background-repeat: no-repeat; }
+  #ov-feltview .ce-x { top: 14px; right: 14px; }
   .st-follow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
   .st-follow span { font-size: 14.5px; font-weight: 700; color: #ffd7f2; }
   .st-ig { width: 46px; height: 46px; flex: 0 0 auto; border-radius: 13px; text-decoration: none;
@@ -3521,8 +3557,8 @@
 
 <!-- ======== SETTINGS POPUP ======== -->
 <div class="overlay" id="ov-settings">
+  <div class="st-wrap">
   <div class="panel st-panel">
-    <button type="button" class="st-ribbon" id="btn-settings-x" aria-label="بندول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
     <h2 id="st-title">امادګي</h2>
     <div class="st-langrow">
       <span class="st-langpair"><span class="pf-label" id="st-lang-lbl">ژبه</span><span class="st-langcur" id="st-lang-cur">پښتو</span></span>
@@ -3557,7 +3593,10 @@
     </div>
     <div class="st-felts">
       <div class="st-felts-title" id="st-felts-title">د لوبې ډګر سمول</div>
-      <div class="felt-grid" id="felt-grid"></div>
+      <div class="felt-single">
+        <button type="button" class="felt-preview" id="felt-preview" aria-label="اصلي قالین"><span class="felt-nm" id="felt-preview-nm"></span></button>
+        <button type="button" class="pf-pencil felt-pencil" id="btn-felt-edit" aria-label="د لوبې ډګر سمول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1.5 1.5 0 0 0 0-2.12l-1.63-1.63a1.5 1.5 0 0 0-2.12 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+      </div>
     </div>
     <div class="st-follow">
       <span id="st-follow-lbl">د نورو لپاره موږ تعقیب کړئ</span>
@@ -3567,6 +3606,25 @@
       <button id="btn-settings-close" class="ghost">بندول</button>
     </div>
   </div>
+  <button type="button" class="st-ribbon" id="btn-settings-x" aria-label="بندول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+  </div>
+</div>
+
+<!-- ======== CARPET PICKER POPUP (the full 11-carpet grid) ======== -->
+<div class="overlay" id="ov-feltpick">
+  <div class="fp-wrap">
+    <div class="panel fp-panel">
+      <h2 id="fp-title">د لوبې ډګر سمول</h2>
+      <div class="felt-grid" id="felt-grid"></div>
+    </div>
+    <button type="button" class="ce-x" id="btn-feltpick-x" aria-label="بندول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+  </div>
+</div>
+
+<!-- ======== CARPET LARGE VIEWER ======== -->
+<div class="overlay" id="ov-feltview">
+  <div class="fv-img" id="felt-view-img"></div>
+  <button type="button" class="ce-x" id="btn-feltview-x" aria-label="بندول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
 </div>
 
 <!-- ======== EXIT CONFIRM POPUP ======== -->
@@ -4637,7 +4695,7 @@ function applyI18n() {
   document.title = T('docTitle');
   const ltr = LANG === 'en';
   ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-settings', 'ov-exit', 'ov-join', 'ov-install',
-   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-clubseatreqs', 'scr-picker', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu']
+   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-clubseatreqs', 'scr-picker', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu', 'ov-feltpick', 'ov-feltview']
     .forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.setAttribute('dir', ltr ? 'ltr' : 'rtl');
@@ -4820,6 +4878,10 @@ function applyI18n() {
   aria('#btn-pf-edit-country', 'pfEditCountry');
   aria('#btn-st-lang-edit', 'languageLbl');
   aria('#btn-settings-x', 'closeBtn');
+  set('#fp-title', 'setFieldEdit');
+  aria('#btn-felt-edit', 'setFieldEdit');
+  aria('#btn-feltpick-x', 'closeBtn');
+  aria('#btn-feltview-x', 'closeBtn');
   set('.chat-title', 'chatTitle');
   aria('#btn-chat-close', 'closeBtn');
   set('.stk-label', 'stickersLbl');
@@ -8181,18 +8243,32 @@ function paintSettings() {
   const cr = $('#row-set-chat'); if (cr) cr.setAttribute('aria-checked', String(c));
   paintFelts();
 }
-// ----- settings: field edit (د لوبې ډګر سمول) — eleven felt swatches.
-// Tapping one selects it IMMEDIATELY and persists it in
-// tore.profile (profile.felt). The choice takes effect on the next
-// room I CREATE: the felt is fixed at creation and the whole room
-// (and spectators) play on the creator's field; changing the
-// setting mid-room never recolours a live room. -----
+// ----- settings: field edit (د لوبې ډګر سمول). The settings sheet
+// shows ONE preview of the selected carpet (profile pattern, owner
+// order 2026-11-11): the pencil opens the picker popup with the
+// full eleven-swatch grid; tapping a swatch there selects it
+// IMMEDIATELY, persists it in tore.profile (profile.felt), closes
+// the popup and refreshes the preview. Tapping the preview itself
+// opens the large viewer (no selection change). The choice takes
+// effect on the next room I CREATE: the felt is fixed at creation
+// and the whole room (and spectators) play on the creator's field;
+// changing the setting mid-room never recolours a live room. -----
 function paintFelts() {
   const grid = $('#felt-grid');
   if (!grid) return;
   const title = $('#st-felts-title');
   if (title) title.textContent = T('setFieldEdit');
+  const fpTitle = $('#fp-title');
+  if (fpTitle) fpTitle.textContent = T('setFieldEdit');
   const mine = validFelt(profile.felt);
+  const preview = $('#felt-preview');
+  if (preview) {
+    preview.style.backgroundImage = 'url("' + ASSET('carpets/felt' + mine + '.jpg') + '")';
+    preview.dataset.felt = String(mine);
+    preview.setAttribute('aria-label', T('felt' + mine));
+    const pnm = $('#felt-preview-nm');
+    if (pnm) pnm.textContent = T('felt' + mine);
+  }
   grid.innerHTML = '';
   for (let n = 1; n <= 11; n++) {
     const b = document.createElement('button');
@@ -8210,10 +8286,18 @@ function paintFelts() {
     nm.className = 'felt-nm';
     nm.textContent = T('felt' + n);
     b.appendChild(nm);
-    b.onclick = () => { profile.felt = n; saveProfile(); paintFelts(); };
+    b.onclick = () => { profile.felt = n; saveProfile(); paintFelts(); closeFeltPick(); };
     grid.appendChild(b);
   }
 }
+function openFeltPick() { paintFelts(); $('#ov-feltpick').classList.add('show'); }
+function closeFeltPick() { $('#ov-feltpick').classList.remove('show'); }
+function openFeltView() {
+  const img = $('#felt-view-img');
+  if (img) img.style.backgroundImage = 'url("' + ASSET('carpets/felt' + validFelt(profile.felt) + '.jpg') + '")';
+  $('#ov-feltview').classList.add('show');
+}
+function closeFeltView() { $('#ov-feltview').classList.remove('show'); }
 // The felt the table currently wears — always the room creator's,
 // taken from the state push; before any state (or from an older
 // host that sends none) my own profile felt is the fallback.
@@ -8243,6 +8327,12 @@ function applyChatSetting() {
   if (!on) closeChatPanel();
 }
 $('#btn-settings-x').onclick = closeSettings;
+$('#btn-felt-edit').onclick = openFeltPick;
+$('#felt-preview').onclick = openFeltView;
+$('#btn-feltpick-x').onclick = closeFeltPick;
+$('#btn-feltview-x').onclick = closeFeltView;
+$('#ov-feltpick').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeFeltPick(); });
+$('#ov-feltview').addEventListener('click', () => closeFeltView());
 $('#btn-st-lang-edit').onclick = () => { $('#st-langs').classList.toggle('hidden'); };
 function bindToggleRow(id, key, dflt, after) {
   const row = $(id);
