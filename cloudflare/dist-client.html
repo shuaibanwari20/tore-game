@@ -1924,9 +1924,9 @@
   #ov-settings .panel { position: relative; border: 3px solid #f0b93e; border-radius: 22px; color: #fff;
     background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
     box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
-    padding: 22px 16px 16px; text-align: start;
+    padding: 18px 16px 14px; text-align: start;
     max-height: calc(100dvh - 64px); overflow-y: auto; }
-  #ov-settings .panel h2 { color: #fff; text-align: center; font-size: 23px; margin-bottom: 12px;
+  #ov-settings .panel h2 { color: #fff; text-align: center; font-size: 23px; margin-bottom: 8px;
     text-shadow: 0 2px 4px rgba(0,0,0,.45); }
   .st-ribbon { position: absolute; top: -27px; inset-inline-start: 16px; width: 44px; height: 54px; margin: 0;
     padding: 0 0 10px; cursor: pointer; border: 0; z-index: 3;
@@ -1947,7 +1947,7 @@
   #ov-settings .st-lang { background: rgba(43,6,54,.5); color: #fff; border: 1.5px solid rgba(255,255,255,.35); }
   #ov-settings .st-lang.sel { background: linear-gradient(180deg, #ffd75e, #d9a83c); color: #33270a;
     border-color: #ffd75e; box-shadow: 0 0 0 1px #ffd75e; }
-  .st-rows { margin-top: 12px; background: rgba(43,6,54,.55); border-radius: 16px; padding: 2px 14px;
+  .st-rows { margin-top: 10px; background: rgba(43,6,54,.55); border-radius: 16px; padding: 2px 14px;
     box-shadow: inset 0 2px 8px rgba(0,0,0,.35); }
   #ov-settings .st-rules, #ov-settings .st-logout { width: 100%; margin: 0; padding: 13px 2px; gap: 9px;
     justify-content: space-between; background: none; color: #fff; border: 0; border-radius: 0;
@@ -1971,9 +1971,9 @@
      carpet photo into it). The player's choice wears a gold ring +
      check disc; tapping selects + persists at once. The settings
      sheet itself shows a single preview (see .felt-single below). */
-  .st-felts { margin-top: 12px; background: rgba(43,6,54,.55); border-radius: 16px;
-    padding: 10px 10px 11px; box-shadow: inset 0 2px 8px rgba(0,0,0,.35); }
-  .st-felts-title { font-size: 16.5px; font-weight: 700; color: #fff; padding: 1px 4px 9px; }
+  .st-felts { margin-top: 10px; background: rgba(43,6,54,.55); border-radius: 16px;
+    padding: 8px 10px 9px; box-shadow: inset 0 2px 8px rgba(0,0,0,.35); }
+  .st-felts-title { font-size: 16.5px; font-weight: 700; color: #fff; padding: 1px 4px 6px; }
   .felt-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
   .felt-sw { position: relative; height: 60px; margin: 0; padding: 0; overflow: hidden;
     border: 2px solid rgba(255,255,255,.28); border-radius: 11px; cursor: pointer;
@@ -1998,9 +1998,13 @@
      carpet with the profile-style pencil on its corner; the pencil
      opens the picker popup (#ov-feltpick, the full grid above), and
      tapping the preview itself opens the large viewer (#ov-feltview). */
-  .felt-single { position: relative; width: 200px; margin: 2px auto 0; }
-  .felt-preview { position: relative; width: 200px; height: 262px; margin: 0; padding: 0;
-    overflow: hidden; border: 2px solid #ffd75e; border-radius: 14px; cursor: pointer;
+  /* Preview shrunk 200x262 -> 132x173 (owner order 2026-11-11: «خیلی
+     بزرگ هست کوچکش کن») so the WHOLE settings sheet fits one popup
+     view with no scrolling at 390x844 / 390x932 (proof:
+     tore-proofs-settingsx-applied asserts scrollHeight <= clientHeight). */
+  .felt-single { position: relative; width: 132px; margin: 2px auto 0; }
+  .felt-preview { position: relative; width: 132px; height: 173px; margin: 0; padding: 0;
+    overflow: hidden; border: 2px solid #ffd75e; border-radius: 12px; cursor: pointer;
     display: flex; align-items: flex-end; justify-content: center;
     background-size: cover; background-position: center; background-repeat: no-repeat;
     box-shadow: 0 0 0 2px rgba(255,215,94,.35), 0 6px 16px rgba(0,0,0,.45),
@@ -2024,7 +2028,7 @@
   #ov-feltview .fv-img { width: 92vw; max-width: 430px; height: 78dvh;
     background-size: contain; background-position: center; background-repeat: no-repeat; }
   #ov-feltview .ce-x { top: 14px; right: 14px; }
-  .st-follow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
+  .st-follow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
   .st-follow span { font-size: 14.5px; font-weight: 700; color: #ffd7f2; }
   .st-ig { width: 46px; height: 46px; flex: 0 0 auto; border-radius: 13px; text-decoration: none;
     background: linear-gradient(45deg, #f9ce34 0%, #ee2a7b 55%, #6228d7 100%);
