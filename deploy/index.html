@@ -333,8 +333,32 @@
   }
   .pcard img.face {
     width: 100%; height: 100%; display: block; border-radius: 9px; pointer-events: none;
+    /* CARDSFIX (2026-11-11): the face stays invisible until its PNG
+       has actually loaded — until then the element wears the room's
+       card-BACK design (.cback-N classes from cardEl), never the
+       bare near-white .pcard background. .faceready (added on load)
+       fades the face in and sheds the back look. */
+    opacity: 0; transition: opacity .18s ease-out;
   }
+  .pcard.faceready { background: #fffef9; border-color: transparent;
+    box-shadow: 0 3px 9px rgba(0,0,0,.45); }
+  .pcard.faceready::after { display: none; }
+  .pcard.faceready img.face { opacity: 1; }
   .trick .pcard { width: 76px; height: 106px; }
+
+  /* CARDSFIX: the slim deck-loading hint over the table shell —
+     shown only when a table-entry face gate runs past ~300 ms
+     (cold cache, slow network); pointer-events none so seats and
+     scores underneath stay live. */
+  #cardloader { position: fixed; left: 50%; top: 132px; transform: translateX(-50%);
+    z-index: 65; display: flex; align-items: center; gap: 9px; pointer-events: none;
+    background: linear-gradient(180deg, rgba(109,17,96,.96), rgba(43,6,54,.96));
+    border: 1.5px solid rgba(255,183,224,.55); border-radius: 999px; padding: 8px 16px;
+    color: #ffe9f8; font-size: 14.5px; font-weight: 700; box-shadow: 0 6px 18px rgba(0,0,0,.5); }
+  #cardloader .cl-spin { width: 17px; height: 17px; flex: 0 0 auto; border-radius: 50%;
+    border: 2.5px solid rgba(255,215,94,.3); border-top-color: #ffd75e;
+    animation: clspin .8s linear infinite; }
+  @keyframes clspin { to { transform: rotate(360deg); } }
 
   /* ---------- card flight (throw animation) ---------- */
   .flycard { position: fixed; z-index: 80; margin: 0; pointer-events: none; }
@@ -876,6 +900,20 @@
      glyph is sized to sit level with the neighbouring gamepad/🔔 icons. */
   .fr-act.fr-chatbtn { display: inline-flex; align-items: center; justify-content: center; padding: 6px 10px; }
   .fr-act.fr-chatbtn svg { width: 20px; height: 20px; display: block; }
+  /* DM-on-table gating: the friends-page 💬 is dimmed while the
+     friend is not in a match (a tap only toasts why). */
+  .fr-act.fr-chatbtn-off { opacity: .38; filter: saturate(.35); }
+  /* DM-on-table overlay: bubbles at the table's top-left, below
+     the score strip, clear of the seats and the trick area. The
+     container never takes touches; each bubble takes its own
+     (tap = dismiss). */
+  #dm-overlay { position: absolute; top: 96px; left: 10px; z-index: 26; display: flex; flex-direction: column; gap: 6px; max-width: 252px; pointer-events: none; }
+  .dm-bubble { pointer-events: auto; display: flex; gap: 8px; align-items: flex-start; background: rgba(43,6,54,.93); border: 1.5px solid rgba(255,215,94,.55); border-radius: 14px; padding: 8px 10px; box-shadow: 0 4px 14px rgba(0,0,0,.5); cursor: pointer; animation: dmbub .18s ease-out; }
+  .dm-bubble .dm-av { flex: none; line-height: 0; }
+  .dm-bubble .dm-txt { min-width: 0; }
+  .dm-bubble .dm-name { color: #ffd75e; font-weight: 800; font-size: 12.5px; line-height: 1.25; }
+  .dm-bubble .dm-body { color: #fff; font-size: 13.5px; line-height: 1.35; word-break: break-word; }
+  @keyframes dmbub { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
   /* icon-only BUSY button (owner order 2026-11-09): the 🎮 emoji
      rendered muddy-dark on the dark button (and the generic
      :disabled dimming made it worse) — a bright pale-gold inline
@@ -2946,6 +2984,7 @@
   <!-- ======== GAME ======== -->
   <section id="scr-game" class="hidden">
     <div id="spec-chip" class="hidden">👁 <span id="spec-chip-txt"></span></div>
+    <div id="dm-overlay"></div>
     <div id="vs-tag" class="hidden"></div>
     <div class="scorestrip">
       <div class="ss-team">
@@ -2980,6 +3019,7 @@
     </div>
 
     <button id="btn-13" class="hidden">🙋 13 یم!</button>
+    <div id="cardloader" class="hidden"><span class="cl-spin"></span><span id="cardloader-txt">کارتونه بارېږي…</span></div>
     <div class="hand" id="hand"></div>
     <div class="actionrow">
       <button class="iconbtn" id="btn-chat" aria-label="پیغام">
@@ -4182,6 +4222,7 @@ const STR = {
     frAccept: 'تایید',
     frReject: 'رد',
     frChat: 'ګپ',
+    frChatOnlyInGame: 'دا تڼۍ یوازې هغه وخت کار کوي چې ملګری په لوبه کې وي',
     frInvite: 'بلنه',
     frInGame: 'په لوبه کې دی',
     frInLobby: 'په لابي کې دی',
@@ -4398,6 +4439,7 @@ const STR = {
     noNetBody: 'د انټرنټ اتصال نشته، انټرنټ چالان کړه او بیا هڅه وکړه',
     noNetOk: 'سمه ده',
     offlineGameToast: 'آفلاین لوبه',
+    cardsLoading: 'کارتونه بارېږي…',
     cancelLine: (a, ca, b, cb, p) => '🤝 تکانونه یو له بله خلاص شول: د (' + a + ') ټیم ' + ca + ' تکان او د (' + b + ') ټیم ' + cb + ' تکان — ' + p + ' جوړې له منځه لاړې، نه شمېرل کېږي',
     pendLine: (names) => 'د (' + names + ') ټیم تکان د راتلونکو لاسونو لپاره پاتې شو ⭐',
     execLine: (amount, victim, takan) => amount + ' تاوان د (' + victim + ') له جمع شوي څخه کم شو او (' + takan + ') ټیم ته ورکړل شو',
@@ -4551,6 +4593,7 @@ const STR = {
     frAccept: 'تایید',
     frReject: 'رد',
     frChat: 'گفت‌وگو',
+    frChatOnlyInGame: 'این دکمه فقط وقتی کار می‌کند که دوست در بازی باشد',
     frInvite: 'دعوت',
     frInGame: 'در بازی است',
     frInLobby: 'در لابی است',
@@ -4767,6 +4810,7 @@ const STR = {
     noNetBody: 'اتصال اینترنت برقرار نیست — لطفاً اینترنت را روشن کن و دوباره تلاش کن',
     noNetOk: 'باشه',
     offlineGameToast: 'بازی آفلاین',
+    cardsLoading: 'کارت‌ها در حال بارگذاری…',
     cancelLine: (a, ca, b, cb, p) => '🤝 تکان‌ها با هم ادا شدند: تیمِ (' + a + ') ' + ca + ' تکان و تیمِ (' + b + ') ' + cb + ' تکان — ' + p + ' جفت حذف شد، بدون حساب',
     pendLine: (names) => 'تکانِ تیمِ (' + names + ') ماند برای دست‌های بعد ⭐',
     execLine: (amount, victim, takan) => amount + ' تاوان از جمع‌شدهٔ تیمِ (' + victim + ') کم شد و به تیمِ (' + takan + ') داده شد',
@@ -4920,6 +4964,7 @@ const STR = {
     frAccept: 'Accept',
     frReject: 'Reject',
     frChat: 'Chat',
+    frChatOnlyInGame: 'This button only works while your friend is in a game',
     frInvite: 'Invite',
     frInGame: 'In a game',
     frInLobby: 'In a lobby',
@@ -5136,6 +5181,7 @@ const STR = {
     noNetBody: 'There is no internet connection — turn on your internet and try again',
     noNetOk: 'OK',
     offlineGameToast: 'Offline game',
+    cardsLoading: 'Loading cards…',
     cancelLine: (a, ca, b, cb, p) => '🤝 Takans cancelled out: team (' + a + ') ' + ca + ' and team (' + b + ') ' + cb + ' — ' + p + ' pair(s) removed, no charge',
     pendLine: (names) => 'Team (' + names + ')’s takan stays for later hands ⭐',
     execLine: (amount, victim, takan) => amount + ' tawan moved from team (' + victim + ')’s bank to team (' + takan + ')',
@@ -5230,6 +5276,7 @@ function applyI18n() {
   set('#nonet-title', 'noNetTitle');
   set('#nonet-body', 'noNetBody');
   set('#btn-nonet-ok', 'noNetOk');
+  set('#cardloader-txt', 'cardsLoading');
   set('#rules-txt', 'rulesBtn');
   set('#foot-a', 'homeFootA');
   set('#foot-b', 'homeFootB');
@@ -5455,16 +5502,115 @@ function THUMB(u) { return '/' + u.replace('carpets/', 'carpets/thumbs/'); }
 // cards are dealt (cardEl). ONE exception, kicked off from the home
 // screen below: my OWN profile felt (full) warms in the background so
 // my own table never waits for it.
+// ---------- card faces: the never-blank law (CARDSFIX 2026-11-11) ----------
+// Owner's live screenshot: two cards already played into the trick
+// stood on the table as big BLANK WHITE rectangles for seconds (one
+// wearing the gold winner frame), and spectators saw the same. The
+// mechanism: since the speed pass the faces are separate PNG files,
+// and cardEl set <img src> cold at render time over .pcard's
+// #fffef9 background — until a face arrived, the white box WAS the
+// card. The only whole-deck preload (the SW warm-up) never runs at
+// all in in-app webviews without a service worker (Telegram), and
+// even in Chrome it is an idle-time background crawl that a first
+// trick easily beats. So, two defences:
+//   1. EVERY card element is born wearing the room's card-BACK
+//      design (.cback-N) with its face img invisible; the img fades
+//      in and the element sheds the back look (.faceready) only
+//      once the PNG has loaded. A face that fails is retried once
+//      (cache-busting) and otherwise the back design stays — a card
+//      on the table can never present as a blank white rectangle,
+//      for the player or for any number of spectators (they share
+//      this same render path).
+//   2. A deck gate: every table entry (picker play, bot games,
+//      code join, Continue, spectate) calls gateFaces(), which
+//      fetches + decodes all 52 faces + back.png through ONE shared
+//      promise (the same URLs the warm-up primes, so cache hits
+//      dedupe). Past ~300 ms a slim loading hint shows over the
+//      table shell; a warm cache resolves instantly and it never
+//      appears.
+const faceRecs = Object.create(null); // code -> { st: 'loading'|'ready'|'failed', p }
+function faceURL(code, retry) {
+  return ASSET(code === 'back' ? 'cards/back.png' : 'cards/' + code + '.png') + (retry ? '?r=1' : '');
+}
+function paintReadyFaces(code) {
+  document.querySelectorAll('.pcard[data-face="' + code + '"]').forEach((el) => el.classList.add('faceready'));
+}
+function markFaceReady(code) {
+  const r = faceRecs[code] || (faceRecs[code] = { st: 'ready', p: Promise.resolve(true) });
+  r.st = 'ready';
+  paintReadyFaces(code);
+}
+function ensureFace(code) {
+  let r = faceRecs[code];
+  if (r) return r.p;
+  r = faceRecs[code] = { st: 'loading', p: null };
+  r.p = new Promise((resolve) => {
+    const attempt = (n) => {
+      const im = new Image();
+      im.onload = () => {
+        const done = () => { markFaceReady(code); resolve(true); };
+        if (typeof im.decode === 'function') im.decode().then(done, done);
+        else done();
+      };
+      im.onerror = () => {
+        if (n < 1) setTimeout(() => attempt(n + 1), 400);
+        else { r.st = 'failed'; console.warn('[tore] card face failed to load:', code); resolve(false); }
+      };
+      im.src = faceURL(code, n > 0);
+    };
+    attempt(0);
+  });
+  return r.p;
+}
+let deckPromise = null;
+function ensureDeck() {
+  if (!deckPromise) {
+    const codes = [];
+    for (const s of 'CDHS') for (const r of '23456789TJQKA') codes.push(r + s);
+    codes.push('back');
+    deckPromise = Promise.all(codes.map((c) => ensureFace(c))).then(() => true);
+  }
+  return deckPromise;
+}
+let cardLoaderTimer = null;
+function gateFaces() {
+  const p = ensureDeck();
+  if (!cardLoaderTimer) {
+    cardLoaderTimer = setTimeout(() => {
+      cardLoaderTimer = null;
+      const el = $('#cardloader');
+      if (el) el.classList.remove('hidden');
+    }, 300);
+  }
+  p.then(() => {
+    if (cardLoaderTimer) { clearTimeout(cardLoaderTimer); cardLoaderTimer = null; }
+    const el = $('#cardloader');
+    if (el) el.classList.add('hidden');
+  });
+  return p;
+}
+
 function cardEl(code, extraClass) {
   const d = document.createElement('div');
-  d.className = 'pcard' + (extraClass ? ' ' + extraClass : '');
+  d.className = 'pcard cback cback-' + currentBack() + (extraClass ? ' ' + extraClass : '');
+  d.dataset.face = code;
   d.title = cardTitle(code);
   const img = document.createElement('img');
   img.className = 'face';
-  img.src = ASSET('cards/' + code + '.png');
   img.alt = cardTitle(code);
   img.draggable = false;
+  if (faceRecs[code] && faceRecs[code].st === 'ready') d.classList.add('faceready');
+  img.onload = () => { markFaceReady(code); };
+  img.onerror = () => {
+    if (!img.dataset.retried) { img.dataset.retried = '1'; img.src = faceURL(code, true); }
+    else console.warn('[tore] card face failed to load:', code);
+  };
+  img.src = faceURL(code, false);
+  // A memory-cached face can already be complete before the load
+  // event is observed — wear it at once, never a frame of back.
+  if (img.complete && img.naturalWidth > 0) markFaceReady(code);
   d.appendChild(img);
+  ensureFace(code); // feed the shared registry (dedupes by URL/cache)
   return d;
 }
 // ---------- home menu fans (real faces, contained) ----------
@@ -5820,6 +5966,7 @@ function joinRoomWithCode(code) {
   const b = $('#btn-join'); if (b) b.disabled = true;
   joinFlightTimer = setTimeout(endJoinFlight, 10000);
   setCameFromClub(null); // v9.3: a code/invite-joined room is not my club creation
+  gateFaces(); // CARDSFIX: deck gate before the table can open
   connect(() => send({ type: 'join', code, ...profilePayload() }));
 }
 $('#btn-join').onclick = () => joinRoomWithCode($('#inp-code').value);
@@ -8628,6 +8775,7 @@ function armBotFallback() {
   }, 4000) };
 }
 function startBotGame(club) {
+  gateFaces(); // CARDSFIX: deck gate (deduped with the picker's call)
   window.__toreLocalGame = false;
   const createFrame = () => ({ type: 'create', ...(club ? { club } : {}), felt: validFelt(profile.felt), back: validBack(profile.back), ...profilePayload() });
   if (!engineReady()) {
@@ -8650,6 +8798,7 @@ function startBotGame(club) {
 }
 function startLocalBotGame(withToast) {
   disarmBotFallback();
+  gateFaces(); // CARDSFIX: deck gate — offline these resolve from the SW cache
   quickPlay = true;
   const host = new LocalHost();
   ws = host.socket;
@@ -9363,6 +9512,7 @@ function startPickedGame() {
   // popup over the still-open picker. The bots flow never stops:
   // startBotGame routes it to the in-page host instead.
   if (mode !== 'bots' && netOffline()) { showNoNet(); return; }
+  gateFaces(); // CARDSFIX: the deck loads before the table can open
   closePicker();
   if (mode === 'bots') { startBotGame(club); return; }
   connect(() => send({ type: 'create', ...(club ? { club } : {}), felt: validFelt(profile.felt), back: validBack(profile.back), ...profilePayload() }));
@@ -9632,6 +9782,7 @@ $('#btn-continue').onclick = () => {
   if (s.local) { localStorage.removeItem('tore.session'); return updateContinue(); }
   if (ws) { try { ws.onclose = null; ws.close(); } catch (e) {} ws = null; }
   intentionalClose = false;
+  gateFaces(); // CARDSFIX: deck gate before the table can open
   connect(() => send({ type: 'reconnect', code: s.code, token: s.token, ...profileMsg() }));
 };
 // ---------- PWA (Phase 0): service worker + install entry ----------
@@ -10408,6 +10559,7 @@ function onSocialMsg(m) {
       renderFriends();
     }
     renderChats();
+    maybeDmBubble(m, peerId);
   } else if (m.type === 's-dm-history') {
     dmThreads.set(m.with, (m.messages || []).map((x) => ({ from: x.from, text: x.text, ts: x.ts })));
     if (dmPeer && dmPeer.id === m.with) renderDmThread();
@@ -10495,6 +10647,12 @@ function updateFriendsBadge() {
 // screen (کور, چت, پروفایل, or the back button itself) clears it.
 let frOrigin = null;
 function openFriends(origin) {
+  // CARDSFIX scope extension (owner order 2026-11-11): the social
+  // pages are online pages — offline, EVERY entry (bottom nav, the
+  // home friends card, the lobby button, the picker/page navs, the
+  // player-menu row) stops here with the no-net popup instead of
+  // opening a dead page. Guarding the shared opener covers them all.
+  if (guardOnlineDoor()) return;
   frOrigin = origin === 'lobby' ? 'lobby' : null;
   const bb = $('#btn-fr-back');
   if (bb) bb.classList.toggle('hidden', frOrigin !== 'lobby');
@@ -10527,6 +10685,7 @@ $('#btn-fr-back').onclick = () => closeFriends();
 // existing DM view with its back target set to this page.
 let dmReturn = 'friends';   // where the DM back button lands
 function openChats() {
+  if (guardOnlineDoor()) return; // CARDSFIX scope extension: چت is an online page — offline, the popup instead
   frOrigin = null; // leaving friends via a nav page drops the lobby origin
   $('#scr-friends').classList.add('hidden');
   $('#scr-profile').classList.add('hidden');
@@ -10829,6 +10988,22 @@ const CHAT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden=
   '<circle cx="7.4" cy="11.6" r="1.45" fill="#0e2a1c"/><circle cx="12" cy="11.6" r="1.45" fill="#0e2a1c"/>' +
   '<circle cx="16.6" cy="11.6" r="1.45" fill="#0e2a1c"/></svg>';
 function frChatBtn(p) {
+  // DM-ON-TABLE (owner order 2026-11-11): on the FRIENDS page this
+  // button is live only while the friend is IN A MATCH — the same
+  // p.ingame signal that puts «تماشا» on the row (the point: a DM
+  // sent now pops on his table, see maybeDmBubble). Otherwise it
+  // renders dimmed + aria-disabled and a tap only toasts why. The
+  // چت page is untouched: it lists every friend and its rows open
+  // the DM directly at any time (it never uses this button).
+  if (!p.ingame) {
+    const b = frBtn('', 'fr-chatbtn fr-chatbtn-off', () => toast(T('frChatOnlyInGame')), dmUnread.get(p.id) || 0);
+    b.dataset.act = 'chat';
+    b.setAttribute('aria-disabled', 'true');
+    b.insertAdjacentHTML('afterbegin', CHAT_ICON_SVG);
+    b.title = T('frChat');
+    b.setAttribute('aria-label', T('frChat'));
+    return b;
+  }
   const b = frBtn('', 'fr-chatbtn', () => openDm(p), dmUnread.get(p.id) || 0);
   b.dataset.act = 'chat';
   b.insertAdjacentHTML('afterbegin', CHAT_ICON_SVG);
@@ -11086,7 +11261,58 @@ $('#btn-fm-block').onclick = () => {
 
 
 // ---------- friend DM ----------
+// ---------- DM on the table (owner order 2026-11-11) ----------
+// «همان چت معمولی باشد، روی میز هم بیاید» — the NORMAL DM, which
+// also appears on the table: a DM that arrives while I am SEATED
+// in a match pops as a bubble at the table's top-left. It makes
+// no difference which page the sender used — the چت page and the
+// friends-page 💬 both end in this same s-dm receive, so both pop
+// (owner clarification 2026-11-11). The thread + unread badge
+// behave exactly as before; the bubble is display only, and there
+// is no reply from the table. Not seated — in the lobby, watching
+// a game, or on the menus — no bubble: the badge alone, as today.
+const DM_BUBBLE_MS = 6000;
+function maybeDmBubble(m, peerId) {
+  if (m.from === socialMe) return;
+  if (spectating) return;
+  if (mySeat === null || mySeat < 0) return;
+  if (!state || state.phase === 'lobby') return;
+  if ($('#scr-game').classList.contains('hidden')) return;
+  if (!$('#scr-dm').classList.contains('hidden')) return;
+  dmBubbleShow(peerId, m.text || '');
+}
+function dmBubbleShow(peerId, text) {
+  const box = $('#dm-overlay');
+  if (!box) return;
+  const p = socialPeople.get(peerId) || {};
+  const b = document.createElement('div');
+  b.className = 'dm-bubble';
+  const av = document.createElement('div');
+  av.className = 'dm-av';
+  av.appendChild(avatarEl(p.name || '', p.avatar, 30, p.photo));
+  const tx = document.createElement('div');
+  tx.className = 'dm-txt';
+  const nm = document.createElement('div');
+  nm.className = 'dm-name';
+  nm.textContent = p.name || '';
+  const bd = document.createElement('div');
+  bd.className = 'dm-body';
+  bd.textContent = text.length > 120 ? text.slice(0, 120) + '…' : text;
+  tx.appendChild(nm);
+  tx.appendChild(bd);
+  b.appendChild(av);
+  b.appendChild(tx);
+  const kill = () => { if (b._t) clearTimeout(b._t); b.remove(); };
+  b._t = setTimeout(kill, DM_BUBBLE_MS);
+  b.onclick = kill;
+  box.appendChild(b);
+  while (box.children.length > 2) box.firstElementChild.remove(); // queue cap 2 — newest replaces oldest
+}
 function openDm(p, from) {
+  // CARDSFIX scope extension: the DM's only entries live inside the
+  // (guarded) friends/chat pages, but a connection can drop while
+  // the player is already on one of them — guard the DM too.
+  if (guardOnlineDoor()) return;
   dmReturn = from === 'chats' ? 'chats' : 'friends';
   dmPeer = p;
   cachePerson(p);
@@ -11326,6 +11552,7 @@ let clPodTimer = null;
 let clRoomView = false;          // true = the club room, false = discovery
 
 function openClubs() {
+  if (guardOnlineDoor()) return; // CARDSFIX scope extension: کلبونه is an online page — offline, the popup instead
   frOrigin = null; // leaving friends via a nav page drops the lobby origin
   closeClubMenu();
   $('#scr-friends').classList.add('hidden');
@@ -14425,6 +14652,7 @@ function spectateGame(code) {
   spectating = true;
   specCode = code;
   intentionalClose = false;
+  gateFaces(); // CARDSFIX: a spectator's deck gate — a mid-trick join renders through the same loaded path
   connect(() => send({ type: 'spectate', code, ...profilePayload() }));
 }
 // A friend's «تماشا»: ask the social server for his room code;
@@ -14462,8 +14690,20 @@ function exitSpectate() {
   $('#scr-lobby').classList.add('hidden');
   $('#scr-game').classList.add('hidden');
   $('#spec-chip').classList.add('hidden');
+  // SPECTATE-EXIT FIX (owner bug 2026-11-11): restore the base
+  // screen FIRST. The social landings below are OVERLAYS — their
+  // «کور» navs (closeFriends / closeClubs) only hide the overlay,
+  // assuming #scr-home is alive underneath. But the watch ran
+  // render() -> show('scr-game'), which hid #scr-home, and the old
+  // exit never restored it: exiting to friends/clubs looked fine,
+  // yet the next «کور» tap revealed the bare body — the blank
+  // dark-green field of his screenshot (body's own gradient).
+  // show('scr-home') also covers the offline case: if the nav
+  // guard stops openFriends, the player lands on this home with
+  // the 📵 popup over it, never on a void.
+  show('scr-home');
   if (ret === 'friends') { openFriends(); return; }
-  if (ret === 'home') { show('scr-home'); return; }
+  if (ret === 'home') { return; }
   clRoomView = true;
   $('#scr-clubs').classList.remove('hidden');
   renderClubs();
