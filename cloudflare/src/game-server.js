@@ -42,7 +42,7 @@ import { SocialCore } from './social-core.js';
 // ---- Tunables (same values as ../server.js) ----
 const TURN_TIMEOUT_MS = 30000;    // a stalled human seat is played by a bot
 const BOT_DELAY_MS = 750;         // bot "thinking" delay (watchable pace)
-const ROUND_PAUSE_MS = 6000;      // round-summary pause before next round
+const ROUND_PAUSE_MS = 8000;      // round-summary pause before next round (6s -> 8s, owner 2026-11-11; a tap dismisses the card early on the tapper's screen only)
 const TRICK_PAUSE_MS = 1600;      // completed trick stays on the table before it is collected
 const RECONNECT_GRACE_MS = 120000; // seat+hand kept for a reconnecting player
 const SPECTATOR_CAP = 20;          // clubs v8: watchers per club-game room
