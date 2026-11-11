@@ -117,8 +117,12 @@ const svgURIs = (html.match(/data:image\/svg\+xml/g) || []).length;
 // The drawn-SVG table carpets (2026-11-11, one iteration) are GONE —
 // the felts are real carpet PHOTOS now and ride the asset map like
 // the cards, so they are counted by the asset check below, not here.
-if (svgURIs !== 1) {
-  throw new Error('expected exactly 1 decorative SVG data URI (club skyline), got ' + svgURIs);
+if (svgURIs !== 2) {
+  // Two deliberate decorative SVG data URIs: the clubs v6 night
+  // skyline (above) and the card-back gold-star emblem (features
+  // batch 2026-11-11, feature 15) — both self-contained CSS decor,
+  // same guarantee as the skyline exception.
+  throw new Error('expected exactly 2 decorative SVG data URIs (club skyline + card-back emblem), got ' + svgURIs);
 }
 if (dataURIs - svgURIs !== assetCount) { // the asset map alone (CSS carpet retired with tabnew)
   throw new Error('expected ' + assetCount + ' data URIs in bundle, got ' + dataURIs);
