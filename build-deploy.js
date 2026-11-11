@@ -128,7 +128,18 @@ if (dataURIs - svgURIs !== assetCount) { // the asset map alone (CSS carpet reti
 fs.writeFileSync(path.join(DEPLOY, 'index.html'), html);
 for (const f of ['game.js', 'bots.js', 'social-core.js', 'social-node.js']) fs.copyFileSync(path.join(ROOT, f), path.join(DEPLOY, f));
 
+// The PWA statics ride as FILES beside the bundle (deploy/server.js
+// serves them from pinned routes, like the stickers): the manifest,
+// the service worker, the apple touch icon and the app icons. They
+// are copied, never inlined — a service worker or manifest inside
+// the page could not be fetched as its own URL at all.
+for (const f of ['manifest.webmanifest', 'sw.js', 'apple-touch-icon.png']) fs.copyFileSync(path.join(PUB, f), path.join(DEPLOY, f));
+const DEPLOY_ICONS = path.join(DEPLOY, 'icons');
+fs.mkdirSync(DEPLOY_ICONS, { recursive: true });
+for (const f of fs.readdirSync(path.join(PUB, 'icons')).filter((x) => /\.png$/i.test(x))) fs.copyFileSync(path.join(PUB, 'icons', f), path.join(DEPLOY_ICONS, f));
+
 console.log('build-deploy: inlined ' + assetCount + ' assets (' +
   cardFiles.length + ' card images + ' + feltFiles.length + ' felt photos + carpet in the map) = ' + dataURIs + ' data URIs (table felts are real carpet photos via ASSET())');
 console.log('build-deploy: deploy/index.html = ' + Buffer.byteLength(html) + ' bytes');
 console.log('build-deploy: copied game.js, bots.js, social-core.js, social-node.js -> deploy/');
+console.log('build-deploy: copied manifest.webmanifest, sw.js, apple-touch-icon.png, icons/ -> deploy/');
