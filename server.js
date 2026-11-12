@@ -26,7 +26,29 @@ const FROZEN_MAX_MS = 24 * 3600 * 1000; // F35: a frozen match dissolves after 2
 const REMATCH_OFFER_MS = 30000;   // a rematch offer lives 30 s, then expires
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.svg': 'image/svg+xml', '.webp': 'image/webp' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.mp3': 'audio/mpeg' };
+// up41: byte-range file streaming for the music player's songs —
+// a media element needs 206 + Content-Range to seek. Used only
+// for /music/; every other file keeps the plain full stream.
+function serveFileRange(req, res, full, type) {
+  const size = fs.statSync(full).size;
+  const range = req.headers.range;
+  const base = { 'Content-Type': type, 'Cache-Control': 'public, max-age=86400', 'Accept-Ranges': 'bytes' };
+  if (range) {
+    const m = /^bytes=(\d*)-(\d*)$/.exec(range);
+    if (m) {
+      let start = m[1] === '' ? 0 : Number(m[1]);
+      let end = m[2] === '' ? size - 1 : Number(m[2]);
+      if (m[1] === '' && m[2] !== '') { start = Math.max(0, size - Number(m[2])); end = size - 1; }
+      if (start > end || start >= size) { res.writeHead(416, { 'Content-Range': 'bytes */' + size }); return res.end(); }
+      end = Math.min(end, size - 1);
+      res.writeHead(206, { ...base, 'Content-Range': 'bytes ' + start + '-' + end + '/' + size, 'Content-Length': end - start + 1 });
+      return fs.createReadStream(full, { start, end }).pipe(res);
+    }
+  }
+  res.writeHead(200, { ...base, 'Content-Length': size });
+  return fs.createReadStream(full).pipe(res);
+}
 
 const httpServer = http.createServer((req, res) => {
   const pathOnly = req.url.split('?')[0];
@@ -44,6 +66,11 @@ const httpServer = http.createServer((req, res) => {
   const full = path.join(PUBLIC_DIR, file);
   if (!full.startsWith(PUBLIC_DIR) || !fs.existsSync(full) || fs.statSync(full).isDirectory()) {
     res.writeHead(404); return res.end('not found');
+  }
+  // up41: the music player's files (pinned set m1..m9.mp3 +
+  // c1..c9.jpg) stream with Range support + the long cache.
+  if (/^\/music\/[mc][1-9]\.(mp3|jpg)$/.test(pathOnly)) {
+    return serveFileRange(req, res, full, MIME[path.extname(full)] || 'application/octet-stream');
   }
   // The game IMAGE files (speed pass) ride the long cache like the
   // production hosts give them: /cards/, /carpets/ (incl. thumbs),

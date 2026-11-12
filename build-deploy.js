@@ -119,6 +119,9 @@ const nCarpets = copyDir(path.join(PUB, 'carpets'), path.join(DEPLOY, 'carpets')
 fs.copyFileSync(path.join(PUB, 'carpet.jpg'), path.join(DEPLOY, 'carpet.jpg'));
 if (nCards !== 53) throw new Error('expected 53 card files (52 faces + back.png), copied ' + nCards);
 if (nCarpets !== 22) throw new Error('expected 22 carpet files (11 full + 11 thumbs), copied ' + nCarpets);
+// up41: the music player's files (9 songs + 9 real covers).
+const nMusic = copyDir(path.join(PUB, 'music'), path.join(DEPLOY, 'music'), (f) => /\.(mp3|jpe?g)$/i.test(f));
+if (nMusic !== 18) throw new Error('expected 18 music files (9 songs + 9 covers), copied ' + nMusic);
 
 for (const f of ['manifest.webmanifest', 'sw.js', 'apple-touch-icon.png']) fs.copyFileSync(path.join(PUB, f), path.join(DEPLOY, f));
 const nIcons = copyDir(path.join(PUB, 'icons'), path.join(DEPLOY, 'icons'), (f) => /\.png$/i.test(f));
@@ -126,6 +129,6 @@ const nIcons = copyDir(path.join(PUB, 'icons'), path.join(DEPLOY, 'icons'), (f) 
 console.log('build-deploy: NO inlined assets (speed pass) — 0 raster data URIs, ' + svgURIs + ' decorative SVG data URIs');
 console.log('build-deploy: offline engine inlined (game.js ' + Buffer.byteLength(gameSrc) + ' B + bots.js ' + Buffer.byteLength(botsSrc) + ' B -> window.ToreEngine/ToreBots)');
 console.log('build-deploy: deploy/index.html = ' + Buffer.byteLength(html) + ' bytes');
-console.log('build-deploy: copied ' + nCards + ' cards -> deploy/cards/, ' + nCarpets + ' carpets (full+thumbs) -> deploy/carpets/, carpet.jpg -> deploy/');
+console.log('build-deploy: copied ' + nCards + ' cards -> deploy/cards/, ' + nCarpets + ' carpets (full+thumbs) -> deploy/carpets/, carpet.jpg -> deploy/, ' + nMusic + ' music files -> deploy/music/');
 console.log('build-deploy: copied game.js, bots.js, social-core.js, social-node.js -> deploy/');
 console.log('build-deploy: copied manifest.webmanifest, sw.js, apple-touch-icon.png, ' + nIcons + ' icons -> deploy/');
