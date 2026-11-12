@@ -377,8 +377,9 @@ function handleCoverGet(req, res, cid) {
 // social socket; the core flips the record's photo to the
 // versioned /p-photo/<uid>.jpg?v=N path. Hard rules: JPEG only
 // (the client always sends canvas JPEG — the magic bytes prove
-// it), at most 200 KB.
-const PHOTO_MAX_BYTES = 200 * 1024;
+// it), at most 512 KB (up38: photos are stored at up to
+// 1024×1024 so the large viewer shows near-original quality).
+const PHOTO_MAX_BYTES = 512 * 1024;
 function handlePhotoUpload(req, res) {
   const pid = req.headers['x-tore-pid'];
   if (typeof pid !== 'string' || !/^[A-Za-z0-9_-]{6,64}$/.test(pid)) return coverJson(res, 401, { error: 'unauthorized' });
