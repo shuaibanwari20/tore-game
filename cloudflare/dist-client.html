@@ -10313,12 +10313,26 @@ function closeFeltView() { $('#ov-feltview').classList.remove('show'); }
 // avatar container only: the frame pencil (#btn-pf-edit-av) is a
 // separate element beside the frame and keeps its edit behaviour
 // — it never opens this viewer. -----
+// The large viewer's source (up38): always the highest-quality
+// variant available. An uploaded photo is already the stored
+// /p-photo file itself — returned unchanged. A Google photo is
+// stored in the ID-token form …=s96-c (96 px), which turns soft
+// at the viewer's 264 CSS px; rewrite the size parameter to the
+// large =s1024-c variant of the SAME picture. Anything else
+// (Facebook, no size suffix) is returned untouched.
+function hqPhotoSrc(photo) {
+  if (typeof photo !== 'string' || !photo) return photo;
+  if (!photo.includes('googleusercontent.com')) return photo;
+  if (/=s\d+(-c)?$/.test(photo)) return photo.replace(/=s\d+(-c)?$/, '=s1024-c');
+  if (/=w\d+-h\d+(-c)?$/.test(photo)) return photo.replace(/=w\d+-h\d+(-c)?$/, '=s1024-c');
+  return photo;
+}
 function openPhotoView(person) {
   if (!person) return;
   const box = $('#photoview-av');
   if (!box) return;
   box.innerHTML = '';
-  box.appendChild(avatarEl(person.name || '', person.avatar, 264, person.photo));
+  box.appendChild(avatarEl(person.name || '', person.avatar, 264, hqPhotoSrc(person.photo)));
   $('#ov-photoview').classList.add('show');
 }
 function closePhotoView() { $('#ov-photoview').classList.remove('show'); }
@@ -13578,8 +13592,10 @@ async function uploadClubCover(blob) {
 }
 // ----- F17: upload own profile photo -----
 // Mirrors the club-cover flow: the picked image is downscaled on
-// a canvas (max 384×384, JPEG, quality ladder down until the blob
-// is ≤120 KB) and POSTed to /p-photo — never over the social
+// a canvas (max 1024×1024 since up38 — the large photo viewer
+// shows the stored file, so it must stay near-original quality;
+// JPEG, quality ladder down until the blob is ≤500 KB, under the
+// 512 KB server cap) and POSTed to /p-photo — never over the social
 // socket. The SERVER derives the player identity (Worker session
 // cookie / Node x-tore-pid), stores the blob in the social store
 // and points the directory record at /p-photo/<uid>.jpg?v=N; the
@@ -13617,7 +13633,7 @@ async function photoFileToBlob(file) {
   const w = bmp.width || bmp.naturalWidth;
   const h = bmp.height || bmp.naturalHeight;
   if (!w || !h) return null;
-  const sc = Math.min(1, 384 / w, 384 / h);
+  const sc = Math.min(1, 1024 / w, 1024 / h);
   const cnv = document.createElement('canvas');
   cnv.width = Math.max(1, Math.round(w * sc));
   cnv.height = Math.max(1, Math.round(h * sc));
@@ -13626,10 +13642,10 @@ async function photoFileToBlob(file) {
     if (cnv.toBlob) cnv.toBlob((b) => resolve(b), 'image/jpeg', q);
     else resolve(null);
   });
-  for (const q of [0.82, 0.7, 0.55]) {
+  for (const q of [0.85, 0.78, 0.68, 0.58]) {
     const b = await encode(q);
-    if (b && b.size <= 120 * 1024) return b;
-    if (b && q === 0.55) return b; // smallest we can make — the server cap still guards
+    if (b && b.size <= 500 * 1024) return b;
+    if (b && q === 0.58) return b; // smallest we can make — the server cap still guards
   }
   return null;
 }
