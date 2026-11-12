@@ -2924,7 +2924,7 @@
   #mp-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; cursor: pointer; }
   #mp-title { font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
   #mp-artist { font-size: 10.5px; color: #b9b0c9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
-  #mp-controls { display: flex; align-items: center; gap: 6px; flex: none; direction: ltr; }
+  #mp-controls { display: flex; align-items: center; gap: 6px; flex: none; direction: ltr; position: relative; z-index: 1; }
   .mp-btn {
     width: 32px; height: 32px; border-radius: 50%; flex: none; cursor: pointer;
     background: rgba(255,255,255,.06); border: 1.5px solid rgba(245,242,250,.85);
@@ -2937,11 +2937,33 @@
   #mp-bc { border-color: rgba(247,197,74,.6); }
   #mp-bc.on { background: #f7c54a; border-color: #f7c54a; }
   #mp-bc.on svg path { fill: #2a1440; }
+  /* up42: the hairline is a real SEEK bar now — same spot at the
+     pill's bottom edge, same gold look. The visible strip stays
+     3px; transparent borders widen the touch box to 18px
+     (background-clip keeps the paint on the strip alone). The
+     knob rides the fill's leading edge; the tiny time digits sit
+     at the bar's right end, so the track gives up that corner
+     (right inset 70px). Followers (locked) get a dimmed knob. */
   #mp-prog {
-    position: absolute; left: 14px; right: 14px; bottom: 3px; height: 3px;
-    background: rgba(255,255,255,.18); border-radius: 2px; overflow: hidden;
+    position: absolute; left: 14px; right: 70px; bottom: 0; height: 3px;
+    border-top: 12px solid transparent; border-bottom: 3px solid transparent;
+    background: rgba(255,255,255,.18); background-clip: padding-box;
+    border-radius: 2px; cursor: pointer; touch-action: none;
   }
   #mp-prog-fill { height: 100%; width: 0%; background: #f7c54a; border-radius: 2px; }
+  #mp-knob {
+    position: absolute; top: 50%; right: 0; width: 11px; height: 11px;
+    border-radius: 50%; background: #f7c54a; pointer-events: none;
+    border: 1.5px solid rgba(24, 14, 2, .6); box-shadow: 0 1px 4px rgba(0,0,0,.55);
+    transform: translate(50%, -50%);
+  }
+  #mplayer.locked #mp-prog { cursor: default; }
+  #mplayer.locked #mp-knob { opacity: .35; }
+  #mp-time {
+    position: absolute; right: 14px; bottom: 2px; direction: ltr; pointer-events: none;
+    font-size: 9.5px; line-height: 1.2; font-weight: 600; color: #b9b0c9;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
   /* the founder-broadcast chip that rides above a follower's pill */
   #mp-bcchip {
     position: fixed; left: 50%; transform: translateX(-50%); z-index: 35;
@@ -2971,11 +2993,27 @@
   .mp-sheet-panel { max-width: 430px; text-align: start; padding: 14px 12px 10px; }
   .mp-sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 6px 10px; }
   .mp-sheet-head h2 { margin: 0; font-size: 19px; }
+  /* up42: the sheet joins the Ludo card family (it shipped in
+     the old brown .panel) with the popui recipe; its rows go
+     dark-plum, the title stays gold. The ✖ also moves INSIDE
+     the sheet's top corner at a normal size: the stock .ce-x
+     anchored to the VIEWPORT (the panel was not positioned)
+     and hung half off-screen over the player's avatar — now
+     the panel is positioned and the button is scoped to it,
+     clear of the title (the head reserves its corner). */
+  #ov-playlist .panel { position: relative; border: 2px solid rgba(255,183,224,.4); border-radius: 22px; color: #fff;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
+    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
+    padding: 18px 16px 14px; }
+  #ov-playlist .mp-sheet-head { padding: 2px 52px 10px 6px; }
+  #ov-playlist .mp-sheet-head h2 { color: #ffd75e; text-shadow: 0 2px 5px rgba(0,0,0,.5); }
+  #ov-playlist .ce-x { top: 10px; right: 10px; width: 40px; height: 40px; }
+  #ov-playlist .ce-x svg { width: 18px; height: 18px; }
   #mp-rows { max-height: 62dvh; overflow-y: auto; }
   .mp-row {
     display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box;
     padding: 7px 8px; margin: 0 0 4px; border-radius: 14px; cursor: pointer;
-    background: rgba(255,255,255,.045); border: 1px solid transparent; color: #f5e7c6;
+    background: rgba(43,6,54,.55); border: 1px solid rgba(255,255,255,.16); color: #f5e7c6;
     font-family: inherit; text-align: start;
   }
   .mp-row img { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; flex: none; }
@@ -4420,7 +4458,8 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11.2a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6zM8.6 9a4.9 4.9 0 0 0 0 8.1l-1.5 1.5a7 7 0 0 1 0-11.1zm6.8 0l1.5-1.5a7 7 0 0 1 0 11.1l-1.5-1.5a4.9 4.9 0 0 0 0-8.1zM5.7 6.1a9.4 9.4 0 0 0 0 13.7l-1.5 1.5a11.5 11.5 0 0 1 0-16.7zm12.6 0l1.5-1.5a11.5 11.5 0 0 1 0 16.7l-1.5-1.5a9.4 9.4 0 0 0 0-13.7z"/></svg>
     </button>
   </div>
-  <div id="mp-prog"><div id="mp-prog-fill"></div></div>
+  <div id="mp-prog" role="slider" aria-label="seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="mp-prog-fill"></div><div id="mp-knob"></div></div>
+  <div id="mp-time"><span id="mp-cur">0:00</span>/<span id="mp-dur">9:18</span></div>
 </div>
 <button type="button" id="mp-chip" class="hidden" aria-label="music player">
   <img id="mp-chip-img" alt="">
@@ -10226,6 +10265,8 @@ const TorePlayer = (() => {
   const pill = $p('#mplayer'), chip = $p('#mp-chip'), bcChip = $p('#mp-bcchip');
   const coverEl = $p('#mp-cover'), titleEl = $p('#mp-title'), artistEl = $p('#mp-artist');
   const playBtn = $p('#mp-play'), fillEl = $p('#mp-prog-fill');
+  const progEl = $p('#mp-prog'), knobEl = $p('#mp-knob');
+  const curEl = $p('#mp-cur'), durEl = $p('#mp-dur');
   const bcBtn = $p('#mp-bc'), chipImg = $p('#mp-chip-img'), chipBadge = $p('#mp-chip-badge');
   const SVG_PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
   const SVG_PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></svg>';
@@ -10288,6 +10329,101 @@ const TorePlayer = (() => {
   function bcStop() {
     try { socialSend({ type: 's-club-music', action: 'stop' }); } catch (e) { /* offline */ }
   }
+  // ---------- up42: seek ----------
+  // The bottom gold bar is a real seek control: tap jumps,
+  // drag scrubs (pointer events + capture, so iOS touch works).
+  // While scrubbing, the repaint follows the finger instead of
+  // timeupdate; the position commits on release. Followers are
+  // locked out — the founder's bar drives them — and an owner's
+  // seek re-anchors the broadcast via bcSend. The fill grows
+  // from the RIGHT (the pill is RTL), so fractions measure from
+  // the bar's right edge.
+  let scrub = null;   // { id, frac } while a finger is on the bar
+  const fmtT = (s) => {
+    if (!Number.isFinite(s) || s < 0) s = 0;
+    return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+  };
+  function paintProg() {
+    const d = audio.duration;
+    const have = Number.isFinite(d) && d > 0;
+    let f = 0, cur = audio.currentTime || 0;
+    if (scrub) { f = scrub.frac; cur = have ? scrub.frac * d : 0; }
+    else if (have) f = Math.min(1, Math.max(0, cur / d));
+    if (fillEl) fillEl.style.width = (f * 100) + '%';
+    if (knobEl) knobEl.style.right = (f * 100) + '%';
+    if (curEl) curEl.textContent = fmtT(cur);
+    if (durEl) durEl.textContent = have ? fmtT(d) : (MP_TRACKS[idx].dur || '0:00');
+    if (progEl) progEl.setAttribute('aria-valuenow', String(Math.round(f * 100)));
+  }
+  function seekCommit(f) {
+    const d = audio.duration;
+    if (!Number.isFinite(d) || d <= 0) { paintProg(); return; }
+    try { audio.currentTime = Math.min(Math.max(0, f * d), Math.max(0, d - 0.25)); } catch (e) { /* not seekable yet */ }
+    paintProg();
+    bcSend();   // owner: followers re-anchor at the new spot
+  }
+  if (progEl) {
+    const fracAt = (e) => {
+      const r = progEl.getBoundingClientRect();
+      if (!r.width) return 0;
+      return Math.min(1, Math.max(0, (r.right - e.clientX) / r.width));
+    };
+    progEl.addEventListener('pointerdown', (e) => {
+      if (bc.mode === 'follow') return;                    // locked for followers
+      if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
+      e.preventDefault();
+      scrub = { id: e.pointerId, frac: fracAt(e) };
+      try { progEl.setPointerCapture(e.pointerId); } catch (err) { /* guarded */ }
+      paintProg();
+    });
+    progEl.addEventListener('pointermove', (e) => {
+      if (!scrub || e.pointerId !== scrub.id) return;
+      scrub.frac = fracAt(e);
+      paintProg();
+    });
+    progEl.addEventListener('pointerup', (e) => {
+      if (!scrub || e.pointerId !== scrub.id) return;
+      const f = scrub.frac; scrub = null;
+      seekCommit(f);
+    });
+    progEl.addEventListener('pointercancel', () => { scrub = null; paintProg(); });
+  }
+  // ---------- up42: club voice ducking ----------
+  // In a club room the music must sit UNDER the voices (owner
+  // report: the song drowned the players out). While club voice
+  // is live the player runs at a background level; while any
+  // REMOTE voice is speaking it ducks further; ~1.3 s after the
+  // speech stops it eases back to the background level, and
+  // leaving the room restores full volume. The speaking signal
+  // is cv.speaking — the analyser-fed set the seat glow uses;
+  // my OWN mic never ducks my music. Every listener ducks his
+  // own playback locally (broadcast followers included) — no
+  // server change. Ramps run on a 60 ms tween (fast down,
+  // gentle up) so there are no clicks or jumps.
+  const DUCK_BASE = 0.33, DUCK_LOW = 0.15, DUCK_HOLD_MS = 1300;
+  let duckTarget = 1, lastLoudAt = 0;
+  function clubVoiceLive() {
+    try {
+      if (typeof cv === 'undefined' || !cv || !cv.joined) return null;
+      if (!inRoomClub()) return null;
+      let loud = false;
+      if (cv.speaking) for (const k of cv.speaking) { if (k !== socialMe) { loud = true; break; } }
+      return { loud };
+    } catch (e) { return null; }
+  }
+  setInterval(() => {
+    const cvs = clubVoiceLive();
+    if (!cvs) duckTarget = 1;
+    else {
+      if (cvs.loud) lastLoudAt = Date.now();
+      duckTarget = (Date.now() - lastLoudAt < DUCK_HOLD_MS) ? DUCK_LOW : DUCK_BASE;
+    }
+    const v = audio.volume, diff = duckTarget - v;
+    if (Math.abs(diff) > 0.01) {
+      const step = diff < 0 ? 0.09 : 0.045;
+      audio.volume = Math.min(1, Math.max(0, v + Math.sign(diff) * Math.min(step, Math.abs(diff))));
+    }
+  }, 60);
   function toggle() {
     if (bc.mode === 'follow') { detach(); return; }
     if (audio.paused) play(); else pause();
@@ -10390,6 +10526,7 @@ const TorePlayer = (() => {
       else { bcChip.style.top = ''; }
     }
     paintRows();
+    paintProg();
   }
   function placeChip() {
     if (!chip) return;
@@ -10441,6 +10578,8 @@ const TorePlayer = (() => {
   audio.addEventListener('play', () => { paint(); bcSend(); });
   audio.addEventListener('pause', () => { paint(); bcSend(); });
   audio.addEventListener('canplay', () => { errChain = 0; });
+  audio.addEventListener('timeupdate', () => paintProg());
+  audio.addEventListener('loadedmetadata', () => paintProg());
   audio.addEventListener('error', () => {
     errChain++;
     if (errChain <= MP_TRACKS.length) load(idx + 1, !audio.paused);
@@ -10490,9 +10629,7 @@ const TorePlayer = (() => {
   // progress + owner anchor refresh + room-context watch
   let bcTick = 0, lastCtxKey = '';
   setInterval(() => {
-    if (!audio.paused && audio.duration > 0 && fillEl) {
-      fillEl.style.width = Math.min(100, (audio.currentTime / audio.duration) * 100) + '%';
-    }
+    paintProg();
     bcTick++;
     if (bc.mode === 'owner' && !audio.paused && bcTick % 20 === 0) bcSend();
     // context: the broadcast button belongs to the room; if I
@@ -10535,6 +10672,7 @@ const TorePlayer = (() => {
         idx, playing: !audio.paused, collapsed,
         bc: bc.mode, detached: bc.detached, master: master(),
         src: audio.src || '', pos: audio.currentTime || 0,
+        vol: audio.volume, duck: duckTarget,
       };
     },
   };
