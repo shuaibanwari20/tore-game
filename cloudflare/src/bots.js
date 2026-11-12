@@ -39,8 +39,37 @@
  *    forced repeat lead declares «13» (maybeDeclare13) — the ONE
  *    exception to the human-only declaration; a FRESH final-trick
  *    takan is never declared, its claim stands.
+ *
+ * CARD COUNTING (up45, owner order 2026-11-12 «همه روبات ها را قوی
+ * کن تا هیچ خطا نده»): the bot counts every card played this round
+ * (the captured piles + the current trick are public) against its own
+ * hand, so for each suit it knows exactly how many cards are still
+ * UNSEEN — i.e. sitting in the other three hands:
+ *   unseen = 13 − played − own.
+ * Measured diagnosis first (400-match harness): EVERY bot takan was a
+ * STRANDED endgame lead — the leader held no live suit at all, 87% of
+ * them on tricks 12–13. The current lead itself is already made safe
+ * by the live filter below; the winnable fight is over the bot's
+ * FUTURE hand composition. So the count drives three things:
+ *  - PROVABLY-DEAD SUITS (unseen = 0: played + own = 13, so NOBODY
+ *    else can hold the suit) are hard-banned as leads while any other
+ *    card exists — leading one is a guaranteed takan, never a gamble.
+ *  - DYING-SUIT-FIRST leads and discards: a live suit down to its
+ *    last few unseen cards (unseen ≤ DYING_UNSEEN) is about to strand
+ *    this bot, so its cards are spent FIRST — led while leading them
+ *    is still safe, shed first when discarding — instead of being
+ *    kept in hand until they are the only thing left to lead.
+ *    (A "most unseen first" lead order was measured and REJECTED: it
+ *    preserves exactly those dying suits in hand and strands the bot
+ *    more — 65.9 takans/100 rounds vs 61.1 for dying-first, same
+ *    seeds; the untouched baseline was 65.1.)
+ * The heuristic stays fully deterministic: no RNG anywhere below.
  */
 const G = require('./game');
+
+/** A live suit with at most this many unseen cards is "dying" for the
+ *  bot holding it — spend/shed its cards before it strands the bot. */
+const DYING_UNSEEN = 3;
 
 function lowestRank(cards) {
   return cards.slice().sort((a, b) => G.rankOf(a) - G.rankOf(b))[0];
@@ -66,6 +95,49 @@ function biggestScoring(cards) {
   )[0];
 }
 
+/**
+ * CARD COUNTING: per suit, how many cards have been PLAYED this round
+ * (both captured piles + the current trick — all public), how many the
+ * bot itself holds (own), and how many are therefore still UNSEEN in
+ * the other three hands: unseen = 13 − played − own. unseen === 0
+ * PROVES nobody else holds the suit (a lead of it is a certain takan).
+ * Exported for sim's counting checks.
+ */
+function countSuits(round, seat) {
+  const played = { H: 0, D: 0, C: 0, S: 0 };
+  const tally = (cards) => { for (const c of cards) played[G.suitOf(c)]++; };
+  const captured = round.captured || [[], []];
+  tally(captured[0]); tally(captured[1]);
+  for (const p of round.trick || []) played[G.suitOf(p.card)]++;
+  const own = { H: 0, D: 0, C: 0, S: 0 };
+  for (const c of round.hands[seat]) own[G.suitOf(c)]++;
+  const info = {};
+  for (const s of G.SUITS) {
+    info[s] = { played: played[s], own: own[s], unseen: 13 - played[s] - own[s] };
+  }
+  return info;
+}
+
+/**
+ * EARLY SHEDDING: pick which of `cards` to throw away — prefer the suit
+ * that is dead or dying FOR THIS BOT (fewest unseen cards: the suit it
+ * will soon be stranded holding alone); ties go to the suit it holds
+ * MORE of (the bigger stranding risk). Within the chosen suit, shed
+ * the highest rank (dead weight first), as before.
+ * GATED mode (the partner-winning shed): the settled line there is the
+ * highest dead card overall, so the dying-suit override applies only
+ * when a suit really is dying (unseen ≤ DYING_UNSEEN).
+ */
+function shedCard(round, seat, cards, gated) {
+  const info = countSuits(round, seat);
+  const suits = [...new Set(cards.map((c) => G.suitOf(c)))];
+  suits.sort((a, b) =>
+    (info[a].unseen - info[b].unseen) || (info[b].own - info[a].own));
+  if (gated && info[suits[0]].unseen > DYING_UNSEEN) return highestRank(cards);
+  const suit = suits[0];
+  return highestRank(cards.filter((c) => G.suitOf(c) === suit));
+}
+
 function pickLead(round, seat, legal) {
   // NO-REPEAT TAKAN LAW (absolute): suits this bot has already takan'd
   // this round are BANNED as leads while any card of another suit
@@ -78,6 +150,14 @@ function pickLead(round, seat, legal) {
     const other = legal.filter((c) => !banned.includes(G.suitOf(c)));
     if (other.length) base = other;
   }
+  // CARD COUNTING hard ban: a PROVABLY-dead suit (played + own = 13 —
+  // by counting, nobody else can hold it) is never led while any other
+  // card remains. In real play this coincides with the othersVoidIn
+  // filter below; it is stated in counting terms because the count is
+  // what a strong player actually knows, and sim pins it directly.
+  const info = countSuits(round, seat);
+  const provable = base.filter((c) => info[G.suitOf(c)].unseen > 0);
+  if (provable.length) base = provable;
   // A takan lead happens when nobody else holds the suit — AVOID those
   // suits now; a takan hands the opponents a pending claim on our bank,
   // and the uncontested trick comes back to us with everyone's dumps in it.
@@ -86,7 +166,23 @@ function pickLead(round, seat, legal) {
   // Live suit: cheap non-scoring probe — scoring cards stay in hand,
   // waiting to be fed to the opponents.
   const nonScoring = pool.filter((c) => G.cardPoints(c) === 0);
-  if (nonScoring.length) return lowestRank(nonScoring);
+  if (nonScoring.length) {
+    if (live.length) {
+      // DYING-SUIT-FIRST (counting): a live suit down to its last few
+      // unseen cards is about to strand this bot — spend its cheap
+      // probe NOW, while leading it is still safe, instead of keeping
+      // it for the endgame. The threshold keeps ordinary play on the
+      // settled cheapest-probe line below.
+      const dying = [...new Set(nonScoring.map((c) => G.suitOf(c)))]
+        .filter((s) => info[s].unseen <= DYING_UNSEEN)
+        .sort((a, b) =>
+          (info[a].unseen - info[b].unseen) || (info[a].own - info[b].own));
+      if (dying.length) {
+        return lowestRank(nonScoring.filter((c) => G.suitOf(c) === dying[0]));
+      }
+    }
+    return lowestRank(nonScoring);
+  }
   return cheapestGiveaway(pool);
 }
 
@@ -129,16 +225,19 @@ function chooseCard(round, seat) {
   if (!legal.some((c) => G.suitOf(c) === ledSuit)) {
     if (partnerWinning) {
       // The points land with OUR team — NEVER feed tawan to partner:
-      // shed dead weight, keep scoring cards for the opponents.
+      // shed dead weight, keep scoring cards for the opponents. EARLY
+      // SHEDDING (counting, gated): when one of the dead cards belongs
+      // to a suit that is dying for this bot, that card goes first, so
+      // the bot is never left holding only a dead suit at the end.
       const deadCards = legal.filter((c) => G.cardPoints(c) === 0);
-      if (deadCards.length) return highestRank(deadCards);
+      if (deadCards.length) return shedCard(round, seat, deadCards, true);
       return cheapestGiveaway(legal); // forced: give away the cheapest points
     }
     // An opponent takes this trick: FEED them — the biggest tawan card
     // we hold lands in THEIR captured pile (Q♠ above all).
     const feed = biggestScoring(legal);
     if (feed) return feed;
-    return highestRank(legal); // nothing scoring: shed the biggest dead card
+    return shedCard(round, seat, legal); // nothing scoring: shed from a dying suit
   }
 
   // Following suit (legal = only led-suit cards here).
@@ -174,4 +273,4 @@ function chooseCard(round, seat) {
   return lowestRank(winners);
 }
 
-export { chooseCard, maybeDeclare13 };
+export { chooseCard, maybeDeclare13, countSuits };
