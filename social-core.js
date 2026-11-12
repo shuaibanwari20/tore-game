@@ -31,13 +31,28 @@
  *
  * Protocol (client -> server): s-hello, s-search, s-request,
  * s-respond, s-unfriend, s-block, s-unblock, s-dm, s-dm-history,
- * s-invite, s-invite-reply, and the club messages below.
+ * s-invite, s-invite-reply, s-dnd, and the club messages below.
  * Protocol (server -> client): s-init, s-friends, s-presence,
  * s-search-result, s-requested, s-dm, s-dm-history, s-invited,
  * s-invite-result, s-error (codes: socialBlocked, socialNotFriends,
  * socialDuplicate, socialRate, socialOffline, socialNotInRoom,
  * socialNotFound, socialInGame, socialBusy, socialCooldown,
- * socialNotInGame).
+ * socialNotInGame, socialDnd).
+ *
+ * DO NOT DISTURB (features batch 2, 2026-11-12): a directory
+ * record carries `dnd` — set ONLY by the s-dnd frame, preserved
+ * across hellos, shipped on person() (and on s-presence) so
+ * friends' rows can paint a 🌙. While it is on, invite() rejects
+ * every lobby invite to that player with socialDnd (after the
+ * busy checks, so a seated player still reads as in-game/busy
+ * first). DMs, club chat and spectating are NOT affected.
+ * UPLOADED PROFILE PHOTO (same batch): the hosts store the
+ * player's own photo (POST /p-photo) and setUploadedPhoto()
+ * points the record's photo at /p-photo/<uid>.jpg?v=<photoV>
+ * (the 'google' avatar kind renders it everywhere). cleanPhoto
+ * accepts that exact same-origin pattern; hello() additionally
+ * requires the uid in the path to be the record's OWN uid, so
+ * nobody can wear another player's uploaded photo.
  *
  * Clubs (کلبونه, 2026-11-09 — spec: CLUBS-PROMPT.md): one club per
  * player; a club has a permanent unique 6-digit ID, a name, an
@@ -351,8 +366,13 @@ function cleanAvatar(v) {
   if (v === 'google') return 'google';
   return (typeof v === 'string' && /^av([1-9]|1[0-2])$/.test(v)) ? v : null;
 }
+// An uploaded own photo (F17) is addressed by this exact
+// same-origin pattern; the uid in it must be the owner's own
+// (hello enforces that — see there).
+const UPLOADED_PHOTO_RE = /^\/p-photo\/(\d{6})\.jpg\?v=(\d{1,6})$/;
 function cleanPhoto(p) {
   if (typeof p !== 'string' || !p || p.length > 300) return '';
+  if (UPLOADED_PHOTO_RE.test(p)) return p;
   if (!p.startsWith('https://')) return '';
   if (!p.includes('googleusercontent.com')) return '';
   return p;
@@ -523,7 +543,13 @@ class SocialCore {
     this._clubVoiceGone(id);
   }
   _fanPresence(id, online) {
-    const msg = { type: 's-presence', id, online, ingame: this.isInGame(id), inlobby: this.isInLobby(id) };
+    const rec = this.directory.get(id);
+    // F46 (invisible mode): presence EMITTED TO OTHERS is masked —
+    // he reads as offline / not in a game / not in a lobby. The
+    // internal truth (isOnline/isInGame/isInLobby, verifyBusy,
+    // seat logic) is never touched; only this outbound view is.
+    const inv = !!(rec && rec.invisible);
+    const msg = { type: 's-presence', id, online: inv ? false : online, ingame: inv ? false : this.isInGame(id), inlobby: inv ? false : this.isInLobby(id), dnd: !!(rec && rec.dnd) };
     const set = this.friends.get(id);
     if (set) for (const f of set) if (this.isOnline(f)) this._send(f, msg);
     // Clubmates watch the same presence (their member rows render
@@ -588,20 +614,35 @@ class SocialCore {
   }
   person(id) {
     const r = this.directory.get(id);
-    if (!r) return { id, name: '', avatar: 'av1', photo: '', country: '', uid: null, online: this.isOnline(id), ingame: this.isInGame(id), inlobby: this.isInLobby(id) };
-    return { id: r.id, name: r.name, avatar: r.avatar, photo: r.photo, country: r.country, uid: r.uid ? String(r.uid) : null, online: this.isOnline(id), ingame: this.isInGame(id), inlobby: this.isInLobby(id) };
+    if (!r) return { id, name: '', avatar: 'av1', photo: '', country: '', uid: null, online: this.isOnline(id), ingame: this.isInGame(id), inlobby: this.isInLobby(id), dnd: false };
+    return { id: r.id, name: r.name, avatar: r.avatar, photo: r.photo, country: r.country, uid: r.uid ? String(r.uid) : null, online: this.isOnline(id), ingame: this.isInGame(id), inlobby: this.isInLobby(id), dnd: !!r.dnd };
+  }
+  // F46: person() as seen BY a specific viewer. When the subject
+  // runs invisible mode and the viewer is someone else, the
+  // presence flags are masked to offline / not-in-game /
+  // not-in-lobby. Identity fields (name/avatar/photo/uid/dnd)
+  // stay real — DMs, invites and the busy re-checks run on
+  // internal truth, and the invisible flag itself is never
+  // shipped to other players.
+  personFor(viewerId, id) {
+    const p = this.person(id);
+    if (viewerId !== id) {
+      const r = this.directory.get(id);
+      if (r && r.invisible) { p.online = false; p.ingame = false; p.inlobby = false; }
+    }
+    return p;
   }
   listsFor(id) {
     const byName = (a, b) => a.name.localeCompare(b.name);
-    const friends = [...(this.friends.get(id) || [])].map((f) => this.person(f))
+    const friends = [...(this.friends.get(id) || [])].map((f) => this.personFor(id, f))
       .sort((a, b) => (b.online - a.online) || byName(a, b));
     const incoming = [], outgoing = [];
     for (const r of this.requests.values()) {
-      if (r.to === id) incoming.push(this.person(r.from));
-      else if (r.from === id) outgoing.push(this.person(r.to));
+      if (r.to === id) incoming.push(this.personFor(id, r.from));
+      else if (r.from === id) outgoing.push(this.personFor(id, r.to));
     }
     incoming.sort(byName); outgoing.sort(byName);
-    const blocked = [...(this.blocked.get(id) || [])].map((b) => this.person(b)).sort(byName);
+    const blocked = [...(this.blocked.get(id) || [])].map((b) => this.personFor(id, b)).sort(byName);
     return { friends, incoming, outgoing, blocked };
   }
   refresh(id) { if (this.isOnline(id)) this._send(id, { type: 's-friends', ...this.listsFor(id) }); }
@@ -684,6 +725,10 @@ class SocialCore {
     // never watchable, and lobbies are not watchable at all (the
     // hook below only ever names a live MATCH).
     if (!this.areFriends(id, to) && !this.sameClub(id, to)) return this._error(id, 'socialNotFriends');
+    // F46: an invisible target reads as not-in-a-match — he
+    // cannot be spectated while invisible (accepted side effect).
+    const wrec = this.directory.get(to);
+    if (wrec && wrec.invisible) return this._error(id, 'socialNotInGame');
     let hit = null;
     if (typeof this.hooks.watchLookup === 'function') {
       try { hit = this.hooks.watchLookup(to); } catch (e) { hit = null; }
@@ -724,14 +769,19 @@ class SocialCore {
   }
   hello(id, profile) {
     profile = profile || {};
-    const photo = cleanPhoto(profile.photo);
-    let avatar = cleanAvatar(profile.avatar);
-    if (avatar === 'google' && !photo) avatar = null;
     const prev = this.directory.get(id);
     // The permanent player ID: kept from the existing record when
     // there is one; assigned exactly once otherwise (this is also
     // the migration path for records created before IDs existed).
     const uid = (prev && prev.uid) ? String(prev.uid) : this._newUid();
+    let photo = cleanPhoto(profile.photo);
+    // F17: an uploaded-photo path names its owner's uid — a hello
+    // carrying ANOTHER player's path is dropped on the floor (the
+    // owner himself re-wears his own upload untouched).
+    const upm = photo.match(UPLOADED_PHOTO_RE);
+    if (upm && upm[1] !== uid) photo = '';
+    let avatar = cleanAvatar(profile.avatar);
+    if (avatar === 'google' && !photo) avatar = null;
     this.directory.set(id, {
       id,
       name: cleanName(profile.name) || (prev && prev.name) || 'بازیکن',
@@ -739,14 +789,77 @@ class SocialCore {
       photo,
       country: cleanCountry(profile.country) || (prev && prev.country) || '',
       uid,
+      // Do-not-disturb + the uploaded-photo version survive every
+      // re-hello: neither rides the hello payload (s-dnd sets the
+      // flag; the /p-photo upload bumps the version).
+      dnd: !!(prev && prev.dnd),
+      // F46: the invisible flag survives re-hello the same way
+      // (set ONLY by the s-invisible frame, never by hello).
+      invisible: !!(prev && prev.invisible),
+      photoV: (prev && typeof prev.photoV === 'number' && prev.photoV > 0) ? prev.photoV : 0,
       lastSeen: Date.now(),
     });
     this._persist();
-    this._send(id, { type: 's-init', me: id, uid: uid || null, ...this.listsFor(id), stats: this.statsOf(id), leaders: this.weeklyLeaders(10) });
+    this._send(id, { type: 's-init', me: id, uid: uid || null, dnd: !!(prev && prev.dnd), invisible: !!(prev && prev.invisible), ...this.listsFor(id), stats: this.statsOf(id), leaders: this.weeklyLeaders(10) });
     this.refreshClub(id, true); // the clubs state rides right behind the init
   }
 
+  // ---------- do not disturb (مزاحم نشو) ----------
+  // The ONLY writer of the directory's dnd flag (hello preserves
+  // it). Friends get a fresh s-friends at once: their rows paint
+  // the 🌙 from person() data without waiting for a presence flip.
+  setDnd(id, on) {
+    const rec = this.directory.get(id);
+    if (!rec) return;
+    const v = !!on;
+    if (!!rec.dnd === v) return;
+    rec.dnd = v;
+    this._persist();
+    const set = this.friends.get(id);
+    if (set) for (const f of set) this.refresh(f);
+  }
+
+  // ---------- uploaded profile photo (F17) ----------
+  // Host entry point AFTER it has stored the player's uploaded
+  // photo bytes: the record's photo flips to the versioned
+  // same-origin path (the 'google' avatar kind renders it) and
+  // the version bumps — the bump is what makes the new photo show
+  // everywhere at once. Returns {uid, v, photo} or null when the
+  // identity has no directory record / no uid yet.
+  setUploadedPhoto(id) {
+    const rec = this.directory.get(id);
+    if (!rec || !rec.uid) return null;
+    rec.photoV = (typeof rec.photoV === 'number' && rec.photoV > 0 ? rec.photoV : 0) + 1;
+    rec.photo = '/p-photo/' + rec.uid + '.jpg?v=' + rec.photoV;
+    rec.avatar = 'google';
+    this._persist();
+    this.refresh(id);
+    const set = this.friends.get(id);
+    if (set) for (const f of set) this.refresh(f);
+    return { uid: String(rec.uid), v: rec.photoV, photo: rec.photo };
+  }
+
   // ---------- message entry ----------
+  // ---------- invisible mode (حالت نامرئی) ----------
+  // Same storage pattern as DND: a flag on the directory record,
+  // set ONLY by the s-invisible frame. Everything keeps WORKING
+  // (DMs, invites, joining, playing) — only the presence VIEW
+  // others get is masked (personFor + _fanPresence). Flipping it
+  // re-fans at once: friends' lists refresh with masked/truthful
+  // rows and a presence push flips the dots, no reconnect needed.
+  setInvisible(id, on) {
+    const rec = this.directory.get(id);
+    if (!rec) return;
+    const v = !!on;
+    if (!!rec.invisible === v) return;
+    rec.invisible = v;
+    this._persist();
+    const set = this.friends.get(id);
+    if (set) for (const f of set) this.refresh(f);
+    if (this.clubOf.has(id)) this.fanClub(this.clubOf.get(id));
+    this._fanPresence(id, this.isOnline(id));
+  }
+
   handleMessage(id, msg) {
     if (!msg || typeof msg.type !== 'string') return;
     switch (msg.type) {
@@ -761,6 +874,8 @@ class SocialCore {
       case 's-dm-history': return this.dmHistory(id, msg.with);
       case 's-invite': return this.invite(id, msg.to, msg.code);
       case 's-invite-reply': return this.inviteReply(id, msg.from, msg.code, msg.accept);
+      case 's-dnd': return this.setDnd(id, msg.on);
+      case 's-invisible': return this.setInvisible(id, msg.on);
       case 's-stats': return this.statsReply(id);
       case 's-watch': return this.watch(id, msg.to);
       case 's-club-create': return this.clubCreate(id, msg);
@@ -816,7 +931,7 @@ class SocialCore {
       if (this.areFriends(id, hit.id)) relation = 'friend';
       else if (this.requests.has(reqKey(id, hit.id))) relation = 'outgoing';
       else if (this.requests.has(reqKey(hit.id, id))) relation = 'incoming';
-      out.push({ ...this.person(hit.id), relation });
+      out.push({ ...this.personFor(id, hit.id), relation });
     }
     this._send(id, { type: 's-search-result', q: digits, results: out });
   }
@@ -851,7 +966,7 @@ class SocialCore {
       to,
       relation,
       profile: {
-        ...this.person(to),
+        ...this.personFor(id, to),
         club: club ? club.name : null,
         friendsCount: fset ? fset.size : 0,
         stats: this.statsOf(to),
@@ -876,7 +991,7 @@ class SocialCore {
     this._persist();
     this.refresh(id); // my outgoing list grows
     if (this.isOnline(to)) {
-      this._send(to, { type: 's-requested', from: this.person(id) });
+      this._send(to, { type: 's-requested', from: this.personFor(to, id) });
       this.refresh(to); // their incoming list grows
     }
   }
@@ -1023,6 +1138,12 @@ class SocialCore {
     if (busy === null) busy = this.isInGame(to) ? 'match' : (this.isInLobby(to) ? 'lobby' : '');
     if (busy === 'match') return this._error(id, 'socialInGame');
     if (busy === 'lobby') return this._error(id, 'socialBusy');
+    // Do-not-disturb (مزاحم نشو): checked after the busy rules —
+    // a seated player still reads as in-game/busy first; a free
+    // player with the flag on rejects every invite, friend and
+    // club alike (the one s-invite path serves both).
+    const trec = this.directory.get(to);
+    if (trec && trec.dnd) return this._error(id, 'socialDnd');
     const now = Date.now();
     const key = reqKey(id, to);
     // ONE popup per pair: while my earlier invite to this target is
@@ -1047,7 +1168,7 @@ class SocialCore {
     if (this.pendingInvites.size > 200) {
       for (const [k, t] of this.pendingInvites) if (now - t >= INVITE_PENDING_MS) this.pendingInvites.delete(k);
     }
-    this._send(to, { type: 's-invited', from: this.person(id), code, src: this.inviteSource(id, to, code) });
+    this._send(to, { type: 's-invited', from: this.personFor(to, id), code, src: this.inviteSource(id, to, code) });
   }
 
   inviteReply(id, from, code, accept) {
@@ -1062,7 +1183,7 @@ class SocialCore {
     }
     if (!this.areFriends(id, from) && !this.sameClub(id, from)) return; // stale popup / no relation: drop silently
     code = (typeof code === 'string' ? code : '').toUpperCase().trim().slice(0, 8);
-    this._send(from, { type: 's-invite-result', by: this.person(id), code, accept: !!accept });
+    this._send(from, { type: 's-invite-result', by: this.personFor(from, id), code, accept: !!accept });
   }
 
   // ================= clubs (کلبونه) =================
@@ -1214,7 +1335,7 @@ class SocialCore {
     const club = this._clubOf(forId);
     if (!club) return null;
     const rank = { owner: 0, deputy: 1, member: 2 };
-    const members = club.members.map((m) => ({ ...this.person(m.id), role: m.role }))
+    const members = club.members.map((m) => ({ ...this.personFor(typeof forId !== 'undefined' ? forId : id, m.id), role: m.role }))
       .sort((a, b) => (rank[a.role] - rank[b.role]) || (b.online - a.online) || a.name.localeCompare(b.name));
     const view = {
       ...this.clubSummary(club, forId),
@@ -1238,7 +1359,7 @@ class SocialCore {
     for (const inv of this.clubInvites.values()) {
       if (inv.to !== id) continue;
       const club = this.clubs.get(inv.club);
-      if (club) invites.push({ club: this.clubSummary(club, id), from: this.person(inv.from) });
+      if (club) invites.push({ club: this.clubSummary(club, id), from: this.personFor(id, inv.from) });
     }
     return { club: this.clubView(id, withChat), invites };
   }
@@ -1443,7 +1564,7 @@ class SocialCore {
     this._persistClubs();
     this.refreshClub(id);
     this.refreshClub(to);
-    if (this.isOnline(to)) this._send(to, { type: 's-club-invited', club: this.clubSummary(club, to), from: this.person(id) });
+    if (this.isOnline(to)) this._send(to, { type: 's-club-invited', club: this.clubSummary(club, to), from: this.personFor(to, id) });
   }
 
   clubInviteReply(id, cid, accept) {
@@ -1711,7 +1832,7 @@ class SocialCore {
     const club = this.clubs.get(cid);
     if (!club || this.blockedEither(id, club.owner)) return this._error(id, 'clubNotFound');
     const rank = { owner: 0, deputy: 1, member: 2 };
-    const members = club.members.map((m) => ({ ...this.person(m.id), role: m.role }))
+    const members = club.members.map((m) => ({ ...this.personFor(id, m.id), role: m.role }))
       .sort((a, b) => (rank[a.role] - rank[b.role]) || (b.online - a.online) || a.name.localeCompare(b.name))
       .slice(0, 20);
     this._send(id, { type: 's-club-view-result', club: { ...this.clubSummary(club, id), members } });
