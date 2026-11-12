@@ -729,8 +729,8 @@ function stateFor(room, seatIdx) {
     takanCount: round ? round.takanCount.slice() : [0, 0],
     pendingTakan: room.match ? room.match.pendingTakan.slice() : [0, 0],
     piles: round ? round.wonTricks.slice() : [0, 0, 0, 0],
-    canDeclare13: round && !room.trickHold ? round.canDeclare13(seatIdx) : false,
-    declared13: round ? round.declared13 : false,
+    canArm13: round && !room.trickHold ? round.canArm13(seatIdx) : false,
+    armed13: round ? !!round.armed13 : false,
     roundNo: room.match ? room.match.roundNo : 0,
     roundResult: (room.phase === 'roundEnd' || room.phase === 'matchEnd') ? last : null,
     matchWinner: room.match && room.match.finished ? room.match.winner : null,
@@ -758,7 +758,7 @@ function publicStateFor(room) {
   st.spectator = true;
   st.hand = [];
   st.legal = [];
-  st.canDeclare13 = false;
+  st.canArm13 = false;
   return st;
 }
 
@@ -864,7 +864,12 @@ function onMatchEvent(room, evt) {
     // updated star count.
     broadcastEvent(room, { type: 'takan', seat: evt.seat, team: evt.team, count: evt.count });
   } else if (evt.type === 'declared13') {
-    broadcastEvent(room, { type: 'declared13', seat: evt.seat });
+    // up46: the declaration RESOLVED at the lead — carry the outcome
+    // (suit, held count, clean?) so every client can announce it.
+    broadcastEvent(room, {
+      type: 'declared13', seat: evt.seat, suit: evt.suit,
+      card: evt.card, count: evt.count, clean: evt.clean,
+    });
   }
   if (evt.type === 'roundFinished') {
     room.phase = 'roundEnd';
@@ -928,19 +933,23 @@ function doPlay(room, seat, card) {
 
 /**
  * Play a seat by bot logic. `mayDeclare` is true only for real bot seats:
- * bots always declare «13» on the final trick when it cancels a takan.
- * A human seat auto-played by the turn timer plays WITHOUT declaring
- * (spec: on timeout the takan stands).
+ * a bot declares «13» (up46) ONLY on a provably-clean call that is not
+ * worse for its team (see bots.plan13) — it arms the declaration and
+ * leads the planned card at once, which resolves it and ends the round.
+ * A human seat auto-played by the turn timer plays WITHOUT declaring.
  */
 function botPlay(room, seat, mayDeclare) {
   const round = room.match && room.match.round;
   if (room.frozen) return; // F35: frozen matches never advance (stale-timer guard)
   if (!round || round.finished || round.turn !== seat) return;
   if (room.trickHold) return;
-  if (mayDeclare && bots.maybeDeclare13(round, seat)) {
-    broadcastState(room); // clients toast the declaration…
-    pumpTurn(room);       // …then the bot plays its card on the next tick
-    return;
+  if (mayDeclare) {
+    const plan = bots.plan13(round, seat);
+    if (plan) {
+      round.arm13(seat);      // arm the «13» declaration…
+      doPlay(room, seat, plan); // …the lead resolves it — the round ends
+      return;
+    }
   }
   let card;
   try { card = bots.chooseCard(round, seat); } catch (e) { return; }
@@ -1444,17 +1453,21 @@ function handleMessage(ws, msg) {
       ws._seat = undefined;
       break;
     }
-    case 'declare13': {
+    case 'arm13': {
+      // up46: toggle the «13» arm for the pending lead (leader only —
+      // the engine enforces turn + empty trick). The state push shows
+      // every client the armed flag; the declaration itself resolves
+      // when the leader plays his lead card.
       const room = rooms.get(ws._roomCode);
       if (!room || room.phase !== 'playing') return;
       if (room.trickHold) { send(ws, stateFor(room, ws._seat)); return; } // trick on display — resync silently
       const round = room.match && room.match.round;
       if (!round) return;
       try {
-        round.declare13(ws._seat); // emits declared13 → clients toast it
+        round.arm13(ws._seat);
         broadcastState(room);
       } catch (e) {
-        sendError(ws, 'الآن نمی‌توانی «13» بگویی', 'cannotDeclare13');
+        sendError(ws, 'الآن نمی‌توانی «13» را فعال کنی', 'cannotArm13');
         send(ws, stateFor(room, ws._seat));
       }
       break;
