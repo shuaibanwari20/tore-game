@@ -64,7 +64,7 @@ check('dist carries the pview screen + s-profile + photo viewer',
 check('dist no longer carries the old #ov-playerview popup', !dist.includes('id="ov-playerview"') && !dist.includes('function fillProfileView'));
 check('dist no longer carries the clubs discovery tabs', !dist.includes('cl-tab-explore') && !dist.includes('cl-pane-mine'));
 const workerSrc = fs.readFileSync(path.join(ROOT, 'cloudflare/src/worker.js'), 'utf8');
-check('worker.js serves ?v=20261112-burstfix', workerSrc.includes('dist-client.html?v=20261112-burstfix'));
+check('worker.js serves ?v=20261113-bots', workerSrc.includes('dist-client.html?v=20261113-bots'));
 
 // ---------------- server ----------------
 function spawnServer(args, port) {
