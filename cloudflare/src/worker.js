@@ -78,7 +78,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261112-feat2';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261112-hqphoto';
 const STICKER_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/stickers/';
 const COVER_URL_BASE_DEFAULT =
