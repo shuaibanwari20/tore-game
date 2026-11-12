@@ -25,6 +25,17 @@ const BOT_DELAY_MS = 750;         // bot "thinking" delay (watchable pace)
 const ROUND_PAUSE_MS = 8000;      // round-summary pause before next round (6s -> 8s, owner 2026-11-11; a tap dismisses the card early on the tapper's screen only)
 const TRICK_PAUSE_MS = 1600;      // completed trick stays on the table before it is collected
 const RECONNECT_GRACE_MS = 120000; // seat+hand kept for a reconnecting player
+// up44: a seat the server KNOWS is disconnected (hard close — the
+// app died, the socket was terminated) must not hold the table for
+// the full 30 s turn timeout: a bot covers its turns after this
+// short delay until the human reconnects and reclaims the seat.
+// The seat stays human the whole time — cover is NOT the grace
+// expiry's bot conversion and changes no stats/abandon semantics.
+// TORE_COVER_MS is a test lever only; production uses 10000.
+const COVER_DELAY_MS = (() => {
+  const v = Number(process.env.TORE_COVER_MS);
+  return Number.isFinite(v) && v >= 0 ? v : 10000;
+})();
 const FROZEN_MAX_MS = 24 * 3600 * 1000; // F35: a frozen match dissolves after 24 h
 const REMATCH_OFFER_MS = 30000;   // a rematch offer lives 30 s, then expires
 const SPECTATOR_CAP = 20;          // clubs v8: watchers per club-game room
@@ -946,7 +957,8 @@ function pumpTurn(room) {
   if (round.finished) return;
   const seat = round.turn;
   const info = room.seats[seat];
-  const delay = info.kind === 'bot' ? BOT_DELAY_MS : TURN_TIMEOUT_MS;
+  const delay = info.kind === 'bot' ? BOT_DELAY_MS
+    : info.connected ? TURN_TIMEOUT_MS : COVER_DELAY_MS;
   room.turnTimer = setTimeout(() => botPlay(room, seat, info.kind === 'bot'), delay);
 }
 
@@ -1047,6 +1059,7 @@ function reattachSeat(ws, room, seatIdx, msg) {
     isHost: seatIdx === hostSeat(room),
   });
   broadcastState(room);
+  pumpTurn(room); // up44: a reclaimed seat gets its full turn clock back
   maybeUnfreeze(room); // F35: reattaching resumes a frozen match
 }
 
@@ -1098,6 +1111,10 @@ function onDisconnect(ws) {
     broadcastEvent(room, { type: 'voice', seat: ws._seat, mic: false, speaker: seat.voiceSpeaker !== false, on: false });
   }
   broadcastState(room);
+  // up44: re-arm the turn — if the drop is the player to move, his
+  // cover clock starts from the drop (COVER_DELAY_MS), not from
+  // whenever his turn began. pumpTurn itself defers to a freeze.
+  pumpTurn(room);
 }
 
 /** Expire disconnected seats after the grace window — IN-MATCH ONLY.
@@ -1241,6 +1258,12 @@ function handleMessage(ws, msg) {
     return;
   }
   switch (msg.type) {
+    case 'ping': {
+      // up44 heartbeat: the client's watchdog stamps every inbound
+      // frame; the pong is how it tells a live path from a dead one.
+      send(ws, { type: 'pong' });
+      break;
+    }
     case 'create': {
       // F35: one frozen match per player — a fresh create
       // dissolves his frozen match (never the one being made).
@@ -1349,6 +1372,7 @@ function handleMessage(ws, msg) {
         isHost: idx === hostSeat(room),
       });
       broadcastState(room);
+      pumpTurn(room); // up44: a reclaimed seat gets its full turn clock back
       maybeStartVs(room); // a token reconnect can be a vs room's 4th connection
       maybeUnfreeze(room); // F35: the Continue flow lands here — resume a frozen match
       break;
