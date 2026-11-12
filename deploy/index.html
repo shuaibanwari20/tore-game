@@ -183,6 +183,68 @@
     text-shadow: 0 0 18px rgba(255,59,48,.9), 0 4px 14px rgba(0,0,0,.7);
   }
   #takanbanner.show { animation: takanpop 1.9s ease-out forwards; }
+  /* F28: the round-end replay wears the burst dress — bigger,
+     with a rotating ray disc behind the word. */
+  #takanbanner.burst { font-size: 58px; }
+  #takanbanner.burst::before {
+    content: ''; position: absolute; left: 50%; top: 50%; width: 240px; height: 240px;
+    transform: translate(-50%, -50%); border-radius: 50%; z-index: -1;
+    background: repeating-conic-gradient(from 0deg, rgba(255,59,48,.34) 0deg 9deg, rgba(255,215,94,.20) 9deg 18deg);
+    animation: burstspin 1.2s linear;
+  }
+  @keyframes burstspin { from { transform: translate(-50%, -50%) rotate(0deg) scale(.6); opacity: 0; } 25% { opacity: 1; } to { transform: translate(-50%, -50%) rotate(38deg) scale(1.05); opacity: 0; } }
+  /* F28: «۱۳!» burst — shown to ALL players the moment anyone
+     declares (the declared13 event already fans out to everyone). */
+  #burst13 {
+    position: fixed; top: 30%; left: 50%; z-index: 70; pointer-events: none;
+    transform: translate(-50%, -50%) scale(.5); opacity: 0; text-align: center;
+  }
+  #burst13 .b13-num { display: block; font-size: 74px; font-weight: 900; color: #ffd75e;
+    text-shadow: 0 0 22px rgba(255,59,48,.95), 0 4px 16px rgba(0,0,0,.75); }
+  #burst13 .b13-sub { display: block; margin-top: 2px; font-size: 16px; font-weight: 800; color: #fff;
+    text-shadow: 0 2px 8px rgba(0,0,0,.8); }
+  #burst13.show { animation: burst13pop 1.2s ease-out forwards; }
+  @keyframes burst13pop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.5); }
+    14% { opacity: 1; transform: translate(-50%, -50%) scale(1.14); }
+    26% { transform: translate(-50%, -50%) scale(1); }
+    78% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -58%) scale(1); }
+  }
+  /* F40 tutorial: coach bar over the table + the glowing pick */
+  #coach {
+    position: fixed; left: 50%; bottom: 118px; transform: translateX(-50%);
+    width: min(92vw, 430px); z-index: 65; display: none;
+    background: linear-gradient(180deg, #d81b74, #67124e);
+    border: 2px solid rgba(255,183,224,.45); border-radius: 18px;
+    box-shadow: 0 14px 34px rgba(20,2,24,.5), inset 0 2px 0 rgba(255,255,255,.22);
+    color: #fff; padding: 12px 14px;
+  }
+  #coach.show { display: block; }
+  #coach-txt { font-size: 15.5px; font-weight: 700; line-height: 1.65; }
+  #coach-row { display: flex; gap: 9px; margin-top: 10px; }
+  #coach-next { flex: 1; padding: 9px; border: none; border-radius: 12px; cursor: pointer;
+    font-family: inherit; font-size: 15px; font-weight: 900; color: #33270a;
+    background: linear-gradient(180deg, #ffd75e, #d9a83c); }
+  #coach-exit { padding: 9px 16px; border-radius: 12px; cursor: pointer; font-family: inherit;
+    font-size: 14px; font-weight: 800; color: #fff; background: rgba(43,6,54,.55);
+    border: 1px solid rgba(255,255,255,.35); }
+  .card.coach-glow { outline: 3px solid #ffd75e; outline-offset: 1px; border-radius: 9px;
+    animation: coachpulse 1.1s ease-in-out infinite; }
+  @keyframes coachpulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,215,94,.0), 0 0 14px 2px rgba(255,215,94,.55); } 50% { box-shadow: 0 0 0 3px rgba(255,215,94,.35), 0 0 22px 6px rgba(255,215,94,.8); } }
+  .card.coach-shake { animation: coachshake .3s ease-in-out; }
+  @keyframes coachshake { 0%, 100% { margin-left: 0; } 25% { margin-left: -5px; } 75% { margin-left: 5px; } }
+  #ov-tutend .tutend-btns { display: flex; flex-direction: column; gap: 9px; margin-top: 12px; }
+  #ov-tutend #btn-tut-bots { padding: 11px; border-radius: 14px; font-size: 16px; font-weight: 900;
+    color: #33270a; cursor: pointer; font-family: inherit;
+    background: linear-gradient(180deg, #ffd75e, #d9a83c); border: 2px solid #ffd75e; }
+  #ov-tutend #btn-tut-home { padding: 11px; border-radius: 14px; font-size: 15px; font-weight: 800;
+    color: #fff; cursor: pointer; font-family: inherit;
+    background: rgba(43,6,54,.55); border: 1px solid rgba(255,255,255,.35); }
+  @media (prefers-reduced-motion: reduce) {
+    #takanbanner.show, #burst13.show { animation-duration: .01s; }
+    #takanbanner.burst::before { animation: none; opacity: 0; }
+  }
   @keyframes takanpop {
     0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); }
     12% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
@@ -808,9 +870,10 @@
      (same rule block higher up) so the two pages match exactly.
      Scoped to the profile screen only — the same override the
      friends/picker/chats reskins already carry for themselves;
-     the screens still on the veil (clubs family, leaders) keep
-     it until he says otherwise. */
-  #scr-profile, #scr-pview {
+     the screens still on the veil (clubs family) keep it until
+     he says otherwise. (F14, up37: #scr-leaders joined this
+     override — the weekly-leaders screen wears the shell too.) */
+  #scr-profile, #scr-pview, #scr-leaders {
     background-color: #6d0d3f;
     background-image:
       linear-gradient(45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
@@ -1737,6 +1800,10 @@
   .pf-pvname { font-size: 12.5px; font-weight: 700; color: #ffd75e; }
   .pf-label { display: block; font-size: 12.5px; font-weight: 700; color: #ffd75e; margin: 8px 0 4px; opacity: 1; }
   .pf-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  .pf-upload { display: block; width: 100%; margin: 2px 0 9px; padding: 10px; border-radius: 14px; cursor: pointer;
+    border: 2px dashed rgba(255,215,94,.75); background: rgba(43,6,54,.45); color: #ffd75e;
+    font-family: inherit; font-size: 15px; font-weight: 800; }
+  .pf-upload:active { transform: scale(.98); }
   .pf-cell { width: auto; margin: 0; padding: 4px 2px 3px; background: rgba(255,255,255,.06);
     border: 2px solid rgba(217,179,128,.25); border-radius: 12px; cursor: pointer; font-family: inherit;
     display: flex; flex-direction: column; align-items: center; gap: 2px; }
@@ -2040,9 +2107,9 @@
   #ov-settings .panel { position: relative; border: 3px solid #f0b93e; border-radius: 22px; color: #fff;
     background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
     box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
-    padding: 18px 16px 14px; text-align: start;
+    padding: 12px 16px 10px; text-align: start;
     max-height: calc(100dvh - 64px); overflow-y: auto; }
-  #ov-settings .panel h2 { color: #fff; text-align: center; font-size: 23px; margin-bottom: 8px;
+  #ov-settings .panel h2 { color: #fff; text-align: center; font-size: 20px; margin-bottom: 5px;
     text-shadow: 0 2px 4px rgba(0,0,0,.45); }
   .st-ribbon { position: absolute; top: -27px; inset-inline-start: 16px; width: 44px; height: 54px; margin: 0;
     padding: 0 0 10px; cursor: pointer; border: 0; z-index: 3;
@@ -2054,7 +2121,7 @@
     margin-top: 10px; filter: drop-shadow(0 1px 1px rgba(90,30,0,.65)); }
   .st-ribbon:active { transform: scale(.94); }
   .st-langrow { display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    background: rgba(255,255,255,.17); border-radius: 13px; padding: 8px 12px;
+    background: rgba(255,255,255,.17); border-radius: 13px; padding: 6px 12px;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
   .st-langpair { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
   .st-langpair .pf-label { margin: 0; color: #ffd7f2; }
@@ -2063,21 +2130,21 @@
   #ov-settings .st-lang { background: rgba(43,6,54,.5); color: #fff; border: 1.5px solid rgba(255,255,255,.35); }
   #ov-settings .st-lang.sel { background: linear-gradient(180deg, #ffd75e, #d9a83c); color: #33270a;
     border-color: #ffd75e; box-shadow: 0 0 0 1px #ffd75e; }
-  .st-rows { margin-top: 10px; background: rgba(43,6,54,.55); border-radius: 16px; padding: 2px 14px;
+  .st-rows { margin-top: 8px; background: rgba(43,6,54,.55); border-radius: 16px; padding: 0 14px;
     box-shadow: inset 0 2px 8px rgba(0,0,0,.35); }
-  #ov-settings .st-rules, #ov-settings .st-logout { width: 100%; margin: 0; padding: 13px 2px; gap: 9px;
+  #ov-settings .st-rules, #ov-settings .st-logout { width: 100%; margin: 0; padding: 9px 2px; gap: 9px;
     justify-content: space-between; background: none; color: #fff; border: 0; border-radius: 0;
     border-bottom: 1px solid rgba(255,255,255,.13); box-shadow: none; font-size: 16.5px; font-weight: 700; }
   #ov-settings .st-logout { border-bottom: 0; }
   #ov-settings .st-rules svg { stroke: #ffd7f2; }
   #ov-settings .st-logout svg { stroke: #ffd7f2; }
   .st-togrow { display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    padding: 12px 2px; border-bottom: 1px solid rgba(255,255,255,.13); cursor: pointer; }
+    padding: 4px 2px; border-bottom: 1px solid rgba(255,255,255,.13); cursor: pointer; }
   .st-tog-lbl { font-size: 16.5px; font-weight: 700; color: #fff; }
-  .st-check { width: 34px; height: 34px; flex: 0 0 auto; border: 2.5px solid #f0b93e; border-radius: 7px;
+  .st-check { width: 28px; height: 28px; flex: 0 0 auto; border: 2.5px solid #f0b93e; border-radius: 7px;
     background: rgba(0,0,0,.25); box-shadow: inset 0 2px 5px rgba(0,0,0,.45);
     display: flex; align-items: center; justify-content: center; }
-  .st-check svg { width: 22px; height: 22px; stroke: #3ce862; stroke-width: 3.4; fill: none;
+  .st-check svg { width: 18px; height: 18px; stroke: #3ce862; stroke-width: 3.4; fill: none;
     stroke-linecap: round; stroke-linejoin: round; opacity: 0; transform: scale(.55);
     transition: opacity .15s, transform .15s; filter: drop-shadow(0 1px 2px rgba(0,60,0,.65)); }
   .st-check.on svg { opacity: 1; transform: scale(1); }
@@ -2087,8 +2154,8 @@
      carpet photo into it). The player's choice wears a gold ring +
      check disc; tapping selects + persists at once. The settings
      sheet itself shows a single preview (see .felt-single below). */
-  .st-felts { margin-top: 10px; background: rgba(43,6,54,.55); border-radius: 16px;
-    padding: 8px 10px 9px; box-shadow: inset 0 2px 8px rgba(0,0,0,.35); }
+  .st-felts { margin-top: 8px; background: rgba(43,6,54,.55); border-radius: 16px;
+    padding: 6px 10px 7px; box-shadow: inset 0 2px 8px rgba(0,0,0,.35); }
   .st-felts-title { font-size: 16.5px; font-weight: 700; color: #fff; padding: 1px 4px 6px; }
   .felt-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
   .felt-sw { position: relative; height: 60px; margin: 0; padding: 0; overflow: hidden;
@@ -2118,13 +2185,13 @@
      بزرگ هست کوچکش کن») so the WHOLE settings sheet fits one popup
      view with no scrolling at 390x844 / 390x932 (proof:
      tore-proofs-settingsx-applied asserts scrollHeight <= clientHeight). */
-  .felt-single { position: relative; width: 124px; margin: 2px auto 0; }
+  .felt-single { position: relative; width: 110px; margin: 2px auto 0; }
   /* carpets + card-backs share ONE settings block side by side
      (features batch 2026-11-11) so the sheet still fits one popup
      view with no scrolling after the back section was added. */
   .st-duo { display: flex; gap: 12px; justify-content: center; }
   .st-duo .st-felts-title { text-align: center; font-size: 15px; padding-bottom: 4px; }
-  .felt-preview { position: relative; width: 124px; height: 162px; margin: 0; padding: 0;
+  .felt-preview { position: relative; width: 110px; height: 96px; margin: 0; padding: 0;
     overflow: hidden; border: 2px solid #ffd75e; border-radius: 12px; cursor: pointer;
     display: flex; align-items: flex-end; justify-content: center;
     background-size: cover; background-position: center; background-repeat: no-repeat;
@@ -2199,7 +2266,7 @@
   .pilerow[data-pos="bottom"] .pileback:first-child, .pilerow[data-pos="top"] .pileback:first-child { margin-left: 0; }
   .pilerow[data-pos="right"] .pileback, .pilerow[data-pos="left"] .pileback { margin-top: -28px; }
   .pilerow[data-pos="right"] .pileback:first-child, .pilerow[data-pos="left"] .pileback:first-child { margin-top: 0; }
-  .back-preview { position: relative; width: 124px; height: 162px; margin: 0; padding: 0; overflow: hidden;
+  .back-preview { position: relative; width: 110px; height: 96px; margin: 0; padding: 0; overflow: hidden;
     border-radius: 12px; cursor: pointer; display: flex; align-items: flex-end; justify-content: center; }
   .back-preview:active { transform: scale(.98); }
   .back-preview .felt-nm { width: 100%; padding: 3px 1px 4px; text-align: center;
@@ -2238,6 +2305,13 @@
     font-weight: 900; cursor: pointer; font-family: inherit;
     color: #33270a; background: linear-gradient(180deg, #ffd75e, #d9a83c); border: 2px solid #ffd75e; }
   .pf-leadersbtn:active { transform: scale(.98); }
+  #ld-list { margin: 10px 14px; padding: 8px 14px; border-radius: 22px;
+    background: linear-gradient(180deg, #d81b74, #67124e);
+    border: 2px solid rgba(255,183,224,.4);
+    box-shadow: 0 14px 34px rgba(20,2,24,.45), inset 0 2px 0 rgba(255,255,255,.22); }
+  #ld-list .fr-row { border-bottom: 1px solid rgba(255,255,255,.14); padding: 8px 2px; }
+  #ld-list .fr-row:last-child { border-bottom: none; }
+  #ld-list .fr-name { color: #fff; }
   #ld-list .ld-rank { flex: 0 0 30px; text-align: center; font-size: 17px; font-weight: 900; color: #ffd75e; }
   #ld-list .ld-wins { margin-inline-start: auto; flex: 0 0 auto; font-weight: 800; color: #ffd75e; white-space: nowrap; }
   #ov-match #btn-rematch { margin-top: 10px; width: 100%; padding: 11px; border-radius: 14px; font-size: 17px;
@@ -2282,7 +2356,7 @@
   .cv-check { flex: 0 0 auto; width: 34px; height: 34px; margin: 0; padding: 0; border-radius: 9px; cursor: pointer;
     border: 1.5px solid rgba(255,255,255,.4); background: rgba(43,6,54,.5); color: #ffd75e; font-size: 17px; }
   #cvi-players { color: #fff; font-weight: 700; margin-bottom: 6px; word-break: break-word; }
-  .st-follow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+  .st-follow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; }
   .st-follow span { font-size: 14.5px; font-weight: 700; color: #ffd7f2; }
   .st-ig { width: 46px; height: 46px; flex: 0 0 auto; border-radius: 13px; text-decoration: none;
     background: linear-gradient(45deg, #f9ce34 0%, #ee2a7b 55%, #6228d7 100%);
@@ -2886,6 +2960,10 @@
           <span class="cluster"><svg viewBox="0 0 96 64" aria-hidden="true"><circle cx="22" cy="18" r="13" fill="url(#clCoin)" stroke="#a86e00" stroke-width="2"/><text x="22" y="24" text-anchor="middle" font-size="14" font-weight="800" fill="#7a4d00">#</text><circle cx="80" cy="14" r="9" fill="url(#clViolet)" stroke="rgba(255,255,255,.65)" stroke-width="1.5"/><circle cx="76" cy="14" r="1.5" fill="#fff"/><circle cx="80" cy="14" r="1.5" fill="#fff"/><circle cx="84" cy="14" r="1.5" fill="#fff"/><circle cx="38" cy="36" r="12" fill="none" stroke="url(#clGold)" stroke-width="6.5"/><path d="M46 44 74 58" stroke="url(#clGold)" stroke-width="6.5" stroke-linecap="round"/><path d="M64 51v-8M74 58v-9" stroke="url(#clGold)" stroke-width="5.5" stroke-linecap="round"/></svg></span>
           <b>له کوډ سره ورګډ شه</b>
         </button>
+        <button class="hm-small" id="btn-tutorial" aria-label="لارښود">
+          <span class="cluster"><svg viewBox="0 0 96 64" aria-hidden="true"><path d="M48 8 6 26l42 18 36-15.4V46h8V26z" fill="url(#nvGold)"/><path d="M26 34.5V50c0 4.4 9.8 8 22 8s22-3.6 22-8V34.5L48 44z" fill="url(#nvBlue)"/></svg></span>
+          <b id="tut-tile-lbl">لارښود</b>
+        </button>
         <button class="hm-small" id="btn-friends-card" aria-label="له ملګرو سره لوبه">
           <span class="cluster"><svg viewBox="0 0 96 64" aria-hidden="true"><rect x="3" y="1" width="25" height="17" rx="6" fill="url(#nvPink)"/><path d="M9 16.5 9 23l7-5.5z" fill="#e84393"/><circle cx="10" cy="9.5" r="1.6" fill="#fff"/><circle cx="15.5" cy="9.5" r="1.6" fill="#fff"/><circle cx="21" cy="9.5" r="1.6" fill="#fff"/><rect x="68" y="1" width="25" height="17" rx="6" fill="url(#nvGreen)"/><path d="M87 16.5 87 23l-7-5.5z" fill="#28b751"/><circle cx="75" cy="9.5" r="1.6" fill="#fff"/><circle cx="80.5" cy="9.5" r="1.6" fill="#fff"/><circle cx="86" cy="9.5" r="1.6" fill="#fff"/><circle cx="35" cy="41" r="16" fill="url(#nvBlue)"/><circle cx="61" cy="41" r="16" fill="url(#nvGreen)"/><circle cx="29.5" cy="38" r="1.9" fill="#10365e"/><circle cx="40.5" cy="38" r="1.9" fill="#10365e"/><path d="M28.5 45a7 7 0 0 0 13 0" fill="none" stroke="#10365e" stroke-width="2" stroke-linecap="round"/><circle cx="55.5" cy="38" r="1.9" fill="#0d4d24"/><circle cx="66.5" cy="38" r="1.9" fill="#0d4d24"/><path d="M54.5 45a7 7 0 0 0 13 0" fill="none" stroke="#0d4d24" stroke-width="2" stroke-linecap="round"/></svg></span>
           <b>له ملګرو سره لوبه</b>
@@ -3107,6 +3185,24 @@
 </div>
 
 <div id="takanbanner"></div>
+<div id="burst13"><span class="b13-num">۱۳!</span><span class="b13-sub"></span></div>
+<div id="coach">
+  <div id="coach-txt"></div>
+  <div id="coach-row">
+    <button type="button" id="coach-next">بل</button>
+    <button type="button" id="coach-exit">وتل</button>
+  </div>
+</div>
+<div class="overlay" id="ov-tutend">
+  <div class="panel">
+    <h2 id="tutend-title">لارښود</h2>
+    <p id="tutend-txt" style="line-height:1.7"></p>
+    <div class="tutend-btns">
+      <button type="button" id="btn-tut-bots">له روباتانو سره لوبه</button>
+      <button type="button" id="btn-tut-home">کور ته ستون شه</button>
+    </div>
+  </div>
+</div>
 
 <!-- ======== FRIENDS (ملګري) ======== -->
 <section id="scr-friends" class="hidden">
@@ -3421,6 +3517,7 @@
       <label class="pf-label" id="pf-name-lbl" for="pf-name">نوم</label>
       <input id="pf-name" type="text" maxlength="20" placeholder="نوم دې — لکه احمد" autocomplete="name">
       <span class="pf-label" id="pf-avatar-lbl">انځور</span>
+      <button type="button" class="pf-upload" id="btn-pf-upload">📷 <span id="pf-upload-lbl">انځور اپلود کړه</span></button>
       <div class="pf-grid" id="pf-grid"></div>
       <div class="pf-btns">
         <button id="btn-profile-save">ساتل</button>
@@ -3882,6 +3979,7 @@
 
 <!-- the one hidden file picker behind every cover-upload tile -->
 <input type="file" id="cover-file" accept="image/*" class="hidden">
+<input type="file" id="photo-file" accept="image/*" class="hidden">
 
 <!-- ======== FRIEND DM ======== -->
 <section id="scr-dm" class="hidden">
@@ -4049,6 +4147,22 @@
       <div class="st-togrow" id="row-set-chat" role="switch" aria-checked="true" tabindex="0">
         <span class="st-tog-lbl" id="st-chat-lbl">د لوبې چټ</span>
         <span class="st-check on" id="st-chat-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
+      </div>
+      <div class="st-togrow" id="row-set-dnd" role="switch" aria-checked="false" tabindex="0">
+        <span class="st-tog-lbl" id="st-dnd-lbl">مزاحم نشو</span>
+        <span class="st-check" id="st-dnd-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
+      </div>
+      <div class="st-togrow" id="row-set-invisible" role="switch" aria-checked="false" tabindex="0">
+        <span class="st-tog-lbl" id="st-invisible-lbl">پټ حالت</span>
+        <span class="st-check" id="st-invisible-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
+      </div>
+      <div class="st-togrow" id="row-set-sound" role="switch" aria-checked="true" tabindex="0">
+        <span class="st-tog-lbl" id="st-sound-lbl">د لوبې غږ</span>
+        <span class="st-check on" id="st-sound-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
+      </div>
+      <div class="st-togrow" id="row-set-music" role="switch" aria-checked="false" tabindex="0">
+        <span class="st-tog-lbl" id="st-music-lbl">د شاليد موسيقي</span>
+        <span class="st-check" id="st-music-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
       </div>
       <button id="btn-logout" class="st-logout" aria-label="له حسابه وتل">
         <svg viewBox="0 0 24 24">
@@ -4235,6 +4349,28 @@ const STR = {
     stFollowUs: 'د نورو لپاره موږ تعقيب کړه',
     setVibrate: 'رېږدل',
     setChat: 'د لوبې چټ',
+    setDnd: 'مزاحم نشو',
+    setInvisible: 'پټ حالت',
+    setSound: 'د لوبې غږ',
+    setMusic: 'د شاليد موسيقي',
+    errSocialDnd: 'هغه مزاحمت نه غواړي',
+    errPhotoTooBig: 'انځور ډېر غټ دی — تر ۲۰۰ KB کم وي',
+    pfUploadPhoto: 'انځور اپلود کړه',
+    pfPhotoSaved: 'انځور خوندي شو',
+    tutTitle: 'لارښود',
+    tutGoal: 'هدف: هغه ټیم چې جمع شوي تاوان یې ۲۱۰ ته ورسېږي، هغه بایلي!',
+    tutTawan: 'تاوان کارتونه: هر لال ♥ = ۱، د خښتې ۱۰ = ۳، د پشې غلام = ۵، د قرې ماتکه = ۹',
+    tutFollow: 'باید د مشر رنګ کارت واچوې — که هغه رنګ لرې، هماغه واچوه',
+    tutPlayCard: 'ځلېدونکی کارت واچوه',
+    tutTrickWin: 'شاباس! ستاسو ټیم دا لاس وګاټه او تاوان یې ونیوه',
+    tutBank: 'د لاس په پای کې تاوان په لسو بندو کې جمع کېږي: ۰–۹ ← ۰، ۱۰–۱۵ ← ۱۰، ۱۶–۲۰ ← ۲۰، ۲۱–۳۰ ← ۳۰',
+    tutTakan: 'تکان: که داسې رنګ واچوې چې هېڅوک یې نه لري — ۳۰ جمع شوی تاوان دې دعوه کېږي!',
+    tut13: 'په وروستي لاس کې، که ستا د رنګ کارت هېڅوک نه لري، «۱۳» ووهه — خپل تکان دې لغوه کېږي',
+    tutDone: 'زده کړه دې وکړه! اوس اصلي لوبه وکړه',
+    tutBots: 'له روباتانو سره لوبه',
+    tutHome: 'کور ته ستون شه',
+    tutExit: 'وتل',
+    tutNext: 'بل',
     setFieldEdit: 'د لوبې ډګر سمول',
     felt1: 'ترنج شين',
     felt2: 'ترنج ابي',
@@ -4606,6 +4742,28 @@ const STR = {
     stFollowUs: 'برای بیشتر، ما را دنبال کنید',
     setVibrate: 'لرزش',
     setChat: 'چت بازی',
+    setDnd: 'مزاحم نشو',
+    setInvisible: 'حالت نامرئی',
+    setSound: 'صدای بازی',
+    setMusic: 'موسیقی پس‌زمینه',
+    errSocialDnd: 'مزاحم نشو برای او روشن است',
+    errPhotoTooBig: 'عکس خیلی بزرگ است — کمتر از ۲۰۰ KB',
+    pfUploadPhoto: 'آپلود عکس',
+    pfPhotoSaved: 'عکس ذخیره شد',
+    tutTitle: 'آموزش',
+    tutGoal: 'هدف: تیمی که تاوان جمع‌شده‌اش به ۲۱۰ برسد، می‌بازد!',
+    tutTawan: 'کارت‌های تاوان: هر دل ♥ = ۱، ده خشت = ۳، سرباز گشنیز = ۵، بی‌بی پیک = ۹',
+    tutFollow: 'باید از رنگِ دست پیروی کنی — اگر آن رنگ را داری، همان را بینداز',
+    tutPlayCard: 'کارت روشن را بینداز',
+    tutTrickWin: 'آفرین! تیمت این دست را برد و تاوان گرفت',
+    tutBank: 'در پایان دست، تاوان ده‌بندی جمع می‌شود: ۰–۹ ← ۰، ۱۰–۱۵ ← ۱۰، ۱۶–۲۰ ← ۲۰، ۲۱–۳۰ ← ۳۰',
+    tutTakan: 'تکان: اگر رنگی را بیندازی که هیچ‌کس دیگری ندارد — ۳۰ تاوان جمع‌شده ادعا می‌کنی!',
+    tut13: 'در دست آخر، اگر رنگت را هیچ‌کس ندارد، «۱۳» بزن — تکان خودت لغو می‌شود',
+    tutDone: 'یاد گرفتی! حالا بازی واقعی را بازی کن',
+    tutBots: 'بازی با ربات‌ها',
+    tutHome: 'برگشت به خانه',
+    tutExit: 'خروج',
+    tutNext: 'بعدی',
     setFieldEdit: 'ویرایش میدان بازی',
     felt1: 'ترنج سبز',
     felt2: 'ترنج آبی',
@@ -4977,6 +5135,28 @@ const STR = {
     stFollowUs: 'Follow us for more',
     setVibrate: 'Vibration',
     setChat: 'Game chat',
+    setDnd: 'Do Not Disturb',
+    setInvisible: 'Invisible mode',
+    setSound: 'Game sounds',
+    setMusic: 'Background music',
+    errSocialDnd: 'Do Not Disturb is on for them',
+    errPhotoTooBig: 'Image too big — must be under 200 KB',
+    pfUploadPhoto: 'Upload photo',
+    pfPhotoSaved: 'Photo saved',
+    tutTitle: 'Tutorial',
+    tutGoal: 'Goal: the team whose banked tawan reaches 210 LOSES!',
+    tutTawan: 'Tawan cards: every ♥ = 1, 10♦ = 3, J♣ = 5, Q♠ = 9',
+    tutFollow: 'Follow the led suit — if you hold that suit, you must play it',
+    tutPlayCard: 'Play the glowing card',
+    tutTrickWin: 'Nice! Your team won this trick and captured tawan',
+    tutBank: 'At round end, tawan banks in tens: 0–9 → 0, 10–15 → 10, 16–20 → 20, 21–30 → 30',
+    tutTakan: 'Takan: lead a suit nobody else holds — a claim of 30 banked tawan!',
+    tut13: 'On the final trick, if nobody holds your suit, call «13» — it cancels your own takan',
+    tutDone: 'You learned it! Now play the real game',
+    tutBots: 'Play with bots',
+    tutHome: 'Back home',
+    tutExit: 'Exit',
+    tutNext: 'Next',
     setFieldEdit: 'Edit game field',
     felt1: 'Green Medallion',
     felt2: 'Navy Medallion',
@@ -5539,6 +5719,12 @@ function applyI18n() {
   set('#pf-stat-country-lbl', 'pfStatCountry');
   set('#st-vibrate-lbl', 'setVibrate');
   set('#st-chat-lbl', 'setChat');
+  set('#st-dnd-lbl', 'setDnd');
+  set('#st-invisible-lbl', 'setInvisible');
+  set('#st-sound-lbl', 'setSound');
+  set('#st-music-lbl', 'setMusic');
+  set('#pf-upload-lbl', 'pfUploadPhoto');
+  set('#tut-tile-lbl', 'tutTitle');
   set('#st-follow-lbl', 'stFollowUs');
   aria('#btn-pf-home', 'navHome');
   aria('#btn-pfedit-x', 'closeBtn');
@@ -5988,7 +6174,7 @@ function loadProfile() {
     name: (typeof p.name === 'string' && p.name.trim()) ? p.name.trim().slice(0, 20) : oldName.slice(0, 20),
     avatar: validAvatar(p.avatar) ? p.avatar : 'av1',
     country: (typeof p.country === 'string' && p.country.trim()) ? p.country.trim() : 'افغانستان',
-    photo: (typeof p.photo === 'string' && p.photo.startsWith('https://')) ? p.photo.slice(0, 300) : '',
+    photo: (typeof p.photo === 'string' && (p.photo.startsWith('https://') || p.photo.startsWith('/p-photo/'))) ? p.photo.slice(0, 300) : '',
     felt: validFelt(p.felt),
     back: validBack(p.back),
   };
@@ -8930,11 +9116,11 @@ function startBotGame(club) {
   armBotFallback();
   connect(() => send(createFrame()));
 }
-function startLocalBotGame(withToast) {
+function startLocalBotGame(withToast, hostOverride) {
   disarmBotFallback();
   gateFaces(); // CARDSFIX: deck gate — offline these resolve from the SW cache
   quickPlay = true;
-  const host = new LocalHost();
+  const host = hostOverride || new LocalHost();
   ws = host.socket;
   ws.onmessage = (ev) => { try { onMsg(JSON.parse(ev.data)); } catch (e) { /* bad frame */ } };
   ws.onclose = () => {
@@ -8948,6 +9134,102 @@ function startLocalBotGame(withToast) {
   window.__toreLocalGame = true;
   host.open();
   if (withToast) toast(T('offlineGameToast'));
+}
+
+// ================= F40: interactive tutorial (لارښود) =================
+// A scripted LOCAL game on the LocalHost engine with a SEEDED rng
+// (mulberry32, seed chosen offline so the scripted beats always
+// land with the coach's picks): follow-suit, a tawan trick for my
+// team, takan claims at the round end, and a «13» chance on the
+// final trick. The coach's pick rides every state (coachCard);
+// playCard() refuses any other card, so the line cannot drift.
+// Bots run a touch faster, the human turn never times out, and
+// the round pause is huge — the lesson ends at the first round
+// end with the banking card + the play-now end card. No stats,
+// no server, works offline.
+let tut = null;
+const TUT_SEED = 35;
+function tutRng(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function tutTawanOf(code) {
+  if (code.slice(-1) === 'H') return 1;
+  if (code === '10D') return 3;
+  if (code === 'JC') return 5;
+  if (code === 'QS') return 9;
+  return 0;
+}
+function showCoach(text, withNext) {
+  const c = $('#coach');
+  if (!c) return;
+  $('#coach-txt').textContent = text;
+  $('#coach-next').textContent = T('tutNext');
+  $('#coach-exit').textContent = T('tutExit');
+  $('#coach-next').style.display = withNext ? '' : 'none';
+  c.classList.add('show');
+}
+function hideCoach() { const c = $('#coach'); if (c) c.classList.remove('show'); }
+function startTutorial() {
+  if (tut) return;
+  gateFaces();
+  tut = { intro: 0, follow: false, trickwin: false, takan: false, s13: false, banked: false, over: false, piles: 0 };
+  const host = new LocalHost({ rng: tutRng(TUT_SEED), botMs: 420, turnMs: 600000, trickMs: 1000, roundMs: 3600000, tutorial: true });
+  startLocalBotGame(false, host);
+  showCoach(T('tutGoal'), true);
+}
+function endTutorial() {
+  tut = null;
+  hideCoach();
+  $('#ov-tutend').classList.remove('show');
+  leaveGameToHome();
+}
+$('#btn-tutorial').onclick = () => startTutorial();
+$('#coach-exit').onclick = () => endTutorial();
+$('#coach-next').onclick = () => {
+  if (!tut) return;
+  if (tut.intro === 0) { tut.intro = 1; showCoach(T('tutTawan'), true); return; }
+  if (tut.intro === 1) { tut.intro = 2; hideCoach(); return; }
+  if (tut.banked && !tut.over) {
+    tut.over = true;
+    hideCoach();
+    $('#tutend-title').textContent = T('tutTitle');
+    $('#tutend-txt').textContent = T('tutDone');
+    $('#btn-tut-bots').textContent = T('tutBots');
+    $('#btn-tut-home').textContent = T('tutHome');
+    $('#ov-tutend').classList.add('show');
+    return;
+  }
+  hideCoach();
+};
+$('#btn-tut-bots').onclick = () => { endTutorial(); startBotGame(); };
+$('#btn-tut-home').onclick = () => endTutorial();
+// Coach step triggers driven off the rendered state (called from
+// render()): each fires exactly once, in the order the game
+// presents it.
+function tutRenderSteps(st) {
+  if (!tut || tut.over) return;
+  if (st.phase === 'playing' && st.turn === mySeat) {
+    if (!tut.follow && st.trick.length > 0) {
+      const led = suitOf(st.trick[0].card);
+      if (st.hand.some((c) => suitOf(c) === led)) { tut.follow = true; showCoach(T('tutFollow'), true); }
+    }
+    if (!tut.s13 && st.canDeclare13) { tut.s13 = true; showCoach(T('tut13'), true); }
+  }
+  const ps = st.piles ? st.piles.reduce((a, b) => a + b, 0) : 0;
+  if (ps > tut.piles) {
+    if (!tut.trickwin && st.trickWinner != null && st.trickWinner % 2 === myTeam) {
+      const tw = (st.trick || []).reduce((a, p) => a + tutTawanOf(p.card), 0);
+      if (tw > 0) { tut.trickwin = true; showCoach(T('tutTrickWin'), true); }
+    }
+    tut.piles = ps;
+  }
+  if (st.phase === 'roundEnd' && !tut.banked) { tut.banked = true; showCoach(T('tutBank'), true); }
 }
 
 // ----- asset warm-up (offline entry) -----
@@ -9018,7 +9300,8 @@ async function warmAssets() {
 //   - 'rtc' frames are dropped (bots hold no peer connections);
 //   - a match end records NO stats and NO leaderboard entry.
 class LocalHost {
-  constructor() {
+  constructor(opts) {
+    this.tutOpts = opts || null; // F40 tutorial rig: seeded rng + pacing
     this.G = window.ToreEngine;
     this.bots = window.ToreBots;
     this.room = null;
@@ -9184,6 +9467,8 @@ class LocalHost {
       pendingTakan: room.match ? room.match.pendingTakan.slice() : [0, 0],
       piles: round ? round.wonTricks.slice() : [0, 0, 0, 0],
       canDeclare13: round && !room.trickHold ? round.canDeclare13(seatIdx) : false,
+      coachCard: (this.tutOpts && seatIdx === 0 && round && room.phase === 'playing' && !room.trickHold && round.turn === 0)
+        ? (() => { try { return this.bots.chooseCard(round, 0); } catch (e) { return null; } })() : null,
       declared13: round ? round.declared13 : false,
       roundNo: room.match ? room.match.roundNo : 0,
       roundResult: (room.phase === 'roundEnd' || room.phase === 'matchEnd') ? last : null,
@@ -9220,7 +9505,7 @@ class LocalHost {
         room.match.startRound();
         this.broadcastState(room);
         this.pumpTurn(room);
-      }, 8000); // ROUND_PAUSE_MS — the summary card's full read
+      }, this.tutOpts ? this.tutOpts.roundMs : 8000); // ROUND_PAUSE_MS — the summary card's full read
     } else if (evt.type === 'matchFinished') {
       room.phase = 'matchEnd';
       this.cancelT(room.turnTimer); room.turnTimer = null;
@@ -9257,7 +9542,7 @@ class LocalHost {
         if (this.room !== room) return;
         this.broadcastState(room);
         this.pumpTurn(room);
-      }, 1600); // TRICK_PAUSE_MS
+      }, this.tutOpts ? this.tutOpts.trickMs : 1600); // TRICK_PAUSE_MS
       return true;
     }
     this.broadcastState(room);
@@ -9286,7 +9571,7 @@ class LocalHost {
     if (round.finished) return;
     const seat = round.turn;
     const info = room.seats[seat];
-    const delay = info.kind === 'bot' ? 750 : 30000; // BOT_DELAY_MS : TURN_TIMEOUT_MS
+    const delay = info.kind === 'bot' ? (this.tutOpts ? this.tutOpts.botMs : 750) : (this.tutOpts ? this.tutOpts.turnMs : 30000); // BOT_DELAY_MS : TURN_TIMEOUT_MS
     room.turnTimer = this.later(() => this.botPlay(room, seat, info.kind === 'bot'), delay);
   }
   startMatch(room) {
@@ -9307,7 +9592,7 @@ class LocalHost {
         s.voiceSpeaker = false;
       }
     });
-    room.match = new this.G.Match(room.emit);
+    room.match = new this.G.Match(room.emit, this.tutOpts ? this.tutOpts.rng : undefined);
     room.match.botSeats = room.seats.map((s) => s.kind === 'bot');
     room.phase = 'playing';
     room.match.startRound();
@@ -9709,6 +9994,236 @@ function buzz(pattern) {
   if (!toreSetting('vibrate', false)) return;
   if (navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) { /* unsupported (iOS) */ } }
 }
+// ================= feat2: sounds, takan FX, music =================
+// F19 — zero-asset WebAudio SFX. The AudioContext is created /
+// resumed lazily (first user gesture unlocks it — see the
+// pointerdown hook below); every entry point is guarded so a
+// missing or blocked AudioContext is a silent no-op. The whole
+// module is gated by the «د لوبې غږ» switch (tore.set.sound,
+// DEFAULT ON), read live on every sound.
+const sfx = (() => {
+  let ac = null, master = null;
+  function ctx() {
+    if (!toreSetting('sound', true)) return null;
+    try {
+      if (!ac) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        ac = new AC();
+        master = ac.createGain();
+        master.gain.value = 0.15;
+        master.connect(ac.destination);
+      }
+      if (ac.state === 'suspended') { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); }
+      return ac;
+    } catch (e) { return null; }
+  }
+  function tone(freq, delay, dur, type, vol, slideTo) {
+    const c = ctx(); if (!c || !master) return;
+    try {
+      const t0 = c.currentTime + (delay || 0);
+      const o = c.createOscillator(); const g = c.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, t0);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(vol || 0.5, t0 + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(master);
+      o.start(t0); o.stop(t0 + dur + 0.05);
+    } catch (e) { /* guarded no-op */ }
+  }
+  function tap() { // cardPlay: a short soft filtered-noise tap
+    const c = ctx(); if (!c || !master) return;
+    try {
+      const dur = 0.06;
+      const buf = c.createBuffer(1, Math.max(1, Math.ceil(c.sampleRate * dur)), c.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const srcb = c.createBufferSource(); srcb.buffer = buf;
+      const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 0.8;
+      const g = c.createGain(); g.gain.value = 0.5;
+      srcb.connect(f); f.connect(g); g.connect(master);
+      srcb.start();
+    } catch (e) { /* guarded no-op */ }
+  }
+  return {
+    card() { tap(); },
+    trickWin() { tone(660, 0, 0.12, 'sine', 0.32); tone(880, 0.09, 0.17, 'sine', 0.32); },
+    roundWin() { tone(523.25, 0, 0.14, 'triangle', 0.38); tone(659.25, 0.1, 0.14, 'triangle', 0.38); tone(783.99, 0.2, 0.24, 'triangle', 0.38); },
+    roundLose() { tone(392, 0, 0.16, 'triangle', 0.33); tone(329.63, 0.12, 0.26, 'triangle', 0.33); },
+    matchWin() { [523.25, 659.25, 783.99, 1046.5].forEach((fr, i) => tone(fr, i * 0.11, 0.26, 'triangle', 0.38)); },
+    matchLose() { tone(330, 0, 0.25, 'sine', 0.38); tone(262, 0.2, 0.42, 'sine', 0.38); },
+    invite() { tone(1046.5, 0, 0.16, 'sine', 0.28); },
+    takan() { tone(196, 0, 0.3, 'sine', 0.7, 65); tone(98, 0, 0.34, 'triangle', 0.5, 49); },
+    unlock() { ctx(); },
+    _ctx() { return ac; },
+  };
+})();
+// F10 — the takan vibration detector (pure; unit-tested through
+// window.ToreFx). Reads ONLY the round-result the state already
+// carries: claimsExecuted[other] > 0 means a claim executed
+// AGAINST my team at this round end (strong); a team whose
+// created claims exceed its executed ones holds NEW pending
+// claims (normal). Mirrors the score-strip ★ semantics exactly.
+function takanRoundFx(r, myTeam) {
+  if (!r) return null;
+  const created = r.claimsCreated || [0, 0];
+  const executed = r.claimsExecuted || [0, 0];
+  if ((executed[1 - myTeam] || 0) > 0) return 'strong';
+  for (const t of [0, 1]) if ((created[t] || 0) > (executed[t] || 0)) return 'normal';
+  return null;
+}
+// F28 — the shared burst players. Reduced-motion: the CSS media
+// query collapses the animations; here we just don't add rays.
+function fxReducedMotion() {
+  try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+  catch (e) { return false; }
+}
+function showTakanBurst(mine) {
+  const b = $('#takanbanner');
+  if (!b) return;
+  b.textContent = mine ? T('takanBannerUs') : T('takanBannerThem');
+  b.classList.remove('show', 'burst');
+  void b.offsetWidth; // restart the animation
+  b.classList.add('show');
+  if (!fxReducedMotion()) b.classList.add('burst');
+}
+function show13Burst(name) {
+  const b = $('#burst13');
+  if (!b) return;
+  const sub = b.querySelector('.b13-sub');
+  if (sub) sub.textContent = name || '';
+  b.classList.remove('show');
+  void b.offsetWidth;
+  b.classList.add('show');
+}
+// The round-end edge: vibration (F10) + takan thud & burst (F19 /
+// F28) + the win/lose motif (F19). Motif rule: the team that
+// banked LESS this round had the better round (tawan is bad).
+function processRoundEndFx(r, myTeam) {
+  const kind = takanRoundFx(r, myTeam);
+  if (kind === 'strong') buzz([120, 50, 120]);
+  else if (kind === 'normal') buzz([70, 40, 70]);
+  const created = r.claimsCreated || [0, 0];
+  const hasTakan = (created[0] + created[1]) > 0;
+  const banked = r.banked || r.cardTawan || [0, 0];
+  const motif = () => {
+    if (banked[myTeam] < banked[1 - myTeam]) sfx.roundWin();
+    else if (banked[myTeam] > banked[1 - myTeam]) sfx.roundLose();
+  };
+  if (hasTakan) {
+    sfx.takan();
+    const t = created[0] > created[1] ? 0 : 1;
+    setTimeout(() => showTakanBurst(t === myTeam), 30);
+    setTimeout(motif, 380);
+  } else {
+    motif();
+  }
+}
+window.ToreFx = { takanRoundFx, processRoundEndFx, sfx };
+// F41 — background music: a separate procedural WebAudio pad
+// loop (slow sine/triangle chords + a very soft pluck line),
+// master gain ~0.05, lookahead-scheduled. Independent of the
+// sound switch; runs only while «د شاليد موسيقي» is ON (default
+// OFF) and only after a user gesture; pauses while the page is
+// hidden. Fully guarded — no AudioContext, no crash, no music.
+const ToreMusic = (() => {
+  let ac = null, master = null, timer = null, nextAt = 0, step = 0, running = false;
+  const CHORDS = [
+    [261.63, 329.63, 392.0],   // C
+    [220.0, 261.63, 329.63],   // Am
+    [174.61, 220.0, 261.63],   // F
+    [196.0, 246.94, 293.66],   // G
+  ];
+  function ensure() {
+    try {
+      if (!ac) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return false;
+        ac = new AC();
+        master = ac.createGain();
+        master.gain.value = 0.05;
+        master.connect(ac.destination);
+      }
+      return true;
+    } catch (e) { return false; }
+  }
+  function pad(freqs, t, dur) {
+    freqs.forEach((fr, i) => {
+      try {
+        const o = ac.createOscillator(); const g = ac.createGain();
+        o.type = i === 0 ? 'triangle' : 'sine';
+        o.frequency.value = fr;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.4, t + 1.3);
+        g.gain.linearRampToValueAtTime(0.0001, t + dur);
+        o.connect(g); g.connect(master);
+        o.start(t); o.stop(t + dur + 0.1);
+      } catch (e) { /* guarded */ }
+    });
+  }
+  function pluck(fr, t) {
+    try {
+      const o = ac.createOscillator(); const g = ac.createGain();
+      o.type = 'sine'; o.frequency.value = fr;
+      g.gain.setValueAtTime(0.16, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 1.5);
+      o.connect(g); g.connect(master);
+      o.start(t); o.stop(t + 1.6);
+    } catch (e) { /* guarded */ }
+  }
+  function tick() {
+    if (!running || !ac) return;
+    try {
+      while (nextAt < ac.currentTime + 0.35) {
+        const ch = CHORDS[step % CHORDS.length];
+        pad(ch, nextAt, 4.6);
+        pluck(ch[step % ch.length] * 2, nextAt + 1.1);
+        pluck(ch[(step + 1) % ch.length] * 2, nextAt + 2.7);
+        nextAt += 4.2;
+        step++;
+      }
+    } catch (e) { /* guarded */ }
+  }
+  function start() {
+    if (running) return;
+    if (!toreSetting('music', false)) return;
+    if (!ensure()) return;
+    try {
+      if (master) master.gain.value = 0.05;
+      if (ac.state === 'suspended') { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); }
+      running = true;
+      nextAt = ac.currentTime + 0.08;
+      step = 0;
+      timer = setInterval(tick, 400);
+      tick();
+    } catch (e) { running = false; }
+  }
+  function stop() {
+    running = false;
+    if (timer) { clearInterval(timer); timer = null; }
+    try { if (ac && ac.state === 'running') { const p = ac.suspend(); if (p && p.catch) p.catch(() => {}); } } catch (e) { /* guarded */ }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (running) stop(); }
+    else if (toreSetting('music', false)) start();
+  });
+  return {
+    start, stop,
+    onToggle() { if (toreSetting('music', false)) start(); else stop(); },
+    isRunning() { return running; },
+    _ctx() { return ac; },
+  };
+})();
+window.ToreMusic = ToreMusic;
+// Autoplay policy: the first tap anywhere unlocks the SFX
+// context and (if enabled) starts the music.
+document.addEventListener('pointerdown', () => {
+  sfx.unlock();
+  if (toreSetting('music', false)) ToreMusic.start();
+}, { passive: true });
+
 function paintSettings() {
   const cur = $('#st-lang-cur');
   if (cur) cur.textContent = { ps: 'پښتو', fa: 'دری', en: 'English' }[LANG] || LANG;
@@ -9717,6 +10232,16 @@ function paintSettings() {
   const cc = $('#st-chat-check'); if (cc) cc.classList.toggle('on', c);
   const vr = $('#row-set-vibrate'); if (vr) vr.setAttribute('aria-checked', String(v));
   const cr = $('#row-set-chat'); if (cr) cr.setAttribute('aria-checked', String(c));
+  // feat2 switches: DND + invisible (server-truth flags mirrored
+  // locally for the switch), sounds (default ON), music (default OFF).
+  const paintTog = (check, row, on) => {
+    const ck = $(check); if (ck) ck.classList.toggle('on', on);
+    const rw = $(row); if (rw) rw.setAttribute('aria-checked', String(on));
+  };
+  paintTog('#st-dnd-check', '#row-set-dnd', toreSetting('dnd', false));
+  paintTog('#st-invisible-check', '#row-set-invisible', toreSetting('invisible', false));
+  paintTog('#st-sound-check', '#row-set-sound', toreSetting('sound', true));
+  paintTog('#st-music-check', '#row-set-music', toreSetting('music', false));
   paintFelts();
   paintBacks();
 }
@@ -9911,6 +10436,16 @@ function bindToggleRow(id, key, dflt, after) {
 }
 bindToggleRow('#row-set-vibrate', 'vibrate', false, null);
 bindToggleRow('#row-set-chat', 'chat', true, applyChatSetting);
+// F5/F46: the flag's truth lives on the social directory record —
+// the toggle flips the local mirror AND tells the server.
+bindToggleRow('#row-set-dnd', 'dnd', false, () => {
+  if (typeof socialSend === 'function') socialSend({ type: 's-dnd', on: toreSetting('dnd', false) });
+});
+bindToggleRow('#row-set-invisible', 'invisible', false, () => {
+  if (typeof socialSend === 'function') socialSend({ type: 's-invisible', on: toreSetting('invisible', false) });
+});
+bindToggleRow('#row-set-sound', 'sound', true, null);
+bindToggleRow('#row-set-music', 'music', false, () => { if (window.ToreMusic) window.ToreMusic.onToggle(); });
 $('#btn-settings').onclick = openSettings;
 $('#btn-settings-close').onclick = closeSettings;
 $('#ov-settings').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeSettings(); });
@@ -10427,6 +10962,7 @@ function onMsg(msg) {
   } else if (msg.type === 'rtc') {
     onRtcSignal(msg.from, msg.data);
   } else if (msg.type === 'takan') {
+    if (tut && !tut.takan) { tut.takan = true; showCoach(T('tutTakan'), true); }
     const mine = msg.team === (mySeat % 2);
     const b = $('#takanbanner');
     b.textContent = mine ? T('takanBannerUs') : T('takanBannerThem');
@@ -10435,6 +10971,8 @@ function onMsg(msg) {
     b.classList.add('show');
   } else if (msg.type === 'declared13') {
     const nm = state && state.seats[msg.seat] ? (dispName(state.seats[msg.seat]) || T('playerName')) : T('playerName');
+    if (tut && !tut.s13) { tut.s13 = true; showCoach(T('tut13'), true); }
+    show13Burst(nm); // F28: «۱۳!» bursts for ALL players, not only the declarer
     toast(T('declaredToast', nm));
   } else if (msg.type === 'rematch-cancelled') {
     toast(msg.reason === 'declined' ? T('rematchDeclinedToast')
@@ -10593,6 +11131,11 @@ function onSocialMsg(m) {
   if (m.type === 's-init') {
     socialMe = m.me;
     if (m.uid) socialUid = String(m.uid);
+    // F5/F46: server-truth flags — the settings switches mirror
+    // whatever the directory record says (another device may have
+    // flipped them).
+    if (typeof m.dnd === 'boolean') setToreSetting('dnd', m.dnd);
+    if (typeof m.invisible === 'boolean') setToreSetting('invisible', m.invisible);
     renderMyId();
     applySocialLists(m);
   } else if (m.type === 's-friends') {
@@ -10610,6 +11153,7 @@ function onSocialMsg(m) {
       x.online = !!m.online;
       if (m.ingame !== undefined) x.ingame = !!m.ingame;
       if (m.inlobby !== undefined) x.inlobby = !!m.inlobby;
+      if (m.dnd !== undefined) x.dnd = !!m.dnd;
     };
     const p = socialPeople.get(m.id);
     if (p) applyPresence(p);
@@ -10784,6 +11328,7 @@ function onSocialMsg(m) {
     // 30 s expiry) can the next invite show.
     if (!inviteCurrent) {
       inviteCurrent = { from: m.from, code: m.code, src: m.src || null };
+      sfx.invite();
       showInvite();
     }
   } else if (m.type === 's-invite-result') {
@@ -11356,6 +11901,13 @@ function personRow(p, actions, opts) {
   const nm = document.createElement('div');
   nm.className = 'fr-name';
   nm.textContent = p.name || T('playerName');
+  if (p.dnd) { // F5: 🌙 marks a friend who muted game invites
+    const moon = document.createElement('span');
+    moon.className = 'fr-dnd';
+    moon.textContent = ' 🌙';
+    moon.title = T('setDnd');
+    nm.appendChild(moon);
+  }
   const sub = document.createElement('div');
   sub.className = 'fr-sub';
   const dot = document.createElement('span');
@@ -13024,6 +13576,98 @@ async function uploadClubCover(blob) {
   toast(T('clCoverSaved'));
   return true;
 }
+// ----- F17: upload own profile photo -----
+// Mirrors the club-cover flow: the picked image is downscaled on
+// a canvas (max 384×384, JPEG, quality ladder down until the blob
+// is ≤120 KB) and POSTed to /p-photo — never over the social
+// socket. The SERVER derives the player identity (Worker session
+// cookie / Node x-tore-pid), stores the blob in the social store
+// and points the directory record at /p-photo/<uid>.jpg?v=N; the
+// client then wears it through the normal 'google'-style photo
+// path (profile.photo + avatar 'google'), so every render site
+// (own profile, friends rows, player view, table badges, club
+// lists) shows it unchanged.
+let photoPickCb = null;
+function pickPhotoFile(cb) {
+  photoPickCb = cb;
+  const inp = $('#photo-file');
+  if (!inp) return;
+  inp.value = '';
+  inp.click();
+}
+$('#photo-file').addEventListener('change', (e) => {
+  const f = e.target.files && e.target.files[0];
+  const cb = photoPickCb;
+  photoPickCb = null;
+  if (f && cb) cb(f);
+});
+async function photoFileToBlob(file) {
+  if (!file) return null;
+  let bmp = null;
+  try { bmp = await createImageBitmap(file); } catch (e) { bmp = null; }
+  if (!bmp) {
+    bmp = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = URL.createObjectURL(file);
+    });
+    if (!bmp) return null;
+  }
+  const w = bmp.width || bmp.naturalWidth;
+  const h = bmp.height || bmp.naturalHeight;
+  if (!w || !h) return null;
+  const sc = Math.min(1, 384 / w, 384 / h);
+  const cnv = document.createElement('canvas');
+  cnv.width = Math.max(1, Math.round(w * sc));
+  cnv.height = Math.max(1, Math.round(h * sc));
+  cnv.getContext('2d').drawImage(bmp, 0, 0, cnv.width, cnv.height);
+  const encode = (q) => new Promise((resolve) => {
+    if (cnv.toBlob) cnv.toBlob((b) => resolve(b), 'image/jpeg', q);
+    else resolve(null);
+  });
+  for (const q of [0.82, 0.7, 0.55]) {
+    const b = await encode(q);
+    if (b && b.size <= 120 * 1024) return b;
+    if (b && q === 0.55) return b; // smallest we can make — the server cap still guards
+  }
+  return null;
+}
+async function uploadProfilePhoto(blob) {
+  if (!blob) return false;
+  const headers = { 'Content-Type': 'image/jpeg' };
+  let pid = '';
+  try { pid = localStorage.getItem('tore.pid') || ''; } catch (e) { /* private mode */ }
+  if (pid) headers['x-tore-pid'] = pid;
+  let res = null;
+  try {
+    res = await fetch('/p-photo', { method: 'POST', headers, body: blob, credentials: 'same-origin' });
+  } catch (e) { /* offline */ }
+  if (!res) { toast(T('errServerError')); return false; }
+  if (!res.ok) {
+    let code = '';
+    try { code = (await res.json()).error || ''; } catch (e) { /* not json */ }
+    toast(code === 'photoTooBig' ? T('errPhotoTooBig')
+      : code === 'photoBadType' ? T('errCoverBadType')
+      : T('errServerError'));
+    return false;
+  }
+  let out = null;
+  try { out = await res.json(); } catch (e) { /* not json */ }
+  if (!out || !out.photo) { toast(T('errServerError')); return false; }
+  profile.photo = out.photo;
+  pfAvatar = 'google';
+  pfPersist(); // commits avatar+photo locally and re-hellos the directory
+  pfRenderGrid();
+  pfRenderPreview();
+  toast(T('pfPhotoSaved'));
+  return true;
+}
+$('#btn-pf-upload').onclick = () => pickPhotoFile(async (file) => {
+  const blob = await photoFileToBlob(file);
+  if (blob) await uploadProfilePhoto(blob);
+});
+
 function buildCatRow(box, current, onPick) {
   if (!box) return;
   box.innerHTML = '';
@@ -14315,6 +14959,20 @@ function seatFromRect(seat) {
 }
 
 function playCard(code, fromRect) {
+  // F40: during the lesson, only the glowing coach card plays —
+  // any other tap shakes the card and re-shows the hint, so the
+  // scripted beats (follow suit, takan, 13) always land.
+  if (tut && state && state.coachCard && code !== state.coachCard) {
+    const el = document.querySelector('#hand .card[data-code="' + code + '"]');
+    if (el) {
+      el.style.opacity = '';
+      el.classList.remove('coach-shake');
+      void el.offsetWidth;
+      el.classList.add('coach-shake');
+    }
+    showCoach(T('tutPlayCard'), false);
+    return;
+  }
   flownKeys.add(mySeat + ':' + code);
   buzz(25);
   const pid = ++pendingSeq;
@@ -14430,6 +15088,11 @@ function barAvatar(pos, s, seatIdx) {
 }
 
 let prevPhase = ''; // matchEnd edge for the vibration buzz
+// feat2 FX tracking (state-diff edges, fired once per transition)
+let fxRoundNo = -1;    // last round number the round-end FX ran for
+let fxTrickLen = 0;    // previous trick size (card-play tap)
+let fxPilesSum = 0;    // tricks completed this round (trick-win chime)
+let fxPilesRound = -1; // round the piles baseline belongs to
 let ovRoundNo = -1;      // roundNo of the round summary currently on screen
 let ovRoundDismissed = -1; // roundNo this player tapped away (this screen only)
 function render(st) {
@@ -14586,15 +15249,33 @@ function render(st) {
     el.style.setProperty('--rot', ((idx - (sorted.length - 1) / 2) * FAN_ROT_STEP).toFixed(1) + 'deg'); // arc fan
     el.style.zIndex = idx + 1; // each card overlaps the previous one, rightmost on top
     if (playable) attachPlayHandlers(el, code);
+    if (tut && st.coachCard && code === st.coachCard) el.classList.add('coach-glow');
     handEl.appendChild(el);
   });
   fitHand();
+
+  // feat2 FX: a card landing taps; my team collecting a trick
+  // chimes. Spectators and seatless states stay silent.
+  if (st.roundNo !== fxPilesRound) { fxPilesRound = st.roundNo; fxPilesSum = 0; }
+  if (mySeat >= 0 && !spectating && st.phase === 'playing') {
+    if (st.trick.length > fxTrickLen) sfx.card();
+    const ps = st.piles ? st.piles.reduce((a, b) => a + b, 0) : 0;
+    if (ps > fxPilesSum && st.trickWinner != null && st.trickWinner % 2 === myTeam) sfx.trickWin();
+    fxPilesSum = ps;
+  }
+  fxTrickLen = st.trick.length;
+  tutRenderSteps(st);
 
   // overlays
   const r = st.roundResult;
   $('#ov-round').classList.toggle('show', st.phase === 'roundEnd' && !!r && r.roundNo !== ovRoundDismissed);
   if (r && st.phase === 'roundEnd') {
     ovRoundNo = r.roundNo;
+    // feat2: F10 vibration + F19 motifs + F28 burst, once per round
+    if (r.roundNo !== fxRoundNo) {
+      fxRoundNo = r.roundNo;
+      if (mySeat >= 0 && !spectating) processRoundEndFx(r, myTeam);
+    }
     $('#ov-round-title').textContent = T('roundEndTitle', faNum(r.roundNo));
     // Name the teams by their PLAYERS in every summary line that carries a
     // per-team value, so no number can ever be read against the wrong team
@@ -14667,7 +15348,14 @@ function render(st) {
       $('#ov-tie').textContent = T('tieLine', teamNames(r.qsTeam));
     }
   }
-  if (st.phase === 'matchEnd' && prevPhase !== 'matchEnd' && st.matchWinner === myTeam) buzz([45, 40, 45]);
+  if (st.phase === 'matchEnd' && prevPhase !== 'matchEnd') {
+    if (st.matchWinner === myTeam) {
+      buzz([45, 40, 45]);
+      if (mySeat >= 0 && !spectating) sfx.matchWin();
+    } else if (mySeat >= 0 && !spectating) {
+      sfx.matchLose();
+    }
+  }
   prevPhase = st.phase;
   $('#ov-match').classList.toggle('show', st.phase === 'matchEnd');
   paintRematch(st);
