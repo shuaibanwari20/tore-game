@@ -789,7 +789,7 @@
      behind a dark emerald veil, its own scroll. Opened from the
      bottom nav (and from the lobby's friends button); it floats
      above home/lobby/table without disturbing the game screens. */
-  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders {
+  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-pview, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders {
     position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 30;
     overflow-x: hidden;
     /* The home screen's dark emerald veil, without the carpet photo:
@@ -810,7 +810,7 @@
      friends/picker/chats reskins already carry for themselves;
      the screens still on the veil (clubs family, leaders) keep
      it until he says otherwise. */
-  #scr-profile {
+  #scr-profile, #scr-pview {
     background-color: #6d0d3f;
     background-image:
       linear-gradient(45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
@@ -830,7 +830,7 @@
   #scr-friends { display: flex; flex-direction: column; overflow-y: hidden; }
   /* Chat + profile pages (owner order 2026-11-08): same family as the
      friends screen — scrolling content, bottom nav pinned at the foot. */
-  #scr-chats, #scr-profile, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders { display: flex; flex-direction: column; overflow-y: hidden; }
+  #scr-chats, #scr-profile, #scr-pview, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders { display: flex; flex-direction: column; overflow-y: hidden; }
   .fr-scroll { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; width: 100%; }
   #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav, #scr-clubpage .hm-nav, #scr-clubmembers .hm-nav, #scr-clubseatreqs .hm-nav, #scr-picker .hm-nav, #scr-leaders .hm-nav { margin: 0; flex: none; width: 100%; }
   /* chat list rows: the whole row is the tap target into the DM view */
@@ -1051,13 +1051,9 @@
   .pmpop-sep { border-top: 1px solid rgba(217,179,128,.35); margin: 6px 0; }
   /* ===== clubs v2 (Ludo-style discovery + club room) ===== */
   .cl-create-wide { width: 100%; margin: 2px 0 10px; }
-  .cl-topbar { display: flex; align-items: stretch; gap: 8px; margin-bottom: 10px; }
-  .cl-tabs { display: flex; flex: 1; gap: 6px; }
-  .cl-tab { flex: 1; margin: 0; padding: 10px 4px; font-size: 15px; font-weight: 800; font-family: inherit;
-    background: rgba(255,255,255,.05); color: #cfe8d8; border: 1.5px solid rgba(217,179,128,.35);
-    border-radius: 12px; cursor: pointer; }
-  .cl-tab.sel { background: linear-gradient(165deg, #146545, #0a3520); color: #ffd75e;
-    border-color: #ffd75e; box-shadow: 0 0 0 1px rgba(255,215,94,.35), 0 4px 12px rgba(0,0,0,.35); }
+  /* the search toggle lives in the discovery HEADER row now
+     (owner order 2026-11-12: rightmost, beside the create
+     pill) — its old standalone row under the header is gone */
   .cl-searchbtn { flex: 0 0 46px; margin: 0; border-radius: 50%; border: 1.5px solid #ffd75e;
     background: linear-gradient(165deg, #146545, #07271a); cursor: pointer;
     display: flex; align-items: center; justify-content: center; }
@@ -1323,9 +1319,6 @@
     background: rgba(16,4,32,.85); color: #fff; border: 1px solid rgba(216,178,255,.45); }
   #ov-clubmenu { background: linear-gradient(165deg, #3d1163, #1e0636); border-color: rgba(216,178,255,.55); color: #f6efff; }
   /* --- discovery in purple --- */
-  #scr-clubs .cl-tab { background: rgba(20,6,40,.62); color: #e9defc; border-color: rgba(216,178,255,.3); }
-  #scr-clubs .cl-tab.sel { background: linear-gradient(180deg, #6d28a8, #4c1d95); color: #fff; border-color: #c9a6ff;
-    box-shadow: 0 0 0 1px rgba(201,166,255,.4), 0 4px 12px rgba(0,0,0,.4); }
   #scr-clubs .cl-searchbtn { background: radial-gradient(circle at 35% 30%, #6d28a8, #2a0a45 80%); border-color: #c9a6ff; }
   #scr-clubs .cl-searchbtn svg { stroke: #fff; }
   #scr-clubs .cl-searchbtn.on { background: linear-gradient(180deg, #ffd75e, #d9a83c); }
@@ -1367,17 +1360,7 @@
     border: 1.5px solid #ffadd9; border-radius: 999px; cursor: pointer;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -3px 6px rgba(120,10,70,.35), 0 4px 12px rgba(214,51,132,.45); }
   .cl-createbtn:active { transform: scale(.96); }
-  /* the tab bar: fat magenta tabs, the active one raised + hot pink */
-  #scr-clubs .cl-topbar { align-items: stretch; }
-  #scr-clubs .cl-tab { display: flex; align-items: center; justify-content: center; gap: 0;
-    background: linear-gradient(180deg, #7e2568, #5c1549); color: #ffd9f3;
-    border: 1.5px solid rgba(255,255,255,.14); border-radius: 14px; padding: 11px 4px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 3px 8px rgba(30,2,30,.35); }
-  #scr-clubs .cl-tab svg { width: 16.5px; height: 16.5px; flex: 0 0 auto; margin-inline-end: 5px; }
-  #scr-clubs .cl-tab.sel { background: linear-gradient(180deg, #ff8ade, #f452b8 45%, #dd379b);
-    color: #fff; border-color: #ffc2e8; transform: translateY(-3px);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.6), inset 0 -3px 6px rgba(140,10,90,.35), 0 7px 16px rgba(221,55,155,.5); }
-  /* the search toggle: a glossy purple SQUARE at the tab row's end */
+  /* the search toggle: a glossy purple SQUARE at the header row's right end */
   #scr-clubs .cl-searchbtn { flex-basis: 48px; border-radius: 14px;
     background: linear-gradient(180deg, #b06bf7, #7d30e8 55%, #5c17c4);
     border: 1.5px solid rgba(255,255,255,.4);
@@ -1697,21 +1680,31 @@
   .seatrow.tappable:active { background: rgba(255, 215, 94, .10); }
   /* Player menu = a SMALL ANCHORED CARD beside the tapped avatar
      (lobby row or table badge), not a centred overlay: a slim
-     avatar+name header over two list rows (icon + label + chevron)
-     in the game's dark emerald/gold. z-index stays under the modal
-     overlays (40) so a round summary always covers it. The friend
-     row ⋯ menu shares the SAME card (owner order 2026-11-09) with
-     its own slightly higher z-index: it floats over the friends
-     screen, whose only modals are the confirms it hands off to. */
+     avatar+name header over two list rows (icon + label + chevron).
+     z-index stays under the modal overlays (40) so a round summary
+     always covers it. The friend row ⋯ menu shares the SAME card
+     (owner order 2026-11-09) with its own slightly higher z-index:
+     it floats over the friends screen, whose only modals are the
+     confirms it hands off to. Both cards wore the OLD dark emerald
+     until 2026-11-12 — the owner photographed the ⋯ popover still
+     green and ordered the new UI: they now wear the Ludo family
+     card (the #ov-round/.pf-card magenta gradient, gold accents,
+     dark-plum rows), exactly like the popui batch. (The club seat
+     menu #ov-clubmenu already wears its own purple — untouched.) */
   #ov-playermenu, #ov-friendmenu {
     position: fixed; z-index: 38; width: 234px; display: none;
-    background: linear-gradient(165deg, #0f4026, #07271a);
-    border: 1.5px solid #d9b380; border-radius: 14px; padding: 8px;
-    box-shadow: 0 12px 30px rgba(0,0,0,.6), inset 0 0 22px rgba(0,0,0,.35);
-    color: #f5e7c6;
+    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
+    border: 2px solid rgba(255,183,224,.4); border-radius: 14px; padding: 8px;
+    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
+    color: #fff;
   }
   #ov-playermenu.show, #ov-friendmenu.show { display: block; }
   #ov-friendmenu { z-index: 44; }
+  #ov-playermenu .pmpop-head, #ov-friendmenu .pmpop-head { border-bottom-color: rgba(255,183,224,.45); }
+  #ov-playermenu .pmpop-row, #ov-friendmenu .pmpop-row { color: #fff; background: rgba(43,6,54,.45);
+    box-shadow: inset 0 2px 8px rgba(0,0,0,.35); margin-top: 5px; }
+  #ov-playermenu .pmpop-row:active, #ov-friendmenu .pmpop-row:active { background: rgba(43,6,54,.78); }
+  #ov-playermenu .pmpop-row:disabled, #ov-friendmenu .pmpop-row:disabled { background: rgba(43,6,54,.3); }
   .pmpop-head { display: flex; align-items: center; gap: 9px; padding: 3px 8px 9px;
     border-bottom: 1px solid rgba(217,179,128,.35); margin-bottom: 6px; }
   .pmpop-head .pavatar { border-radius: 50%; border: 2px solid #eec95f; flex: 0 0 auto; }
@@ -1726,12 +1719,6 @@
   .pmpop-ic svg { width: 20px; height: 20px; display: block; color: #ffd75e; }
   .pmpop-lbl { flex: 1 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pmpop-ch { color: #ffd75e; font-size: 20px; line-height: 1; flex: 0 0 auto; }
-  #ov-playerview { z-index: 47; }
-  .pv-av { display: flex; justify-content: center; margin-bottom: 6px; }
-  .pv-av .pavatar { border-radius: 50%; border: 2.5px solid #eec95f; }
-  .pv-name { display: block; text-align: center; }
-  .pv-line { text-align: center; font-size: 14.5px; margin-top: 3px; }
-  .pv-rel { text-align: center; font-size: 13px; opacity: .85; margin-top: 2px; min-height: 18px; }
 
   /* ---------- profile popup ----------
      Compact by design: the WHOLE popup (title, preview, Google tile +
@@ -1935,20 +1922,20 @@
      in localStorage, and the profile شمېرې rows show only data the
      game actually has (server ID, friends count, club, country). */
   /* --- profile: the card --- */
-  #scr-profile .fr-inner { padding: 12px 14px 14px; }
-  #scr-profile .pf-card { position: relative; color: #fff; border-radius: 22px; padding: 13px 14px 13px;
+  #scr-profile .fr-inner, #scr-pview .fr-inner { padding: 12px 14px 14px; }
+  #scr-profile .pf-card, #scr-pview .pf-card { position: relative; color: #fff; border-radius: 22px; padding: 13px 14px 13px;
     border: 3px solid #f0b93e;
     background: linear-gradient(180deg, #d81b74 0%, #b3126e 32%, #8e1a63 66%, #67124e 100%);
     box-shadow: 0 12px 28px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35); }
-  #scr-profile .pf-card .pf-x { position: absolute; top: -15px; inset-inline-start: -7px; z-index: 3;
+  #scr-profile .pf-card .pf-x, #scr-pview .pf-card .pf-x { position: absolute; top: -15px; inset-inline-start: -7px; z-index: 3;
     width: 46px; height: 46px; margin: 0; padding: 0; border-radius: 50%; cursor: pointer;
     background: radial-gradient(circle at 35% 27%, #ff9a86, #f03434 52%, #b30d0d 88%);
     border: 2px solid rgba(255,255,255,.4);
     box-shadow: inset 0 2px 3px rgba(255,255,255,.6), inset 0 -4px 7px rgba(90,0,0,.5), 0 4px 10px rgba(0,0,0,.45);
     display: flex; align-items: center; justify-content: center; }
-  #scr-profile .pf-card .pf-x svg { width: 21px; height: 21px; stroke: #fff; fill: none; stroke-width: 3.1;
+  #scr-profile .pf-card .pf-x svg, #scr-pview .pf-card .pf-x svg { width: 21px; height: 21px; stroke: #fff; fill: none; stroke-width: 3.1;
     stroke-linecap: round; filter: drop-shadow(0 1px 1px rgba(90,0,0,.6)); }
-  #scr-profile .pf-card .pf-x:active { transform: scale(.92); }
+  #scr-profile .pf-card .pf-x:active, #scr-pview .pf-card .pf-x:active { transform: scale(.92); }
   /* profile rework (2026-11-12): the .pf-headrow header bar rules
      are gone with the bar itself; .pf-pencil / .pf-flagname survive
      for the country row that now lives inside the photo frame. */
@@ -1965,15 +1952,15 @@
   /* the photo frame is the profile header now: photo, then the
      player NAME under it, then the COUNTRY row (flag + name +
      pencil) under the name — all inside the one gold frame. */
-  #scr-profile .pf-card .pf-pvwrap { margin-top: 2px; display: flex; justify-content: center; }
-  #scr-profile .pf-card .pf-preview { flex: 0 1 auto; }
-  #scr-profile .pf-card .pf-preview { background: rgba(43,6,54,.5); border: 2.5px solid #f0b93e; border-radius: 18px;
+  #scr-profile .pf-card .pf-pvwrap, #scr-pview .pf-card .pf-pvwrap { margin-top: 2px; display: flex; justify-content: center; }
+  #scr-profile .pf-card .pf-preview, #scr-pview .pf-card .pf-preview { flex: 0 1 auto; }
+  #scr-profile .pf-card .pf-preview, #scr-pview .pf-card .pf-preview { background: rgba(43,6,54,.5); border: 2.5px solid #f0b93e; border-radius: 18px;
     padding: 10px 18px 9px; box-shadow: inset 0 2px 9px rgba(0,0,0,.45), 0 4px 12px rgba(0,0,0,.3); }
-  #scr-profile .pf-card .pf-preview .pavatar { width: 116px !important; height: 116px !important; border-radius: 20px; }
-  #scr-profile .pf-card .pf-pvname { color: #fff; font-size: 17px; font-weight: 800; margin-top: 5px;
+  #scr-profile .pf-card .pf-preview .pavatar, #scr-pview .pf-card .pf-preview .pavatar { width: 116px !important; height: 116px !important; border-radius: 20px; }
+  #scr-profile .pf-card .pf-pvname, #scr-pview .pf-card .pf-pvname { color: #fff; font-size: 17px; font-weight: 800; margin-top: 5px;
     max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px rgba(0,0,0,.55); }
-  #scr-profile .pf-card .pf-pvcountry { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 3px; }
-  #scr-profile .pf-card .pf-pvcountry .pf-flagname { font-size: 14.5px; }
+  #scr-profile .pf-card .pf-pvcountry, #scr-pview .pf-card .pf-pvcountry { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 3px; }
+  #scr-profile .pf-card .pf-pvcountry .pf-flagname, #scr-pview .pf-card .pf-pvcountry .pf-flagname { font-size: 14.5px; }
   #scr-profile .pf-card .pf-pvcountry .pf-pencil.sm { width: 30px; height: 30px; }
   #scr-profile .pf-card .pf-pvcountry .pf-pencil.sm svg { width: 14px; height: 14px; }
   #scr-profile .pf-card .pf-editav { top: -9px; left: calc(50% + 50px); width: 38px; height: 38px;
@@ -2023,8 +2010,28 @@
   .pf-stat-lbl { font-size: 13.5px; font-weight: 700; color: #ffd7f2; }
   .pf-stat-val { font-size: 14px; font-weight: 800; color: #fff; background: rgba(0,0,0,.28);
     border-radius: 9px; padding: 3px 10px; min-width: 52px; text-align: center; }
-  #scr-profile .pf-card .pf-idnum { color: #fff; background: rgba(0,0,0,.28); border-radius: 9px;
+  #scr-profile .pf-card .pf-idnum, #scr-pview .pf-card .pf-idnum { color: #fff; background: rgba(0,0,0,.28); border-radius: 9px;
     font-size: 18px; letter-spacing: 3px; padding: 3px 11px; }
+  /* --- player profile view (pview): the friend-action row under
+     the photo container — one prominent button whose state is the
+     server's relationship word (friend / pending / respond /
+     request), plus the gold تماشا when he is in a game. The
+     request state wears the glossy green of the game's primary
+     actions; the settled states sit quiet in dark plum. --- */
+  .pv2-actions { margin-top: 11px; display: flex; flex-direction: column; gap: 8px; }
+  .pv2-actions button { width: 100%; margin: 0; padding: 11px; border-radius: 14px; font-size: 17px;
+    font-weight: 900; font-family: inherit; cursor: pointer; color: #fff;
+    background: linear-gradient(180deg, #5ecf6a, #23a047 55%, #17823a);
+    border: 2px solid rgba(255,255,255,.35);
+    box-shadow: 0 4px 12px rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.35); }
+  .pv2-actions button:active { transform: scale(.98); }
+  .pv2-actions button[disabled] { background: rgba(43,6,54,.55); color: #ffd7f2; border-color: rgba(255,255,255,.25);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.3); cursor: default; }
+  .pv2-actions button[disabled]:active { transform: none; }
+  #btn-pv2-watch { background: linear-gradient(180deg, #ffd75e, #d9a83c); color: #33270a; border-color: #ffd75e; }
+  /* a friend row's avatar+name block is the tap into his profile */
+  .fr-who-tap { cursor: pointer; }
+  .fr-who-tap:active { opacity: .72; }
   /* --- settings: the card --- */
   /* .st-wrap takes the panel's overlay box so the close ribbon can live
      OUTSIDE the scrolling panel (owner order 2026-11-11) without the
@@ -2142,6 +2149,19 @@
   #ov-feltview .fv-img { width: 92vw; max-width: 430px; height: 78dvh;
     background-size: contain; background-position: center; background-repeat: no-repeat; }
   #ov-feltview .ce-x { top: 14px; right: 14px; }
+  /* --- profile photo large viewer (owner order 2026-11-12): the
+     felt/back viewer pattern — dark stage, the player's picture
+     big in the gold frame; tap anywhere (or the ✖) closes. Works
+     for the Google photo and for the SVG portraits alike (the
+     .pavatar box simply scales). The framed photo containers on
+     both profile pages are the tap target (cursor below); the
+     frame PENCIL is a separate element and never opens this. --- */
+  #ov-photoview { background: rgba(0,0,0,.92); }
+  #ov-photoview .pavatar { width: min(72vw, 264px) !important; height: min(72vw, 264px) !important;
+    border-radius: 30px; border: 3px solid #f0b93e;
+    box-shadow: 0 18px 44px rgba(0,0,0,.65); }
+  #ov-photoview .ce-x { top: 14px; right: 14px; }
+  #pf-preview-av, #pv2-preview-av { cursor: pointer; }
   /* --- features batch: card backs (.cback-1..6, six original CSS
      designs in the plum/gold Ludo palette — gradients and repeating
      patterns under one centred gold star emblem), the leaders page,
@@ -2492,12 +2512,12 @@
      shell, not a panel. Ids, strings, geometry and behaviour
      are untouched. --- */
   #ov-pollcreate .panel, #ov-clubvs .panel, #ov-clubvsinv .panel,
-  #ov-blocked .panel, #ov-playerview .panel { border: 2px solid rgba(255,183,224,.4); border-radius: 22px; color: #fff;
+  #ov-blocked .panel { border: 2px solid rgba(255,183,224,.4); border-radius: 22px; color: #fff;
     background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
     box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
     padding: 18px 16px 14px; }
   #ov-pollcreate .panel h2, #ov-clubvs .panel h2, #ov-clubvsinv .panel h2,
-  #ov-blocked .panel h2, #ov-playerview .panel h2 { color: #ffd75e; font-size: 22px; margin: 0 0 12px;
+  #ov-blocked .panel h2 { color: #ffd75e; font-size: 22px; margin: 0 0 12px;
     text-shadow: 0 2px 5px rgba(0,0,0,.5); }
   #ov-pollcreate input, #ov-clubvs input { background: rgba(43,6,54,.55); color: #fff;
     border: 1.5px solid rgba(255,255,255,.4); border-radius: 13px;
@@ -2509,13 +2529,13 @@
   #ov-clubvs .fr-row:last-child, #ov-clubvsinv .fr-row:last-child, #ov-blocked .fr-row:last-child { margin-bottom: 0; }
   #cvi-players { color: #ffe9a3; }
   #ov-pollcreate .pf-btns, #ov-clubvs .pf-btns, #ov-clubvsinv .pf-btns,
-  #ov-blocked .pf-btns, #ov-playerview .pf-btns { margin-top: 14px; }
-  #btn-pc-create, #btn-cv-send, #btn-cvi-accept, #btn-pv-watch { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 900; color: #fff;
+  #ov-blocked .pf-btns { margin-top: 14px; }
+  #btn-pc-create, #btn-cv-send, #btn-cvi-accept { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 900; color: #fff;
     background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
     border: 2px solid rgba(255,255,255,.4);
     box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -5px 9px rgba(10,80,0,.4), 0 7px 16px rgba(20,90,0,.5);
     text-shadow: 0 1px 3px rgba(0,60,0,.5); }
-  #btn-pc-cancel, #btn-cv-cancel, #btn-cvi-decline, #btn-blocked-close, #btn-pv-close { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 800; color: #ffd9f3;
+  #btn-pc-cancel, #btn-cv-cancel, #btn-cvi-decline, #btn-blocked-close { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 800; color: #ffd9f3;
     background: rgba(43,6,54,.55); border: 1.5px solid rgba(255,255,255,.4);
     box-shadow: inset 0 2px 9px rgba(0,0,0,.45); }
   #ov-match #btn-rematch-accept { padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 900; color: #fff;
@@ -3342,6 +3362,52 @@
   </nav>
 </section>
 
+<!-- ======== PLAYER PROFILE VIEW (د بل لوبغاړي پروفایل) ========
+     Another player's FULL profile (owner order 2026-11-12): the
+     SAME page family as my own profile above — purple shell,
+     magenta card, framed photo container with the NAME and the
+     COUNTRY at its base, the شمېرې panel under it — but strictly
+     read-only (no pencils, no edit popup). The data is the
+     server's: the social directory card + club name + real match
+     stats (s-profile / s-profile-result in social-core). The one
+     action on the page is the friend button under the photo
+     container, whose state is the relationship itself (friend /
+     pending / respond / request; hidden for self, blocked and
+     seat-only strangers), plus the gold تماشا while he is in a
+     game. The ✖ returns to the screen it was opened from. -->
+<section id="scr-pview" class="hidden">
+  <div class="fr-scroll">
+    <div class="fr-inner">
+      <div class="pf-card">
+        <button type="button" class="pf-x" id="btn-pv2-close" aria-label="بندول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+        <div class="pf-pvwrap">
+          <div class="pf-preview" id="pv2-preview">
+            <div id="pv2-preview-av"></div>
+            <div class="pf-pvname" id="pv2-name">…</div>
+            <div class="pf-pvcountry">
+              <span class="pf-flagname" id="pv2-country">…</span>
+            </div>
+          </div>
+        </div>
+        <div class="pv2-actions">
+          <button type="button" id="btn-pv2-friend" class="hidden"></button>
+          <button type="button" id="btn-pv2-watch" class="hidden">تماشا</button>
+        </div>
+        <div class="pf-stats">
+          <div class="pf-stats-title" id="pv2-stats-title">شمېرې</div>
+          <div class="pf-stat"><span class="pf-stat-lbl" id="pv2-stat-id-lbl">د لوبغاړي پېژند</span><span class="pf-idnum" id="pv2-id" dir="ltr">…</span></div>
+          <div class="pf-stat"><span class="pf-stat-lbl" id="pv2-stat-friends-lbl">ملګري</span><span class="pf-stat-val" id="pv2-stat-friends">…</span></div>
+          <div class="pf-stat"><span class="pf-stat-lbl" id="pv2-stat-club-lbl">کلب</span><span class="pf-stat-val" id="pv2-stat-club">…</span></div>
+          <div class="pf-stat"><span class="pf-stat-lbl" id="pv2-stat-country-lbl">هېواد</span><span class="pf-stat-val" id="pv2-stat-country">…</span></div>
+          <div class="pf-stat"><span class="pf-stat-lbl" id="pv2-stat-played-lbl">لوبې</span><span class="pf-stat-val" id="pv2-stat-played">…</span></div>
+          <div class="pf-stat"><span class="pf-stat-lbl" id="pv2-stat-won-lbl">ګټلي</span><span class="pf-stat-val" id="pv2-stat-won">…</span></div>
+          <div class="pf-stat"><span class="pf-stat-lbl" id="pv2-stat-lost-lbl">بایللي</span><span class="pf-stat-val" id="pv2-stat-lost">…</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ======== PROFILE EDIT POPUP (نوم + انځور) ========
      ONE popup for name + avatar (owner order 2026-11-12), opened by
      the pencil on the profile photo frame. Reuses the existing
@@ -3413,13 +3479,13 @@
       <div class="cl-headrow">
         <button type="button" class="cl-xbtn" id="btn-cl-home" aria-label="close"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
         <button type="button" id="btn-cl-create" class="cl-createbtn"></button>
-      </div>
-      <div class="cl-topbar">
-        <div class="cl-tabs">
-          <button type="button" class="cl-tab sel" id="cl-tab-explore"></button>
-          <button type="button" class="cl-tab" id="cl-tab-hot"></button>
-          <button type="button" class="cl-tab" id="cl-tab-mine"></button>
-        </div>
+        <!-- The three discovery tabs (پلټنه / ګرم / زما) were
+             DELETED by the owner 2026-11-12: discovery is ONE
+             listing — the browse content below (top-3 stage,
+             country chips, search, the full grid). Owner order
+             2026-11-12: the search toggle moved UP into this
+             header row, rightmost, beside the create pill (it
+             used to sit alone in its own row underneath). -->
         <button type="button" class="cl-searchbtn" id="btn-cl-search-toggle" aria-label="search"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="M16 16l4.6 4.6"/></svg></button>
       </div>
       <div class="fr-searchrow hidden" id="cl-searchrow">
@@ -3447,19 +3513,10 @@
         <div class="cl-grid" id="cl-grid"></div>
         <div class="fr-empty hidden" id="cl-grid-empty"></div>
       </div>
-      <div id="cl-pane-mine" class="hidden">
-        <div class="cardbox cl-hero" id="cl-create-card">
-          <div class="cl-hero-emb" id="cl-hero-emb"></div>
-          <p class="cl-hero-text" id="cl-home-text"></p>
-        </div>
-        <div id="cl-myclub-slot"></div>
-        <div class="cardbox hidden" id="cl-invites-box">
-          <h3 class="fr-sec" id="cl-invites-title"></h3>
-          <div id="cl-invites"></div>
-        </div>
-        <h3 class="fr-sec hidden" id="cl-liked-title"></h3>
-        <div class="cl-grid" id="cl-liked-grid"></div>
-      </div>
+      <!-- The زما pane (create hero, my-club slot, club-invites
+           box, liked grid) left with its tab — see the topbar
+           note. My club's card is in the browse grid below, and
+           tapping it opens the room exactly as before. -->
     </div>
   </div>
   <!-- ======== CLUB ROOM ======== -->
@@ -3890,21 +3947,6 @@
   <div id="cm-rows"></div>
 </div>
 
-<!-- ======== PLAYER PROFILE VIEW ======== -->
-<div class="overlay" id="ov-playerview">
-  <div class="panel" style="max-width:340px">
-    <div class="pv-av" id="pv-av"></div>
-    <span class="inv-name pv-name" id="pv-name"></span>
-    <div class="pv-line" id="pv-country"></div>
-    <div class="pv-line" id="pv-id" dir="ltr"></div>
-    <div class="pv-rel" id="pv-rel"></div>
-    <div class="pf-btns">
-      <button type="button" id="btn-pv-watch" class="hidden">تماشا</button>
-      <button id="btn-pv-close" class="ghost">بندول</button>
-    </div>
-  </div>
-</div>
-
 <!-- ======== GENERIC CONFIRM (unfriend / block) ======== -->
 <div class="overlay" id="ov-confirm">
   <div class="panel" style="max-width:340px">
@@ -4062,6 +4104,12 @@
 <div class="overlay" id="ov-feltview">
   <div class="fv-img" id="felt-view-img"></div>
   <button type="button" class="ce-x" id="btn-feltview-x" aria-label="بندول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+</div>
+
+<!-- ======== PROFILE PHOTO LARGE VIEWER ======== -->
+<div class="overlay" id="ov-photoview">
+  <div id="photoview-av"></div>
+  <button type="button" class="ce-x" id="btn-photoview-x" aria-label="بندول"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
 </div>
 
 <!-- ======== CARD-BACK PICKER POPUP (the six CSS backs) ======== -->
@@ -5310,7 +5358,7 @@ function applyI18n() {
   document.title = T('docTitle');
   const ltr = LANG === 'en';
   ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-settings', 'ov-exit', 'ov-join', 'ov-install', 'ov-nonet',
-   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-clubseatreqs', 'scr-picker', 'scr-leaders', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-playerview', 'ov-friendmenu', 'ov-feltpick', 'ov-feltview', 'ov-backpick', 'ov-backview', 'ov-pollcreate', 'ov-clubvs', 'ov-clubvsinv', 'ov-pfedit']
+   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-pview', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-clubseatreqs', 'scr-picker', 'scr-leaders', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-friendmenu', 'ov-feltpick', 'ov-feltview', 'ov-backpick', 'ov-backview', 'ov-pollcreate', 'ov-clubvs', 'ov-clubvsinv', 'ov-pfedit', 'ov-photoview']
     .forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.setAttribute('dir', ltr ? 'ltr' : 'rtl');
@@ -5372,7 +5420,7 @@ function applyI18n() {
   set('#fr-blocked-title', 'frBlockedTitle');
   set('#btn-blocked-close', 'closeBtn');
   set('#pm-profile-lbl', 'navProfile');
-  set('#btn-pv-close', 'closeBtn');
+  aria('#btn-pv2-close', 'closeBtn');
   set('#frnav-friends-lbl', 'navFriends');
   set('#frnav-clubs-lbl', 'navClubs');
   set('#frnav-home-lbl', 'navHome');
@@ -5503,10 +5551,19 @@ function applyI18n() {
   aria('#btn-felt-edit', 'setFieldEdit');
   aria('#btn-feltpick-x', 'closeBtn');
   aria('#btn-feltview-x', 'closeBtn');
+  aria('#btn-photoview-x', 'closeBtn');
   set('#pf-stat-played-lbl', 'statPlayed');
   set('#pf-stat-won-lbl', 'statWon');
   set('#pf-stat-lost-lbl', 'statLost');
   set('#btn-leaders', 'leadersTitle');
+  set('#pv2-stats-title', 'pfStatsTitle');
+  set('#pv2-stat-id-lbl', 'pfStatId');
+  set('#pv2-stat-friends-lbl', 'pfStatFriends');
+  set('#pv2-stat-club-lbl', 'pfStatClub');
+  set('#pv2-stat-country-lbl', 'pfStatCountry');
+  set('#pv2-stat-played-lbl', 'statPlayed');
+  set('#pv2-stat-won-lbl', 'statWon');
+  set('#pv2-stat-lost-lbl', 'statLost');
   set('#ld-title', 'leadersTitle');
   set('#ldnav-friends-lbl', 'navFriends');
   set('#ldnav-clubs-lbl', 'navClubs');
@@ -5517,7 +5574,7 @@ function applyI18n() {
   set('#btn-rematch', 'rematchBtn');
   set('#btn-rematch-accept', 'rematchAccept');
   set('#btn-rematch-decline', 'rematchDecline');
-  set('#btn-pv-watch', 'watchBtn');
+  set('#btn-pv2-watch', 'watchBtn');
   set('#bp-title', 'backSection');
   aria('#btn-back-edit', 'backSection');
   aria('#btn-backpick-x', 'closeBtn');
@@ -9722,6 +9779,31 @@ function openFeltView() {
   $('#ov-feltview').classList.add('show');
 }
 function closeFeltView() { $('#ov-feltview').classList.remove('show'); }
+// ----- profile photo large viewer (owner order 2026-11-12):
+// tapping the PHOTO inside the profile frame — on my own profile
+// page and on the player profile view alike — opens it LARGE,
+// the felt/back viewer pattern (dark stage; a tap anywhere, or
+// the ✖, closes). The Google photo renders at the big size; an
+// SVG portrait scales into the same box. The tap target is the
+// avatar container only: the frame pencil (#btn-pf-edit-av) is a
+// separate element beside the frame and keeps its edit behaviour
+// — it never opens this viewer. -----
+function openPhotoView(person) {
+  if (!person) return;
+  const box = $('#photoview-av');
+  if (!box) return;
+  box.innerHTML = '';
+  box.appendChild(avatarEl(person.name || '', person.avatar, 264, person.photo));
+  $('#ov-photoview').classList.add('show');
+}
+function closePhotoView() { $('#ov-photoview').classList.remove('show'); }
+$('#ov-photoview').addEventListener('click', () => closePhotoView());
+$('#pf-preview-av').addEventListener('click', () => {
+  openPhotoView({ name: profile.name, avatar: pfAvatar || profile.avatar, photo: profile.photo });
+});
+$('#pv2-preview-av').addEventListener('click', () => {
+  if (pviewData) openPhotoView(pviewData);
+});
 // ----- settings: card-back edit (د کارت شا) — the felt pattern
 // mirrored exactly: ONE preview in the sheet (the pencil opens
 // the picker popup #ov-backpick with the six tiles; a tap there
@@ -10092,6 +10174,7 @@ function copyMyId() {
 $('#pf-id-num').onclick = copyMyId;
 function openProfile() {
   frOrigin = null; // leaving friends via a nav page drops the lobby origin
+  hidePview();
   pfAvatar = profile.avatar;
   renderMyId();
   $('#pf-name').value = profile.name || '';
@@ -10496,6 +10579,14 @@ function applySocialLists(lists) {
   renderChats();
   renderPlayerMenu();
   renderProfileStats();
+  // While another player's profile is open, its friend button
+  // follows the live lists (a request accepted on another device,
+  // a block…) — except a server-reported block, which only an
+  // s-profile answer may set or clear.
+  if (pviewId && pviewData && pviewData.relation !== 'blocked' && pviewId !== socialMe) {
+    const rel = seatRelation(pviewId);
+    if (rel !== pviewData.relation) { pviewData.relation = rel; renderPviewFriendBtn(); }
+  }
 }
 function onSocialMsg(m) {
   if (!m || typeof m.type !== 'string') return;
@@ -10506,6 +10597,14 @@ function onSocialMsg(m) {
     applySocialLists(m);
   } else if (m.type === 's-friends') {
     applySocialLists(m);
+  } else if (m.type === 's-profile-result') {
+    // The open player profile's authoritative answer: full data
+    // for anyone not blocked; a bare 'blocked' relation (no
+    // profile field at all) only retires the friend button.
+    if (pviewId && m.to === pviewId) {
+      if (m.profile) renderPview({ ...m.profile, relation: m.relation });
+      else if (m.relation === 'blocked' && pviewData) { pviewData.relation = 'blocked'; renderPviewFriendBtn(); }
+    }
   } else if (m.type === 's-presence') {
     const applyPresence = (x) => {
       x.online = !!m.online;
@@ -10764,6 +10863,7 @@ function openFriends(origin) {
   // player-menu row) stops here with the no-net popup instead of
   // opening a dead page. Guarding the shared opener covers them all.
   if (guardOnlineDoor()) return;
+  hidePview();
   frOrigin = origin === 'lobby' ? 'lobby' : null;
   const bb = $('#btn-fr-back');
   if (bb) bb.classList.toggle('hidden', frOrigin !== 'lobby');
@@ -10797,6 +10897,7 @@ $('#btn-fr-back').onclick = () => closeFriends();
 let dmReturn = 'friends';   // where the DM back button lands
 function openChats() {
   if (guardOnlineDoor()) return; // CARDSFIX scope extension: چت is an online page — offline, the popup instead
+  hidePview();
   frOrigin = null; // leaving friends via a nav page drops the lobby origin
   $('#scr-friends').classList.add('hidden');
   $('#scr-profile').classList.add('hidden');
@@ -11034,31 +11135,124 @@ function renderPlayerMenu() {
     };
   }
 }
+// ---------- player profile view (#scr-pview) ----------
+// Another player's FULL profile page (owner order 2026-11-12) —
+// the same family as my own (#scr-profile): framed photo + name +
+// country at the frame's base, the شمېرې panel, and ONE action:
+// the friend button under the photo container, whose state is the
+// relationship itself. Opened from the friends rows (avatar or
+// name), the ID search results, the table/lobby player menu and
+// the club menus — this screen replaces the old #ov-playerview
+// popup everywhere. The instant paint uses the person data the
+// caller already holds; the server's s-profile answer then fills
+// the real شمېرې, club name, friends count and the authoritative
+// relation (a blocked player gets NO data back — the button just
+// vanishes). The ✖ returns to the screen it was opened from.
+let pviewId = null;      // social id on view (null = page closed)
+let pviewData = null;    // last painted profile payload
+let pviewReturn = null;  // social screen to restore on close
+const PVIEW_SCREENS = ['scr-friends', 'scr-chats', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-leaders', 'scr-profile'];
+function openPlayerProfile(person) {
+  if (!person) return;
+  pviewReturn = null;
+  for (const s of PVIEW_SCREENS) {
+    const el = document.getElementById(s);
+    if (el && !el.classList.contains('hidden')) { pviewReturn = s; el.classList.add('hidden'); break; }
+  }
+  pviewId = person.id || null;
+  const rel = person.id ? (socialMe && person.id === socialMe ? 'self' : seatRelation(person.id)) : 'nosid';
+  renderPview({ ...person, relation: rel });
+  $('#scr-pview').classList.remove('hidden');
+  if (person.id) {
+    connectSocial();
+    socialSend({ type: 's-profile', to: person.id });
+  }
+}
+function closePlayerProfile() {
+  $('#scr-pview').classList.add('hidden');
+  pviewId = null;
+  pviewData = null;
+  const back = pviewReturn;
+  pviewReturn = null;
+  if (back) {
+    const el = document.getElementById(back);
+    if (el) el.classList.remove('hidden');
+    if (back === 'scr-friends') renderFriends();
+    else if (back === 'scr-chats') renderChats();
+    else if (back === 'scr-clubs') renderClubs();
+    else if (back === 'scr-leaders') renderLeaders();
+  }
+}
+// Drop the view WITHOUT restoring: a nav opener is taking over
+// the screen stack (the friends/chats/profile/clubs openers call
+// this so a stale pview never floats above their page).
+function hidePview() {
+  $('#scr-pview').classList.add('hidden');
+  pviewId = null;
+  pviewData = null;
+  pviewReturn = null;
+}
+function renderPview(d) {
+  if (!d) return;
+  pviewData = d;
+  if (d.id) cachePerson(d);
+  const avBox = $('#pv2-preview-av');
+  avBox.innerHTML = '';
+  avBox.appendChild(avatarEl(d.name || '', d.avatar, 88, d.photo));
+  $('#pv2-name').textContent = d.name || T('playerName');
+  const fl = d.country ? countryFlag(d.country) : '';
+  $('#pv2-country').textContent = d.country ? (fl ? fl + ' ' : '') + dispCountry(d.country) : '—';
+  $('#pv2-id').textContent = d.uid ? String(d.uid) : '—';
+  $('#pv2-stat-friends').textContent = (d.friendsCount === undefined || d.friendsCount === null) ? '…' : String(d.friendsCount);
+  $('#pv2-stat-club').textContent = d.club === undefined ? '…' : (d.club || T('pfStatNone'));
+  $('#pv2-stat-country').textContent = d.country ? dispCountry(d.country) : '—';
+  const st = d.stats;
+  $('#pv2-stat-played').textContent = st ? String(st.p || 0) : '…';
+  $('#pv2-stat-won').textContent = st ? String(st.w || 0) : '…';
+  $('#pv2-stat-lost').textContent = st ? String(st.l || 0) : '…';
+  renderPviewFriendBtn();
+  const w = $('#btn-pv2-watch');
+  w.classList.toggle('hidden', !d.ingame);
+  w.onclick = d.ingame ? () => {
+    const target = { id: d.id };
+    closePlayerProfile(); // restores the origin screen first — requestWatch reads it for spectateReturn
+    requestWatch(target);
+  } : null;
+}
+function renderPviewFriendBtn() {
+  const btn = $('#btn-pv2-friend');
+  const rel = pviewData ? (pviewData.relation || 'none') : 'nosid';
+  btn.onclick = null;
+  btn.disabled = false;
+  btn.classList.toggle('hidden', rel === 'nosid' || rel === 'blocked' || rel === 'self');
+  if (rel === 'friend') { btn.textContent = '🤝 ' + T('frIsFriend'); btn.disabled = true; }
+  else if (rel === 'outgoing') { btn.textContent = T('frPending'); btn.disabled = true; }
+  else if (rel === 'incoming') {
+    btn.textContent = T('frRespond');
+    btn.onclick = () => { closePlayerProfile(); openFriends(); };
+  } else if (rel === 'none') {
+    btn.textContent = T('frRequestBtn');
+    btn.onclick = () => {
+      if (!pviewId) return;
+      socialSend({ type: 's-request', to: pviewId });
+      if (pviewData) pviewData.relation = 'outgoing';
+      toast(T('frRequestSent'));
+      renderPviewFriendBtn();
+    };
+  }
+}
+$('#btn-pv2-close').onclick = () => closePlayerProfile();
 $('#btn-pm-profile').onclick = () => {
   if (!pmSeat) return;
-  const pv = $('#pv-av');
-  pv.innerHTML = '';
-  pv.appendChild(avatarEl(pmSeat.name, pmSeat.avatar, 84, pmSeat.photo));
-  $('#pv-name').textContent = pmSeat.name;
-  const fl = pmSeat.country ? countryFlag(pmSeat.country) : '';
-  $('#pv-country').textContent = pmSeat.country ? (fl ? fl + ' ' : '') + dispCountry(pmSeat.country) : '—';
-  const pvId = $('#pv-id');
-  pvId.textContent = pmSeat.uid ? (T('frIdLabel') + ': ' + pmSeat.uid) : '';
-  pvId.style.display = pmSeat.uid ? '' : 'none';
-  const rel = seatRelation(pmSeat.sid);
-  $('#pv-rel').textContent = rel === 'friend' ? T('frIsFriend')
-    : rel === 'outgoing' ? T('frPending')
-    : rel === 'incoming' ? T('frRespond') : '—';
-  const pvPerson = pmSeat.sid ? (socialPeople.get(pmSeat.sid) || null) : null;
-  const pvWatch = $('#btn-pv-watch');
-  pvWatch.textContent = T('watchBtn');
-  pvWatch.classList.toggle('hidden', !(pvPerson && pvPerson.ingame));
-  pvWatch.onclick = pvPerson ? () => requestWatch(pvPerson) : null;
+  const person = {
+    id: pmSeat.sid || null,
+    name: pmSeat.name, avatar: pmSeat.avatar, photo: pmSeat.photo,
+    country: pmSeat.country, uid: pmSeat.uid || null,
+    ingame: pmSeat.sid ? !!((socialPeople.get(pmSeat.sid) || {}).ingame) : false,
+  };
   closePlayerMenu();
-  $('#ov-playerview').classList.add('show');
+  openPlayerProfile(person);
 };
-$('#btn-pv-close').onclick = () => $('#ov-playerview').classList.remove('show');
-$('#ov-playerview').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
 
 // ---------- table player menu (tap a player's badge) ----------
 // The table twin of the lobby rows: another HUMAN's seat badge
@@ -11143,12 +11337,19 @@ function frBusyBtn(p) {
   b.setAttribute('aria-label', busyLbl);
   return b;
 }
-function personRow(p, actions) {
+function personRow(p, actions, opts) {
   const row = document.createElement('div');
   row.className = 'fr-row';
   row.dataset.fid = p.id; // lets the open ⋯ popover re-anchor after a re-render
   const who = document.createElement('div');
   who.className = 'fr-who';
+  if (opts && opts.profileTap) {
+    // Owner order 2026-11-12: on the friends page, tapping the
+    // player's AVATAR or NAME opens his full profile (#scr-pview).
+    who.classList.add('fr-who-tap');
+    who.title = T('navProfile');
+    who.addEventListener('click', () => openPlayerProfile(p));
+  }
   who.appendChild(avatarEl(p.name, p.avatar, 38, p.photo));
   const meta = document.createElement('div');
   meta.className = 'fr-meta';
@@ -11221,7 +11422,7 @@ function renderFriends() {
       if (inc) inc.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
     else btn = frBtn(T('frAdd'), 'primary', () => socialSend({ type: 's-request', to: p.id }));
-    resBox.appendChild(personRow(p, [btn]));
+    resBox.appendChild(personRow(p, [btn], { profileTap: true }));
   });
   if (frSearched && !frSearchResults.length) resBox.appendChild(frEmpty(T('frNoResults')));
 
@@ -11236,12 +11437,12 @@ function renderFriends() {
     incBox.appendChild(personRow(p, [
       frBtn(T('frAccept'), 'primary', () => socialSend({ type: 's-respond', from: p.id, accept: true })),
       frBtn(T('frReject'), '', () => socialSend({ type: 's-respond', from: p.id, accept: false })),
-    ]));
+    ], { profileTap: true }));
   });
   const outBox = $('#fr-outgoing');
   outBox.innerHTML = '';
   socialData.outgoing.forEach((p) => {
-    outBox.appendChild(personRow(p, [frBtn(T('frPending'), '', null)]));
+    outBox.appendChild(personRow(p, [frBtn(T('frPending'), '', null)], { profileTap: true }));
   });
 
   // friends (the ⋯ button opens the small friend menu popup)
@@ -11285,7 +11486,7 @@ function renderFriends() {
     const dotsBtn = frBtn('⋯', '', (e) => openFriendMenu(p, e && e.currentTarget));
     dotsBtn.classList.add('fr-dots');
     actions.push(dotsBtn);
-    listBox.appendChild(personRow(p, actions));
+    listBox.appendChild(personRow(p, actions, { profileTap: true }));
   });
 
   // blocked
@@ -11597,11 +11798,7 @@ const CL_CROWN = {
   1: '<svg class="cl-crown" viewBox="0 0 40 28"><path d="M3 24 L5 8 L14 16 L20 4 L26 16 L35 8 L37 24 Z" fill="#dfe7ea" stroke="#8d9aa0" stroke-width="1.6"/><circle cx="20" cy="20" r="2.4" fill="#57a8d8"/><circle cx="33.5" cy="6.5" r="6.8" fill="#eef3f5" stroke="#8d9aa0" stroke-width="1.2"/><text x="33.5" y="10" text-anchor="middle" font-size="9.5" font-weight="900" fill="#54606a">2</text></svg>',
   2: '<svg class="cl-crown" viewBox="0 0 40 28"><path d="M3 24 L5 8 L14 16 L20 4 L26 16 L35 8 L37 24 Z" fill="#e0a266" stroke="#96602e" stroke-width="1.6"/><circle cx="20" cy="20" r="2.4" fill="#7d2231"/><circle cx="33.5" cy="6.5" r="6.8" fill="#f3c491" stroke="#96602e" stroke-width="1.2"/><text x="33.5" y="10" text-anchor="middle" font-size="9.5" font-weight="900" fill="#6e4520">3</text></svg>',
 };
-const CL_TAB_ICON = {
-  globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4.2" ry="9"/><path d="M3.5 9h17M3.5 15h17"/></svg>',
-  flame: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3.5-3.5 5.5-3.5 9.5a3.5 3.5 0 0 0 7 0c0-1.2-.5-2.1-1.2-3 .8.3 2.7 1.6 2.7 4.5a5 5 0 0 1-10 0C7 8 10.5 6.5 12 3z"/></svg>',
-  heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5C7 16.5 3.5 13.3 3.5 9.6 3.5 7 5.4 5 7.8 5c1.7 0 3.3 1 4.2 2.5C12.9 6 14.5 5 16.2 5c2.4 0 4.3 2 4.3 4.6 0 3.7-3.5 6.9-8.5 10.9z"/></svg>',
-};
+// (CL_TAB_ICON left with the discovery tabs — 2026-11-12.)
 const CL_SHIELD = {
   1: '<svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 8.8-8 10C7.4 19.8 4 16 4 11V5z" fill="#3d7bd9" stroke="#bfe0ff" stroke-width="1.3"/></svg>',
   2: '<svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 8.8-8 10C7.4 19.8 4 16 4 11V5z" fill="#e84393" stroke="#ffc2dd" stroke-width="1.3"/></svg>',
@@ -11650,7 +11847,8 @@ let ceLang = 'ps';
 let ceCountry = '';
 const clubInvitedSent = new Set(); // friends I club-invited this session (row state)
 // ---- discovery state ----
-let clTab = 'explore';           // explore | hot | mine
+// (The discovery TABS were deleted 2026-11-12 — there is exactly
+// ONE listing, the browse query: tab 'explore' on the wire.)
 let clCountryFilter = '';        // canonical country name or '' (global)
 let clCountryMore = false;       // the «نور» country select is open
 let clDisc = null;               // last s-club-discover-result payload
@@ -11664,6 +11862,7 @@ let clRoomView = false;          // true = the club room, false = discovery
 
 function openClubs() {
   if (guardOnlineDoor()) return; // CARDSFIX scope extension: کلبونه is an online page — offline, the popup instead
+  hidePview();
   frOrigin = null; // leaving friends via a nav page drops the lobby origin
   closeClubMenu();
   $('#scr-friends').classList.add('hidden');
@@ -11710,13 +11909,13 @@ $('#btn-cl-home').onclick = () => closeClubs();
 
 function requestDiscover() {
   connectSocial();
-  socialSend({ type: 's-club-discover', tab: clTab, country: clTab === 'mine' ? '' : clCountryFilter });
+  socialSend({ type: 's-club-discover', tab: 'explore', country: clCountryFilter });
 }
 // Live discovery sync (2026-11-09): the server broadcasts the
 // payload-free s-clubs-changed whenever the club catalogue moves
 // (a club created / edited / dissolved, a like, a join / leave /
 // kick, a transfer). An open discovery page re-runs its CURRENT
-// query — same tab, same country filter, same search text — so a
+// query — same country filter, same search text — so a
 // club created on another phone appears at once, no refresh, no
 // re-entry (Shuaib's live report). Bursts coalesce behind one
 // 300 ms timer. Overlays sitting on discovery (create form,
@@ -11934,7 +12133,7 @@ function renderChips() {
 }
 function renderExplorePane() {
   renderChips();
-  const fresh = clDisc && clDisc.tab === clTab && (clDisc.country || '') === clCountryFilter;
+  const fresh = clDisc && clDisc.tab === 'explore' && (clDisc.country || '') === clCountryFilter;
   renderPodium(fresh ? clDisc.top : []);
   const grid = $('#cl-grid');
   grid.innerHTML = '';
@@ -11958,44 +12157,6 @@ function renderExplorePane() {
     if (!clubSearchResults.length) res.appendChild(frEmpty(T('clNoResults')));
   }
 }
-function renderMinePane() {
-  const hero = $('#cl-hero-emb');
-  hero.innerHTML = '';
-  hero.appendChild(clEmblemEl('trophy', 64));
-  const invBox = $('#cl-invites-box'), invList = $('#cl-invites');
-  invList.innerHTML = '';
-  const invs = clubData ? (clubData.invites || []) : [];
-  invBox.classList.toggle('hidden', !invs.length);
-  invs.forEach((inv) => {
-    invList.appendChild(clubRow(inv.club, [
-      frBtn(T('frAccept'), 'primary', () => socialSend({ type: 's-club-invite-reply', club: inv.club.cid, accept: true })),
-      frBtn(T('frReject'), '', () => socialSend({ type: 's-club-invite-reply', club: inv.club.cid, accept: false })),
-    ]));
-  });
-  // my club entry card (tap → the club room)
-  const slot = $('#cl-myclub-slot');
-  slot.innerHTML = '';
-  if (clubData && clubData.club) {
-    const c = clubData.club;
-    const card = document.createElement('div');
-    card.className = 'cardbox';
-    const h = document.createElement('h3');
-    h.className = 'fr-sec';
-    h.textContent = T('clMyClubTitle');
-    card.appendChild(h);
-    const row = clubRow(c, [frBtn(T('clEnterClub'), 'primary', (e) => { if (e) e.stopPropagation(); enterMyClubRoom(); })]);
-    row.style.cursor = 'pointer';
-    row.onclick = () => enterMyClubRoom();
-    card.appendChild(row);
-    slot.appendChild(card);
-  }
-  // clubs I liked
-  const liked = (clDisc && clDisc.tab === 'mine') ? (clDisc.liked || []) : [];
-  $('#cl-liked-title').classList.toggle('hidden', !liked.length);
-  const lg = $('#cl-liked-grid');
-  lg.innerHTML = '';
-  liked.forEach((s) => lg.appendChild(clubCardEl(s)));
-}
 function enterMyClubRoom() {
   if (!clubData || !clubData.club) return;
   clRoomView = true;
@@ -12015,11 +12176,10 @@ function exitClubRoomView() {
   renderClubs();
 }
 function renderDiscovery() {
-  ['explore', 'hot', 'mine'].forEach((t) => $('#cl-tab-' + t).classList.toggle('sel', clTab === t));
-  $('#cl-pane-explore').classList.toggle('hidden', clTab === 'mine');
-  $('#cl-pane-mine').classList.toggle('hidden', clTab !== 'mine');
+  // ONE listing since the tabs were deleted (2026-11-12): the
+  // browse pane is always the page's content.
   $('#btn-cl-create').classList.toggle('hidden', !!(clubData && clubData.club));
-  if (clTab === 'mine') renderMinePane(); else renderExplorePane();
+  renderExplorePane();
 }
 // ---------- club entry (AUTO-JOIN) ----------
 // Tapping a club card IS joining it (owner order 2026-11-09):
@@ -12680,14 +12840,8 @@ function openClubInvitePopup() {
 function renderClubs() {
   updateClubsBadge();
   // static labels (painted here so a language switch is one call)
-  $('#cl-home-text').textContent = T('clHomeText');
   $('#btn-cl-create').textContent = T('clCreate');
-  $('#cl-tab-explore').innerHTML = CL_TAB_ICON.globe + T('clTabExplore');
-  $('#cl-tab-hot').innerHTML = CL_TAB_ICON.flame + T('clTabHot');
-  $('#cl-tab-mine').innerHTML = CL_TAB_ICON.heart + T('clTabMine');
   $('#cl-podium-title').textContent = T('clTopClubs');
-  $('#cl-invites-title').textContent = T('clInvitesTitle');
-  $('#cl-liked-title').textContent = T('clLikedTitle');
   $('#cl-search-title').textContent = T('clSearchTitle');
   $('#btn-cl-search').textContent = T('clSearchBtn');
   $('#cl-search-inp').placeholder = T('clSearchPh');
@@ -12986,9 +13140,7 @@ $('#srqnav-chat').onclick = () => openChats();
 // the owner's requests button beside the member-count pill
 $('#btn-cl-seatreqs').onclick = () => openClubSeatReqs();
 // discovery tabs + search toggle
-$('#cl-tab-explore').onclick = () => { clTab = 'explore'; clPodIdx = 0; requestDiscover(); renderClubs(); };
-$('#cl-tab-hot').onclick = () => { clTab = 'hot'; clPodIdx = 0; requestDiscover(); renderClubs(); };
-$('#cl-tab-mine').onclick = () => { clTab = 'mine'; requestDiscover(); renderClubs(); };
+// (The discovery tab handlers left with the tabs — 2026-11-12.)
 // The discovery search row is HIDDEN until the magnifier is
 // tapped (owner order 2026-11-09, the friends-screen pattern):
 // tap → the row opens and the input takes focus; tap again →
@@ -13503,22 +13655,10 @@ function openClubMenu(m, anchor) {
   renderClubMenu();
   placeAnchoredCard(pop, cmAnchor);
 }
-// Feeds the shared profile-view popup with a person (the member
-// menu's row and the seat menu's row both land here).
-function fillProfileView(m) {
-  const pv = $('#pv-av');
-  pv.innerHTML = '';
-  pv.appendChild(avatarEl(m.name, m.avatar, 84, m.photo));
-  $('#pv-name').textContent = m.name || '';
-  const fl = m.country ? countryFlag(m.country) : '';
-  $('#pv-country').textContent = m.country ? (fl ? fl + ' ' : '') + dispCountry(m.country) : '—';
-  const pvId = $('#pv-id');
-  pvId.textContent = m.uid ? (T('frIdLabel') + ': ' + m.uid) : '';
-  pvId.style.display = m.uid ? '' : 'none';
-  const rel = seatRelation(m.id);
-  $('#pv-rel').textContent = rel === 'friend' ? T('frIsFriend')
-    : rel === 'outgoing' ? T('frPending') : rel === 'incoming' ? T('frRespond') : '—';
-}
+// (The club menus' profile rows open the full player profile
+// page #scr-pview via openPlayerProfile — the old shared
+// #ov-playerview popup and its fillProfileView feeder were
+// deleted with it, owner order 2026-11-12.)
 // A player tapped another player's OCCUPIED seat: the anchored
 // menu opens for EVERY member — renderClubSeatMenu decides the
 // rows from the tapper's role.
@@ -13561,11 +13701,10 @@ function renderClubMenu() {
   $('#cm-name').textContent = m.name || '';
   const rows = $('#cm-rows');
   rows.innerHTML = '';
-  // profile view (the existing popup, fed like the player menu's)
+  // profile view (the full player profile page, #scr-pview)
   rows.appendChild(cmRow('👤', T('navProfile'), () => {
-    fillProfileView(m);
     closeClubMenu();
-    $('#ov-playerview').classList.add('show');
+    openPlayerProfile(m);
   }));
   // friend relation
   const rel = seatRelation(m.id);
@@ -13660,9 +13799,8 @@ function renderClubSeatMenu() {
   // friend row and the two kicks, per his own listing)
   if (c.myRole !== 'owner') {
     rows.appendChild(cmRow('👤', T('navProfile'), () => {
-      fillProfileView(p);
       closeClubMenu();
-      $('#ov-playerview').classList.add('show');
+      openPlayerProfile(p);
     }));
   }
   const seatKick = canSeatKick(c, p.id);
@@ -14755,11 +14893,11 @@ function spectateGame(code) {
   // a friend's profile): those paint above the table and show()
   // only manages home/lobby/game, so hide them here too —
   // exitSpectate reopens the right one from spectateReturn.
-  ['scr-friends', 'scr-chats', 'scr-dm', 'scr-profile', 'scr-picker', 'scr-leaders'].forEach((s) => {
+  ['scr-friends', 'scr-chats', 'scr-dm', 'scr-profile', 'scr-pview', 'scr-picker', 'scr-leaders'].forEach((s) => {
     const el = document.getElementById(s);
     if (el) el.classList.add('hidden');
   });
-  $('#ov-playerview').classList.remove('show');
+  hidePview(); // a watch started from the player profile leaves no stale view state behind
   spectating = true;
   specCode = code;
   intentionalClose = false;
