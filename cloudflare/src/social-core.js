@@ -150,6 +150,22 @@
  * Protocol additions (client -> server): s-club-game.
  * Protocol additions (server -> client): s-club-game-state.
  *
+ * Club music broadcast (up41, 2026-11-12): the club OWNER can
+ * broadcast the music player to everyone currently in his club
+ * room. The core keeps ONE runtime-only state per club —
+ * {track, playing, anchorPos, anchorAt, by} — never persisted.
+ * The owner drives it with s-club-music {action:'state', track,
+ * playing, pos} and ends it with {action:'stop'}; any other role
+ * is refused (clubNoPerm). Every change fans s-club-music-state
+ * {club, on, track, playing, pos} to the room (the clubVoice set)
+ * with pos resolved to "now", so a member ENTERING the room
+ * mid-song is handed the live position by the same message when
+ * he joins the voice room. The broadcast dies with the owner's
+ * room presence (voice-leave / club leave / kick / disconnect)
+ * and with the club itself.
+ * Protocol additions (client -> server): s-club-music.
+ * Protocol additions (server -> client): s-club-music-state.
+ *
  * Invite rules (2026-11-08, extended 2026-11-09): a target holding
  * ANY seat cannot be invited — a started match (host hook
  * inGameCheck) rejects socialInGame, a waiting lobby seat (host
@@ -414,6 +430,11 @@ class SocialCore {
     this.clubMic = new Map();     // cid -> Set<playerId> (mic ON — a seat
                                   // holder may mute WITHOUT losing the seat;
                                   // the flag only paints the muted badge)
+    // Club music broadcast (up41) — RUNTIME ONLY like the voice
+    // room: cid -> {track, playing, anchorPos, anchorAt, by}.
+    // anchorPos is the track position (seconds) at anchorAt
+    // (Date.now()); the live position is derived, never stored.
+    this.clubMusic = new Map();
     // Seat requests — RUNTIME ONLY like the seats: reqKey(cid,
     // playerId) -> {club, from, seat, ts}. Never persisted; a
     // restart simply drops pending asks.
@@ -903,6 +924,7 @@ class SocialCore {
       case 's-club-vs-challenge': return this.clubVsChallenge(id, msg.club, msg.players);
       case 's-club-vs-reply': return this.clubVsReply(id, msg.club, msg.accept, msg.players);
       case 's-club-voice': return this.clubVoiceSet(id, msg.action);
+      case 's-club-music': return this.clubMusicSet(id, msg);
       case 's-club-seat': return this.clubSeatSit(id, msg.seat);
       case 's-club-mic': return this.clubMicSet(id, msg.on === true);
       case 's-club-seat-kick': return this.clubSeatKick(id, msg.id);
@@ -1745,6 +1767,9 @@ class SocialCore {
     // then push one empty voice-state so every member's client
     // tears its peer connections down.
     this.clubSeats.delete(club.cid);
+    // up41: the music broadcast dies with the club — tell the
+    // room before the voice set is cleared.
+    if (this.clubMusic.delete(club.cid)) this._fanClubMusic(club.cid);
     this.clubVoice.delete(club.cid);
     this.clubMic.delete(club.cid);
     for (const mid of memberIds) if (this.clubOf.get(mid) === club.cid) this.clubOf.delete(mid);
@@ -2053,6 +2078,9 @@ class SocialCore {
     const room = this.clubVoice.get(cid);
     if (room && room.delete(id)) { changed = true; if (!room.size) this.clubVoice.delete(cid); }
     if (changed) this._fanClubVoice(cid);
+    // up41: if the departing player was driving this club's
+    // music broadcast, it ends for the room he left behind.
+    this._clubMusicEnd(cid, id);
   }
   // Voice-leave semantics for a whole player: his presence ends
   // in his member club (seat + voice-room place + pending ask).
@@ -2069,6 +2097,63 @@ class SocialCore {
     const room = this.clubVoice.get(club.cid);
     if (!room.has(id)) { room.add(id); this._fanClubVoice(club.cid); }
     else this._fanClubVoice(club.cid); // a re-join re-syncs the joiner
+    // up41: a member entering the room mid-broadcast is handed
+    // the live music position at once (same message shape).
+    if (this.clubMusic.has(club.cid)) this._send(id, this._clubMusicMsg(club.cid));
+  }
+  // ---------- club music broadcast (up41, runtime only) ----------
+  // The live position of a broadcast: the anchor advanced by
+  // the wall clock while playing, frozen while paused.
+  _clubMusicPos(st) {
+    if (!st) return 0;
+    const p = st.playing ? st.anchorPos + (Date.now() - st.anchorAt) / 1000 : st.anchorPos;
+    return Math.max(0, Math.round(p * 10) / 10);
+  }
+  _clubMusicMsg(cid) {
+    const st = this.clubMusic.get(cid);
+    if (!st) return { type: 's-club-music-state', club: cid, on: false, track: 0, playing: false, pos: 0 };
+    return {
+      type: 's-club-music-state', club: cid, on: true,
+      track: st.track, playing: st.playing, pos: this._clubMusicPos(st),
+    };
+  }
+  // Fans the broadcast state to everyone currently IN THE ROOM
+  // (the clubVoice set — being on the club page), owner included.
+  _fanClubMusic(cid) {
+    const room = this.clubVoice.get(cid);
+    if (!room) return;
+    const msg = this._clubMusicMsg(cid);
+    for (const pid of room) if (this.isOnline(pid)) this._send(pid, msg);
+  }
+  clubMusicSet(id, msg) {
+    const club = this._clubOf(id);
+    if (!club) return this._error(id, 'clubNoPerm');
+    // Broadcast is the FOUNDER's prerogative: members and
+    // deputies are refused, and a non-member never reaches here.
+    if (this._clubRole(club, id) !== 'owner') return this._error(id, 'clubNoPerm');
+    const cid = club.cid;
+    if (!msg || msg.action === 'stop') {
+      if (this.clubMusic.delete(cid)) this._fanClubMusic(cid);
+      return;
+    }
+    if (msg.action !== 'state') return;
+    const track = Number(msg.track);
+    if (!Number.isInteger(track) || track < 0 || track > 8) return;
+    let pos = Number(msg.pos);
+    if (!Number.isFinite(pos) || pos < 0) pos = 0;
+    if (pos > 3600) pos = 3600;
+    this.clubMusic.set(cid, {
+      track, playing: msg.playing === true,
+      anchorPos: pos, anchorAt: Date.now(), by: id,
+    });
+    this._fanClubMusic(cid);
+  }
+  // Ends cid's broadcast if `id` is its owner-driver (the founder
+  // left the room / the club / the socket): remaining room
+  // members are told it is over.
+  _clubMusicEnd(cid, id) {
+    const st = this.clubMusic.get(cid);
+    if (st && st.by === id) { this.clubMusic.delete(cid); this._fanClubMusic(cid); }
   }
   // Mic state is NOT seat state (owner order 2026-11-09): a seated
   // player muting his mic keeps his seat — the flag only drives
