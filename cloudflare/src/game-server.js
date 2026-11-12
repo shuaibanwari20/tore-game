@@ -45,6 +45,7 @@ const BOT_DELAY_MS = 750;         // bot "thinking" delay (watchable pace)
 const ROUND_PAUSE_MS = 8000;      // round-summary pause before next round (6s -> 8s, owner 2026-11-11; a tap dismisses the card early on the tapper's screen only)
 const TRICK_PAUSE_MS = 1600;      // completed trick stays on the table before it is collected
 const RECONNECT_GRACE_MS = 120000; // seat+hand kept for a reconnecting player
+const COVER_DELAY_MS = 10000;     // up44: bot cover for a known-disconnected seat (lever: TORE_COVER_MS)
 const FROZEN_MAX_MS = 24 * 3600 * 1000; // F35: a frozen match dissolves after 24 h
 const SPECTATOR_CAP = 20;          // clubs v8: watchers per club-game room
 const SWEEP_MS = 10000;           // seat-expiry sweep cadence (was setInterval)
@@ -233,6 +234,10 @@ export class GameServer {
     // F35 test lever (same pattern): production freezes last 24 h.
     const fzv = Number(env && env.TORE_FROZEN_MS);
     this.frozenMaxMs = (Number.isFinite(fzv) && fzv > 0) ? fzv : FROZEN_MAX_MS;
+    // up44 test lever (same pattern): production covers a
+    // known-disconnected seat after COVER_DELAY_MS.
+    const cov = Number(env && env.TORE_COVER_MS);
+    this.coverDelayMs = (Number.isFinite(cov) && cov >= 0) ? cov : COVER_DELAY_MS;
 
     state.blockConcurrencyWhile(async () => {
       // Timers (their own small key; the legacy blob carried them too).
@@ -1257,6 +1262,10 @@ export class GameServer {
       this._broadcastEvent(room, { type: 'voice', seat: att.seat, mic: false, speaker: seat.voiceSpeaker !== false, on: false });
     }
     this._broadcastState(room);
+    // up44: re-arm the turn — if the drop is the player to move,
+    // his cover clock starts from the drop (coverDelayMs), not
+    // from whenever his turn began. _pumpTurn defers to a freeze.
+    this._pumpTurn(room);
   }
 
   // ------------------------------------------------------------ rooms
@@ -1551,7 +1560,11 @@ export class GameServer {
     if (round.finished) return;
     const seat = round.turn;
     const info = room.seats[seat];
-    const delay = info.kind === 'bot' ? BOT_DELAY_MS : TURN_TIMEOUT_MS;
+    // up44: a CONNECTED human keeps the full 30 s to think; a seat
+    // the server knows is disconnected is covered after the short
+    // coverDelayMs instead, so the table barely notices the drop.
+    const delay = info.kind === 'bot' ? BOT_DELAY_MS
+      : info.connected ? TURN_TIMEOUT_MS : this.coverDelayMs;
     this._schedule('turn', delay, { code: room.code, seat, mayDeclare: info.kind === 'bot' });
   }
 
@@ -1649,6 +1662,7 @@ export class GameServer {
     att.token = seat.token;
     this._saveAttachment(ws, att);
     this._maybeUnfreeze(room); // F35: reattaching resumes a frozen match
+    this._pumpTurn(room); // up44: a reclaimed seat gets its full turn clock back
   }
 
   _sendRoomReply(ws, room, seatIdx) {
@@ -1681,6 +1695,13 @@ export class GameServer {
       return;
     }
     switch (msg.type) {
+      case 'ping': {
+        // up44 heartbeat: the client's watchdog stamps every
+        // inbound frame; the pong is how it tells a live path
+        // from a dead one.
+        send(ws, { type: 'pong' });
+        break;
+      }
       case 'create': {
         // F35: one frozen match per player — a fresh create
         // dissolves his frozen match (never the one being made).
