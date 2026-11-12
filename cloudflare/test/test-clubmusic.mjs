@@ -83,6 +83,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const frozen = core._clubMusicPos(core.clubMusic.get(cid));
   check('clubmusic: the position stays frozen while paused', frozen === 50, String(frozen));
 
+  // ---- up42: an owner's SEEK re-anchors the broadcast ----
+  core.clubMusicSet(OWN, { action: 'state', track: 7, playing: true, pos: 300 });
+  const stSeek = lastMusic(MEM);
+  check('clubmusic: an owner seek (position jump) fans out as the new anchor',
+    !!stSeek && stSeek.playing === true && stSeek.pos >= 300 && stSeek.pos <= 302, stSeek && String(stSeek.pos));
+  await sleep(700);
+  const adv = core._clubMusicPos(core.clubMusic.get(cid));
+  check('clubmusic: after the seek, the anchor advances FROM the new spot',
+    adv >= 300.5 && adv <= 302.5, String(adv));
+
   // ---- resume on another track, then stop ends it ----
   core.clubMusicSet(OWN, { action: 'state', track: 2, playing: true, pos: 5 });
   const st3 = lastMusic(MEM);
