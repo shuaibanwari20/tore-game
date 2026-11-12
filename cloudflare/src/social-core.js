@@ -753,6 +753,7 @@ class SocialCore {
     if (!msg || typeof msg.type !== 'string') return;
     switch (msg.type) {
       case 's-search': return this.search(id, msg.q);
+      case 's-profile': return this.profileOf(id, msg.to);
       case 's-request': return this.request(id, msg.to);
       case 's-respond': return this.respond(id, msg.from, msg.accept);
       case 's-unfriend': return this.unfriend(id, msg.id);
@@ -820,6 +821,44 @@ class SocialCore {
       out.push({ ...this.person(hit.id), relation });
     }
     this._send(id, { type: 's-search-result', q: digits, results: out });
+  }
+
+  // ---------- public profile of ANOTHER player (pview) ----------
+  // The read-only FULL profile the friends page / ID search /
+  // player menu open: directory identity + the club NAME + the
+  // lifetime شمېرې + friends count + the RELATIONSHIP between the
+  // asker and the target — every field derived HERE from the same
+  // records the lists ship, so the client paints what it is told
+  // and can invent nothing. Blocked either way is refused to a
+  // bare relation word (no name, no stats — nothing leaks); an
+  // unknown id errors exactly like a bad request target.
+  profileOf(id, to) {
+    if (typeof to !== 'string' || !to || !this.directory.has(to)) return this._error(id, 'socialNotFound');
+    if (to !== id && this.blockedEither(id, to)) {
+      this._send(id, { type: 's-profile-result', to, relation: 'blocked' });
+      return;
+    }
+    let relation = 'self';
+    if (to !== id) {
+      if (this.areFriends(id, to)) relation = 'friend';
+      else if (this.requests.has(reqKey(id, to))) relation = 'outgoing';
+      else if (this.requests.has(reqKey(to, id))) relation = 'incoming';
+      else relation = 'none';
+    }
+    const cid = this.clubOf.get(to);
+    const club = cid ? this.clubs.get(cid) : null;
+    const fset = this.friends.get(to);
+    this._send(id, {
+      type: 's-profile-result',
+      to,
+      relation,
+      profile: {
+        ...this.person(to),
+        club: club ? club.name : null,
+        friendsCount: fset ? fset.size : 0,
+        stats: this.statsOf(to),
+      },
+    });
   }
 
   request(id, to) {
