@@ -25,6 +25,7 @@ const BOT_DELAY_MS = 750;         // bot "thinking" delay (watchable pace)
 const ROUND_PAUSE_MS = 8000;      // round-summary pause before next round (6s -> 8s, owner 2026-11-11; a tap dismisses the card early on the tapper's screen only)
 const TRICK_PAUSE_MS = 1600;      // completed trick stays on the table before it is collected
 const RECONNECT_GRACE_MS = 120000; // seat+hand kept for a reconnecting player
+const FROZEN_MAX_MS = 24 * 3600 * 1000; // F35: a frozen match dissolves after 24 h
 const REMATCH_OFFER_MS = 30000;   // a rematch offer lives 30 s, then expires
 const SPECTATOR_CAP = 20;          // clubs v8: watchers per club-game room
 
@@ -42,6 +43,11 @@ const httpServer = http.createServer((req, res) => {
   // /club-cover/<cid> serves that club's photo publicly.
   if (url === '/club-cover' && req.method === 'POST') return handleCoverUpload(req, res);
   if (url.startsWith('/club-cover/') && req.method === 'GET') return handleCoverGet(req, res, url.slice('/club-cover/'.length));
+  // Uploaded PROFILE photos (F17) ride the same shape of routes:
+  // POST /p-photo stores the caller's own photo; GET
+  // /p-photo/<uid>.jpg serves it back publicly.
+  if (url === '/p-photo' && req.method === 'POST') return handlePhotoUpload(req, res);
+  if (url.startsWith('/p-photo/') && req.method === 'GET') return handlePhotoGet(req, res, url.slice('/p-photo/'.length));
   if (url === '/' || url === '/index.html') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     return res.end(INDEX_HTML);
@@ -158,6 +164,11 @@ const rooms = new Map();
 const BUSY_GRACE_MS = (() => {
   const v = Number(process.env.TORE_BUSY_GRACE_MS);
   return Number.isFinite(v) && v >= 0 ? v : RECONNECT_GRACE_MS;
+})();
+// F35 test lever (same pattern): production freezes last 24 h.
+const FROZEN_MAX_EFF = (() => {
+  const v = Number(process.env.TORE_FROZEN_MS);
+  return Number.isFinite(v) && v > 0 ? v : FROZEN_MAX_MS;
 })();
 function seatLive(s, now) {
   return s.connected || (!!s.disconnectAt && (now || Date.now()) - s.disconnectAt <= BUSY_GRACE_MS);
@@ -449,6 +460,56 @@ function handleCoverGet(req, res, cid) {
   });
   res.end(entry.buf);
 }
+// ------------------------------------------------- uploaded profile photos
+// POST /p-photo — a player uploads HIS OWN profile photo (F17).
+// Identity is the same x-tore-pid header as the cover route (the
+// production Worker derives it from the verified session instead
+// and sets the directory record itself). The bytes never ride the
+// social socket; the core flips the record's photo to the
+// versioned /p-photo/<uid>.jpg?v=N path. Hard rules: JPEG only
+// (the client always sends canvas JPEG — the magic bytes prove
+// it), at most 200 KB.
+const PHOTO_MAX_BYTES = 200 * 1024;
+function handlePhotoUpload(req, res) {
+  const pid = req.headers['x-tore-pid'];
+  if (typeof pid !== 'string' || !/^[A-Za-z0-9_-]{6,64}$/.test(pid)) return coverJson(res, 401, { error: 'unauthorized' });
+  const type = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+  if (type !== 'image/jpeg') return coverJson(res, 415, { error: 'photoBadType' });
+  const chunks = [];
+  let size = 0;
+  let tooBig = false;
+  req.on('data', (ch) => {
+    size += ch.length;
+    if (size > PHOTO_MAX_BYTES) { tooBig = true; return; }
+    chunks.push(ch);
+  });
+  req.on('end', () => {
+    if (tooBig) return coverJson(res, 413, { error: 'photoTooBig' });
+    const buf = Buffer.concat(chunks);
+    if (!buf.length) return coverJson(res, 400, { error: 'photoEmpty' });
+    if (buf.length < 3 || buf[0] !== 0xFF || buf[1] !== 0xD8 || buf[2] !== 0xFF) {
+      return coverJson(res, 415, { error: 'photoBadType' });
+    }
+    const out = social.uploadPhoto('p:' + pid, 'image/jpeg', buf);
+    if (!out) return coverJson(res, 403, { error: 'photoNoPerm' });
+    return coverJson(res, 200, { ok: true, uid: out.uid, v: out.v, photo: out.photo });
+  });
+  req.on('error', () => { try { res.writeHead(400); res.end(); } catch (e) { /* gone */ } });
+}
+function handlePhotoGet(req, res, rest) {
+  const m = /^(\d{6})\.jpg$/.exec(rest);
+  if (!m) { res.writeHead(404); return res.end('not found'); }
+  const entry = social.getPhoto(m[1]);
+  if (!entry) { res.writeHead(404); return res.end('not found'); }
+  // The ?v=<photoV> query versions the URL; a day of cache is
+  // plenty (a re-upload bumps the version and changes the URL).
+  res.writeHead(200, {
+    'Content-Type': entry.type,
+    'Content-Length': entry.buf.length,
+    'Cache-Control': 'public, max-age=86400',
+  });
+  res.end(entry.buf);
+}
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 function newCode() {
@@ -480,6 +541,8 @@ function createRoom() {
     vsNames: null, // {a, b} display names for the vs stamp
     rematch: null, // runtime-only rematch offer {bySid, bySeat, expires, accepts:Set<sid>}
     rematchTimer: null, // expiry timer for the live rematch offer
+    frozen: false, // F35: true while every human is unintentionally gone (timers cleared)
+    frozenAt: null, // F35: when the freeze began (24 h dissolve clock)
     statsRecorded: false, // match-end stats guard: set when recorded, cleared when a new match starts
     spectators: new Set(), // clubs v8: receive-only sockets watching the public state
   };
@@ -492,6 +555,80 @@ function hostSeat(room) {
   const i = room.seats.findIndex((s) => s.kind === 'human');
   return i === -1 ? 0 : i;
 }
+
+// ------------------------------------------------------------ F35 freeze / resume
+// Twin of the DO logic (cloudflare/src/game-server.js): an
+// UNINTENTIONALLY interrupted match (every human's socket died
+// without a leave frame) FREEZES instead of playing out under
+// bots — timers clear, seats stay reserved, and the home
+// Continue entry reattaches a returning player, which unfreezes
+// play. Explicit leave is untouched. Club games and club-vs
+// rooms never freeze. A frozen match dissolves after 24 h with
+// no stats; a player holds at most ONE frozen match — seating
+// himself into a different room dissolves the frozen one.
+function freezable(room) {
+  return !!room && room.phase !== 'lobby' && room.phase !== 'matchEnd' && !room.club && !room.vs;
+}
+function maybeFreeze(room) {
+  if (!freezable(room) || room.frozen) return false;
+  if (room.seats.some((s) => s.kind === 'human' && s.connected)) return false;
+  if (!room.seats.some((s) => s.kind === 'human')) return false;
+  room.frozen = true;
+  room.frozenAt = Date.now();
+  clearTimeout(room.turnTimer); room.turnTimer = null;
+  clearTimeout(room.trickTimer); room.trickTimer = null;
+  clearTimeout(room.roundTimer); room.roundTimer = null;
+  return true;
+}
+function maybeUnfreeze(room) {
+  if (!room || !room.frozen) return;
+  room.frozen = false;
+  room.frozenAt = null;
+  broadcastState(room);
+  if (room.phase === 'roundEnd') {
+    clearTimeout(room.roundTimer);
+    room.roundTimer = setTimeout(() => {
+      if (!rooms.has(room.code) || room.match.finished) return;
+      room.phase = 'playing';
+      room.match.startRound();
+      broadcastState(room);
+      pumpTurn(room);
+    }, ROUND_PAUSE_MS);
+  } else if (room.trickHold) {
+    // Froze mid trick-hold: its timer was cleared too, and
+    // pumpTurn defers to it — re-arm it or the match stalls.
+    clearTimeout(room.trickTimer);
+    room.trickTimer = setTimeout(() => {
+      room.trickHold = null;
+      if (!rooms.has(room.code)) return;
+      broadcastState(room);
+      pumpTurn(room);
+    }, TRICK_PAUSE_MS);
+  } else {
+    pumpTurn(room);
+  }
+}
+function dissolveRoom(room) {
+  clearTimeout(room.turnTimer);
+  clearTimeout(room.roundTimer);
+  clearTimeout(room.trickTimer);
+  if (room.rematchTimer) { clearTimeout(room.rematchTimer); room.rematchTimer = null; }
+  sendToSpectators(room, { type: 'roomClosed', code: 'roomCancelled' });
+  rooms.delete(room.code);
+  syncClubGame(room);
+}
+function dissolveFrozenFor(sid, exceptCode) {
+  if (!sid) return;
+  for (const room of [...rooms.values()]) {
+    if (!room.frozen || room.code === exceptCode) continue;
+    if (room.seats.some((s) => s.kind === 'human' && s.sid === sid)) {
+      const sids = room.seats.filter((s) => s.kind === 'human' && s.sid).map((s) => s.sid);
+      dissolveRoom(room);
+      if (sids.length) syncBusyFor(null, sids);
+    }
+  }
+}
+
 
 function send(ws, obj) {
   if (ws && ws.readyState === ws.OPEN) ws.send(JSON.stringify(obj));
@@ -749,6 +886,7 @@ function doPlay(room, seat, card) {
  */
 function botPlay(room, seat, mayDeclare) {
   const round = room.match && room.match.round;
+  if (room.frozen) return; // F35: frozen matches never advance (stale-timer guard)
   if (!round || round.finished || round.turn !== seat) return;
   if (room.trickHold) return;
   if (mayDeclare && bots.maybeDeclare13(round, seat)) {
@@ -763,6 +901,7 @@ function botPlay(room, seat, mayDeclare) {
 
 /** (Re)arm the action for whoever is on turn: bot → quick, human → 30 s. */
 function pumpTurn(room) {
+  if (room.frozen) return; // F35: a frozen match never advances
   clearTimeout(room.turnTimer);
   if (room.trickHold) return; // the trick-pause timer re-arms the turn when it fires
   if (room.phase !== 'playing' || !room.match || !room.match.round) return;
@@ -818,6 +957,9 @@ function cleanCountry(c) {
 }
 function cleanPhoto(p) {
   if (typeof p !== 'string' || p.length > 300) return null;
+  // F17: the player's uploaded own photo rides the same 'google'
+  // kind — addressed by this exact same-origin pattern only.
+  if (/^\/p-photo\/\d{6}\.jpg\?v=\d{1,6}$/.test(p)) return p;
   if (!p.startsWith('https://')) return null;
   if (!p.includes('googleusercontent.com')) return null;
   return p;
@@ -868,6 +1010,7 @@ function reattachSeat(ws, room, seatIdx, msg) {
     isHost: seatIdx === hostSeat(room),
   });
   broadcastState(room);
+  maybeUnfreeze(room); // F35: reattaching resumes a frozen match
 }
 
 function attachPlayer(ws, room, seatIdx, name, prof) {
@@ -890,6 +1033,7 @@ function attachPlayer(ws, room, seatIdx, name, prof) {
     isHost: seatIdx === hostSeat(room),
   });
   broadcastState(room);
+  maybeUnfreeze(room); // F35: a live seat wakes the match
 }
 
 function onDisconnect(ws) {
@@ -907,6 +1051,9 @@ function onDisconnect(ws) {
   seat.ws = null;
   seat.connected = false;
   seat.disconnectAt = Date.now();
+  // F35: if that was the last connected human, the match freezes
+  // here (the sweep backstops any path that misses it).
+  maybeFreeze(room);
   if (seat.voiceMic) {
     // Voice is opt-in per connection: a gone mic is a silent mic, and
     // the room hears about it so peers tear the connection down.
@@ -944,6 +1091,18 @@ setInterval(() => {
         if (s.kind === 'human' && s.sid && !seatLive(s, now)) deadSids.push(s.sid);
       });
       if (deadSids.length) syncBusyFor(null, deadSids);
+      continue;
+    }
+    // F35: frozen matches hold their seats past the reconnect
+    // grace — no bot conversion — until the freeze itself
+    // expires (24 h), when the room dissolves with no stats.
+    maybeFreeze(room);
+    if (room.frozen) {
+      if (now - (room.frozenAt || now) > FROZEN_MAX_EFF) {
+        const sids = room.seats.filter((s) => s.kind === 'human' && s.sid).map((s) => s.sid);
+        dissolveRoom(room);
+        if (sids.length) syncBusyFor(null, sids);
+      }
       continue;
     }
     // Rematch expiry backstop (the per-offer setTimeout armed at
@@ -1046,6 +1205,9 @@ function handleMessage(ws, msg) {
   }
   switch (msg.type) {
     case 'create': {
+      // F35: one frozen match per player — a fresh create
+      // dissolves his frozen match (never the one being made).
+      dissolveFrozenFor(joinSid(msg), null);
       const room = createRoom();
       room.felt = cleanFelt(msg.felt); // creator's felt, validated; fixed at creation
       room.back = cleanBack(msg.back); // creator's card back, validated the same way
@@ -1107,12 +1269,19 @@ function handleMessage(ws, msg) {
       const sid = joinSid(msg);
       const mine = sid ? room.seats.findIndex((s) => s.kind === 'human' && s.sid === sid) : -1;
       if (mine !== -1) { reattachSeat(ws, room, mine, msg); maybeStartVs(room); break; }
+      // (F35 dissolve happens at the attach below, once the seat
+      // is really his — a refused join must not cost him the
+      // frozen match.)
       // Club-vs-club rooms seat ONLY their four reserved
       // players — anyone else is refused outright.
       if (room.vs) return sendError(ws, 'این بازی فقط برای بازیکنان دو کلب است', 'vsOnly');
       if (room.phase !== 'lobby') return sendError(ws, 'بازی این اتاق شروع شده است', 'gameStarted');
       const idx = room.seats.findIndex((s) => s.kind === 'empty');
       if (idx === -1) return sendError(ws, 'اتاق پر است', 'roomFull');
+      // F35: taking a seat in a DIFFERENT room dissolves his
+      // frozen match (joining the frozen room itself reattaches
+      // above and never reaches here).
+      dissolveFrozenFor(sid, room.code);
       attachPlayer(ws, room, idx, cleanName(msg.name), msg);
       break;
     }
@@ -1144,6 +1313,7 @@ function handleMessage(ws, msg) {
       });
       broadcastState(room);
       maybeStartVs(room); // a token reconnect can be a vs room's 4th connection
+      maybeUnfreeze(room); // F35: the Continue flow lands here — resume a frozen match
       break;
     }
     case 'start': {
