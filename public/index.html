@@ -6432,25 +6432,155 @@ function renderProfileButton() {
   // The player's name sits beside the avatar; placeholder until one is saved.
   $('#home-name').textContent = (profile.name || '').trim() || T('playerPlaceholder');
 }
+// ---------- up44: connection self-healing ----------
+// Owner's order 2026-11-12 («اتصال بازی قوی شود تا قطع نشود» — the
+// game's connection must be strong so it never drops), after his
+// live freeze: mid-match his path died silently, the socket still
+// looked OPEN, no reconnect was ever attempted and the table sat
+// frozen behind an «اړیکه نشته» toast. Three mechanisms now guard
+// the game socket, replacing the old onclose-only retry:
+//   1. a heartbeat — the client pings every 5 s and stamps every
+//      inbound frame; a socket with no inbound traffic for 12 s is
+//      silently dead (NAT timeout, carrier handover, a webview
+//      that froze the socket while backgrounded) even though
+//      readyState still says OPEN, and a socket stuck CONNECTING
+//      for 8 s is abandoned. The watchdog force-closes both, so
+//      the redial below actually starts.
+//   2. a redial loop with backoff — the first retry fires ~1 s
+//      after a detected drop, then 2 s / 4 s / 8 s, capped at
+//      10 s, and it keeps trying for as long as a resumable
+//      session exists: a drop that heals inside a few seconds is
+//      nearly invisible (the banner may flash; play is not lost).
+//   3. wake-up kicks — returning to the foreground, the network
+//      coming back ('online') or the window regaining focus
+//      re-checks liveness at once instead of waiting for the next
+//      watchdog tick or backoff step.
+const HB_PING_MS = 5000;        // heartbeat cadence on the game socket
+const HB_DEAD_MS = 12000;       // no inbound frame for this long = silently dead
+const HB_CONNECT_MS = 20000;    // a socket CONNECTING longer than this is abandoned — deliberately
+                                // generous: after several failed handshakes the browser throttles new
+                                // ones per host, and aborting a still-queued handshake early only feeds
+                                // that throttle (measured in the reconnect driver: redials never dialled)
+let lastRxAt = 0;               // last inbound frame on the current game socket
+let lastPingAt = 0;             // last heartbeat sent on it
+let wsBornAt = 0;               // when the current socket was created
+let reconnectTimer = null;
+let reconnectDelay = 1000;      // first redial ~1 s after a detected drop
+function connWanted() {
+  return !!(session && session.code && session.token && !session.local &&
+    !intentionalClose && !localGameLive && !spectating);
+}
+function scheduleReconnect(now) {
+  if (!connWanted()) return;
+  if (reconnectTimer) {
+    if (!now) return;
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  const wait = now ? 0 : reconnectDelay;
+  reconnectDelay = Math.min(10000, reconnectDelay * 2);
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    if (!connWanted()) return;
+    if (ws && ws.readyState !== 3) return; // a socket appeared meanwhile — the watchdog judges it
+    connect(() => send({ type: 'reconnect', code: session.code, token: session.token, ...profileMsg() }));
+  }, wait);
+}
+// The shared teardown for a game socket that is gone. The real
+// onclose runs it; the watchdog also runs it (via forceDropSocket)
+// for sockets whose close event never comes.
+function onSocketGone() {
+  endJoinFlight(); // an unanswered join dies with its socket
+  // Offline bot fallback (2026-11-11): a bot-game create whose
+  // socket dies BEFORE the room reply means the server is
+  // unreachable — hand the game to the in-page local host
+  // instead of the reconnect loop below.
+  if (botFallbackArm) { disarmBotFallback(); startLocalBotGame(true); return; }
+  if (intentionalClose) return;
+  // Peer connections were negotiated over this socket's session:
+  // drop them; they re-form after the reconnect re-announces voice.
+  if (typeof peers !== 'undefined') Object.keys(peers).forEach((s) => closePeer(+s, 'teardown'));
+  $('#connbar').textContent = T('disconnected');
+  scheduleReconnect();
+}
+function forceDropSocket() {
+  if (!ws) return;
+  const s = ws;
+  ws = null;
+  try { s.onclose = null; } catch (e) { /* gone */ }
+  try { s.close(); } catch (e) { /* gone */ }
+  onSocketGone();
+  scheduleReconnect(true); // a detected death redials at once
+}
+function kickConnection() {
+  if (!connWanted()) return;
+  if (!ws || ws.readyState === 3) { scheduleReconnect(true); return; }
+  if (ws.readyState === 0) {
+    // A CONNECTING socket whose path is PROVABLY dead — a live
+    // session existed (lastRxAt set) but no frame has arrived for
+    // HB_DEAD_MS, i.e. the path died while this handshake queued —
+    // will never complete (a dead NAT path never revives in place;
+    // only a fresh dial heals). The wake-up kick abandons it at
+    // once instead of waiting out HB_CONNECT_MS. The watchdog
+    // keeps the age rule only: during an outage every redial is
+    // born into stale-rx, so a staleness rule there would spin the
+    // loop against the browser's handshake throttle — a kick is a
+    // human/OS-paced event, so one immediate redial is safe.
+    const pathDead = lastRxAt > 0 && Date.now() - lastRxAt > HB_DEAD_MS;
+    if (pathDead || Date.now() - wsBornAt > HB_CONNECT_MS) forceDropSocket();
+    return;
+  }
+  if (ws.readyState !== 1) return;
+  const rxAtKick = lastRxAt;
+  try { ws.send(JSON.stringify({ type: 'ping' })); lastPingAt = Date.now(); } catch (e) { /* gone */ }
+  if (Date.now() - lastRxAt > HB_DEAD_MS) {
+    // Possibly just a sleepy socket (the page was suspended and
+    // the path may still be alive): give the ping one short beat
+    // to prove the path before redialling.
+    setTimeout(() => {
+      if (ws && ws.readyState === 1 && lastRxAt === rxAtKick && connWanted()) forceDropSocket();
+    }, 1500);
+  }
+}
+setInterval(() => {
+  if (!connWanted()) return;
+  if (!ws) { scheduleReconnect(); return; }
+  const now = Date.now();
+  if (ws.readyState === 1) {
+    if (now - lastRxAt > HB_DEAD_MS) { forceDropSocket(); return; }
+    if (now - lastPingAt >= HB_PING_MS) {
+      lastPingAt = now;
+      try { ws.send(JSON.stringify({ type: 'ping' })); } catch (e) { /* the watchdog will judge */ }
+    }
+  } else if (ws.readyState === 0) {
+    if (now - wsBornAt > HB_CONNECT_MS) forceDropSocket();
+  } else if (ws.readyState === 3) {
+    scheduleReconnect();
+  }
+  // up44: the social socket gets the same stall discipline — a handshake left
+  // CONNECTING forever (dead path) otherwise corks the browser's per-host
+  // WebSocket pipeline and starves the game socket's redials (driver-proven).
+  if (sws && sws.readyState === 0 && swsBornAt && now - swsBornAt > HB_CONNECT_MS) {
+    const stuck = sws;
+    sws = null; swsOpen = false;
+    try { stuck.onclose = null; stuck.close(); } catch (e) { /* gone */ }
+    scheduleSocialRetry();
+  }
+}, 1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) kickConnection(); });
+window.addEventListener('online', kickConnection);
+window.addEventListener('focus', kickConnection);
+
 function connect(onOpen) {
   const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
-  ws = new WebSocket(proto + location.host);
-  ws.onopen = onOpen;
-  ws.onmessage = (ev) => { try { onMsg(JSON.parse(ev.data)); } catch (e) {} };
-  ws.onclose = () => {
-    endJoinFlight(); // an unanswered join dies with its socket
-    // Offline bot fallback (2026-11-11): a bot-game create whose
-    // socket dies BEFORE the room reply means the server is
-    // unreachable — hand the game to the in-page local host
-    // instead of the reconnect loop below.
-    if (botFallbackArm) { disarmBotFallback(); startLocalBotGame(true); return; }
-    if (intentionalClose) return;
-    // Peer connections were negotiated over this socket's session:
-    // drop them; they re-form after the reconnect re-announces voice.
-    if (typeof peers !== 'undefined') Object.keys(peers).forEach((s) => closePeer(+s, 'teardown'));
-    $('#connbar').textContent = T('disconnected');
-    setTimeout(() => { if (session) connect(() => send({ type: 'reconnect', code: session.code, token: session.token, ...profileMsg() })); }, 2500);
-  };
+  const s = new WebSocket(proto + location.host);
+  ws = s;
+  wsBornAt = Date.now();
+  lastPingAt = 0;
+  intentionalClose = false; // a fresh flow (boot / join / create / redial) re-arms the healer
+  s.onopen = () => { lastRxAt = Date.now(); if (onOpen) onOpen(); };
+  s.onmessage = (ev) => { lastRxAt = Date.now(); try { onMsg(JSON.parse(ev.data)); } catch (e) {} };
+  s.onclose = () => { if (ws === s) ws = null; onSocketGone(); };
 }
 function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
 
@@ -9992,6 +10122,11 @@ class LocalHost {
         // forms a pair with a bot seat, so it never sends one.)
         return;
       }
+      case 'ping': {
+        // up44 heartbeat: the local host answers like every server.
+        this.emit({ type: 'pong' });
+        return;
+      }
       default:
         return;
     }
@@ -10103,6 +10238,10 @@ function pkGo(i, smooth) {
   pkPaintNext();
 }
 function openPicker(mode, clubCid) {
+  ensureDeck(); // UP44R: pre-warm the deck at door intent — the reconnect
+  // healer's boot work made warm re-entry cross the 300 ms loader-gate
+  // threshold (cardsfix C flash); loading from the picker click keeps
+  // every table entry instant. Deduped by deckPromise.
   pkMode = mode || 'online';
   pkClubCid = clubCid || null;
   pkFromClub = !!clubCid;
@@ -11051,6 +11190,11 @@ try {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
 } catch (e) { /* no PWA on this browser — the game is unaffected */ }
+// UP44R: warm the deck at boot. Faces are cache-first (SW / HTTP cache),
+// so for a returning player this costs no network — it only moves the
+// load off the table-entry critical path, where up44's reconnect healer
+// made warm re-entry cross the 300 ms loader gate (cardsfix C flash).
+try { ensureDeck(); } catch (e) { /* the entry gates still load it */ }
 // The home install entry: visible ONLY when installation is really
 // possible — a captured beforeinstallprompt (Android/Chrome), or
 // iOS Safari, which has no such event and gets the Share-sheet
@@ -11427,9 +11571,14 @@ function serverMsgText(msg) {
 }
 
 function onMsg(msg) {
+  if (msg.type === 'pong') return; // up44 heartbeat reply — lastRxAt was already stamped
   if (msg.type === 'room') {
     endJoinFlight(); // the join (or create/reconnect) landed
     disarmBotFallback(); // a host answered (server or local) — no fallback
+    // up44: a landed room reply means the connection healed —
+    // the next drop starts its redial backoff from ~1 s again.
+    reconnectDelay = 1000;
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
     closeJoin(); // the join popup has done its job — never cover the lobby
     closePicker(); // a picker-started flow lands the same way
     closeClubs(); // a room entered from the club screens (club-game create, invite accept) must not stay covered by them
@@ -11577,7 +11726,7 @@ function onMsg(msg) {
 // account (g:<sub>) from the session; on the plain Node hosts it
 // keys me by the persistent player id below (p:<pid>). The client
 // just sends the hello and renders what the server answers.
-let sws = null, swsOpen = false, swsRetry = null;
+let sws = null, swsOpen = false, swsRetry = null, swsBornAt = 0;
 let socialMe = null;
 let socialUid = null;            // my permanent player ID (from s-init; never changes)
 let socialData = null;           // {friends, incoming, outgoing, blocked}
@@ -11642,8 +11791,10 @@ function connectSocial() {
   try { sock = new WebSocket(proto + location.host + '/social'); }
   catch (e) { scheduleSocialRetry(); return; }
   sws = sock;
+  swsBornAt = Date.now();
   sock.onopen = () => {
     swsOpen = true;
+    swsRetryDelay = 3000;
     socialHello();
     if (dmPeer) socialSend({ type: 's-dm-history', with: dmPeer.id });
   };
@@ -11654,9 +11805,13 @@ function connectSocial() {
   sock.onclose = () => { swsOpen = false; if (sws === sock) sws = null; scheduleSocialRetry(); };
   sock.onerror = () => { try { sock.close(); } catch (e) { /* ignore */ } };
 }
+let swsRetryDelay = 3000;   // grows on repeated failures (up44: a flat 3 s retry floods the browser's
+                            // per-host handshake throttle during an outage and starves the game socket)
 function scheduleSocialRetry() {
   if (swsRetry) return;
-  swsRetry = setTimeout(() => { swsRetry = null; connectSocial(); }, 3000);
+  const d = swsRetryDelay;
+  swsRetryDelay = Math.min(swsRetryDelay * 2, 20000);
+  swsRetry = setTimeout(() => { swsRetry = null; connectSocial(); }, d);
 }
 
 function cachePerson(p) { if (p && p.id) socialPeople.set(p.id, p); }
