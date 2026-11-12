@@ -2939,20 +2939,33 @@
   #mp-bc.on svg path { fill: #2a1440; }
   /* up42: the hairline is a real SEEK bar now — same spot at the
      pill's bottom edge, same gold look. The visible strip stays
-     3px; transparent borders widen the touch box to 18px
-     (background-clip keeps the paint on the strip alone). The
+     3px; transparent borders widen the touch box to 18px. The
      knob rides the fill's leading edge; the tiny time digits sit
      at the bar's right end, so the track gives up that corner
      (right inset 70px). Followers (locked) get a dimmed knob. */
   #mp-prog {
     position: absolute; left: 14px; right: 70px; bottom: 0; height: 3px;
     border-top: 12px solid transparent; border-bottom: 3px solid transparent;
-    background: rgba(255,255,255,.18); background-clip: padding-box;
     border-radius: 2px; cursor: pointer; touch-action: none;
   }
-  #mp-prog-fill { height: 100%; width: 0%; background: #f7c54a; border-radius: 2px; }
+  /* up43b: the painted lines are ABSOLUTE, centred on the knob's
+     line. The fill used to be a normal-flow child with
+     height:100% and the track the element's own background — but
+     the global border-box plus the 12px transparent touch border
+     crush the track's content box to 0px tall, so the fill
+     rendered 0px high: only the knob dot showed and the played
+     line was invisible (owner photo 2026-11-12). Now the dim
+     remainder is ::before and the played segment is the fill,
+     each an explicit 3px — solid gold vs dim, unmistakable. */
+  #mp-prog::before {
+    content: ''; position: absolute; left: 0; right: 0; top: 50%;
+    transform: translateY(-50%); height: 3px; border-radius: 2px;
+    background: rgba(255,255,255,.18);
+  }
+  #mp-prog-fill { position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+    height: 3px; width: 0%; background: #f7c54a; border-radius: 2px; z-index: 1; }
   #mp-knob {
-    position: absolute; top: 50%; right: 0; width: 11px; height: 11px;
+    position: absolute; top: 50%; right: 0; width: 11px; height: 11px; z-index: 2;
     border-radius: 50%; background: #f7c54a; pointer-events: none;
     border: 1.5px solid rgba(24, 14, 2, .6); box-shadow: 0 1px 4px rgba(0,0,0,.55);
     transform: translate(50%, -50%);
@@ -7394,6 +7407,7 @@ function cancelMicPending(why) {
 function completeMicOn(gen, stream) {
   localStream = stream;
   micOn = true;
+  try { if (typeof TorePlayer !== 'undefined' && TorePlayer) TorePlayer.micHook(true); } catch (e) { /* up43b: player gone */ }
   // Pairs that already exist (formed while I was listening) take
   // the track by replaceTrack ALONE: the transceiver was born
   // sendrecv, so sending starts with no renegotiation and no
@@ -7586,6 +7600,7 @@ function stopMic() {
   if (micPending) cancelMicPending('off');
   micGen++; // supersede any mic-on still acquiring the microphone
   micOn = false;
+  try { if (typeof TorePlayer !== 'undefined' && TorePlayer) TorePlayer.micHook(false); } catch (e) { /* up43b: player gone */ }
   clearMicSupervision();
   micMuteSince = 0; micMuteHealed = false; micReacquiring = false;
   eachMicBtn((b) => b.classList.remove('on'));
@@ -10205,7 +10220,34 @@ function fxReducedMotion() {
   try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
   catch (e) { return false; }
 }
+// up43 — bursts live ONLY on the table. #takanbanner / #burst13
+// are global fixed overlays (z-index 70) floating over EVERY
+// screen and over every z-40 overlay — the playlist sheet
+// included, which the music pill opens on any screen. With no
+// gate, a round-end / ۱۳ event landing while the sheet was open
+// painted the burst across it, and a burst still mid-animation
+// when the player left the table rode onto the home screen
+// (owner report 2026-11-12). Gate: the table screen is the
+// active screen AND the playlist sheet is closed. Anything that
+// would fire anywhere else is DROPPED, never queued for later.
+function burstsAllowed() {
+  const g = $('#scr-game');
+  if (!g || g.classList.contains('hidden')) return false;
+  const pl = $('#ov-playlist');
+  if (pl && pl.classList.contains('show')) return false;
+  return true;
+}
+// Kill any in-flight burst the moment the table screen stops
+// being active (called from show()): the CSS animation would
+// otherwise finish its 1.2–1.9 s run on the next screen.
+function hideBursts() {
+  const b = $('#takanbanner');
+  if (b) b.classList.remove('show', 'burst');
+  const b13 = $('#burst13');
+  if (b13) b13.classList.remove('show');
+}
 function showTakanBurst(mine) {
+  if (!burstsAllowed()) return; // up43: dropped off-table
   const b = $('#takanbanner');
   if (!b) return;
   b.textContent = mine ? T('takanBannerUs') : T('takanBannerThem');
@@ -10215,6 +10257,7 @@ function showTakanBurst(mine) {
   if (!fxReducedMotion()) b.classList.add('burst');
 }
 function show13Burst(name) {
+  if (!burstsAllowed()) return; // up43: dropped off-table
   const b = $('#burst13');
   if (!b) return;
   const sub = b.querySelector('.b13-sub');
@@ -10424,18 +10467,63 @@ const TorePlayer = (() => {
       audio.volume = Math.min(1, Math.max(0, v + Math.sign(diff) * Math.min(step, Math.abs(diff))));
     }
   }, 60);
+  // ---------- up43b: my own mic pauses the music ----------
+  // Owner order 2026-11-12: opening MY mic (table/lobby room
+  // voice via completeMicOn/stopMic, or a club seat mic via
+  // cv.setMic — both funnel into micHook) pauses the song;
+  // closing the mic resumes it FROM THE SAME POSITION — but
+  // only when the player itself did the pausing: a song the
+  // owner had already paused stays paused, and any manual
+  // transport touch during the mic window hands control back
+  // to him (toggle/step/playTrack/detach clear the flag).
+  // Broadcast: the owner's mic-pause rides bcSend, so it IS the
+  // broadcast pause; a follower pauses locally only (anchors
+  // keep parking his position but never force-play him) and
+  // resyncs to the live anchor position on mic-off. This is
+  // about MY voice; the ducking above is about everyone else's.
+  let pausedByMic = false;
+  function micHook(on) {
+    if (on) {
+      if (pausedByMic || audio.paused) return;
+      pausedByMic = true;
+      pause();
+      bcSend(); // owner: the anchor now reads paused — followers pause too
+      paint();
+      return;
+    }
+    if (!pausedByMic) return;
+    pausedByMic = false;
+    if (!master()) { paint(); return; } // master switched off mid-window: stay silent
+    if (bc.mode === 'follow' && lastBc && lastBc.on) {
+      if (lastBc.playing) {
+        // resync to where the broadcast has got to while I talked
+        const est = (lastBc.pos || 0) + (Date.now() - (lastBc._rxAt || Date.now())) / 1000;
+        try { if (Number.isFinite(audio.duration) && audio.duration > 0) audio.currentTime = Math.min(est, Math.max(0, audio.duration - 0.3)); } catch (e) { /* not seekable */ }
+        play();
+      } else {
+        try { audio.currentTime = lastBc.pos || 0; } catch (e) { /* park at the anchor */ }
+      }
+    } else {
+      play();
+      bcSend(); // owner: followers resume from my frozen spot
+    }
+    paint();
+  }
   function toggle() {
+    pausedByMic = false; // a manual touch takes control back
     if (bc.mode === 'follow') { detach(); return; }
     if (audio.paused) play(); else pause();
   }
   function step(d) {
     if (bc.mode === 'follow') return;      // locked while following
+    pausedByMic = false;                   // up43b: a manual pick takes control back
     errChain = 0;                          // a manual pick re-arms the skip chain
     load(idx + d, true);
     bcSend();
   }
   function playTrack(i) {
     if (bc.mode === 'follow') return;      // locked while following
+    pausedByMic = false;                   // up43b: a manual pick takes control back
     errChain = 0;
     load(i, true);
     bcSend();
@@ -10446,6 +10534,7 @@ const TorePlayer = (() => {
     const rc = inRoomClub();
     if (!rc || String(rc.cid) !== String(m.club)) return;
     lastBc = m;
+    m._rxAt = Date.now(); // up43b: anchor receipt stamp (follower mic-resume resync maths)
     if (bc.mode === 'owner') return;       // I drive; the echo is not for me
     if (!m.on) {
       const was = bc.mode === 'follow';
@@ -10461,7 +10550,7 @@ const TorePlayer = (() => {
       try {
         if (Number.isFinite(audio.duration) && Math.abs((audio.currentTime || 0) - m.pos) > 2.5) audio.currentTime = Math.min(m.pos, audio.duration - 0.3);
       } catch (e) { /* not seekable yet */ }
-      if (m.playing) play(); else pause();
+      if (m.playing && !pausedByMic) play(); else pause(); // up43b: a mic-held follower is never force-played
       paint();
     };
     if (audio.readyState >= 1) sync();
@@ -10470,6 +10559,7 @@ const TorePlayer = (() => {
   }
   function detach() {
     if (bc.mode !== 'follow') return;
+    pausedByMic = false; // up43b: detaching takes control back
     bc.detached = true;
     pause();
     paint();
@@ -10624,7 +10714,7 @@ const TorePlayer = (() => {
   // A follower whose broadcast-play was blocked by the autoplay
   // policy gets one repair attempt on his next tap anywhere.
   document.addEventListener('pointerdown', () => {
-    if (bc.mode === 'follow' && !bc.detached && lastBc && lastBc.on && lastBc.playing && audio.paused) play();
+    if (bc.mode === 'follow' && !bc.detached && !pausedByMic && lastBc && lastBc.on && lastBc.playing && audio.paused) play();
   }, { passive: true });
   // progress + owner anchor refresh + room-context watch
   let bcTick = 0, lastCtxKey = '';
@@ -10657,6 +10747,7 @@ const TorePlayer = (() => {
     setChipPos(x, y) { chipPos = { x, y }; save(); paint(); },
     openPlaylist, closePlaylist,
     bcToggle, onBcState: applyBc,
+    micHook, // up43b: the voice funnels (room + club) pause/resume the music with my mic
     onMasterToggle() {
       if (!master()) {
         pause();
@@ -11433,11 +11524,13 @@ function onMsg(msg) {
   } else if (msg.type === 'takan') {
     if (tut && !tut.takan) { tut.takan = true; showCoach(T('tutTakan'), true); }
     const mine = msg.team === (mySeat % 2);
-    const b = $('#takanbanner');
-    b.textContent = mine ? T('takanBannerUs') : T('takanBannerThem');
-    b.classList.remove('show');
-    void b.offsetWidth; // restart the pop animation
-    b.classList.add('show');
+    if (burstsAllowed()) { // up43: the banner pop obeys the same table-only gate
+      const b = $('#takanbanner');
+      b.textContent = mine ? T('takanBannerUs') : T('takanBannerThem');
+      b.classList.remove('show');
+      void b.offsetWidth; // restart the pop animation
+      b.classList.add('show');
+    }
   } else if (msg.type === 'declared13') {
     const nm = state && state.seats[msg.seat] ? (dispName(state.seats[msg.seat]) || T('playerName')) : T('playerName');
     if (tut && !tut.s13) { tut.s13 = true; showCoach(T('tut13'), true); }
@@ -14410,7 +14503,10 @@ const cv = {
     } catch (e) { toast(T('clMicDenied')); return false; }
   },
   setMic(on) {
+    const micWas = this.micOn;
     this.micOn = !!on;
+    // up43b: my club mic pauses/resumes my music like the room mic does
+    if (micWas !== this.micOn) { try { if (typeof TorePlayer !== 'undefined' && TorePlayer) TorePlayer.micHook(this.micOn); } catch (e) { /* player gone */ } }
     if (!on && this.stream) {
       this.stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) { /* gone */ } });
       this.stream = null;
@@ -15509,6 +15605,9 @@ document.addEventListener('touchmove', (e) => {
 
 // ---------- rendering ----------
 function show(id) {
+  // up43: leaving the table kills any in-flight takan/۱۳ burst —
+  // the global overlays must never ride onto home or the lobby.
+  if (id !== 'scr-game') hideBursts();
   ['scr-home', 'scr-lobby', 'scr-game'].forEach((s) => $('#' + s).classList.toggle('hidden', s !== id));
 }
 function relPos(seat) { // position relative to me: 0 bottom, 1 right, 2 top, 3 left
