@@ -61,6 +61,15 @@
  * fetched copy is only served/cached after a completeness check
  * (> CLIENT_MIN_BYTES, ends with </html>) — a failed or truncated
  * fetch serves a short "game is updating" page, never a half page.
+ * The upstream fetch is BOUNDED (CLIENT_FETCH_TIMEOUT_MS): a brand-
+ * new ?v= URL is cold in every edge POP, and before the up39 fix a
+ * stalled GitHub fetch there hung the page response forever (the
+ * 2026-11-12 iPhone outage — blank page, stuck loading bar, while
+ * warm POPs/Android loaded fine). On any upstream trouble
+ * serveClient now falls back, in order, to: the edge copy of the
+ * current URL, the version-independent "last-good" edge entry
+ * (rewritten on every successful upstream fetch), the previous
+ * version's URL (FALLBACK_CLIENT_URL), and only then the 503 page.
  * The source URL is one constant (CLIENT_URL_DEFAULT); the env var
  * CLIENT_URL overrides it (local testing against a static server).
  * Since the speed pass the bundle is CODE-ONLY (~0.8 MB — the images
@@ -78,6 +87,14 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261112-hqfix';
+// The PREVIOUS client version's URL — last-resort fallback for
+// serveClient (see the header comment): that build was live long
+// enough that its edge copies are warm in the POPs, so when a fresh
+// ?v= URL's first upstream fetch stalls or fails, players still get
+// a working game instead of a hung/blank page. (The env var
+// FALLBACK_CLIENT_URL overrides it, same pattern as CLIENT_URL.)
+const FALLBACK_CLIENT_URL_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261112-feat2';
 const STICKER_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/stickers/';
@@ -90,6 +107,19 @@ const CARDS_URL_BASE_DEFAULT =
 const CARPETS_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/carpets/';
 const CLIENT_MIN_BYTES = 500_000; // speed pass: the bundle is code-only now (~0.82 MB; was 13.8 MB with the images inlined)
+// Bounds for serveClient's upstream fetches. Worst case for a page
+// load when everything upstream stalls: 8s (current URL) + 5s
+// (fallback URL) + fast cache lookups — the response ALWAYS
+// completes; it can never hang on GitHub again.
+const CLIENT_FETCH_TIMEOUT_MS = 8000;
+const FALLBACK_FETCH_TIMEOUT_MS = 5000;
+// Cache key of the version-independent "last-good" client copy:
+// serveClient rewrites it on EVERY successful upstream fetch of the
+// current CLIENT_URL, so it always holds the newest client that any
+// request has managed to pull — the copy served when a fresh ?v=
+// URL's own edge entry is cold AND its upstream fetch fails. The
+// .internal host is never fetched; it is only a Cache API key.
+const LAST_GOOD_CACHE_URL = 'https://last-good.tore.internal/client';
 const CLIENT_CACHE_TTL = 86400; // seconds the EDGE keeps the client copy —
 // the browser never gets this TTL: serveClient hands the browser
 // `Cache-Control: no-cache` so it revalidates `/` on every load and
@@ -168,75 +198,158 @@ function ifNoneMatchHits(request, etag) {
   });
 }
 
+// One BOUNDED upstream fetch of a client bundle, with the standing
+// completeness check (> CLIENT_MIN_BYTES, ends with </html>). The
+// AbortController covers the WHOLE fetch — headers AND body — so a
+// stalled or trickling upstream can never hang the caller: when the
+// timer fires, a pending arrayBuffer() rejects and we land in the
+// catch. Never throws; returns { buf } on success, { note } (a short
+// Persian reason for the 503 page) on any failure.
+async function fetchClientCopy(url, timeoutMs) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'tore-game-worker' },
+      signal: ctl.signal,
+    });
+    if (!res.ok) return { buf: null, note: 'HTTP ' + res.status };
+    const buf = await res.arrayBuffer();
+    const tail = new TextDecoder().decode(buf.slice(-64)).trim();
+    if (buf.byteLength > CLIENT_MIN_BYTES && tail.endsWith('</html>')) {
+      return { buf, note: 'HTTP ' + res.status };
+    }
+    return { buf: null, note: 'HTTP ' + res.status + ' — فایل ناقص بود (' + buf.byteLength + ' بایت)' };
+  } catch (e) {
+    return {
+      buf: null,
+      note: ctl.signal.aborted
+        ? 'گرفتن فایل بازی بیش از حد طول کشید'
+        : 'خطای شبکه هنگام گرفتن فایل بازی',
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function serveClient(request, env) {
   const src = env.CLIENT_URL || CLIENT_URL_DEFAULT;
   const etag = clientETag(src);
-  const notModified = () => new Response(null, {
+  const fallbackSrc = env.FALLBACK_CLIENT_URL || FALLBACK_CLIENT_URL_DEFAULT;
+  const fallbackEtag = clientETag(fallbackSrc);
+  const notModified = (tag) => new Response(null, {
     status: 304,
-    headers: { 'ETag': etag, 'Cache-Control': 'no-cache' },
+    headers: { 'ETag': tag, 'Cache-Control': 'no-cache' },
   });
   const cacheKey = new Request(src, { method: 'GET' });
+  const lastGoodKey = new Request(LAST_GOOD_CACHE_URL, { method: 'GET' });
+  const fallbackKey = new Request(fallbackSrc, { method: 'GET' });
   let cache = null;
-  try {
-    cache = caches.default;
-    const hit = await cache.match(cacheKey);
-    if (hit) {
-      // The browser revalidates on every load (no-cache below), but
-      // with the ETag that revalidation is free when nothing changed:
-      // a matching If-None-Match gets a bodyless 304.
-      if (ifNoneMatchHits(request, etag)) return notModified();
-      // Re-head the edge copy for the browser: same body/status and
-      // Content-Type, but `Cache-Control: no-cache` — the browser must
-      // revalidate `/` on every load, so a freshly deployed build is
-      // picked up at once instead of being served from the browser's
-      // own day-long cache. (The ?v= in the source URL only ever
-      // busted THIS edge copy, never the browser's.)
-      const headers = new Headers(hit.headers);
-      headers.set('Cache-Control', 'no-cache');
-      headers.set('ETag', etag);
-      return new Response(hit.body, {
-        status: hit.status,
-        statusText: hit.statusText,
-        headers,
-      });
-    }
-  } catch { cache = null; }
+  try { cache = caches.default; } catch { cache = null; }
 
-  let note = '';
-  try {
-    const res = await fetch(src, { headers: { 'User-Agent': 'tore-game-worker' } });
-    note = 'HTTP ' + res.status;
-    if (res.ok) {
-      const buf = await res.arrayBuffer();
-      const tail = new TextDecoder().decode(buf.slice(-64)).trim();
-      if (buf.byteLength > CLIENT_MIN_BYTES && tail.endsWith('</html>')) {
-        // The copy stored in the edge cache keeps the long TTL (fast,
-        // cheap upstream fetches)…
-        const edgePage = new Response(buf, {
-          headers: {
-            'Content-Type': 'text/html; charset=utf-8',
-            'Cache-Control': 'public, max-age=' + CLIENT_CACHE_TTL,
-          },
-        });
-        if (cache) { try { await cache.put(cacheKey, edgePage); } catch { /* serve anyway */ } }
-        // …but the response handed to the browser revalidates always —
-        // and if this very request already carries the current ETag,
-        // it needs no body at all.
-        if (ifNoneMatchHits(request, etag)) return notModified();
-        return new Response(buf, {
-          headers: {
-            'Content-Type': 'text/html; charset=utf-8',
-            'Cache-Control': 'no-cache',
-            'ETag': etag,
-          },
-        });
-      }
-      note += ' — فایل ناقص بود (' + buf.byteLength + ' بایت)';
-    }
-  } catch (e) {
-    note = 'خطای شبکه هنگام گرفتن فایل بازی';
+  // Serve an EDGE CACHE copy to the browser. `tag` is the ETag of
+  // the version the copy actually holds — for the current URL that
+  // is `etag`; a fallback copy carries its own, so a browser holding
+  // exactly that copy still gets a correct, bodyless 304, and a
+  // browser holding a fallback copy is NOT 304'd once the current
+  // build is reachable again (its If-None-Match names the fallback's
+  // tag, which no longer matches `etag` on the happy path).
+  const serveCached = (hit, tag) => {
+    // The browser revalidates on every load (no-cache below), but
+    // with the ETag that revalidation is free when nothing changed:
+    // a matching If-None-Match gets a bodyless 304.
+    if (ifNoneMatchHits(request, tag)) return notModified(tag);
+    // Re-head the edge copy for the browser: same body/status and
+    // Content-Type, but `Cache-Control: no-cache` — the browser must
+    // revalidate `/` on every load, so a freshly deployed build is
+    // picked up at once instead of being served from the browser's
+    // own day-long cache. (The ?v= in the source URL only ever
+    // busted THIS edge copy, never the browser's.)
+    const headers = new Headers(hit.headers);
+    headers.delete('X-Tore-Client-ETag');
+    headers.set('Cache-Control', 'no-cache');
+    headers.set('ETag', tag);
+    return new Response(hit.body, {
+      status: hit.status,
+      statusText: hit.statusText,
+      headers,
+    });
+  };
+  // The copy stored in the edge cache keeps the long TTL (fast,
+  // cheap upstream fetches) and remembers — in X-Tore-Client-ETag —
+  // which version it holds, so a version-independent reader (the
+  // last-good fallback) can still ETag it correctly.
+  const edgeCopy = (buf, tag) => new Response(buf, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'public, max-age=' + CLIENT_CACHE_TTL,
+      'X-Tore-Client-ETag': tag,
+    },
+  });
+  // Hand a freshly fetched buffer to THIS browser: the response
+  // revalidates always — and if this very request already carries
+  // the copy's ETag, it needs no body at all.
+  const serveFresh = (buf, tag) => {
+    if (ifNoneMatchHits(request, tag)) return notModified(tag);
+    return new Response(buf, {
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'ETag': tag,
+      },
+    });
+  };
+  const cacheMatch = async (key) => {
+    if (!cache) return null;
+    try { return await cache.match(key); } catch { return null; }
+  };
+  const cachePut = async (key, resp) => {
+    if (!cache) return;
+    try { await cache.put(key, resp); } catch { /* serve anyway */ }
+  };
+
+  // Happy path 1: the edge already holds the current client.
+  const hit = await cacheMatch(cacheKey);
+  if (hit) return serveCached(hit, etag);
+
+  // Happy path 2: pull it from upstream — BOUNDED, so a cold ?v=
+  // URL whose GitHub fetch stalls can never hang the page again.
+  const fresh = await fetchClientCopy(src, CLIENT_FETCH_TIMEOUT_MS);
+  if (fresh.buf) {
+    // Cache the copy under its own URL AND as the version-
+    // independent last-good entry (rewritten on every successful
+    // upstream fetch), then serve it.
+    await cachePut(cacheKey, edgeCopy(fresh.buf, etag));
+    await cachePut(lastGoodKey, edgeCopy(fresh.buf, etag));
+    return serveFresh(fresh.buf, etag);
   }
-  return new Response(updatingPage(note), {
+
+  // Upstream failed, timed out or sent a truncated file. Fall back
+  // to the most recent good client copy instead of hanging/503ing:
+  // (a) the edge copy of the CURRENT URL — re-checked here because
+  //     the first match may have raced a concurrent request's put
+  //     (or transiently failed) while our fetch was in flight;
+  const hitAgain = await cacheMatch(cacheKey);
+  if (hitAgain) return serveCached(hitAgain, etag);
+  // (b) the last-good entry — its stored header says which version
+  //     it holds, so it is ETagged as that version;
+  const lastGood = await cacheMatch(lastGoodKey);
+  if (lastGood) {
+    return serveCached(lastGood, lastGood.headers.get('X-Tore-Client-ETag') || etag);
+  }
+  // (c) the PREVIOUS version's URL: its edge copy if this POP has
+  //     one, else one bounded fetch of it (it was live for a day —
+  //     in production the fetch is a warm GitHub raw read).
+  const fbHit = await cacheMatch(fallbackKey);
+  if (fbHit) return serveCached(fbHit, fallbackEtag);
+  const fbFresh = await fetchClientCopy(fallbackSrc, FALLBACK_FETCH_TIMEOUT_MS);
+  if (fbFresh.buf) {
+    await cachePut(fallbackKey, edgeCopy(fbFresh.buf, fallbackEtag));
+    return serveFresh(fbFresh.buf, fallbackEtag);
+  }
+  // (d) Nothing good anywhere — the standing "game is updating"
+  //     page, answered promptly with the current URL's failure note.
+  return new Response(updatingPage(fresh.note), {
     status: 503,
     headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
   });
