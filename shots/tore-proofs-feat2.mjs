@@ -949,9 +949,13 @@ try {
   check('F40: proof saved (tutorial-step-FRESH.jpg)', fs.existsSync(path.join(SHOTS, 'tutorial-step-FRESH.jpg')));
   await T.page.click('#coach-next'); // intro done — play begins
   await sleep(400);
-  // Play the scripted round: dismiss coach cards, declare 13 when
-  // offered, tap the glowing coach card on my turns; watch for the
-  // takan burst at the round end (F28 end-to-end).
+  // Play the scripted round: dismiss coach cards, tap the glowing
+  // coach card on my turns; watch for the takan burst at the round
+  // end (F28 end-to-end). up46: the «13» button is visible at EVERY
+  // lead now — arm it only at the scripted final-trick lead (hand
+  // down to its last card), the moment the F40 check below names;
+  // tutorial bots never declare (LocalHost tutOpts), so the scripted
+  // round still reaches that trick exactly as before.
   let sawTakanBurst = false;
   let takanShot = false;
   let saw13Burst = false;
@@ -972,6 +976,7 @@ try {
         coachText: document.getElementById('coach-txt').textContent,
         nextVisible: next && next.style.display !== 'none',
         can13: b13btn && !b13btn.classList.contains('hidden'),
+        handLen: (typeof state !== 'undefined' && state && state.hand) ? state.hand.length : 99,
         endShow: document.getElementById('ov-tutend').classList.contains('show'),
         phase: (typeof state !== 'undefined' && state) ? state.phase : null,
       };
@@ -987,7 +992,7 @@ try {
     if (snap.b13) saw13Burst = true;
     if (snap.endShow) { endShown = true; break; }
     if (snap.coachShow && snap.nextVisible) { await T.page.click('#coach-next').catch(() => {}); await sleep(350); continue; }
-    if (snap.can13 && !declared13) {
+    if (snap.can13 && snap.handLen === 1 && !declared13) {
       const clicked = await T.page.click('#btn-13', { timeout: 2000 }).then(() => true).catch(() => false);
       if (clicked) declared13 = true;
       await sleep(600);
