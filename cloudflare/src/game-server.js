@@ -792,7 +792,9 @@ export class GameServer {
   // session with the gate on; the pid header with it off). The
   // record flips through the core, so the new photo fans out to
   // every friends list at once. Rules: JPEG only (magic bytes
-  // checked — the client always sends canvas JPEG), ≤ 200 KB.
+  // checked — the client always sends canvas JPEG), ≤ 512 KB
+  // (up38: photos are stored at up to 1024×1024 so the large
+  // viewer shows near-original quality).
   async _pPhotoUpload(request) {
     const json = (status, obj) => new Response(JSON.stringify(obj), {
       status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
@@ -812,7 +814,7 @@ export class GameServer {
     if (type !== 'image/jpeg') return json(415, { error: 'photoBadType' });
     const buf = await request.arrayBuffer();
     if (!buf.byteLength) return json(400, { error: 'photoEmpty' });
-    if (buf.byteLength > 200 * 1024) return json(413, { error: 'photoTooBig' });
+    if (buf.byteLength > 512 * 1024) return json(413, { error: 'photoTooBig' });
     const u8 = new Uint8Array(buf);
     if (u8.length < 3 || u8[0] !== 0xFF || u8[1] !== 0xD8 || u8[2] !== 0xFF) {
       return json(415, { error: 'photoBadType' });
