@@ -924,7 +924,28 @@ function onDisconnect(ws) {
 setInterval(() => {
   const now = Date.now();
   for (const room of rooms.values()) {
-    if (room.phase === 'lobby') continue;
+    if (room.phase === 'lobby') {
+      // BUSYFIX (2026-11-12): a waiting room never expires and its
+      // seats stay reserved (owner order 2026-11-07) — but a seat
+      // whose player vanished WITHOUT a leave frame (app killed,
+      // webview closed, the client's leave frame lost to a dying
+      // socket) stops counting as busy once the busy grace lapses
+      // (seatLive), and that flip must be PUSHED. Friends repaint
+      // the invite button only on a core refresh, and nothing else
+      // ever re-checks a lobby seat — the flip sat unannounced
+      // forever, and the stale disabled button even blocked the
+      // invite whose verifyBusy would have reaped the seat. The
+      // room and the reserved seat stay exactly as they were;
+      // only the announcement is new. syncBusy no-ops unless the
+      // state really flips, so this stays cheap. (Twin of the
+      // root server.js block.)
+      const deadSids = [];
+      room.seats.forEach((s) => {
+        if (s.kind === 'human' && s.sid && !seatLive(s, now)) deadSids.push(s.sid);
+      });
+      if (deadSids.length) syncBusyFor(null, deadSids);
+      continue;
+    }
     // Rematch expiry backstop (the per-offer setTimeout armed at
     // creation is the primary mechanism).
     if (room.rematch && now >= room.rematch.expires) {
