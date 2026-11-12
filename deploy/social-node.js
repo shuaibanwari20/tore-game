@@ -29,6 +29,9 @@ function createNodeSocial(opts) {
   // Memory-only like the rest of the Node social state — the
   // Cloudflare DO is the persistent production host.
   const coverBlobs = new Map();
+  // Uploaded PROFILE photos (F17): uid -> {type, buf}. Same
+  // memory-only rule as the covers.
+  const photoBlobs = new Map();
   const core = new SocialCore({
     coverBlobDelete(cid) { coverBlobs.delete(cid); },
     sendTo(id, obj) {
@@ -120,6 +123,20 @@ function createNodeSocial(opts) {
       return out;
     },
     getCover(cid) { return coverBlobs.get(cid) || null; },
+    // ---- uploaded profile photos (the hosts' HTTP routes) ----
+    // Store the player's own photo under his permanent uid, then
+    // flip the directory record through the core (which versions
+    // the /p-photo/<uid>.jpg?v=N path). Returns {uid, v, photo}
+    // or null when the identity has no directory record yet.
+    uploadPhoto(identityId, type, buf) {
+      const uid = core.uidOf(identityId);
+      if (!uid) return null;
+      photoBlobs.set(uid, { type, buf });
+      const out = core.setUploadedPhoto(identityId);
+      if (!out) { photoBlobs.delete(uid); return null; }
+      return out;
+    },
+    getPhoto(uid) { return photoBlobs.get(uid) || null; },
   };
 }
 
