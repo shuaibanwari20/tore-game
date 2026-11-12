@@ -2897,6 +2897,99 @@
     filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
   .pk-next:active { transform: scale(.94); }
   .pk-next.hidden { display: none; }
+  /* ---------- up41: music player (floating pill + chip + sheet) ----------
+     One persistent player floats over EVERY screen: a dark glass
+     pill (real cover, title, smaller artist, prev / play-pause /
+     next / (gap) / list, broadcast toggle for a club founder) with
+     the progress hairline along its bottom edge. Tapping the cover
+     collapses it to a cover-only chip that can be DRAGGED anywhere
+     (its spot persists); a tap on the chip brings the pill back.
+     The pill never intercepts touches outside its own box. */
+  #mplayer {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(94px + env(safe-area-inset-bottom));
+    width: min(430px, calc(100vw - 20px)); height: 62px; z-index: 35;
+    display: flex; align-items: center; gap: 10px; direction: rtl;
+    padding: 7px 10px 9px; border-radius: 999px; box-sizing: border-box;
+    background: rgba(14, 9, 22, .93); border: 1px solid rgba(247, 197, 74, .55);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255,255,255,.08);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    color: #f5f2fa; overflow: hidden; touch-action: none;
+  }
+  #mplayer.locked #mp-controls .mp-btn { opacity: .35; }
+  #mp-cover {
+    width: 46px; height: 46px; border-radius: 13px; object-fit: cover; flex: none;
+    border: 1px solid rgba(247, 197, 74, .7); cursor: pointer; background: #2a1440;
+  }
+  #mp-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; cursor: pointer; }
+  #mp-title { font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
+  #mp-artist { font-size: 10.5px; color: #b9b0c9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+  #mp-controls { display: flex; align-items: center; gap: 6px; flex: none; direction: ltr; }
+  .mp-btn {
+    width: 32px; height: 32px; border-radius: 50%; flex: none; cursor: pointer;
+    background: rgba(255,255,255,.06); border: 1.5px solid rgba(245,242,250,.85);
+    display: flex; align-items: center; justify-content: center; padding: 0; margin: 0;
+  }
+  .mp-btn svg { width: 17px; height: 17px; display: block; }
+  .mp-btn svg path, .mp-btn svg rect { fill: #f5f2fa; stroke: none; }
+  .mp-btn:active { background: rgba(247,197,74,.25); }
+  #mp-list { margin-inline-start: 10px; }
+  #mp-bc { border-color: rgba(247,197,74,.6); }
+  #mp-bc.on { background: #f7c54a; border-color: #f7c54a; }
+  #mp-bc.on svg path { fill: #2a1440; }
+  #mp-prog {
+    position: absolute; left: 14px; right: 14px; bottom: 3px; height: 3px;
+    background: rgba(255,255,255,.18); border-radius: 2px; overflow: hidden;
+  }
+  #mp-prog-fill { height: 100%; width: 0%; background: #f7c54a; border-radius: 2px; }
+  /* the founder-broadcast chip that rides above a follower's pill */
+  #mp-bcchip {
+    position: fixed; left: 50%; transform: translateX(-50%); z-index: 35;
+    bottom: calc(164px + env(safe-area-inset-bottom));
+    max-width: calc(100vw - 32px); padding: 4px 12px; border-radius: 999px;
+    background: #f7c54a; color: #33230a; font-size: 12px; font-weight: 800;
+    box-shadow: 0 4px 14px rgba(0,0,0,.45); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; cursor: pointer;
+  }
+  #mp-bcchip.detached { background: rgba(20, 14, 30, .92); color: #f7c54a; border: 1px solid rgba(247,197,74,.6); }
+  /* collapsed: cover-only floating chip, draggable anywhere */
+  #mp-chip {
+    position: fixed; z-index: 35; width: 54px; height: 54px; padding: 0; margin: 0;
+    border-radius: 15px; border: 1.5px solid rgba(247, 197, 74, .8); cursor: grab;
+    background: #2a1440; box-shadow: 0 8px 22px rgba(0,0,0,.55); overflow: visible;
+    touch-action: none;
+  }
+  #mp-chip img { width: 100%; height: 100%; object-fit: cover; border-radius: 13px; display: block; pointer-events: none; }
+  #mp-chip-badge {
+    position: absolute; right: -6px; bottom: -6px; width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(14, 9, 22, .95); border: 1px solid rgba(247,197,74,.8);
+    display: flex; align-items: center; justify-content: center; pointer-events: none;
+  }
+  #mp-chip-badge svg { width: 10px; height: 10px; }
+  #mp-chip-badge svg path, #mp-chip-badge svg rect { fill: #f7c54a; stroke: none; }
+  /* playlist sheet */
+  .mp-sheet-panel { max-width: 430px; text-align: start; padding: 14px 12px 10px; }
+  .mp-sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 6px 10px; }
+  .mp-sheet-head h2 { margin: 0; font-size: 19px; }
+  #mp-rows { max-height: 62dvh; overflow-y: auto; }
+  .mp-row {
+    display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box;
+    padding: 7px 8px; margin: 0 0 4px; border-radius: 14px; cursor: pointer;
+    background: rgba(255,255,255,.045); border: 1px solid transparent; color: #f5e7c6;
+    font-family: inherit; text-align: start;
+  }
+  .mp-row img { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; flex: none; }
+  .mp-row .mp-row-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .mp-row .mp-row-title { font-size: 14.5px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mp-row .mp-row-artist { font-size: 11px; color: #b9b0c9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mp-row .mp-row-dur { font-size: 12px; color: #b9b0c9; flex: none; direction: ltr; }
+  .mp-row.cur { background: rgba(247,197,74,.14); border-color: rgba(247,197,74,.65); }
+  .mp-eq { display: none; align-items: flex-end; gap: 2px; height: 14px; flex: none; }
+  .mp-row.cur .mp-eq { display: flex; }
+  .mp-eq i { width: 3px; background: #f7c54a; border-radius: 2px; animation: mpEq 0.9s ease-in-out infinite; }
+  .mp-eq i:nth-child(1) { height: 60%; } .mp-eq i:nth-child(2) { height: 100%; animation-delay: .25s; } .mp-eq i:nth-child(3) { height: 45%; animation-delay: .5s; }
+  #mplayer.paused .mp-eq i, .mp-row.cur.paused .mp-eq i { animation-play-state: paused; }
+  @keyframes mpEq { 0%, 100% { transform: scaleY(.5); } 50% { transform: scaleY(1); } }
 </style>
 </head>
 <body>
@@ -4156,10 +4249,6 @@
         <span class="st-tog-lbl" id="st-invisible-lbl">پټ حالت</span>
         <span class="st-check" id="st-invisible-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
       </div>
-      <div class="st-togrow" id="row-set-sound" role="switch" aria-checked="true" tabindex="0">
-        <span class="st-tog-lbl" id="st-sound-lbl">د لوبې غږ</span>
-        <span class="st-check on" id="st-sound-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
-      </div>
       <div class="st-togrow" id="row-set-music" role="switch" aria-checked="false" tabindex="0">
         <span class="st-tog-lbl" id="st-music-lbl">د شاليد موسيقي</span>
         <span class="st-check" id="st-music-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
@@ -4299,6 +4388,54 @@
 
 <div id="toast"></div>
 
+<!-- ======== MUSIC PLAYER (up41) ========
+     One persistent player floats over every screen: the pill
+     (cover / title / artist / prev · play-pause · next · list,
+     plus a club founder's broadcast toggle), the cover-only
+     draggable chip it collapses to, the founder-broadcast chip a
+     follower sees, and the playlist sheet. Driven by TorePlayer
+     (bottom of the main script); the single <audio> lives there
+     so music survives every screen change. -->
+<div id="mp-bcchip" class="hidden"></div>
+<div id="mplayer" class="hidden">
+  <img id="mp-cover" alt="">
+  <div id="mp-meta">
+    <div id="mp-title"></div>
+    <div id="mp-artist"></div>
+  </div>
+  <div id="mp-controls">
+    <button type="button" class="mp-btn" id="mp-prev" aria-label="previous">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h2.4v14H7zM19 5v14L9.8 12z"/></svg>
+    </button>
+    <button type="button" class="mp-btn" id="mp-play" aria-label="play / pause">
+      <svg viewBox="0 0 24 24" aria-hidden="true" id="mp-play-ic"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <button type="button" class="mp-btn" id="mp-next" aria-label="next">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.6 5H17v14h-2.4zM5 5v14l9.2-7z"/></svg>
+    </button>
+    <button type="button" class="mp-btn" id="mp-list" aria-label="playlist">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h13v2.2H4zM4 10.9h13v2.2H4zM4 15.8h8v2.2H4zM16.2 14.6l5 2.4-5 2.4z"/></svg>
+    </button>
+    <button type="button" class="mp-btn hidden" id="mp-bc" aria-label="broadcast to club">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11.2a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6zM8.6 9a4.9 4.9 0 0 0 0 8.1l-1.5 1.5a7 7 0 0 1 0-11.1zm6.8 0l1.5-1.5a7 7 0 0 1 0 11.1l-1.5-1.5a4.9 4.9 0 0 0 0-8.1zM5.7 6.1a9.4 9.4 0 0 0 0 13.7l-1.5 1.5a11.5 11.5 0 0 1 0-16.7zm12.6 0l1.5-1.5a11.5 11.5 0 0 1 0 16.7l-1.5-1.5a9.4 9.4 0 0 0 0-13.7z"/></svg>
+    </button>
+  </div>
+  <div id="mp-prog"><div id="mp-prog-fill"></div></div>
+</div>
+<button type="button" id="mp-chip" class="hidden" aria-label="music player">
+  <img id="mp-chip-img" alt="">
+  <span id="mp-chip-badge"></span>
+</button>
+<div class="overlay" id="ov-playlist">
+  <div class="panel mp-sheet-panel">
+    <div class="mp-sheet-head">
+      <h2 id="mp-list-title">د سندرو لیست</h2>
+      <button type="button" class="ce-x" id="btn-playlist-x" aria-label="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+    </div>
+    <div id="mp-rows"></div>
+  </div>
+</div>
+
 <!-- ======== VOICE DIAGNOSTICS (long-press the mic button) ======== -->
 <div id="vdiag" class="hidden">
   <div class="vd-head"><span class="vd-title" id="vdiag-title">Voice diagnostics</span><button id="vdiag-close" aria-label="close">×</button></div>
@@ -4351,8 +4488,11 @@ const STR = {
     setChat: 'د لوبې چټ',
     setDnd: 'مزاحم نشو',
     setInvisible: 'پټ حالت',
-    setSound: 'د لوبې غږ',
     setMusic: 'د شاليد موسيقي',
+    musList: 'د سندرو لیست',
+    musBroadcast: 'ټول کلب ته پخوه',
+    musBroadcasting: 'موسس یې ټول کلب ته پخوي',
+    musBcEnded: 'د کلب خپرونه پای ته ورسېده',
     errSocialDnd: 'هغه مزاحمت نه غواړي',
     errPhotoTooBig: 'انځور ډېر غټ دی — تر ۲۰۰ KB کم وي',
     pfUploadPhoto: 'انځور اپلود کړه',
@@ -4744,8 +4884,11 @@ const STR = {
     setChat: 'چت بازی',
     setDnd: 'مزاحم نشو',
     setInvisible: 'حالت نامرئی',
-    setSound: 'صدای بازی',
     setMusic: 'موسیقی پس‌زمینه',
+    musList: 'لیست آهنگ‌ها',
+    musBroadcast: 'پخش برای کل باشگاه',
+    musBroadcasting: 'موسس برای کل باشگاه پخش می‌کند',
+    musBcEnded: 'پخش باشگاه تمام شد',
     errSocialDnd: 'مزاحم نشو برای او روشن است',
     errPhotoTooBig: 'عکس خیلی بزرگ است — کمتر از ۲۰۰ KB',
     pfUploadPhoto: 'آپلود عکس',
@@ -5137,8 +5280,11 @@ const STR = {
     setChat: 'Game chat',
     setDnd: 'Do Not Disturb',
     setInvisible: 'Invisible mode',
-    setSound: 'Game sounds',
     setMusic: 'Background music',
+    musList: 'Songs',
+    musBroadcast: 'Play for the whole club',
+    musBroadcasting: 'The founder is playing for the club',
+    musBcEnded: 'Club broadcast ended',
     errSocialDnd: 'Do Not Disturb is on for them',
     errPhotoTooBig: 'Image too big — must be under 200 KB',
     pfUploadPhoto: 'Upload photo',
@@ -5721,8 +5867,9 @@ function applyI18n() {
   set('#st-chat-lbl', 'setChat');
   set('#st-dnd-lbl', 'setDnd');
   set('#st-invisible-lbl', 'setInvisible');
-  set('#st-sound-lbl', 'setSound');
   set('#st-music-lbl', 'setMusic');
+  set('#mp-list-title', 'musList');
+  aria('#mp-bc', 'musBroadcast');
   set('#pf-upload-lbl', 'pfUploadPhoto');
   set('#tut-tile-lbl', 'tutTitle');
   set('#st-follow-lbl', 'stFollowUs');
@@ -5783,6 +5930,7 @@ function setLang(code) {
   LANG = code;
   try { localStorage.setItem('tore.lang', code); } catch (e) { /* private mode */ }
   applyI18n();
+  if (window.TorePlayer) TorePlayer.paint();
   if ($('#ov-settings').classList.contains('show')) paintSettings();
   renderProfileButton();
   refreshCountryOptions();
@@ -9994,72 +10142,10 @@ function buzz(pattern) {
   if (!toreSetting('vibrate', false)) return;
   if (navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) { /* unsupported (iOS) */ } }
 }
-// ================= feat2: sounds, takan FX, music =================
-// F19 — zero-asset WebAudio SFX. The AudioContext is created /
-// resumed lazily (first user gesture unlocks it — see the
-// pointerdown hook below); every entry point is guarded so a
-// missing or blocked AudioContext is a silent no-op. The whole
-// module is gated by the «د لوبې غږ» switch (tore.set.sound,
-// DEFAULT ON), read live on every sound.
-const sfx = (() => {
-  let ac = null, master = null;
-  function ctx() {
-    if (!toreSetting('sound', true)) return null;
-    try {
-      if (!ac) {
-        const AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) return null;
-        ac = new AC();
-        master = ac.createGain();
-        master.gain.value = 0.15;
-        master.connect(ac.destination);
-      }
-      if (ac.state === 'suspended') { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); }
-      return ac;
-    } catch (e) { return null; }
-  }
-  function tone(freq, delay, dur, type, vol, slideTo) {
-    const c = ctx(); if (!c || !master) return;
-    try {
-      const t0 = c.currentTime + (delay || 0);
-      const o = c.createOscillator(); const g = c.createGain();
-      o.type = type || 'sine';
-      o.frequency.setValueAtTime(freq, t0);
-      if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
-      g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(vol || 0.5, t0 + 0.015);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      o.connect(g); g.connect(master);
-      o.start(t0); o.stop(t0 + dur + 0.05);
-    } catch (e) { /* guarded no-op */ }
-  }
-  function tap() { // cardPlay: a short soft filtered-noise tap
-    const c = ctx(); if (!c || !master) return;
-    try {
-      const dur = 0.06;
-      const buf = c.createBuffer(1, Math.max(1, Math.ceil(c.sampleRate * dur)), c.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
-      const srcb = c.createBufferSource(); srcb.buffer = buf;
-      const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 0.8;
-      const g = c.createGain(); g.gain.value = 0.5;
-      srcb.connect(f); f.connect(g); g.connect(master);
-      srcb.start();
-    } catch (e) { /* guarded no-op */ }
-  }
-  return {
-    card() { tap(); },
-    trickWin() { tone(660, 0, 0.12, 'sine', 0.32); tone(880, 0.09, 0.17, 'sine', 0.32); },
-    roundWin() { tone(523.25, 0, 0.14, 'triangle', 0.38); tone(659.25, 0.1, 0.14, 'triangle', 0.38); tone(783.99, 0.2, 0.24, 'triangle', 0.38); },
-    roundLose() { tone(392, 0, 0.16, 'triangle', 0.33); tone(329.63, 0.12, 0.26, 'triangle', 0.33); },
-    matchWin() { [523.25, 659.25, 783.99, 1046.5].forEach((fr, i) => tone(fr, i * 0.11, 0.26, 'triangle', 0.38)); },
-    matchLose() { tone(330, 0, 0.25, 'sine', 0.38); tone(262, 0.2, 0.42, 'sine', 0.38); },
-    invite() { tone(1046.5, 0, 0.16, 'sine', 0.28); },
-    takan() { tone(196, 0, 0.3, 'sine', 0.7, 65); tone(98, 0, 0.34, 'triangle', 0.5, 49); },
-    unlock() { ctx(); },
-    _ctx() { return ac; },
-  };
-})();
+// ================= feat2: takan FX · up41: music player =================
+// (F19 game sounds were removed entirely in up40 — owner order:
+// «صدای بازی را بیخی حذف کن». The F41 procedural music was
+// replaced in up41 by the real music player further below.)
 // F10 — the takan vibration detector (pure; unit-tested through
 // window.ToreFx). Reads ONLY the round-result the state already
 // carries: claimsExecuted[other] > 0 means a claim executed
@@ -10098,131 +10184,362 @@ function show13Burst(name) {
   void b.offsetWidth;
   b.classList.add('show');
 }
-// The round-end edge: vibration (F10) + takan thud & burst (F19 /
-// F28) + the win/lose motif (F19). Motif rule: the team that
-// banked LESS this round had the better round (tawan is bad).
+// The round-end edge: vibration (F10) + takan burst (F28).
 function processRoundEndFx(r, myTeam) {
   const kind = takanRoundFx(r, myTeam);
   if (kind === 'strong') buzz([120, 50, 120]);
   else if (kind === 'normal') buzz([70, 40, 70]);
   const created = r.claimsCreated || [0, 0];
   const hasTakan = (created[0] + created[1]) > 0;
-  const banked = r.banked || r.cardTawan || [0, 0];
-  const motif = () => {
-    if (banked[myTeam] < banked[1 - myTeam]) sfx.roundWin();
-    else if (banked[myTeam] > banked[1 - myTeam]) sfx.roundLose();
-  };
   if (hasTakan) {
-    sfx.takan();
     const t = created[0] > created[1] ? 0 : 1;
     setTimeout(() => showTakanBurst(t === myTeam), 30);
-    setTimeout(motif, 380);
-  } else {
-    motif();
   }
 }
-window.ToreFx = { takanRoundFx, processRoundEndFx, sfx };
-// F41 — background music: a separate procedural WebAudio pad
-// loop (slow sine/triangle chords + a very soft pluck line),
-// master gain ~0.05, lookahead-scheduled. Independent of the
-// sound switch; runs only while «د شاليد موسيقي» is ON (default
-// OFF) and only after a user gesture; pauses while the page is
-// hidden. Fully guarded — no AudioContext, no crash, no music.
-const ToreMusic = (() => {
-  let ac = null, master = null, timer = null, nextAt = 0, step = 0, running = false;
-  const CHORDS = [
-    [261.63, 329.63, 392.0],   // C
-    [220.0, 261.63, 329.63],   // Am
-    [174.61, 220.0, 261.63],   // F
-    [196.0, 246.94, 293.66],   // G
-  ];
-  function ensure() {
-    try {
-      if (!ac) {
-        const AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) return false;
-        ac = new AC();
-        master = ac.createGain();
-        master.gain.value = 0.05;
-        master.connect(ac.destination);
-      }
-      return true;
-    } catch (e) { return false; }
+window.ToreFx = { takanRoundFx, processRoundEndFx };
+// ================= up41: the music player =================
+// The F41 procedural WebAudio pad is GONE (owner order
+// 2026-11-12): in its place a REAL player — nine full Kandahari
+// songs served as files from /music/ (m1..m9.mp3 + their real
+// covers c1..c9.jpg), one persistent <audio> living outside the
+// screen system so playback survives every navigation. The pill
+// floats over EVERY screen; tapping its cover collapses it to a
+// cover-only chip that can be dragged anywhere (spot persists).
+// «د شاليد موسيقي» (tore.set.music) is the master switch —
+// default ON now (owner order: the player is for everyone), and
+// nothing ever sounds until a player taps: no autoplay on load.
+// In a club room the FOUNDER can broadcast: his transport drives
+// every room member's player in sync (server: s-club-music).
+const MP_TRACKS = [
+  { t: { ps: 'د کندهار هلکه', fa: 'پسر کندهار', en: 'Da Kandahar Halaka' }, a: { ps: 'نغمه', fa: 'نغمه', en: 'Naghma' }, dur: '4:36' },
+  { t: { ps: 'اتڼ سندره', fa: 'آهنگ اتن', en: 'Attan Song' }, a: { ps: 'کجاوې', fa: 'کجاوه', en: 'Kajaweh' }, dur: '5:19' },
+  { t: { ps: 'کندهاری جینۍ', fa: 'دختر کندهاری', en: 'Kandahari Jenay' }, a: { ps: 'لطیف ننګرهاری', fa: 'لطیف ننگرهاری', en: 'Latif Nangarhari' }, dur: '6:01' },
+  { t: { ps: 'کندهار', fa: 'کندهار', en: 'Kandahar Masali' }, a: { ps: 'مثالي سندره', fa: 'آهنگ مثالی', en: 'Masali Song' }, dur: '5:16' },
+  { t: { ps: 'جانان', fa: 'جانان', en: 'Janan' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '5:13' },
+  { t: { ps: 'زما مغرور جانان', fa: 'جانان مغرور من', en: 'Zma Maghroor Janan' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '6:38' },
+  { t: { ps: 'شایسته', fa: 'شایسته', en: 'Shaista' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '5:07' },
+  { t: { ps: 'سترګې افغاني لارې', fa: 'چشم‌های افغانی', en: 'Starge Afghani Lare' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '9:18' },
+  { t: { ps: 'شکلي سندره', fa: 'آهنگ شیک', en: 'Shikli Song' }, a: { ps: 'هلمندي', fa: 'هلمندی', en: 'Helmandi' }, dur: '6:59' },
+];
+const TorePlayer = (() => {
+  const $p = (s) => document.querySelector(s);
+  const pill = $p('#mplayer'), chip = $p('#mp-chip'), bcChip = $p('#mp-bcchip');
+  const coverEl = $p('#mp-cover'), titleEl = $p('#mp-title'), artistEl = $p('#mp-artist');
+  const playBtn = $p('#mp-play'), fillEl = $p('#mp-prog-fill');
+  const bcBtn = $p('#mp-bc'), chipImg = $p('#mp-chip-img'), chipBadge = $p('#mp-chip-badge');
+  const SVG_PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+  const SVG_PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></svg>';
+  const audio = new Audio();
+  audio.preload = 'metadata';
+  let idx = 7;               // track 8 is the owner's default pick
+  let collapsed = false;
+  let chipPos = null;        // {x, y} px, persisted
+  let errChain = 0;
+  // broadcast context: mode 'off' | 'owner' (I drive my club) |
+  // 'follow' (the founder drives me); detached = I paused out of
+  // a follow and keep local control until I rejoin / it restarts.
+  const bc = { mode: 'off', detached: false };
+  let lastBc = null;         // last s-club-music-state for my room
+  try {
+    const raw = localStorage.getItem('tore.player.v1');
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (Number.isInteger(s.idx) && s.idx >= 0 && s.idx < MP_TRACKS.length) idx = s.idx;
+      collapsed = !!s.collapsed;
+      if (s.chip && Number.isFinite(s.chip.x) && Number.isFinite(s.chip.y)) chipPos = s.chip;
+    }
+  } catch (e) { /* fresh state */ }
+  function save() {
+    try { localStorage.setItem('tore.player.v1', JSON.stringify({ idx, collapsed, chip: chipPos })); } catch (e) { /* private mode */ }
   }
-  function pad(freqs, t, dur) {
-    freqs.forEach((fr, i) => {
+  const master = () => toreSetting('music', true);
+  const srcOf = (i) => '/music/m' + (i + 1) + '.mp3';
+  const coverOf = (i) => '/music/c' + (i + 1) + '.jpg';
+  function inRoomClub() {
+    try {
+      if (typeof roomClub !== 'function' || typeof clRoomView === 'undefined' || !clRoomView) return null;
+      const sc = document.querySelector('#scr-clubs');
+      if (!sc || sc.classList.contains('hidden')) return null;
+      return roomClub();
+    } catch (e) { return null; }
+  }
+  // ---------- transport ----------
+  function load(i, autoplay) {
+    idx = ((i % MP_TRACKS.length) + MP_TRACKS.length) % MP_TRACKS.length;
+    const want = srcOf(idx);
+    // NOTE: errChain is deliberately NOT reset here — the audio
+    // 'error' handler advances through load(), and resetting the
+    // counter on every src change made its cap unreachable (an
+    // infinite skip loop when every file fails, e.g. offline).
+    // The chain resets on 'canplay' and on manual track picks.
+    if (!audio.src || !audio.src.endsWith(want)) { audio.src = want; }
+    paint();
+    if (autoplay) play();
+    save();
+  }
+  function play() {
+    try { const pr = audio.play(); if (pr && pr.catch) pr.catch(() => paint()); } catch (e) { /* guarded */ }
+  }
+  function pause() { try { audio.pause(); } catch (e) { /* guarded */ } }
+  function bcSend() {
+    if (bc.mode !== 'owner') return;
+    try { socialSend({ type: 's-club-music', action: 'state', track: idx, playing: !audio.paused, pos: audio.currentTime || 0 }); } catch (e) { /* offline */ }
+  }
+  function bcStop() {
+    try { socialSend({ type: 's-club-music', action: 'stop' }); } catch (e) { /* offline */ }
+  }
+  function toggle() {
+    if (bc.mode === 'follow') { detach(); return; }
+    if (audio.paused) play(); else pause();
+  }
+  function step(d) {
+    if (bc.mode === 'follow') return;      // locked while following
+    errChain = 0;                          // a manual pick re-arms the skip chain
+    load(idx + d, true);
+    bcSend();
+  }
+  function playTrack(i) {
+    if (bc.mode === 'follow') return;      // locked while following
+    errChain = 0;
+    load(i, true);
+    bcSend();
+  }
+  // ---------- broadcast: follower side ----------
+  function applyBc(m) {
+    if (!m || m.club == null) return;
+    const rc = inRoomClub();
+    if (!rc || String(rc.cid) !== String(m.club)) return;
+    lastBc = m;
+    if (bc.mode === 'owner') return;       // I drive; the echo is not for me
+    if (!m.on) {
+      const was = bc.mode === 'follow';
+      bc.mode = 'off'; bc.detached = false; lastBc = null;
+      if (was) { pause(); toast(T('musBcEnded')); }
+      paint();
+      return;
+    }
+    if (bc.detached) { paint(); return; }  // I opted out; only the chip shows
+    bc.mode = 'follow';
+    if (idx !== m.track) { errChain = 0; load(m.track, false); }
+    const sync = () => {
       try {
-        const o = ac.createOscillator(); const g = ac.createGain();
-        o.type = i === 0 ? 'triangle' : 'sine';
-        o.frequency.value = fr;
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.linearRampToValueAtTime(0.4, t + 1.3);
-        g.gain.linearRampToValueAtTime(0.0001, t + dur);
-        o.connect(g); g.connect(master);
-        o.start(t); o.stop(t + dur + 0.1);
-      } catch (e) { /* guarded */ }
+        if (Number.isFinite(audio.duration) && Math.abs((audio.currentTime || 0) - m.pos) > 2.5) audio.currentTime = Math.min(m.pos, audio.duration - 0.3);
+      } catch (e) { /* not seekable yet */ }
+      if (m.playing) play(); else pause();
+      paint();
+    };
+    if (audio.readyState >= 1) sync();
+    else audio.addEventListener('loadedmetadata', sync, { once: true });
+    paint();
+  }
+  function detach() {
+    if (bc.mode !== 'follow') return;
+    bc.detached = true;
+    pause();
+    paint();
+  }
+  function rejoin() {
+    if (!bc.detached || !lastBc || !lastBc.on) return;
+    bc.detached = false;
+    bc.mode = 'off';
+    applyBc(lastBc);
+  }
+  // ---------- broadcast: owner side ----------
+  function bcToggle() {
+    const rc = inRoomClub();
+    if (!rc || rc.myRole !== 'owner') return;
+    if (bc.mode === 'owner') { bc.mode = 'off'; bcStop(); }
+    else { bc.mode = 'owner'; bcSend(); }
+    paint();
+  }
+  // ---------- painting ----------
+  function paint() {
+    const on = master();
+    const tr = MP_TRACKS[idx];
+    if (titleEl) titleEl.textContent = tr.t[LANG] || tr.t.ps;
+    if (artistEl) artistEl.textContent = tr.a[LANG] || tr.a.ps;
+    if (coverEl && coverEl.getAttribute('src') !== coverOf(idx)) coverEl.src = coverOf(idx);
+    if (chipImg && chipImg.getAttribute('src') !== coverOf(idx)) chipImg.src = coverOf(idx);
+    if (playBtn) playBtn.innerHTML = audio.paused ? SVG_PLAY : SVG_PAUSE;
+    if (chipBadge) chipBadge.innerHTML = audio.paused ? SVG_PLAY : SVG_PAUSE;
+    if (pill) {
+      pill.classList.toggle('hidden', !on || collapsed);
+      pill.classList.toggle('locked', bc.mode === 'follow');
+      pill.classList.toggle('paused', audio.paused);
+    }
+    if (chip) {
+      chip.classList.toggle('hidden', !on || !collapsed);
+      if (on && collapsed) placeChip();
+    }
+    // founder's broadcast toggle: only for the owner, only in his room
+    const rc = inRoomClub();
+    const canBc = !!rc && rc.myRole === 'owner';
+    if (bcBtn) {
+      bcBtn.classList.toggle('hidden', !canBc);
+      bcBtn.classList.toggle('on', bc.mode === 'owner');
+    }
+    // follower chip (or the detached rejoin chip)
+    const showBcChip = on && bc.mode === 'follow' && !!lastBc && lastBc.on;
+    if (bcChip) {
+      bcChip.classList.toggle('hidden', !showBcChip);
+      bcChip.classList.toggle('detached', bc.detached);
+      if (showBcChip) bcChip.textContent = '📻 ' + T('musBroadcasting');
+      // ride just above the pill (or above the chip when collapsed)
+      bcChip.style.bottom = collapsed ? 'auto' : '';
+      if (collapsed && chipPos) { bcChip.style.top = Math.max(6, chipPos.y - 40) + 'px'; bcChip.style.bottom = 'auto'; }
+      else { bcChip.style.top = ''; }
+    }
+    paintRows();
+  }
+  function placeChip() {
+    if (!chip) return;
+    if (chipPos) {
+      chip.style.left = chipPos.x + 'px'; chip.style.top = chipPos.y + 'px';
+    } else {
+      chip.style.left = '12px'; chip.style.top = Math.round(window.innerHeight * 0.55) + 'px';
+    }
+  }
+  function paintRows() {
+    const rows = document.querySelectorAll('#mp-rows .mp-row');
+    rows.forEach((r, i) => {
+      r.classList.toggle('cur', i === idx);
+      r.classList.toggle('paused', audio.paused);
     });
   }
-  function pluck(fr, t) {
-    try {
-      const o = ac.createOscillator(); const g = ac.createGain();
-      o.type = 'sine'; o.frequency.value = fr;
-      g.gain.setValueAtTime(0.16, t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 1.5);
-      o.connect(g); g.connect(master);
-      o.start(t); o.stop(t + 1.6);
-    } catch (e) { /* guarded */ }
+  function buildRows() {
+    const host = $p('#mp-rows');
+    if (!host) return;
+    host.innerHTML = '';
+    MP_TRACKS.forEach((tr, i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'mp-row';
+      const img = document.createElement('img'); img.src = coverOf(i); img.alt = '';
+      const meta = document.createElement('span'); meta.className = 'mp-row-meta';
+      const t1 = document.createElement('span'); t1.className = 'mp-row-title';
+      const t2 = document.createElement('span'); t2.className = 'mp-row-artist';
+      meta.appendChild(t1); meta.appendChild(t2);
+      const eq = document.createElement('span'); eq.className = 'mp-eq';
+      eq.innerHTML = '<i></i><i></i><i></i>';
+      const dur = document.createElement('span'); dur.className = 'mp-row-dur'; dur.textContent = tr.dur;
+      b.appendChild(img); b.appendChild(meta); b.appendChild(eq); b.appendChild(dur);
+      b.onclick = () => { playTrack(i); closePlaylist(); };
+      host.appendChild(b);
+    });
+    paintRowsLang();
   }
-  function tick() {
-    if (!running || !ac) return;
-    try {
-      while (nextAt < ac.currentTime + 0.35) {
-        const ch = CHORDS[step % CHORDS.length];
-        pad(ch, nextAt, 4.6);
-        pluck(ch[step % ch.length] * 2, nextAt + 1.1);
-        pluck(ch[(step + 1) % ch.length] * 2, nextAt + 2.7);
-        nextAt += 4.2;
-        step++;
-      }
-    } catch (e) { /* guarded */ }
+  function paintRowsLang() {
+    document.querySelectorAll('#mp-rows .mp-row').forEach((r, i) => {
+      const tr = MP_TRACKS[i];
+      const t1 = r.querySelector('.mp-row-title'); if (t1) t1.textContent = tr.t[LANG] || tr.t.ps;
+      const t2 = r.querySelector('.mp-row-artist'); if (t2) t2.textContent = tr.a[LANG] || tr.a.ps;
+    });
   }
-  function start() {
-    if (running) return;
-    if (!toreSetting('music', false)) return;
-    if (!ensure()) return;
-    try {
-      if (master) master.gain.value = 0.05;
-      if (ac.state === 'suspended') { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); }
-      running = true;
-      nextAt = ac.currentTime + 0.08;
-      step = 0;
-      timer = setInterval(tick, 400);
-      tick();
-    } catch (e) { running = false; }
-  }
-  function stop() {
-    running = false;
-    if (timer) { clearInterval(timer); timer = null; }
-    try { if (ac && ac.state === 'running') { const p = ac.suspend(); if (p && p.catch) p.catch(() => {}); } } catch (e) { /* guarded */ }
-  }
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { if (running) stop(); }
-    else if (toreSetting('music', false)) start();
+  function openPlaylist() { const o = $p('#ov-playlist'); if (o) { paintRows(); o.classList.add('show'); } }
+  function closePlaylist() { const o = $p('#ov-playlist'); if (o) o.classList.remove('show'); }
+  // ---------- events ----------
+  audio.addEventListener('ended', () => { step(1); });
+  audio.addEventListener('play', () => { paint(); bcSend(); });
+  audio.addEventListener('pause', () => { paint(); bcSend(); });
+  audio.addEventListener('canplay', () => { errChain = 0; });
+  audio.addEventListener('error', () => {
+    errChain++;
+    if (errChain <= MP_TRACKS.length) load(idx + 1, !audio.paused);
   });
+  if (playBtn) playBtn.onclick = () => toggle();
+  const prevBtn = $p('#mp-prev'); if (prevBtn) prevBtn.onclick = () => step(-1);
+  const nextBtn = $p('#mp-next'); if (nextBtn) nextBtn.onclick = () => step(1);
+  const listBtn = $p('#mp-list'); if (listBtn) listBtn.onclick = () => openPlaylist();
+  if (bcBtn) bcBtn.onclick = () => bcToggle();
+  if (coverEl) coverEl.onclick = () => { collapsed = true; save(); paint(); };
+  if ($p('#mp-meta')) $p('#mp-meta').onclick = () => openPlaylist();
+  const plX = $p('#btn-playlist-x'); if (plX) plX.onclick = () => closePlaylist();
+  const plOv = $p('#ov-playlist');
+  if (plOv) plOv.addEventListener('click', (e) => { if (e.target === e.currentTarget) closePlaylist(); });
+  if (bcChip) bcChip.onclick = () => { if (bc.detached) rejoin(); };
+  // chip drag: pointer capture; a >7px move is a drag, else a tap.
+  if (chip) {
+    let drag = null;
+    chip.addEventListener('pointerdown', (e) => {
+      drag = { x: e.clientX, y: e.clientY, moved: false };
+      try { chip.setPointerCapture(e.pointerId); } catch (err) { /* guarded */ }
+    });
+    chip.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (!drag.moved && Math.hypot(dx, dy) < 7) return;
+      drag.moved = true;
+      const w = chip.offsetWidth || 54, h = chip.offsetHeight || 54;
+      const nx = Math.min(Math.max(2, e.clientX - w / 2), window.innerWidth - w - 2);
+      const ny = Math.min(Math.max(2, e.clientY - h / 2), window.innerHeight - h - 2);
+      chipPos = { x: Math.round(nx), y: Math.round(ny) };
+      placeChip();
+    });
+    chip.addEventListener('pointerup', () => {
+      if (!drag) return;
+      const wasDrag = drag.moved; drag = null;
+      if (wasDrag) { save(); paint(); }
+      else { collapsed = false; save(); paint(); }
+    });
+    chip.addEventListener('pointercancel', () => { drag = null; });
+  }
+  // A follower whose broadcast-play was blocked by the autoplay
+  // policy gets one repair attempt on his next tap anywhere.
+  document.addEventListener('pointerdown', () => {
+    if (bc.mode === 'follow' && !bc.detached && lastBc && lastBc.on && lastBc.playing && audio.paused) play();
+  }, { passive: true });
+  // progress + owner anchor refresh + room-context watch
+  let bcTick = 0, lastCtxKey = '';
+  setInterval(() => {
+    if (!audio.paused && audio.duration > 0 && fillEl) {
+      fillEl.style.width = Math.min(100, (audio.currentTime / audio.duration) * 100) + '%';
+    }
+    bcTick++;
+    if (bc.mode === 'owner' && !audio.paused && bcTick % 20 === 0) bcSend();
+    // context: the broadcast button belongs to the room; if I
+    // drove a broadcast and left the room, it ends (the server
+    // also ends it when my room presence dies).
+    const rc = inRoomClub();
+    const key = rc ? String(rc.cid) + '|' + rc.myRole : '';
+    if (key !== lastCtxKey) {
+      const wasOwnerBc = bc.mode === 'owner';
+      lastCtxKey = key;
+      if (wasOwnerBc && (!rc || rc.myRole !== 'owner')) { bc.mode = 'off'; bcStop(); }
+      if (!rc && bc.mode === 'follow') { bc.mode = 'off'; bc.detached = false; lastBc = null; }
+      paint();
+    }
+  }, 500);
+  buildRows();
+  load(idx, false);
+  paint();
   return {
-    start, stop,
-    onToggle() { if (toreSetting('music', false)) start(); else stop(); },
-    isRunning() { return running; },
-    _ctx() { return ac; },
+    tracks: MP_TRACKS,
+    audio,
+    playTrack, toggle,
+    next: () => step(1), prev: () => step(-1),
+    collapse(v) { collapsed = !!v; save(); paint(); },
+    setChipPos(x, y) { chipPos = { x, y }; save(); paint(); },
+    openPlaylist, closePlaylist,
+    bcToggle, onBcState: applyBc,
+    onMasterToggle() {
+      if (!master()) {
+        pause();
+        if (bc.mode === 'owner') { bc.mode = 'off'; bcStop(); }
+        if (bc.mode === 'follow') { bc.mode = 'off'; bc.detached = false; lastBc = null; }
+        closePlaylist();
+      }
+      paint();
+    },
+    paint() { paint(); paintRowsLang(); },
+    state() {
+      return {
+        idx, playing: !audio.paused, collapsed,
+        bc: bc.mode, detached: bc.detached, master: master(),
+        src: audio.src || '', pos: audio.currentTime || 0,
+      };
+    },
   };
 })();
-window.ToreMusic = ToreMusic;
-// Autoplay policy: the first tap anywhere unlocks the SFX
-// context and (if enabled) starts the music.
-document.addEventListener('pointerdown', () => {
-  sfx.unlock();
-  if (toreSetting('music', false)) ToreMusic.start();
-}, { passive: true });
+window.TorePlayer = TorePlayer;
 
 function paintSettings() {
   const cur = $('#st-lang-cur');
@@ -10233,15 +10550,16 @@ function paintSettings() {
   const vr = $('#row-set-vibrate'); if (vr) vr.setAttribute('aria-checked', String(v));
   const cr = $('#row-set-chat'); if (cr) cr.setAttribute('aria-checked', String(c));
   // feat2 switches: DND + invisible (server-truth flags mirrored
-  // locally for the switch), sounds (default ON), music (default OFF).
+  // locally for the switch), music (up41: the music player's
+  // master, default ON). (The F19 sound switch was removed with
+  // the SFX system in up40.)
   const paintTog = (check, row, on) => {
     const ck = $(check); if (ck) ck.classList.toggle('on', on);
     const rw = $(row); if (rw) rw.setAttribute('aria-checked', String(on));
   };
   paintTog('#st-dnd-check', '#row-set-dnd', toreSetting('dnd', false));
   paintTog('#st-invisible-check', '#row-set-invisible', toreSetting('invisible', false));
-  paintTog('#st-sound-check', '#row-set-sound', toreSetting('sound', true));
-  paintTog('#st-music-check', '#row-set-music', toreSetting('music', false));
+  paintTog('#st-music-check', '#row-set-music', toreSetting('music', true));
   paintFelts();
   paintBacks();
 }
@@ -10458,8 +10776,7 @@ bindToggleRow('#row-set-dnd', 'dnd', false, () => {
 bindToggleRow('#row-set-invisible', 'invisible', false, () => {
   if (typeof socialSend === 'function') socialSend({ type: 's-invisible', on: toreSetting('invisible', false) });
 });
-bindToggleRow('#row-set-sound', 'sound', true, null);
-bindToggleRow('#row-set-music', 'music', false, () => { if (window.ToreMusic) window.ToreMusic.onToggle(); });
+bindToggleRow('#row-set-music', 'music', true, () => { if (window.TorePlayer) window.TorePlayer.onMasterToggle(); });
 $('#btn-settings').onclick = openSettings;
 $('#btn-settings-close').onclick = closeSettings;
 $('#ov-settings').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeSettings(); });
@@ -11265,6 +11582,9 @@ function onSocialMsg(m) {
       cv.onVoiceState();
       if (clRoomView && !$('#scr-clubs').classList.contains('hidden')) renderClubSeats(rc);
     }
+  } else if (m.type === 's-club-music-state') {
+    // up41: the club founder's music broadcast state for my room.
+    if (window.TorePlayer) TorePlayer.onBcState(m);
   } else if (m.type === 's-rtc') {
     cv.onSignal(m.from, m.data);
   } else if (m.type === 's-club-seat-req-state') {
@@ -11342,7 +11662,6 @@ function onSocialMsg(m) {
     // 30 s expiry) can the next invite show.
     if (!inviteCurrent) {
       inviteCurrent = { from: m.from, code: m.code, src: m.src || null };
-      sfx.invite();
       showInvite();
     }
   } else if (m.type === 's-invite-result') {
@@ -15046,7 +15365,7 @@ function attachPlayHandlers(el, code) {
 // else on the game screen the blanket cancel stays.
 document.addEventListener('touchmove', (e) => {
   if ($('#scr-game').classList.contains('hidden')) return;
-  if (e.target && e.target.closest && e.target.closest('#chatpanel, #scr-friends, #scr-dm')) return;
+  if (e.target && e.target.closest && e.target.closest('#chatpanel, #scr-friends, #scr-dm, #mplayer, #mp-chip, #ov-playlist')) return;
   e.preventDefault();
 }, { passive: false });
 
@@ -15106,9 +15425,6 @@ function barAvatar(pos, s, seatIdx) {
 let prevPhase = ''; // matchEnd edge for the vibration buzz
 // feat2 FX tracking (state-diff edges, fired once per transition)
 let fxRoundNo = -1;    // last round number the round-end FX ran for
-let fxTrickLen = 0;    // previous trick size (card-play tap)
-let fxPilesSum = 0;    // tricks completed this round (trick-win chime)
-let fxPilesRound = -1; // round the piles baseline belongs to
 let ovRoundNo = -1;      // roundNo of the round summary currently on screen
 let ovRoundDismissed = -1; // roundNo this player tapped away (this screen only)
 function render(st) {
@@ -15270,16 +15586,6 @@ function render(st) {
   });
   fitHand();
 
-  // feat2 FX: a card landing taps; my team collecting a trick
-  // chimes. Spectators and seatless states stay silent.
-  if (st.roundNo !== fxPilesRound) { fxPilesRound = st.roundNo; fxPilesSum = 0; }
-  if (mySeat >= 0 && !spectating && st.phase === 'playing') {
-    if (st.trick.length > fxTrickLen) sfx.card();
-    const ps = st.piles ? st.piles.reduce((a, b) => a + b, 0) : 0;
-    if (ps > fxPilesSum && st.trickWinner != null && st.trickWinner % 2 === myTeam) sfx.trickWin();
-    fxPilesSum = ps;
-  }
-  fxTrickLen = st.trick.length;
   tutRenderSteps(st);
 
   // overlays
@@ -15287,7 +15593,7 @@ function render(st) {
   $('#ov-round').classList.toggle('show', st.phase === 'roundEnd' && !!r && r.roundNo !== ovRoundDismissed);
   if (r && st.phase === 'roundEnd') {
     ovRoundNo = r.roundNo;
-    // feat2: F10 vibration + F19 motifs + F28 burst, once per round
+    // feat2: F10 vibration + F28 burst, once per round
     if (r.roundNo !== fxRoundNo) {
       fxRoundNo = r.roundNo;
       if (mySeat >= 0 && !spectating) processRoundEndFx(r, myTeam);
@@ -15365,12 +15671,7 @@ function render(st) {
     }
   }
   if (st.phase === 'matchEnd' && prevPhase !== 'matchEnd') {
-    if (st.matchWinner === myTeam) {
-      buzz([45, 40, 45]);
-      if (mySeat >= 0 && !spectating) sfx.matchWin();
-    } else if (mySeat >= 0 && !spectating) {
-      sfx.matchLose();
-    }
+    if (st.matchWinner === myTeam) buzz([45, 40, 45]);
   }
   prevPhase = st.phase;
   $('#ov-match').classList.toggle('show', st.phase === 'matchEnd');

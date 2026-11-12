@@ -35,6 +35,29 @@ const COVERS_DIR = path.join(__dirname, 'covers');
 const ICONS_DIR = path.join(__dirname, 'icons');
 const CARDS_DIR = path.join(__dirname, 'cards');
 const CARPETS_DIR = path.join(__dirname, 'carpets');
+const MUSIC_DIR = path.join(__dirname, 'music');
+
+// up41: byte-range file streaming for the music player's songs —
+// a media element needs 206 + Content-Range to seek.
+function serveFileRange(req, res, full, type) {
+  const size = fs.statSync(full).size;
+  const range = req.headers.range;
+  const base = { 'Content-Type': type, 'Cache-Control': 'public, max-age=86400', 'Accept-Ranges': 'bytes' };
+  if (range) {
+    const m = /^bytes=(\d*)-(\d*)$/.exec(range);
+    if (m) {
+      let start = m[1] === '' ? 0 : Number(m[1]);
+      let end = m[2] === '' ? size - 1 : Number(m[2]);
+      if (m[1] === '' && m[2] !== '') { start = Math.max(0, size - Number(m[2])); end = size - 1; }
+      if (start > end || start >= size) { res.writeHead(416, { 'Content-Range': 'bytes */' + size }); return res.end(); }
+      end = Math.min(end, size - 1);
+      res.writeHead(206, { ...base, 'Content-Range': 'bytes ' + start + '-' + end + '/' + size, 'Content-Length': end - start + 1 });
+      return fs.createReadStream(full, { start, end }).pipe(res);
+    }
+  }
+  res.writeHead(200, { ...base, 'Content-Length': size });
+  return fs.createReadStream(full).pipe(res);
+}
 
 const httpServer = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
@@ -141,6 +164,19 @@ const httpServer = http.createServer((req, res) => {
       if (fs.existsSync(full)) {
         res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400' });
         return fs.createReadStream(full).pipe(res);
+      }
+    }
+    res.writeHead(404); return res.end('not found');
+  }
+  // up41: the music player's files — nine songs + their real
+  // covers, copied here by build-deploy.js from public/music.
+  // Range-aware (a media element seeks); pinned to the known set.
+  if (url.startsWith('/music/')) {
+    const name = url.slice('/music/'.length);
+    if (/^[mc][1-9]\.(mp3|jpg)$/.test(name)) {
+      const full = path.join(MUSIC_DIR, name);
+      if (fs.existsSync(full)) {
+        return serveFileRange(req, res, full, name.endsWith('.mp3') ? 'audio/mpeg' : 'image/jpeg');
       }
     }
     res.writeHead(404); return res.end('not found');

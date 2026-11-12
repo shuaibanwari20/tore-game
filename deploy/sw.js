@@ -36,8 +36,13 @@
  * version; this worker's cache-first asset route below files every
  * one of those responses into tore-assets-v4). The gate law is
  * untouched: only HTTP-200 navigations ever enter the shell cache.
+ *
+ * v5 (up41 music player, 2026-11-12): a cache roll for the new
+ * client; the asset route also files the music player's nine
+ * cover photos (/music/c1..c9.jpg). The songs themselves are
+ * never intercepted — they stream from the host with Range.
  */
-const SW_VERSION = 'v4';
+const SW_VERSION = 'v5';
 const STATIC_CACHE = 'tore-static-' + SW_VERSION;
 const SHELL_CACHE = 'tore-shell-' + SW_VERSION;
 const ASSET_CACHE = 'tore-assets-' + SW_VERSION;
@@ -102,7 +107,7 @@ self.addEventListener('fetch', (event) => {
   //     versioned asset cache; a miss fetches once and stores the
   //     copy. Only 200s are stored. A new SW_VERSION (shipped with
   //     any client rebuild that changes the art) retires the lot.
-  if (path.startsWith('/cards/') || path.startsWith('/carpets/') || path === '/carpet.jpg') {
+  if (path.startsWith('/cards/') || path.startsWith('/carpets/') || path === '/carpet.jpg' || /^\/music\/c[1-9]\.jpg$/.test(path)) {
     event.respondWith(
       caches.open(ASSET_CACHE).then((cache) => cache.match(req, { ignoreSearch: true }).then((hit) => hit || fetch(req).then((res) => {
         if (res && res.status === 200) {
