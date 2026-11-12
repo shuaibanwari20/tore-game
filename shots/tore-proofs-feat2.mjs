@@ -12,7 +12,13 @@
  * time labels; owner seeks re-anchor the club broadcast,
  * followers' bars are locked), and club voice DUCKS the music
  * (background level in the room, deeper under speech, restored
- * on exit).
+ * on exit). up43: the F28 bursts are TABLE-ONLY — dropped on any
+ * other screen and over the playlist sheet, and killed mid-flight
+ * when the player leaves the table (owner report 2026-11-12).
+ * up43b: the seek bar's PLAYED segment is a real 3px gold line
+ * (it rendered 0px tall under border-box — only the knob dot
+ * showed), and opening MY mic pauses the music while closing
+ * it resumes from the same spot, manual pauses always winning.
  *
  * Runs against the DEPLOY Node host (deploy/server.js) so the
  * hand-maintained deploy variant is exercised too.
@@ -187,26 +193,164 @@ try {
   check('F10: no vibration on a quiet round, and none with the switch OFF', unit.vibQuiet === 0 && unit.vibSwitchOff === 0, unit.vibQuiet + '/' + unit.vibSwitchOff);
 
   // F28 synthetic bursts (the same functions the render path calls)
+  // up43 FLIP: page U sits on the HOME screen, and bursts are now
+  // TABLE-ONLY — fired here they must be DROPPED (never shown,
+  // never queued). The positive on-table assertions live in the
+  // up43 section below.
   await U.page.evaluate(() => { showTakanBurst(true); });
   await sleep(250);
   const burst = await U.page.evaluate(() => {
     const b = document.getElementById('takanbanner');
-    return { show: b.classList.contains('show'), burst: b.classList.contains('burst'), text: b.textContent };
+    return { show: b.classList.contains('show'), burst: b.classList.contains('burst'), op: parseFloat(getComputedStyle(b).opacity) };
   });
-  check('F28: takan burst shows with the .burst animation class', burst.show && burst.burst, JSON.stringify(burst));
+  check('up43: takan burst fired on HOME is dropped (no .show, opacity 0)', !burst.show && !burst.burst && burst.op === 0, JSON.stringify(burst));
   await U.page.evaluate(() => { show13Burst('Unit Tester'); });
   await sleep(250);
   const b13 = await U.page.evaluate(() => {
     const b = document.getElementById('burst13');
-    return { show: b.classList.contains('show'), sub: (b.querySelector('.b13-sub') || {}).textContent || '' };
+    return { show: b.classList.contains('show'), op: parseFloat(getComputedStyle(b).opacity) };
   });
-  check('F28: «13!» burst shows for a declaration, naming the declarer', b13.show && b13.sub === 'Unit Tester', JSON.stringify(b13));
+  check('up43: «13!» burst fired on HOME is dropped (no .show, opacity 0)', !b13.show && b13.op === 0, JSON.stringify(b13));
 
   // up40: F19 was removed entirely (owner order) — no sfx handle
   // on ToreFx, and the settings sheet carries no sound row.
   const sfxGone = await U.page.evaluate(() => typeof window.ToreFx === 'object'
     && window.ToreFx.sfx === undefined && !document.getElementById('row-set-sound'));
   check('up40: F19 SFX removed — ToreFx.sfx is gone and no sound switch row exists', sfxGone);
+
+  // ================= up43: bursts live ONLY on the table =================
+  // Owner report 2026-11-12: the «تکان!» / «۱۳!» bursts showed on
+  // the HOME page and over the PLAYLIST sheet. Root cause: the
+  // burst elements are global fixed overlays with no screen
+  // scoping. Fix: burstsAllowed() gates every ignition (table
+  // screen active AND playlist closed) and show() strips them on
+  // any screen flip, so a burst can never leak or smear.
+  const enterBotMatch = async () => {
+    await U.page.click('#btn-quick');
+    await sleep(500);
+    await U.page.click('#btn-pk-play');
+    await U.page.waitForFunction(() => !document.querySelector('#scr-game').classList.contains('hidden')
+      && document.querySelectorAll('#hand .pcard').length === 13, null, { timeout: 25000 });
+    await sleep(400);
+  };
+  const exitToHome = async () => {
+    await U.page.click('#btn-leave').catch(() => {});
+    await U.page.waitForSelector('#ov-exit.show', { timeout: 8000 }).catch(() => {});
+    await U.page.click('#btn-exit-confirm').catch(() => {});
+    await U.page.waitForFunction(() => !document.querySelector('#scr-home').classList.contains('hidden'), null, { timeout: 10000 }).catch(() => {});
+    await sleep(400);
+  };
+  const burstState = () => U.page.evaluate(() => {
+    const t = document.getElementById('takanbanner'), b = document.getElementById('burst13');
+    return { takanShow: t.classList.contains('show'), takanBurst: t.classList.contains('burst'),
+      takanOp: parseFloat(getComputedStyle(t).opacity),
+      b13Show: b.classList.contains('show'), b13Op: parseFloat(getComputedStyle(b).opacity),
+      b13Sub: (b.querySelector('.b13-sub') || {}).textContent || '',
+      playlistOpen: document.getElementById('ov-playlist').classList.contains('show') };
+  });
+  // (a) on the table both bursts still fire at their moments
+  await enterBotMatch();
+  await U.page.evaluate(() => { ToreFx.processRoundEndFx({ claimsCreated: [1, 0], claimsExecuted: [0, 0], banked: [10, 20] }, 0); });
+  await sleep(500);
+  let bv = await burstState();
+  check('up43: on the table the takan burst still fires at claims-created (.burst dress, opacity 1)', bv.takanShow && bv.takanBurst && bv.takanOp > 0.5, JSON.stringify(bv));
+  await U.page.screenshot({ path: path.join(SHOTS, 'burstfix-table-FRESH.jpg'), type: 'jpeg', quality: 90 });
+  check('up43: proof saved (burstfix-table-FRESH.jpg)', fs.existsSync(path.join(SHOTS, 'burstfix-table-FRESH.jpg')));
+  await U.page.evaluate(() => { show13Burst('Burst Tester'); });
+  await sleep(400);
+  bv = await burstState();
+  check('up43: on the table the «13!» burst still fires for a declaration, naming the declarer', bv.b13Show && bv.b13Op > 0.5 && bv.b13Sub === 'Burst Tester', JSON.stringify(bv));
+  // (b1) the leak itself: fire a burst and leave MID-ANIMATION —
+  // the animation tail used to ride the flip onto the home screen
+  await U.page.evaluate(() => { showTakanBurst(false); });
+  await exitToHome();
+  bv = await burstState();
+  check('up43: leaving mid-burst lands on a CLEAN home (no tail survives the flip)', !bv.takanShow && bv.takanOp === 0 && !bv.b13Show && bv.b13Op === 0, JSON.stringify(bv));
+  await U.page.screenshot({ path: path.join(SHOTS, 'burstfix-home-FRESH.jpg'), type: 'jpeg', quality: 90 });
+  check('up43: proof saved (burstfix-home-FRESH.jpg)', fs.existsSync(path.join(SHOTS, 'burstfix-home-FRESH.jpg')));
+  // (b2) on the table but with the PLAYLIST open, bursts are
+  // dropped too; closing the sheet re-arms them
+  await enterBotMatch();
+  await U.page.click('#mp-list').catch(() => {});
+  await U.page.waitForFunction(() => document.getElementById('ov-playlist').classList.contains('show'), null, { timeout: 8000 }).catch(() => {});
+  await U.page.evaluate(() => { showTakanBurst(true); show13Burst('Burst Tester'); });
+  await sleep(400);
+  bv = await burstState();
+  check('up43: with the playlist open over the table, bursts are dropped (never paint the sheet)', bv.playlistOpen && !bv.takanShow && bv.takanOp === 0 && !bv.b13Show && bv.b13Op === 0, JSON.stringify(bv));
+  await U.page.click('#btn-playlist-x').catch(() => {});
+  await sleep(300);
+  await U.page.evaluate(() => { show13Burst('Burst Tester'); });
+  await sleep(400);
+  bv = await burstState();
+  check('up43: closing the playlist re-arms the table bursts', bv.b13Show && bv.b13Op > 0.5, JSON.stringify(bv));
+  await sleep(1200);
+  await exitToHome(); // the sections below boot U on the home screen
+  await sleep(400);
+
+  // ================= up43b: progress fill + my mic pauses the music =================
+  // Two more owner orders from live play (2026-11-12 evening):
+  // (B) the seek bar showed ONLY the knob dot — root cause: the
+  // fill was a normal-flow child with height:100%, but the global
+  // border-box + the bar's 12px transparent touch border crush
+  // the track's content box to 0px tall, so the fill rendered
+  // 0px high (measured). The painted lines are absolute 3px now
+  // (dim ::before track, solid gold fill). (A) opening MY mic
+  // pauses the music; closing it resumes from the same spot —
+  // only if the player paused it (a manual pause always wins).
+  // B — on HOME: play the default track, jump to ~40%.
+  await U.page.click('#mp-play').catch(() => {});
+  await U.page.waitForFunction(() => window.TorePlayer && TorePlayer.audio.duration > 0 && !TorePlayer.audio.paused, null, { timeout: 20000 }).catch(() => {});
+  await U.page.evaluate(() => { TorePlayer.audio.currentTime = TorePlayer.audio.duration * 0.4; });
+  await sleep(700);
+  const fb = await U.page.evaluate(() => {
+    const fill = document.querySelector('#mp-prog-fill');
+    const prog = document.querySelector('#mp-prog');
+    const fr = fill.getBoundingClientRect(), pr = prog.getBoundingClientRect();
+    return { pct: +(fr.width / pr.width * 100).toFixed(1), fillH: Math.round(fr.height),
+             fillBg: getComputedStyle(fill).backgroundColor,
+             trackBg: getComputedStyle(prog, '::before').backgroundColor };
+  });
+  check('up43b: the played segment is a REAL gold line — ~40% wide, a full 3px tall', fb.pct > 36 && fb.pct < 44 && fb.fillH >= 3, JSON.stringify(fb));
+  check('up43b: the fill is solid bright gold, clearly unlike the dim unplayed track', fb.fillBg.includes('247, 197, 74') && fb.fillBg !== fb.trackBg, JSON.stringify(fb));
+  await U.page.screenshot({ path: path.join(SHOTS, 'player-fill-FRESH.jpg'), type: 'jpeg', quality: 90 });
+  check('up43b: proof saved (player-fill-FRESH.jpg)', fs.existsSync(path.join(SHOTS, 'player-fill-FRESH.jpg')));
+  await U.page.click('#mp-play').catch(() => {}); // pause again for the sections after
+  await U.page.evaluate(() => { try { TorePlayer.audio.currentTime = 0; } catch (e) { /* rewind */ } });
+  // A — the mic flows at a bot-match table (room mic funnels
+  // completeMicOn/stopMic -> TorePlayer.micHook).
+  const pState = () => U.page.evaluate(() => ({ paused: TorePlayer.audio.paused, t: +TorePlayer.audio.currentTime.toFixed(2), mic: document.querySelector('#btn-mic').classList.contains('on') }));
+  await enterBotMatch();
+  await U.page.click('#mp-play').catch(() => {}); // music on at the table
+  await sleep(2500);
+  const m0 = await pState();
+  check('up43b: music is playing at the table before the mic opens', !m0.paused && m0.t > 0.5, JSON.stringify(m0));
+  await U.page.click('#btn-mic').catch(() => {});
+  await sleep(900);
+  const m1 = await pState(); await sleep(700); const m1b = await pState();
+  check('up43b: opening MY mic PAUSES the music (position frozen)', m1.mic && m1.paused && m1b.paused && m1b.t === m1.t, JSON.stringify({ m1, m1b }));
+  await U.page.click('#btn-mic').catch(() => {});
+  await sleep(700);
+  const m2 = await pState();
+  check('up43b: closing the mic RESUMES from the frozen position (drift < 1.6s)', !m2.mic && !m2.paused && (m2.t - m1b.t) >= 0 && (m2.t - m1b.t) < 1.6, JSON.stringify({ m2, frozen: m1b.t }));
+  await U.page.click('#mp-play').catch(() => {}); // manual pause FIRST this time
+  await sleep(300);
+  await U.page.click('#btn-mic').catch(() => {}); await sleep(700);
+  await U.page.click('#btn-mic').catch(() => {}); await sleep(500);
+  const m3 = await pState();
+  check('up43b: music I paused myself stays paused across a mic on/off', m3.paused && !m3.mic, JSON.stringify(m3));
+  await U.page.click('#mp-play').catch(() => {}); // play again
+  await sleep(1200);
+  await U.page.click('#btn-mic').catch(() => {}); await sleep(700);
+  const m4 = await pState();
+  check('up43b: mic opens again -> auto-paused again', m4.mic && m4.paused, JSON.stringify(m4));
+  await U.page.click('#mp-play').catch(() => {}); await sleep(400); // manual play inside the window
+  await U.page.click('#mp-play').catch(() => {}); await sleep(300); // manual pause inside the window
+  await U.page.click('#btn-mic').catch(() => {}); await sleep(500); // mic off must NOT undo his pause
+  const m5 = await pState();
+  check('up43b: a manual pause inside the mic window is NOT undone by mic-off', m5.paused && !m5.mic, JSON.stringify(m5));
+  await U.page.evaluate(() => { try { TorePlayer.audio.currentTime = 0; } catch (e) { /* rewind */ } });
+  await exitToHome(); // player paused, rewound, mic off — the sections below expect exactly this
+  await sleep(400);
 
   // ================= up41: the music player =================
   // (Replaces the F41 checks: the procedural WebAudio pad is
