@@ -5,7 +5,7 @@
  * by build-deploy.js) and drives the real client:
  *   BUNDLE: dist carries window.ToreEngine/ToreBots and stays
  *     code-only (< 1 MB); all three sw.js copies are v5 (up41 cache roll); the
- *     worker points at ?v=20261112-player.
+ *     worker points at ?v=20261112-seek.
  *   ONLINE WARM-UP: after one signed-in-style load the service
  *     worker's tore-assets-v5 cache holds the deck + thumbs + the
  *     player's felt; the profile شمېرې baseline is read.
@@ -68,7 +68,7 @@ for (const rel of ['public/sw.js', 'deploy/sw.js', 'cloudflare/sw.js']) {
   check(rel + " is SW_VERSION 'v5'", sw.includes("const SW_VERSION = 'v5';"));
 }
 const workerSrc = fs.readFileSync(path.join(ROOT, 'cloudflare/src/worker.js'), 'utf8');
-check('worker.js serves ?v=20261112-player', workerSrc.includes('dist-client.html?v=20261112-player'));
+check('worker.js serves ?v=20261112-seek', workerSrc.includes('dist-client.html?v=20261112-seek'));
 
 // ---------------- server ----------------
 function spawnServer(args, port) {

@@ -7,7 +7,12 @@
  * the F41 procedural pad entirely: pill on home/table, playlist,
  * collapse + draggable chip, the settings master, and the club
  * broadcast). F19 game sounds were removed entirely in up40 —
- * this driver asserts their absence.
+ * this driver asserts their absence. up42: the pill's gold
+ * progress bar is a real SEEK control (tap + drag, knob, tiny
+ * time labels; owner seeks re-anchor the club broadcast,
+ * followers' bars are locked), and club voice DUCKS the music
+ * (background level in the room, deeper under speech, restored
+ * on exit).
  *
  * Runs against the DEPLOY Node host (deploy/server.js) so the
  * hand-maintained deploy variant is exercised too.
@@ -227,6 +232,16 @@ try {
   check('up41: NOTHING autoplays on load (audio paused, state silent)', pl0.paused === true && pl0.st && pl0.st.playing === false);
   await U.page.screenshot({ path: path.join(SHOTS, 'player-home-FRESH.jpg'), type: 'jpeg', quality: 88 });
   check('up41: proof saved (player-home-FRESH.jpg)', fs.existsSync(path.join(SHOTS, 'player-home-FRESH.jpg')));
+  // up42: at rest the seek bar shows knob + 0:00 / 9:18 labels
+  const seekHome = await U.page.evaluate(() => ({
+    cur: document.getElementById('mp-cur').textContent,
+    dur: document.getElementById('mp-dur').textContent,
+    knob: !!document.getElementById('mp-knob'),
+  }));
+  check('up42: the seek bar rides the pill — knob + tiny 0:00 / 9:18 labels at rest',
+    seekHome.knob && seekHome.cur === '0:00' && seekHome.dur === '9:18', JSON.stringify(seekHome));
+  await U.page.screenshot({ path: path.join(SHOTS, 'player-seek-home-FRESH.jpg'), type: 'jpeg', quality: 88 });
+  check('up42: proof saved (player-seek-home-FRESH.jpg)', fs.existsSync(path.join(SHOTS, 'player-seek-home-FRESH.jpg')));
 
   // ---- playlist sheet: 9 rows, real covers, row tap plays ----
   await U.page.click('#mp-list');
@@ -240,6 +255,28 @@ try {
   check('up41: playlist has 9 rows with the real covers c1..c9',
     plRows.n === 9 && plRows.covers.every((s, i) => s === '/music/c' + (i + 1) + '.jpg'), plRows.covers.join(','));
   check('up41: current row highlighted = track ۸, durations shown', plRows.cur === 7 && plRows.durs[7] === '9:18', JSON.stringify(plRows.durs));
+  // ---- up42: the sheet wears the Ludo card; the ✖ is inside ----
+  const sheetStyle = await U.page.evaluate(() => {
+    const panel = document.querySelector('#ov-playlist .panel');
+    const cs = getComputedStyle(panel);
+    const pr = panel.getBoundingClientRect();
+    const xr = document.getElementById('btn-playlist-x').getBoundingClientRect();
+    return { bg: cs.backgroundImage,
+             xIn: xr.left >= pr.left - 1 && xr.right <= pr.right + 1 && xr.top >= pr.top - 1 && xr.bottom <= pr.bottom + 1,
+             xw: Math.round(xr.width), xh: Math.round(xr.height) };
+  });
+  check('up42: the playlist sheet is a LUDO card now (magenta family, not the old brown)',
+    /216, 27, 116/.test(sheetStyle.bg) && /103, 18, 78/.test(sheetStyle.bg) && !/rgb\(74, 47, 22\)|rgb\(42, 26, 9\)/.test(sheetStyle.bg),
+    sheetStyle.bg.slice(0, 90));
+  check('up42: the sheet\u2019s ✖ sits fully INSIDE the top corner at a normal size',
+    sheetStyle.xIn && sheetStyle.xw <= 44 && sheetStyle.xh <= 44, JSON.stringify(sheetStyle));
+  await U.page.screenshot({ path: path.join(SHOTS, 'player-list-ludo-FRESH.jpg'), type: 'jpeg', quality: 88 });
+  check('up42: proof saved (player-list-ludo-FRESH.jpg)', fs.existsSync(path.join(SHOTS, 'player-list-ludo-FRESH.jpg')));
+  await U.page.click('#btn-playlist-x');
+  const xClosed = await U.page.waitForFunction(() => !document.getElementById('ov-playlist').classList.contains('show'), null, { timeout: 8000 }).then(() => true).catch(() => false);
+  check('up42: tapping the inside ✖ closes the sheet', xClosed);
+  await U.page.click('#mp-list');
+  await U.page.waitForSelector('#ov-playlist.show', { timeout: 8000 });
   await U.page.screenshot({ path: path.join(SHOTS, 'player-list-FRESH.jpg'), type: 'jpeg', quality: 88 });
   check('up41: proof saved (player-list-FRESH.jpg)', fs.existsSync(path.join(SHOTS, 'player-list-FRESH.jpg')));
   await U.page.click('#mp-rows .mp-row >> nth=4');
@@ -341,6 +378,65 @@ try {
   check('up41: master ON brings the pill back (playback stays paused until a tap)', masterOn);
   await U.page.click('#btn-settings-x');
   await sleep(300);
+
+  // ---- up42: the gold bar is a real seek control (personal) ----
+  // (The fill grows from the bar's RIGHT edge — the pill is RTL —
+  // so fraction f sits at x = box.x + (1 - f) * box.width.)
+  // Run the checks on track ۸ (the 9:18 default), paused.
+  await U.page.evaluate(() => TorePlayer.playTrack(7));
+  await U.page.waitForFunction(() => TorePlayer.state().idx === 7 && !TorePlayer.audio.paused, null, { timeout: 10000 });
+  await U.page.click('#mp-play');
+  await U.page.waitForFunction(() => TorePlayer.audio.paused, null, { timeout: 8000 });
+  const seekReady = await U.page.waitForFunction(() => Number.isFinite(TorePlayer.audio.duration) && TorePlayer.audio.duration > 100, null, { timeout: 15000 }).then(() => true).catch(() => false);
+  check('up42 setup: track ۸ metadata is in (duration known)', seekReady);
+  const progBox = await U.page.$eval('#mp-prog', (el) => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; });
+  const xAt = (f) => progBox.x + (1 - f) * progBox.w;
+  const yMid = progBox.y + progBox.h / 2;
+  // (a) tap at ~50% → the middle of the song
+  await U.page.mouse.click(xAt(0.5), yMid);
+  const tapSeek = await U.page.waitForFunction(() => Math.abs(TorePlayer.audio.currentTime - TorePlayer.audio.duration / 2) <= 3, null, { timeout: 8000 }).then(() => true).catch(() => false);
+  check('up42: tapping the bar at 50% seeks to the middle (±3 s)', tapSeek,
+    await U.page.evaluate(() => TorePlayer.audio.currentTime.toFixed(1) + '/' + TorePlayer.audio.duration.toFixed(1)));
+  // the knob rides the fill's leading (playhead) edge
+  const knobGeo = await U.page.evaluate(() => {
+    const pr = document.getElementById('mp-prog').getBoundingClientRect();
+    const fr = document.getElementById('mp-prog-fill').getBoundingClientRect();
+    const kr = document.getElementById('mp-knob').getBoundingClientRect();
+    const edge = Math.abs(fr.right - pr.right) < 2 ? fr.left : fr.right;
+    return { knobCx: kr.x + kr.width / 2, edge };
+  });
+  check('up42: the knob sits on the fill\u2019s playhead edge', Math.abs(knobGeo.knobCx - knobGeo.edge) <= 3, JSON.stringify(knobGeo));
+  // (b) drag 20% → 80% → lands at ~80%
+  await U.page.mouse.move(xAt(0.2), yMid);
+  await U.page.mouse.down();
+  await U.page.mouse.move(xAt(0.8), yMid, { steps: 12 });
+  await U.page.mouse.up();
+  const dragSeek = await U.page.waitForFunction(() => Math.abs(TorePlayer.audio.currentTime - TorePlayer.audio.duration * 0.8) <= 3, null, { timeout: 8000 }).then(() => true).catch(() => false);
+  check('up42: dragging the bar 20% \u2192 80% scrubs to ~80%', dragSeek,
+    await U.page.evaluate(() => TorePlayer.audio.currentTime.toFixed(1)));
+  // (c) the tiny labels track the position; total = real duration
+  const lbl = await U.page.evaluate(() => {
+    const fmt = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+    return { cur: document.getElementById('mp-cur').textContent, dur: document.getElementById('mp-dur').textContent,
+             wantCur: fmt(TorePlayer.audio.currentTime), wantDur: fmt(TorePlayer.audio.duration), pos: TorePlayer.audio.currentTime };
+  });
+  check('up42: time labels show current / total in Latin digits (total = the real duration)',
+    lbl.cur === lbl.wantCur && lbl.dur === lbl.wantDur && lbl.pos > 60, JSON.stringify(lbl));
+  // (d) a seek while PAUSED keeps the paused state and the spot
+  const pausedBefore = await U.page.evaluate(() => TorePlayer.audio.paused);
+  await U.page.mouse.click(xAt(0.3), yMid);
+  await sleep(500);
+  const pausedSeek = await U.page.evaluate(() => ({ paused: TorePlayer.audio.paused, pos: TorePlayer.audio.currentTime, dur: TorePlayer.audio.duration }));
+  check('up42: a seek while paused lands at ~30% and playback stays paused',
+    pausedBefore && pausedSeek.paused && Math.abs(pausedSeek.pos - pausedSeek.dur * 0.3) <= 3, JSON.stringify(pausedSeek));
+  // proof: play, seek to ~half, screenshot the pill mid-song
+  await U.page.click('#mp-play');
+  await U.page.waitForFunction(() => !TorePlayer.audio.paused, null, { timeout: 8000 });
+  await U.page.mouse.click(xAt(0.5), yMid);
+  await U.page.waitForFunction(() => Math.abs(TorePlayer.audio.currentTime - TorePlayer.audio.duration / 2) <= 3, null, { timeout: 8000 });
+  await sleep(400);
+  await U.page.screenshot({ path: path.join(SHOTS, 'player-seek-mid-FRESH.jpg'), type: 'jpeg', quality: 88 });
+  check('up42: proof saved (player-seek-mid-FRESH.jpg)', fs.existsSync(path.join(SHOTS, 'player-seek-mid-FRESH.jpg')));
   await U.ctx.close();
 
   // ---- regression: a TOTAL music outage must not loop ----
@@ -408,6 +504,31 @@ try {
   check('up41: proof saved (player-club-owner-FRESH.jpg)', fs.existsSync(path.join(SHOTS, 'player-club-owner-FRESH.jpg')));
   await M.page.screenshot({ path: path.join(SHOTS, 'player-club-member-FRESH.jpg'), type: 'jpeg', quality: 88 });
   check('up41: proof saved (player-club-member-FRESH.jpg)', fs.existsSync(path.join(SHOTS, 'player-club-member-FRESH.jpg')));
+  // ---- up42: the OWNER seeks — the broadcast re-anchors ----
+  const oProg = await O.page.$eval('#mp-prog', (el) => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; });
+  await O.page.mouse.click(oProg.x + 0.3 * oProg.w, oProg.y + oProg.h / 2);   // RTL: x = right - 0.7w → the 70% spot
+  const oSeeked = await O.page.waitForFunction(() => Math.abs(TorePlayer.audio.currentTime - TorePlayer.audio.duration * 0.7) <= 4, null, { timeout: 8000 }).then(() => true).catch(() => false);
+  check('up42: the club owner can seek (lands at ~70%)', oSeeked,
+    await O.page.evaluate(() => TorePlayer.audio.currentTime.toFixed(1) + '/' + TorePlayer.audio.duration.toFixed(1)));
+  // the follower converges to the owner's new position
+  let convDiff = null;
+  for (let i = 0; i < 40 && convDiff === null; i++) {
+    const [op, mp] = await Promise.all([
+      O.page.evaluate(() => TorePlayer.audio.currentTime),
+      M.page.evaluate(() => TorePlayer.audio.currentTime),
+    ]);
+    if (mp > 300 && Math.abs(op - mp) <= 2.5) convDiff = Math.abs(op - mp);
+    else await sleep(500);
+  }
+  check('up42: the follower converges to the owner\u2019s seek position (≤2.5 s)', convDiff !== null, convDiff === null ? 'no convergence' : 'drift ' + convDiff.toFixed(2));
+  // a follower's own seek attempt changes nothing (bar locked)
+  const mProg = await M.page.$eval('#mp-prog', (el) => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; });
+  const mBefore = await M.page.evaluate(() => TorePlayer.audio.currentTime);
+  await M.page.mouse.click(mProg.x + 0.9 * mProg.w, mProg.y + mProg.h / 2);   // RTL: the ~10% spot — if the bar worked for him
+  await sleep(800);
+  const mAfter = await M.page.evaluate(() => TorePlayer.audio.currentTime);
+  check('up42: the follower\u2019s seek bar is DISABLED (a seek attempt moves nothing)',
+    mAfter > 300 && mAfter >= mBefore - 2, mBefore.toFixed(1) + ' -> ' + mAfter.toFixed(1));
   // founder pauses → member pauses
   await O.page.click('#mp-play');
   const mPaused = await M.page.waitForFunction(() => TorePlayer.audio.paused === true, null, { timeout: 12000 }).then(() => true).catch(() => false);
@@ -424,6 +545,34 @@ try {
   await O.page.click('#mp-bc');
   const bcOff = await O.page.waitForFunction(() => TorePlayer.state().bc === 'off', null, { timeout: 8000 }).then(() => true).catch(() => false);
   check('up41: founder stops the broadcast', bcOff);
+
+  // ---- up42: club voice ducking (the member's own player) ----
+  // In the room with club voice live, the music sits at the
+  // background level; simulated remote speech — injected at
+  // cv.speaking, the same analyser-fed seam the implementation
+  // (and the seat glow) reads — ducks it further; ~1.3 s of
+  // quiet eases it back; leaving the room restores 1.0.
+  const duckBase = await M.page.waitForFunction(() => {
+    const v = TorePlayer.audio.volume;
+    return v >= 0.28 && v <= 0.38;
+  }, null, { timeout: 10000 }).then(() => true).catch(() => false);
+  check('up42 duck: in a club room the music drops to the background level (~0.33)', duckBase,
+    await M.page.evaluate(() => TorePlayer.audio.volume.toFixed(2)));
+  await M.page.evaluate(() => { cv.speaking.add('p:duckfake'); });
+  const duckLow = await M.page.waitForFunction(() => TorePlayer.audio.volume <= 0.2, null, { timeout: 8000 }).then(() => true).catch(() => false);
+  check('up42 duck: while a remote voice speaks, the music ducks (≤0.2)', duckLow,
+    await M.page.evaluate(() => TorePlayer.audio.volume.toFixed(2)));
+  await M.page.evaluate(() => { cv.speaking.delete('p:duckfake'); });
+  const duckBack = await M.page.waitForFunction(() => {
+    const v = TorePlayer.audio.volume;
+    return v >= 0.28 && v <= 0.38;
+  }, null, { timeout: 10000 }).then(() => true).catch(() => false);
+  check('up42 duck: after the speech stops, the music eases back to the background level', duckBack,
+    await M.page.evaluate(() => TorePlayer.audio.volume.toFixed(2)));
+  await M.page.evaluate(() => { exitClubRoomView(); });
+  const duckFull = await M.page.waitForFunction(() => TorePlayer.audio.volume >= 0.95, null, { timeout: 10000 }).then(() => true).catch(() => false);
+  check('up42 duck: leaving the club room restores full volume (1.0)', duckFull,
+    await M.page.evaluate(() => TorePlayer.audio.volume.toFixed(2)));
   await O.ctx.close(); await M.ctx.close();
 
   // ================= F14: leaders restyle =================
