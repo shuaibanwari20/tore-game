@@ -26,6 +26,7 @@ function check(ok, label, detail) {
 function playMatch(seed, stats) {
   const rng = G.seededRng(seed);
   const match = new G.Match(() => {}, rng);
+  match.botSeats = [true, true, true, true]; // sim matches are all-bot: the BOT NO-REPEAT LAW applies to every seat
   let bankRun = [0, 0]; // running tawan bank, mirrored against match history
   let pendingRun = [0, 0]; // running pending-takan claims, mirrored likewise
   let safety = 0;
@@ -44,9 +45,22 @@ function playMatch(seed, stats) {
     // -- Play the round with bots; any illegal play throws (Acceptance 2) --
     while (!round.finished) {
       const seat = round.turn;
-      if (bots.maybeDeclare13(round, seat)) stats.declarations++;
+      // Mirror the server's bot flow: when the bot must declare «13»
+      // (forced final-trick repeat takan), the declaration is APPLIED
+      // before the card is chosen — not just counted.
+      if (bots.maybeDeclare13(round, seat)) { stats.declarations++; round.declare13(seat); }
       const card = bots.chooseCard(round, seat);
       if (!round.legalMovesFor(seat).includes(card)) stats.illegalBotPlays++;
+      // -- up45 counting invariant: on a LEAD, the chosen suit is never
+      //    PROVABLY dead (count: played + own = 13 → unseen 0) while the
+      //    bot holds any card of a suit that is not provably dead. --
+      if (!round.trick.length) {
+        const info = bots.countSuits(round, seat);
+        if (info[G.suitOf(card)].unseen === 0 &&
+            round.legalMovesFor(seat).some((c) => info[G.suitOf(c)].unseen > 0)) {
+          stats.deadLeadErrors++;
+        }
+      }
       round.play(seat, card); // throws on illegality → caught by caller → FAIL
     }
     stats.takans += round.takanCount[0] + round.takanCount[1];
@@ -632,13 +646,252 @@ async function main() {
       check(pick === '3C' && G.suitOf(pick) !== 'S',
         'bot lead: avoids the dead-suit (takan) lead — cheap live card instead');
     }
-    // «13» stays human-only: even with a declaration available on the
-    // final trick, the bot never declares.
+    // «13» and bots: a FRESH final-trick takan is never declared — the
+    // declaration is reserved for the forced REPEAT (see the BOT13
+    // section below, where the repeat case DOES declare).
     {
       const r = midRound([['AS'], ['KH'], ['QD'], ['JC']], [], 0);
       r.tricksPlayed = 12;
       check(r.canDeclare13(0) === true && bots.maybeDeclare13(r, 0) === false,
-        'bot «13»: never declares, even when a declaration is available');
+        'bot «13»: a fresh final-trick takan is NOT declared — its claim stands');
+    }
+  }
+
+  // --- BOT NO-REPEAT TAKAN LAW (owner order, 2026-11-09 — «فقط دفعهٔ
+  // اول تکان حساب می‌شود»): per bot, per round, only the FIRST takan of
+  // a suit counts. The bot NEVER leads an already-takan'd suit while
+  // any other suit remains (absolute — other suits are exhausted
+  // first); a forced re-lead at the end creates NO claim (suppressed
+  // in game.js for bot seats); on the final trick the forced re-lead
+  // declares «13». The partner's first lead of the same suit counts
+  // (per-bot rule). Humans are untouched in all cases. ---
+  {
+    const leadRig = (hands, tricksPlayed, seed) => {
+      const round = new G.Round(0, () => {}, G.seededRng(seed || 401));
+      round.hands = hands;
+      round.trick = [];
+      round.turn = 0;
+      round.leader = 0;
+      round.tricksPlayed = tricksPlayed;
+      round.captured = [[], []];
+      return round;
+    };
+    const ALLBOTS = [true, true, true, true];
+
+    // Tracking + humans (e): seat 0 (a HUMAN seat — botSeats default
+    // false) holds every spade; its takan is remembered per seat+suit,
+    // and its REPEAT lead still counts. The engine never blocks a
+    // human re-lead.
+    {
+      const r = new G.Round(0, () => {}, G.seededRng(401));
+      r.hands = [
+        G.makeDeck().filter((c) => G.suitOf(c) === 'S'),
+        G.makeDeck().filter((c) => G.suitOf(c) === 'H'),
+        G.makeDeck().filter((c) => G.suitOf(c) === 'D'),
+        G.makeDeck().filter((c) => G.suitOf(c) === 'C'),
+      ];
+      r.play(0, '2S'); r.play(1, '2H'); r.play(2, '2D'); r.play(3, '2C');
+      check(r.takanCount[0] === 1 &&
+            JSON.stringify(r.takanSuits[0]) === '["S"]' &&
+            r.takanSuits[1].length === 0 && r.takanSuits[2].length === 0 && r.takanSuits[3].length === 0,
+        'bot13 tracking: a takan lead is remembered per seat+suit (round.takanSuits)');
+      r.play(0, '3S'); // the human re-leads the same dead suit at once
+      check(r.takanCount[0] === 2 && r.takanSuits[0].length === 1,
+        'bot13 (e): a HUMAN repeat takan lead still counts — humans are untouched by the law');
+    }
+
+    // (a) His example: the bot holds قره (already takan'd) + لال → it
+    // leads لال, never the takan'd suit.
+    {
+      const r = leadRig(
+        [['5S', '3H', '7H'], ['KH', '4D', '6C'], ['2H', '8D', 'TC'], ['QH', '5D', '9C']], 10);
+      r.botSeats = ALLBOTS.slice();
+      r.takanSuits[0] = ['S'];
+      check(bots.chooseCard(r, 0) === '3H',
+        'bot13 (a): bot holds the takan’d قره + لال → leads لال, never the takan’d suit');
+    }
+    // (a2) Even when EVERY suit is dead, the ban holds: the old logic
+    // cheapest-dead-led the takan'd 2♠ here; the law leads another suit.
+    {
+      const r = leadRig(
+        [['2S', 'KH', '3C'], ['4D', '6D', '8D'], ['5D', '7D', '9D'], ['TD', 'JD', 'QD']], 10);
+      r.botSeats = ALLBOTS.slice();
+      r.takanSuits[0] = ['S'];
+      check(bots.chooseCard(r, 0) === '3C',
+        'bot13 (a): all suits dead — the takan’d suit is STILL not led while another suit remains');
+    }
+
+    // The full law in one organic chain: first takan counts → other
+    // suit exhausted before any repeat → that suit's first takan
+    // counts too (c2) → the forced final-trick repeat declares «13».
+    {
+      const evts = [];
+      const r = new G.Round(0, (e) => evts.push(e), G.seededRng(403));
+      r.hands = [['4S', '3H', '6S'], ['QD', '2D', '9D'], ['5D', '7D', 'TC'], ['JC', '8C', '9C']];
+      r.captured = [[], []];
+      r.tricksPlayed = 10; r.leader = 0; r.turn = 0;
+      r.botSeats = ALLBOTS.slice();
+      let pick = bots.chooseCard(r, 0);
+      check(pick === '4S', 'bot13 chain: with only dead suits, the bot opens a fresh suit (قره)');
+      r.play(0, pick); r.play(1, 'QD'); r.play(2, '5D'); r.play(3, 'JC');
+      check(r.takanCount[0] === 1 && JSON.stringify(r.takanSuits[0]) === '["S"]',
+        'bot13 chain: the first قره takan counts and is remembered');
+      pick = bots.chooseCard(r, 0);
+      check(pick === '3H',
+        'bot13 chain: 6♠ still in hand, yet the OTHER suit (لال) is led — exhaustion before any repeat');
+      r.play(0, pick); r.play(1, '2D'); r.play(2, '7D'); r.play(3, '8C');
+      check(r.takanCount[0] === 2 && JSON.stringify(r.takanSuits[0]) === '["S","H"]',
+        'bot13 (c2): the same bot’s FIRST takan of a different suit (لال) still counts');
+      check(r.canDeclare13(0) === true && bots.maybeDeclare13(r, 0) === true,
+        'bot13 (b): only the takan’d suit remains for the final trick → the bot declares «13»');
+      r.declare13(0);
+      r.play(0, '6S'); r.play(1, '9D'); r.play(2, 'TC'); r.play(3, '9C');
+      check(r.finished && r.takanCount[0] === 2 &&
+            evts.some((e) => e.type === 'declared13' && e.seat === 0),
+        'bot13 (b): the declaration cancels the forced repeat — no third takan, no new claim');
+    }
+
+    // (b) standalone: the declaration decision in isolation.
+    {
+      const r = leadRig([['AS'], ['KH'], ['QD'], ['JC']], 12);
+      r.botSeats = ALLBOTS.slice();
+      r.takanSuits[0] = ['S']; r.takanCount = [1, 0]; // this bot already takan'd قره this round
+      check(r.canDeclare13(0) === true && bots.maybeDeclare13(r, 0) === true,
+        'bot13 (b): final trick, last card is the already-takan’d suit → «13» is declared');
+      r.declare13(0);
+      r.play(0, 'AS'); r.play(1, 'KH'); r.play(2, 'QD'); r.play(3, 'JC');
+      check(r.finished && r.takanCount[0] === 1,
+        'bot13 (b): the declared repeat adds no takan and no claim');
+    }
+
+    // (c) Forced mid-round re-lead: led (nothing else exists), no
+    // «13» (final-trick-only), and NO claim — silently suppressed.
+    {
+      const evts = [];
+      const r = new G.Round(0, (e) => evts.push(e), G.seededRng(405));
+      r.hands = [['4S', '6S', '8S'], ['KH', '3H', '2H'], ['QD', '5D', '7D'], ['JC', '7C', '9C']];
+      r.captured = [[], []];
+      r.tricksPlayed = 10; r.leader = 0; r.turn = 0;
+      r.botSeats = ALLBOTS.slice();
+      r.play(0, bots.chooseCard(r, 0)); r.play(1, 'KH'); r.play(2, 'QD'); r.play(3, 'JC');
+      check(r.takanCount[0] === 1, 'bot13 (c) setup: the bot’s first قره takan counts');
+      const pick = bots.chooseCard(r, 0);
+      check(G.suitOf(pick) === 'S' && r.canDeclare13(0) === false && bots.maybeDeclare13(r, 0) === false,
+        'bot13 (c): only the takan’d suit remains mid-round → it IS led (no «13» — final-trick-only)');
+      r.play(0, pick);
+      check(r.takanCount[0] === 1 && evts.filter((e) => e.type === 'takan').length === 1,
+        'bot13 (c): the forced repeat lead creates NO claim — silently suppressed');
+    }
+
+    // (c3) The partner's first lead of the same dead suit is the
+    // PARTNER's first — it counts.
+    {
+      const r = leadRig([['KH', '3H'], ['QD', '2D'], ['7S', '9S'], ['JC', '8C']], 11);
+      r.botSeats = ALLBOTS.slice();
+      r.takanSuits[0] = ['S']; r.takanCount = [1, 0]; // seat 0 already takan'd قره
+      r.turn = 2; r.leader = 2;
+      r.play(2, bots.chooseCard(r, 2));
+      check(r.takanCount[0] === 2 && JSON.stringify(r.takanSuits[2]) === '["S"]',
+        'bot13 (c3): the partner’s first lead of the same dead suit still counts (per-bot rule)');
+    }
+
+    // (d) A FRESH final-trick takan: no declaration, claim created —
+    // exactly as before the law.
+    {
+      const r = leadRig([['AS'], ['KH'], ['QD'], ['JC']], 12);
+      r.botSeats = ALLBOTS.slice();
+      check(bots.maybeDeclare13(r, 0) === false,
+        'bot13 (d): a FRESH final-trick takan is not declared');
+      r.play(0, 'AS'); r.play(1, 'KH'); r.play(2, 'QD'); r.play(3, 'JC');
+      check(r.finished && r.takanCount[0] === 1,
+        'bot13 (d): the fresh final-trick takan creates its claim, as before');
+    }
+
+    // (e) final-trick form: a HUMAN whose last card repeats his own
+    // earlier takan suit, undeclared → the repeat counts.
+    {
+      const r = leadRig([['AS'], ['KH'], ['QD'], ['JC']], 12);
+      r.takanSuits[0] = ['S']; r.takanCount = [1, 0]; // a human seat; botSeats stay all false
+      r.play(0, 'AS'); r.play(1, 'KH'); r.play(2, 'QD'); r.play(3, 'JC');
+      check(r.finished && r.takanCount[0] === 2,
+        'bot13 (e): a human’s undeclared repeat takan on the final trick still counts');
+    }
+  }
+
+  // --- BOT CARD COUNTING (up45, owner order 2026-11-12 «همه روبات ها
+  // را قوی کن»): the bot counts every played card (captured piles +
+  // current trick, all public) against its own hand — unseen = 13 −
+  // played − own per suit. A suit at unseen 0 is PROVABLY dead (nobody
+  // else can hold it) and is hard-banned as a lead while any other card
+  // exists; live suits down to their last few unseen cards are DYING
+  // and get spent/shed first, before they strand the bot. ---
+  {
+    const countRig = (hands, trick, captured, turnSeat) => {
+      const round = new G.Round(0, () => {}, G.seededRng(501));
+      round.hands = hands;
+      round.trick = trick;
+      round.captured = captured;
+      round.turn = turnSeat;
+      round.leader = trick.length ? trick[0].seat : turnSeat;
+      return round;
+    };
+
+    // Counting sanity: exact per-suit played/own/unseen on a rigged
+    // mid-round state, and played + own + unseen = 13 for every suit.
+    {
+      const r = countRig(
+        [['AS', 'KH', '4D'], [], [], []],
+        [{ seat: 3, card: '2S' }],
+        [['3S', '4S', '5H'], ['6D']], 0);
+      const info = bots.countSuits(r, 0);
+      check(info.S.played === 3 && info.S.own === 1 && info.S.unseen === 9 &&
+            info.H.played === 1 && info.H.own === 1 && info.H.unseen === 11 &&
+            info.D.played === 1 && info.D.own === 1 && info.D.unseen === 11 &&
+            info.C.played === 0 && info.C.own === 0 && info.C.unseen === 13,
+        'counting (up45): per-suit played/own/unseen counted exactly from piles + trick + hand');
+      check(G.SUITS.every((s) => info[s].played + info[s].own + info[s].unseen === 13),
+        'counting (up45): played + own + unseen = 13 for every suit');
+    }
+
+    // Provably-dead hard ban: 12 spades are already in the captured
+    // piles and the bot holds the last one (K♠) — by counting, nobody
+    // else can hold a spade, so the bot must NOT lead it while it holds
+    // live cards; it leads the cheap live probe instead.
+    {
+      const spadesGone = G.makeDeck().filter((c) => G.suitOf(c) === 'S' && c !== 'KS');
+      const r = countRig(
+        [['KS', '4D', '9C'], ['5D', '6C', '2H'], ['7D', '8C', '3H'], ['9D', 'TC', '4H']],
+        [], [spadesGone, []], 0);
+      check(bots.countSuits(r, 0).S.unseen === 0,
+        'counting (up45): 12 spades played + K♠ in hand → spades provably dead (unseen 0)');
+      check(bots.chooseCard(r, 0) === '4D',
+        'counting (up45): the provably-dead suit is never led while an alternative exists');
+    }
+
+    // Dying-suit-first lead: diamonds are down to 3 unseen (9 played,
+    // 1 in hand) while clubs sit at 12 unseen — the bot spends the
+    // dying suit's probe (8♦) NOW, not the cheaper healthy-suit card
+    // (3♣) the settled line would have led.
+    {
+      const diamondsPlayed = ['2D', '3D', '4D', '5D', '6D', '7D', '9D', 'JD', 'QD'];
+      const r = countRig(
+        [['8D', '3C', 'KS'], ['AD', '2C', '2S'], ['KD', '5C', '3S'], ['TD', '7C', '4S']],
+        [], [diamondsPlayed, []], 0);
+      check(bots.countSuits(r, 0).D.unseen === 3 && bots.chooseCard(r, 0) === '8D',
+        'counting (up45): a dying live suit (unseen ≤ 3) is led before a healthy suit');
+    }
+
+    // Dying-suit-first shed: void against the PARTNER's winning trick,
+    // the bot sheds its dead-weight spade (spades dying: unseen 1)
+    // instead of the higher diamond the settled line would shed —
+    // the dying card is exactly the one that would strand it later.
+    {
+      const spadesPlayed = ['2S', '3S', '5S', '6S', '7S', '8S', '9S', 'TS', 'JS', 'KS'];
+      const r = countRig(
+        [[], ['2H', '3D'], ['4S', '9D', 'QS'], ['4H', '5D']],
+        [{ seat: 0, card: 'AH' }], [spadesPlayed, []], 2);
+      check(bots.countSuits(r, 2).S.unseen === 1 && bots.chooseCard(r, 2) === '4S',
+        'counting (up45): void vs partner win → the dying-suit card is shed first');
     }
   }
 
@@ -733,7 +986,7 @@ async function main() {
     lateEndErrors: 0, loserErrors: 0, roundsTotal: 0,
     takans: 0, declarations: 0, claimsCreated: 0, claimsExecuted: 0,
     pileErrors: 0, takanErrors: 0, pendingErrors: 0, bankErrors: 0,
-    bandErrors: 0, tieBoosts: 0,
+    bandErrors: 0, tieBoosts: 0, deadLeadErrors: 0,
   };
 
   let thrown = null;
@@ -747,6 +1000,7 @@ async function main() {
     stats.rounds + ' rounds');
   check(stats.dealErrors === 0, 'every round: 13/13/13/13 dealt');
   check(stats.illegalBotPlays === 0, 'every bot move was in the legal set (follow-suit enforced)');
+  check(stats.deadLeadErrors === 0, 'counting (up45): a provably-dead suit (played + own = 13) is never led while an alternative exists');
   check(stats.captureErrors === 0, 'every round: all 52 cards captured by the two teams');
   check(stats.tawanErrors === 0, 'every round: captured CARD tawan sums to exactly 30 (tawan is card-only)');
   check(stats.qsErrors === 0, 'ماتکه کالا (Q♠) captor team recorded correctly every round');
@@ -955,12 +1209,12 @@ async function serverChatRtcChecks() {
     // (and echoes to the sender — clients render from the relay only),
     // carrying seat + name + kind + value.
     const eMark0 = e.msgs.length;
-    a.send({ type: 'chat', kind: 'phrase', value: 'ښه حرکت' });
+    a.send({ type: 'chat', kind: 'phrase', value: 'ښه چال' });
     const chatB = await b.waitFor((m) => m.type === 'chat', 'chat at B');
-    check(chatB.seat === roomA.seat && chatB.name === 'احمد' && chatB.kind === 'phrase' && chatB.value === 'ښه حرکت',
+    check(chatB.seat === roomA.seat && chatB.name === 'احمد' && chatB.kind === 'phrase' && chatB.value === 'ښه چال',
       'server: chat phrase relay reaches room members with seat/name/kind/value');
     const chatA = await a.waitFor((m) => m.type === 'chat', 'chat echo at A');
-    check(chatA.seat === roomA.seat && chatA.kind === 'phrase' && chatA.value === 'ښه حرکت',
+    check(chatA.seat === roomA.seat && chatA.kind === 'phrase' && chatA.value === 'ښه چال',
       'server: chat echoes to the sender (render-from-relay)');
     await sleep(300);
     check(e.countFrom(eMark0, (m) => m.type === 'chat') === 0,
