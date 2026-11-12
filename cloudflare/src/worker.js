@@ -78,7 +78,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261112-pview';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261112-feat2';
 const STICKER_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/stickers/';
 const COVER_URL_BASE_DEFAULT =
@@ -643,6 +643,32 @@ export default {
       // bytes; a dissolved club or a gallery switch answers 404.
       const cid = path.slice('/club-cover/'.length);
       if (!/^\d{6}$/.test(cid)) return new Response('not found', { status: 404 });
+      const stub = env.GAME.get(env.GAME.idFromName('global'));
+      return stub.fetch(request);
+    }
+
+    if (path === '/p-photo' && request.method === 'POST') {
+      // A player uploads HIS OWN profile photo (F17). Session
+      // rules are exactly the cover route's: with the gate on, no
+      // cookie = 401, and the identity the DO trusts comes from
+      // the verified session (x-tore-user) — a client-sent
+      // x-tore-pid is honoured ONLY with the gate off.
+      const user = await auth.readSession(request, env);
+      if (authEnabled && !user) {
+        return new Response('unauthorized — sign in first', { status: 401 });
+      }
+      const stub = env.GAME.get(env.GAME.idFromName('global'));
+      const headers = new Headers(request.headers);
+      if (user) { headers.set('x-tore-user', JSON.stringify(user)); headers.delete('x-tore-pid'); }
+      else headers.delete('x-tore-user');
+      return stub.fetch(new Request(request, { headers }));
+    }
+
+    if (path.startsWith('/p-photo/') && request.method === 'GET') {
+      // An uploaded profile photo: public read — the ?v=<photoV>
+      // query is the cache buster. The DO owns the bytes.
+      const rest = path.slice('/p-photo/'.length);
+      if (!/^\d{6}\.jpg$/.test(rest)) return new Response('not found', { status: 404 });
       const stub = env.GAME.get(env.GAME.idFromName('global'));
       return stub.fetch(request);
     }
