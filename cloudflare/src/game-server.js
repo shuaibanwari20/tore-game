@@ -289,6 +289,20 @@ export class GameServer {
         if (seat.voiceMic === undefined) seat.voiceMic = !!seat.voiceOn;
         if (seat.voiceSpeaker === undefined) seat.voiceSpeaker = true;
         delete seat.voiceOn;
+        // BUSYFIX (2026-11-12): a snapshot's `connected` is a claim
+        // about a socket THIS instance has not seen. A revived seat
+        // starts DISCONNECTED; when the snapshot claimed it was
+        // connected, disconnectAt restarts at the revive, so the
+        // seat gets one fresh grace window to be re-bound. The
+        // constructor's rebind pass (hibernated sockets) and the
+        // reconnect frames re-mark the seats whose players are
+        // really here. Without this, a seat snapshotted while
+        // connected whose socket died while the DO slept revived
+        // as connected=true with disconnectAt=null and counted
+        // "live" FOREVER in _seatLive — its owner showed busy
+        // (disabled gamepad) to every friend with no reap path at
+        // all: _verifyBusy itself believed the seat was live.
+        if (seat.connected) { seat.connected = false; seat.disconnectAt = Date.now(); }
         return seat;
       }),
       trickHold: snap.trickHold || null,
@@ -470,7 +484,22 @@ export class GameServer {
   _sweep() {
     const now = Date.now();
     for (const room of [...this.rooms.values()]) {
-      if (room.phase === 'lobby') continue;
+      if (room.phase === 'lobby') {
+        // BUSYFIX (2026-11-12): the waiting room and its reserved
+        // seats persist (owner order 2026-11-07), but a seat past
+        // the busy grace no longer counts its owner as in-lobby —
+        // and that flip is PUSHED here, because nothing else ever
+        // re-checks a lobby seat and friends repaint invite
+        // buttons only on a core refresh. (The Node host's sweep
+        // carries the twin of this block.) syncBusy no-ops unless
+        // the state really flips.
+        const deadSids = [];
+        room.seats.forEach((s) => {
+          if (s.kind === 'human' && s.sid && !this._seatLive(s)) deadSids.push(s.sid);
+        });
+        if (deadSids.length) this._syncBusyFor(null, deadSids);
+        continue;
+      }
       // Rematch expiry backstop (the 'rematch' alarm timer is the
       // primary mechanism; the sweep catches any offer whose
       // timer was lost with an eviction).
