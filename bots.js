@@ -33,10 +33,12 @@
  *    suits are played to exhaustion first. Only when nothing but the
  *    already-takan'd suit remains may it be led again, and that repeat
  *    creates NO claim (the engine counts only a bot's FIRST takan of
- *    each suit per round — see game.js). On the final trick that
- *    forced repeat lead declares «13» (maybeDeclare13) — the ONE
- *    exception to the human-only declaration; a FRESH final-trick
- *    takan is never declared, its claim stands.
+ *    each suit per round — see game.js).
+ *  - «13» POLICY (up46): a bot declares «13» ONLY on a PROVABLY clean
+ *    call (counting: the suit's unseen = 0) and only when ending now
+ *    is not worse for its team (captured ≤ the opponents'). Never on
+ *    a guess — a wrong call hands the rivals one claim per held card
+ *    against the bot's own team. See plan13.
  *
  * CARD COUNTING (up45, owner order 2026-11-12 «همه روبات ها را قوی
  * کن تا هیچ خطا نده»): the bot counts every card played this round
@@ -185,20 +187,25 @@ function pickLead(round, seat, legal) {
 }
 
 /**
- * «13» declaration — human-only EXCEPT for the one forced case in the
- * NO-REPEAT TAKAN LAW: on the FINAL trick, when the bot's last card is
- * a lead of a suit the bot ALREADY takan'd this round, the bot must
- * declare «13» (the declaration cancels the repeat through the normal
- * mechanic; the repeat would create no claim anyway — the declaration
- * is the visible act the owner ordered). A FRESH final-trick takan
- * (suit not takan'd before) is NEVER declared: its claim stands,
- * exactly as before. (The server calls this before asking for a card,
- * and applies round.declare13 when it returns true.)
+ * «13» PLAN (up46): on a LEAD, the card to declare «13» with — or
+ * null to play normally. Declares ONLY when BOTH: PROVABLY CLEAN
+ * (countSuits: a suit in hand with unseen === 0 — nobody else can
+ * hold it; never a guess, a wrong call costs one claim per held
+ * card) AND NOT WORSE (its team captured ≤ the opponents' tawan).
+ * Card = cheapest giveaway among the dead suits. Deterministic.
+ * (Hosts: on non-null, arm13 + play the card — the round ends.)
  */
-function maybeDeclare13(round, seat) {
-  if (!round.canDeclare13(seat)) return false;
-  const banned = (round.takanSuits && round.takanSuits[seat]) || [];
-  return banned.includes(G.suitOf(round.hands[seat][0]));
+function plan13(round, seat) {
+  if (!round || round.finished || round.trick.length || round.turn !== seat) return null;
+  const hand = round.hands[seat];
+  if (!hand || !hand.length) return null;
+  const info = countSuits(round, seat);
+  const dead = hand.filter((c) => info[G.suitOf(c)].unseen === 0);
+  if (!dead.length) return null;
+  const captured = round.captured || [[], []];
+  const myTeam = G.teamOf(seat);
+  if (G.tawanOf(captured[myTeam]) > G.tawanOf(captured[1 - myTeam])) return null;
+  return cheapestGiveaway(dead);
 }
 
 /**
@@ -271,4 +278,4 @@ function chooseCard(round, seat) {
   return lowestRank(winners);
 }
 
-module.exports = { chooseCard, maybeDeclare13, countSuits };
+module.exports = { chooseCard, plan13, countSuits };

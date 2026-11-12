@@ -45,10 +45,23 @@ function playMatch(seed, stats) {
     // -- Play the round with bots; any illegal play throws (Acceptance 2) --
     while (!round.finished) {
       const seat = round.turn;
-      // Mirror the server's bot flow: when the bot must declare «13»
-      // (forced final-trick repeat takan), the declaration is APPLIED
-      // before the card is chosen — not just counted.
-      if (bots.maybeDeclare13(round, seat)) { stats.declarations++; round.declare13(seat); }
+      // Mirror the server's bot flow (up46): when the bot's «13» plan
+      // fires, it arms the declaration and leads the planned card at
+      // once — the lead resolves the declaration and ends the round.
+      // A bot declaration must ALWAYS be provably clean (count 0) and
+      // no-worse for its team; anything else is an engine/bot error.
+      const plan = bots.plan13(round, seat);
+      if (plan) {
+        stats.declarations++;
+        const capBefore = [G.tawanOf(round.captured[0]), G.tawanOf(round.captured[1])];
+        round.arm13(seat);
+        round.play(seat, plan);
+        if (!round.finished || !round.result.thirteen || round.result.thirteen.count !== 0) {
+          stats.thirteenErrors++;
+        }
+        if (capBefore[G.teamOf(seat)] > capBefore[1 - G.teamOf(seat)]) stats.thirteenErrors++;
+        continue;
+      }
       const card = bots.chooseCard(round, seat);
       if (!round.legalMovesFor(seat).includes(card)) stats.illegalBotPlays++;
       // -- up45 counting invariant: on a LEAD, the chosen suit is never
@@ -65,17 +78,25 @@ function playMatch(seed, stats) {
     }
     stats.takans += round.takanCount[0] + round.takanCount[1];
 
-    // -- Piles: per-seat won tricks sum to 13 and match the captured piles --
+    // -- Piles: per-seat won tricks sum to the tricks actually played
+    //    (13 in a full round; fewer when a «13» ended it early) and
+    //    match the captured piles --
     const pileSum = round.wonTricks.reduce((a, b) => a + b, 0);
-    if (pileSum !== 13) stats.pileErrors++;
+    if (pileSum !== round.tricksPlayed) stats.pileErrors++;
     if ((round.wonTricks[0] + round.wonTricks[2]) * 4 !== round.captured[0].length) stats.pileErrors++;
     if ((round.wonTricks[1] + round.wonTricks[3]) * 4 !== round.captured[1].length) stats.pileErrors++;
 
-    // -- Acceptance 3: captured CARD tawan totals exactly 30 (a takan adds none) --
+    // -- Acceptance 3: captured CARD tawan totals exactly 30 in a full
+    //    round (a takan adds none). A «13»-ended round banks only what
+    //    was captured — captured + still-unplayed must still total 30. --
     const r = round.result;
-    if (r.cardTawan[0] + r.cardTawan[1] !== 30) stats.tawanErrors++;
+    if (r.thirteen) {
+      stats.thirteenRounds++;
+      const rest = round.hands.flat().concat([r.thirteen.card]);
+      if (r.cardTawan[0] + r.cardTawan[1] + G.tawanOf(rest) !== 30) stats.tawanErrors++;
+    } else if (r.cardTawan[0] + r.cardTawan[1] !== 30) stats.tawanErrors++;
     const capturedCards = round.captured[0].length + round.captured[1].length;
-    if (capturedCards !== 52) stats.captureErrors++;
+    if (capturedCards !== round.tricksPlayed * 4) stats.captureErrors++;
     // Q♠ captor recorded consistently with the actual captured pile
     const qsTeamActual = round.captured[0].includes('QS') ? 0 : 1;
     if (qsTeamActual !== r.qsTeam) stats.qsErrors++;
@@ -100,6 +121,8 @@ function playMatch(seed, stats) {
     //        the teams («تکان با تکان ادا می‌شود»), so a team creates
     //        claims only for its SURPLUS takans:
     //        created[t] = max(0, count[t] − count[1−t]);
+    //        PLUS (up46) a wrong «13» adds its penalty claims to the
+    //        DECLARING team's OWN pool with NO cancellation;
     //    (3) pending claims execute (team 0 first, then team 1): while a
     //        team holds claims and the VICTIM's banked total is ≥ 30,
     //        exactly 30 moves from the victim's bank to the holder's.
@@ -115,7 +138,15 @@ function playMatch(seed, stats) {
     const wantCancelled = Math.min(r.takanCount[0], r.takanCount[1]);
     const wantCreated = [0, 1].map((t) => Math.max(0, r.takanCount[t] - r.takanCount[1 - t]));
     if (hLast.takanCancelled !== wantCancelled) stats.pendingErrors++;
+    // up46: a WRONG «13» adds its penalty claims to the DECLARING
+    // team's OWN pool — no pairwise cancellation — before the
+    // execution loop (they execute against the OPPONENTS' bank).
+    const wantPenalty = r.thirteen && r.thirteen.count > 0 ? r.thirteen.count : 0;
+    if (hLast.thirteenPenalty !== wantPenalty) stats.pendingErrors++;
+    if ((hLast.thirteen ? hLast.thirteen.count : null) !== (r.thirteen ? r.thirteen.count : null)) stats.pendingErrors++;
+    stats.thirteenPenalty += wantPenalty;
     const pend = [pendingRun[0] + wantCreated[0], pendingRun[1] + wantCreated[1]];
+    if (wantPenalty) pend[r.thirteen.team] += wantPenalty;
     const wantExecuted = [0, 0];
     for (const t of [0, 1]) {
       while (pend[t] > 0 && afterBank[1 - t] >= G.TAKAN_CLAIM_MIN_BANK) {
@@ -380,7 +411,7 @@ async function main() {
       G.makeDeck().filter((c) => G.suitOf(c) === 'D'),
       G.makeDeck().filter((c) => G.suitOf(c) === 'C'),
     ];
-    check(round.canDeclare13(0) === false, 'no «13» before the final trick');
+    check(round.canArm13(0) === true, 'up46: «13» can be armed on ANY lead — no longer final-trick-only');
     round.play(0, '2S');
     check(round.takanCount[0] === 1 && round.takanCount[1] === 0 &&
           round.takanBonus === undefined,
@@ -391,43 +422,123 @@ async function main() {
       'takan event emitted for clients (count only, no bonus)');
   }
 
-  // --- Constructed scenario: «13» on the final trick cancels the takan ---
-  function finalTrickRound() {
-    const round = new G.Round(0, () => {}, G.seededRng(11));
-    round.hands = [['AS'], ['KH'], ['QD'], ['JC']]; // only seat 0 holds قره
-    round.captured = [[], []];
-    round.tricksPlayed = 12;
-    round.leader = 0; round.turn = 0;
-    return round;
+  // --- Constructed scenarios: the NEW «13» rule (up46 — owner-locked
+  // 2026-11-12). The leader arms «13» on ANY lead, then plays his lead
+  // card; the round ends at once. Nobody else holding the suit → clean;
+  // N cards held by the other three (partner included) → N pending
+  // claims AGAINST the declaring team. ---
+  {
+    // Arm/disarm legality: leader only, empty trick only, toggle.
+    const r = new G.Round(0, () => {}, G.seededRng(11));
+    r.hands = [['AS', '3D'], ['KH', '4C'], ['QD', '5H'], ['JC', '6D']];
+    r.captured = [[], []];
+    r.tricksPlayed = 11; r.leader = 0; r.turn = 0;
+    check(r.canArm13(1) === false, 'up46 «13»: a non-leader cannot arm');
+    let threw = false;
+    try { r.arm13(1); } catch (e) { threw = true; }
+    check(threw && r.armed13 === false, 'up46 «13»: arm13 throws for a non-leader');
+    r.arm13(0);
+    check(r.armed13 === true, 'up46 «13»: the leader arms on his lead');
+    r.arm13(0);
+    check(r.armed13 === false, 'up46 «13»: pressing again DISARMS');
+    r.play(0, '3D'); // seat 2 holds Q♦, so this lead is no takan either
+    check(r.canArm13(1) === false, 'up46 «13»: mid-trick arming is impossible');
+    threw = false;
+    try { r.arm13(1); } catch (e) { threw = true; }
+    check(threw, 'up46 «13»: arm13 throws mid-trick');
   }
   {
-    const r = finalTrickRound();
-    check(r.canDeclare13(0) === true, 'final trick, dead-suit card → «13» available');
-    r.declare13(0);
-    r.play(0, 'AS'); r.play(1, 'KH'); r.play(2, 'QD'); r.play(3, 'JC');
-    check(r.finished && r.takanCount[0] === 0 && r.takanCount[1] === 0 &&
-          r.result.takanBonus === undefined,
-      'declared «13» → no takan, no claim');
+    // CLEAN «13»: the suit is dead → the round ends at once, the
+    // declaration creates nothing, and the tawan captured so far
+    // banks normally by the ten-bands (partial sums).
+    const evts = [];
+    const r = new G.Round(0, (e) => evts.push(e), G.seededRng(11));
+    r.hands = [['AS'], ['KH'], ['QD'], ['JC']]; // only seat 0 holds قره
+    r.captured = [
+      G.makeDeck().filter((c) => G.suitOf(c) === 'H').concat(['TD']), // team 0: 13×1 + 3 = 16
+      ['QS'],                                                          // team 1: 9
+    ];
+    r.tricksPlayed = 12; r.leader = 0; r.turn = 0;
+    r.arm13(0);
+    r.play(0, 'AS');
+    check(r.finished && r.result.thirteen && r.result.thirteen.count === 0 &&
+          r.result.thirteen.seat === 0 && r.result.thirteen.team === 0,
+      'up46 clean «13»: the round ends at the lead; the resolution is recorded (count 0)');
+    check(evts.some((e) => e.type === 'declared13' && e.clean === true && e.count === 0 && e.suit === 'S'),
+      'up46 clean «13»: the declared13 event carries the clean outcome');
+    check(r.result.cardTawan[0] === 16 && r.result.cardTawan[1] === 9 &&
+          r.takanCount[0] === 0 && r.takanCount[1] === 0,
+      'up46 clean «13»: only the captured tawan stands (16/9) — the unplayed remainder is discarded, no takan');
+    const m = new G.Match(() => {}, G.seededRng(21));
+    m.onRoundFinished(r);
+    check(m.bankedTawan[0] === 20 && m.bankedTawan[1] === 0 &&
+          m.pendingTakan[0] === 0 && m.pendingTakan[1] === 0 &&
+          m.history[0].thirteenPenalty === 0,
+      'up46 clean «13» at Match level: partial tawan banks by the bands (16→20, 9→0); NO claims created');
   }
   {
-    const r = finalTrickRound();
+    // WRONG «13»: the suit IS held — partner included. One claim per
+    // held card lands on the DECLARING team; the claims join the pool
+    // before the execution loop, so they execute the same round.
+    const r = new G.Round(0, () => {}, G.seededRng(11));
+    r.hands = [['5S', 'KH'], ['2S', '4C'], ['7S', 'QD'], ['9S', '6D']];
+    // spades in the other three hands: 2♠ + 7♠ (PARTNER seat 2) + 9♠ = 3
+    r.captured = [[], []];
+    r.tricksPlayed = 11; r.leader = 0; r.turn = 0;
+    r.arm13(0);
+    r.play(0, '5S');
+    check(r.finished && r.result.thirteen && r.result.thirteen.count === 3 &&
+          r.result.thirteen.team === 0,
+      'up46 wrong «13»: the server counts the suit in ALL three other hands — partner included (3)');
+    const m = new G.Match(() => {}, G.seededRng(21));
+    m.bankedTawan = [0, 40];
+    m.onRoundFinished(r);
+    // banking: cardTawan 0/0 → banks 0/0 → [0, 40]. The 3 penalty
+    // claims sit ON team 0 — the DECLARING team itself — and execute
+    // while the OPPONENTS' bank ≥ 30: one execution moves 30 from
+    // team 1's bank into the declarer's (0→30 / 40→10), then the
+    // victim is below 30 and the remaining 2 stay pending (★ on the
+    // DECLARING team's own side).
+    check(m.history[0].thirteenPenalty === 3 &&
+          m.history[0].claimsCreated[0] === 0 && m.history[0].claimsCreated[1] === 0,
+      'up46 wrong «13»: the penalty bypasses pairwise cancellation — takan claimsCreated stays 0/0');
+    check(m.bankedTawan[0] === 30 && m.bankedTawan[1] === 10 &&
+          m.pendingTakan[0] === 2 && m.history[0].claimsExecuted[0] === 1,
+      'up46 wrong «13»: penalty claims land on the DECLARING team and execute the SAME round while the opponents’ bank ≥ 30; the rest stay pending');
+  }
+  {
+    // The penalty does NOT cancel against the other team's takans.
+    const r = new G.Round(0, () => {}, G.seededRng(11));
+    r.hands = [['5S'], ['2S'], ['KH'], ['QD']]; // seat 1 holds one spade
+    r.captured = [[], []];
+    r.tricksPlayed = 12; r.leader = 0; r.turn = 0;
+    r.takanCount = [0, 2]; // team 1 takaned twice this round (rigged)
+    r.arm13(0);
+    r.play(0, '5S'); // wrong «13»: 1 spade held → 1 penalty claim ON team 0 itself
+    const m = new G.Match(() => {}, G.seededRng(21));
+    m.onRoundFinished(r);
+    // Team 1 keeps its 2 surplus takan claims IN FULL, and team 0
+    // (the declarer) carries its 1 penalty claim on itself (banks
+    // are 0/0, so nothing executes). Had the penalty entered the
+    // pairwise takan cancellation, it would have annihilated one of
+    // team 1's takans and never landed — instead both stand: 1 + 2.
+    check(m.pendingTakan[0] === 1 && m.pendingTakan[1] === 2 &&
+          m.history[0].claimsCreated[1] === 2 && m.history[0].thirteenPenalty === 1,
+      'up46 wrong «13»: the penalty claim does NOT cancel against the rivals’ takans (declarer holds 1 penalty; rivals keep their 2 surplus)');
+  }
+  {
+    // The same dead-suit final lead WITHOUT a declaration is still a
+    // plain takan — «13» is an alternative, not a replacement.
+    const r = new G.Round(0, () => {}, G.seededRng(11));
+    r.hands = [['AS'], ['KH'], ['QD'], ['JC']]; // only seat 0 holds قره
+    r.captured = [[], []];
+    r.tricksPlayed = 12; r.leader = 0; r.turn = 0;
     r.play(0, 'AS'); r.play(1, 'KH'); r.play(2, 'QD'); r.play(3, 'JC');
     // the trick's cards (KH 1 + JC 5) are the ONLY tawan: 6, card-only.
-    check(r.finished && r.takanCount[0] === 1 && r.result.tawan[0] === 6 &&
-          r.result.tawan[1] === 0,
+    check(r.finished && r.takanCount[0] === 1 && r.result.thirteen === null &&
+          r.result.tawan[0] === 6 && r.result.tawan[1] === 0,
       'final trick WITHOUT «13» → takan claim only; round tawan stays card-only (6/0)');
     check(r.wonTricks[0] === 1, 'won-trick pile credited to the trick winner');
-  }
-  {
-    // «13» must be rejected when someone else holds the led suit
-    const round = new G.Round(0, () => {}, G.seededRng(13));
-    round.hands = [['AS'], ['2S'], ['QD'], ['JC']];
-    round.captured = [[], []];
-    round.tricksPlayed = 12;
-    let threw = false;
-    check(round.canDeclare13(0) === false, '«13» unavailable when the suit is not dead');
-    try { round.declare13(0); } catch (e) { threw = true; }
-    check(threw, 'declare13 throws when the situation does not allow it');
   }
 
   // --- Constructed scenario: single takan at Round level (finish path).
@@ -443,7 +554,9 @@ async function main() {
     ];
     round.tricksPlayed = 12;
     round.takanCount = [1, 0];
-    round.declare13(0); // keep the final AS lead from adding a second takan
+    // (up46: no declaration — the final AS lead is itself a dead-suit
+    // lead and adds a second takan; irrelevant here, the finals below
+    // are card-only either way.)
     round.play(0, 'AS'); round.play(1, 'KH'); round.play(2, 'QD'); round.play(3, 'JC');
     // last trick adds KH(1) + JC(5) to team 0 → card 22 / 14. The takan
     // adds NOTHING and nothing rewrites the finals: 22 / 14 stand (the
@@ -456,29 +569,39 @@ async function main() {
       'round-level: no points either — just the two finals');
   }
 
-  // --- Pending claims from REAL rounds: a declared «13» creates NO
-  // claim; the same final trick WITHOUT the declaration creates one,
-  // and it executes at once because the victim is already ≥ 30. ---
+  // --- Pending claims from REAL rounds: an armed «13» on a dead suit
+  // ends the round clean and creates NO claim; the same final trick
+  // WITHOUT the declaration creates a takan claim, and it executes at
+  // once because the victim is already ≥ 30. ---
   {
-    const rigFinal = (declare) => {
+    const rigDeclared = () => {
       const round = new G.Round(0, () => {}, G.seededRng(11));
       round.hands = [['AS'], ['KH'], ['QD'], ['JC']]; // only seat 0 holds قره
       round.captured = [[], []];
       round.tricksPlayed = 12;
       round.leader = 0; round.turn = 0;
-      if (declare) round.declare13(0);
+      round.arm13(0);
+      round.play(0, 'AS'); // resolves the declaration — the round ends at once
+      return round;
+    };
+    const rigUndeclared = () => {
+      const round = new G.Round(0, () => {}, G.seededRng(11));
+      round.hands = [['AS'], ['KH'], ['QD'], ['JC']]; // only seat 0 holds قره
+      round.captured = [[], []];
+      round.tricksPlayed = 12;
+      round.leader = 0; round.turn = 0;
       round.play(0, 'AS'); round.play(1, 'KH'); round.play(2, 'QD'); round.play(3, 'JC');
       return round;
     };
     const mDecl = new G.Match(() => {}, G.seededRng(21));
     mDecl.bankedTawan = [0, 40];
-    mDecl.onRoundFinished(rigFinal(true));
+    mDecl.onRoundFinished(rigDeclared());
     check(mDecl.pendingTakan[0] === 0 && mDecl.pendingTakan[1] === 0 &&
-          mDecl.history[0].claimsCreated[0] === 0,
-      'pending: «13»-declared final trick → takan cancelled, NO claim created');
+          mDecl.history[0].claimsCreated[0] === 0 && mDecl.history[0].thirteenPenalty === 0,
+      'pending: an armed «13» on a dead suit → round ends clean, NO claim created');
     const mNoDecl = new G.Match(() => {}, G.seededRng(21));
     mNoDecl.bankedTawan = [0, 40];
-    mNoDecl.onRoundFinished(rigFinal(false));
+    mNoDecl.onRoundFinished(rigUndeclared());
     // round final: team 0 = 6 card tawan ONLY (the takan adds nothing) →
     // 6 ≤ 9 wipes, team 0 banks 0; victim team 1 sits at 40 ≥ 30 → the
     // new claim executes immediately: 40−30 to the victim, +30 to team 0.
@@ -646,14 +769,15 @@ async function main() {
       check(pick === '3C' && G.suitOf(pick) !== 'S',
         'bot lead: avoids the dead-suit (takan) lead — cheap live card instead');
     }
-    // «13» and bots: a FRESH final-trick takan is never declared — the
-    // declaration is reserved for the forced REPEAT (see the BOT13
-    // section below, where the repeat case DOES declare).
+    // «13» and bots (up46): a bot declares ONLY on a provably-clean
+    // count with a no-worse balance (plan13 — pinned in the BOT13
+    // section below); on this bare rig the count proves nothing, so
+    // the fresh final-trick takan is NOT declared — its claim stands.
     {
       const r = midRound([['AS'], ['KH'], ['QD'], ['JC']], [], 0);
       r.tricksPlayed = 12;
-      check(r.canDeclare13(0) === true && bots.maybeDeclare13(r, 0) === false,
-        'bot «13»: a fresh final-trick takan is NOT declared — its claim stands');
+      check(bots.plan13(r, 0) === null,
+        'bot «13»: a fresh final-trick takan is NOT declared on a guess — its claim stands');
     }
   }
 
@@ -662,9 +786,10 @@ async function main() {
   // a suit counts. The bot NEVER leads an already-takan'd suit while
   // any other suit remains (absolute — other suits are exhausted
   // first); a forced re-lead at the end creates NO claim (suppressed
-  // in game.js for bot seats); on the final trick the forced re-lead
-  // declares «13». The partner's first lead of the same suit counts
-  // (per-bot rule). Humans are untouched in all cases. ---
+  // in game.js for bot seats). The partner's first lead of the same
+  // suit counts (per-bot rule). Humans are untouched in all cases.
+  // (up46: the law's old final-trick «13» declaration is GONE with the
+  // old rule — a bot now declares only via plan13, pinned in (b).) ---
   {
     const leadRig = (hands, tricksPlayed, seed) => {
       const round = new G.Round(0, () => {}, G.seededRng(seed || 401));
@@ -723,7 +848,8 @@ async function main() {
 
     // The full law in one organic chain: first takan counts → other
     // suit exhausted before any repeat → that suit's first takan
-    // counts too (c2) → the forced final-trick repeat declares «13».
+    // counts too (c2) → the forced final-trick repeat is led with NO
+    // «13» declaration and creates no claim (suppressed).
     {
       const evts = [];
       const r = new G.Round(0, (e) => evts.push(e), G.seededRng(403));
@@ -742,30 +868,42 @@ async function main() {
       r.play(0, pick); r.play(1, '2D'); r.play(2, '7D'); r.play(3, '8C');
       check(r.takanCount[0] === 2 && JSON.stringify(r.takanSuits[0]) === '["S","H"]',
         'bot13 (c2): the same bot’s FIRST takan of a different suit (لال) still counts');
-      check(r.canDeclare13(0) === true && bots.maybeDeclare13(r, 0) === true,
-        'bot13 (b): only the takan’d suit remains for the final trick → the bot declares «13»');
-      r.declare13(0);
+      check(bots.plan13(r, 0) === null,
+        'bot13 (b): only the takan’d suit remains for the final trick — no «13» is planned (the count runs on the captured piles + hand; this rig’s piles cannot prove the suit dead, and its captured balance is worse anyway)');
       r.play(0, '6S'); r.play(1, '9D'); r.play(2, 'TC'); r.play(3, '9C');
       check(r.finished && r.takanCount[0] === 2 &&
-            evts.some((e) => e.type === 'declared13' && e.seat === 0),
-        'bot13 (b): the declaration cancels the forced repeat — no third takan, no new claim');
+            !evts.some((e) => e.type === 'declared13'),
+        'bot13 (b): the forced repeat lead creates NO third takan and no new claim (suppressed)');
     }
 
-    // (b) standalone: the declaration decision in isolation.
+    // (b) plan13 in isolation (up46): the bot declares «13» ONLY on a
+    // provably-clean count (unseen = 0) with a no-worse captured
+    // balance — never on a guess.
     {
-      const r = leadRig([['AS'], ['KH'], ['QD'], ['JC']], 12);
-      r.botSeats = ALLBOTS.slice();
-      r.takanSuits[0] = ['S']; r.takanCount = [1, 0]; // this bot already takan'd قره this round
-      check(r.canDeclare13(0) === true && bots.maybeDeclare13(r, 0) === true,
-        'bot13 (b): final trick, last card is the already-takan’d suit → «13» is declared');
-      r.declare13(0);
-      r.play(0, 'AS'); r.play(1, 'KH'); r.play(2, 'QD'); r.play(3, 'JC');
-      check(r.finished && r.takanCount[0] === 1,
-        'bot13 (b): the declared repeat adds no takan and no claim');
+      const spadesGone = G.makeDeck().filter((c) => G.suitOf(c) === 'S' && c !== 'AS');
+      const rig = (cap) => {
+        const r = leadRig([['AS', '3D'], ['KH', '4C'], ['QD', '5H'], ['JC', '6D']], 11);
+        r.botSeats = ALLBOTS.slice();
+        r.captured = cap;
+        return r;
+      };
+      const rA = rig([[], spadesGone]); // 12 spades in team 1's pile (Q♠ = 9 of their tawan)
+      check(bots.countSuits(rA, 0).S.unseen === 0 && bots.plan13(rA, 0) === 'AS',
+        'bot13 (b): a provably-dead suit (unseen 0) + no-worse balance → the bot plans «13» with the dead card');
+      rA.arm13(0);
+      rA.play(0, 'AS');
+      check(rA.finished && rA.result.thirteen && rA.result.thirteen.count === 0 && rA.takanCount[0] === 0,
+        'bot13 (b): the planned «13» resolves clean — the round ends, no takan, no claim');
+      const rB = rig([spadesGone, []]); // the same spades in OUR pile — our captured tawan is worse
+      check(bots.plan13(rB, 0) === null,
+        'bot13 (b): provably clean but our captured tawan is WORSE → no declaration (stopping would lock the worse result)');
+      const rC = rig([[], []]); // nothing played yet — the count cannot prove the suit dead
+      check(bots.plan13(rC, 0) === null,
+        'bot13 (b): unseen > 0 → NO declaration — a bot never declares «13» on a guess');
     }
 
     // (c) Forced mid-round re-lead: led (nothing else exists), no
-    // «13» (final-trick-only), and NO claim — silently suppressed.
+    // «13» planned, and NO claim — silently suppressed.
     {
       const evts = [];
       const r = new G.Round(0, (e) => evts.push(e), G.seededRng(405));
@@ -776,8 +914,8 @@ async function main() {
       r.play(0, bots.chooseCard(r, 0)); r.play(1, 'KH'); r.play(2, 'QD'); r.play(3, 'JC');
       check(r.takanCount[0] === 1, 'bot13 (c) setup: the bot’s first قره takan counts');
       const pick = bots.chooseCard(r, 0);
-      check(G.suitOf(pick) === 'S' && r.canDeclare13(0) === false && bots.maybeDeclare13(r, 0) === false,
-        'bot13 (c): only the takan’d suit remains mid-round → it IS led (no «13» — final-trick-only)');
+      check(G.suitOf(pick) === 'S' && bots.plan13(r, 0) === null,
+        'bot13 (c): only the takan’d suit remains mid-round → it IS led (no «13» planned — no provably-clean count here)');
       r.play(0, pick);
       check(r.takanCount[0] === 1 && evts.filter((e) => e.type === 'takan').length === 1,
         'bot13 (c): the forced repeat lead creates NO claim — silently suppressed');
@@ -800,8 +938,8 @@ async function main() {
     {
       const r = leadRig([['AS'], ['KH'], ['QD'], ['JC']], 12);
       r.botSeats = ALLBOTS.slice();
-      check(bots.maybeDeclare13(r, 0) === false,
-        'bot13 (d): a FRESH final-trick takan is not declared');
+      check(bots.plan13(r, 0) === null,
+        'bot13 (d): a FRESH final-trick takan is not declared (no provably-clean count on this rig)');
       r.play(0, 'AS'); r.play(1, 'KH'); r.play(2, 'QD'); r.play(3, 'JC');
       check(r.finished && r.takanCount[0] === 1,
         'bot13 (d): the fresh final-trick takan creates its claim, as before');
@@ -985,6 +1123,7 @@ async function main() {
     ties: 0, earlyEndErrors: 0, extraRounds: 0,
     lateEndErrors: 0, loserErrors: 0, roundsTotal: 0,
     takans: 0, declarations: 0, claimsCreated: 0, claimsExecuted: 0,
+    thirteenErrors: 0, thirteenRounds: 0, thirteenPenalty: 0,
     pileErrors: 0, takanErrors: 0, pendingErrors: 0, bankErrors: 0,
     bandErrors: 0, tieBoosts: 0, deadLeadErrors: 0,
   };
@@ -1001,16 +1140,18 @@ async function main() {
   check(stats.dealErrors === 0, 'every round: 13/13/13/13 dealt');
   check(stats.illegalBotPlays === 0, 'every bot move was in the legal set (follow-suit enforced)');
   check(stats.deadLeadErrors === 0, 'counting (up45): a provably-dead suit (played + own = 13) is never led while an alternative exists');
-  check(stats.captureErrors === 0, 'every round: all 52 cards captured by the two teams');
-  check(stats.tawanErrors === 0, 'every round: captured CARD tawan sums to exactly 30 (tawan is card-only)');
+  check(stats.captureErrors === 0, 'every round: captured cards = 4 per completed trick (52 in a full round)');
+  check(stats.tawanErrors === 0, 'every round: captured CARD tawan sums to exactly 30 in a full round; a «13»-ended round banks only what was captured (captured + unplayed still totals 30)');
   check(stats.qsErrors === 0, 'ماتکه کالا (Q♠) captor team recorded correctly every round');
   check(stats.noPointsErrors === 0, 'every round: no credits, no round winner, no points totals anywhere',
     stats.ties + ' natural tie rounds occurred');
-  check(stats.pileErrors === 0, 'every round: won-trick piles sum to 13 and match captured cards');
+  check(stats.pileErrors === 0, 'every round: won-trick piles sum to the tricks played (13 in a full round) and match captured cards');
   check(stats.takanErrors === 0, 'every round: takan adds ZERO round tawan (no takanBonus anywhere; finals are card-only)',
     stats.takans + ' takans, ' + stats.declarations + ' «13» declarations in bot play');
-  check(stats.pendingErrors === 0, 'every round: pending takan — takans cancel pairwise, claims only from the surplus, executions move exactly 30 while the victim bank is ≥30',
-    stats.claimsCreated + ' claims created, ' + stats.claimsExecuted + ' executed in bot play');
+  check(stats.thirteenErrors === 0, 'up46: every bot «13» declaration was provably clean (count 0) and no-worse for its team',
+    stats.declarations + ' bot declarations, ' + stats.thirteenRounds + ' rounds ended by a «13»');
+  check(stats.pendingErrors === 0, 'every round: pending takan — takans cancel pairwise, claims only from the surplus, executions move exactly 30 while the victim bank is ≥30; a wrong «13» adds its penalty claims to the DECLARING team’s own pool with NO cancellation',
+    stats.claimsCreated + ' claims created, ' + stats.claimsExecuted + ' executed, ' + stats.thirteenPenalty + ' «13» penalty claims in bot play');
   check(stats.bankErrors === 0, 'every round: banking follows the ten-bands (0–9→0, 10–15→10, 16–20→20, 21+→30) with the 15–15 Q♠ boost, and accumulates exactly');
   check(stats.bandErrors === 0, 'every round: finals are exactly the card tawan — no bump, no rewrite',
     stats.tieBoosts + ' tie-boost (15–15) rounds occurred in bot play');
