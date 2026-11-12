@@ -26,7 +26,13 @@
  *                                 (PWA_URL overrides the base URL).
  *   GET  /cards/<face>.png        the deck faces + back.png,
  *   GET  /carpets/feltN.jpg       the eleven table-carpet photos,
- *   GET  /carpets/thumbs/feltN.jpg  their picker thumbnails, and
+ *   GET  /carpets/thumbs/feltN.jpg  their picker thumbnails,
+ *   GET  /music/c1..c9.jpg        the music player's real song
+ *                                 covers (up41), and
+ *   GET  /music/m1..m9.mp3        the nine songs themselves —
+ *                                 STREAMED with the client's Range
+ *                                 header relayed upstream
+ *                                 (serveMusic), never buffered, and
  *   GET  /carpet.jpg              the original carpet — the game's
  *                                 IMAGE files (speed pass 2026-11-11):
  *                                 separate files in this repo's
@@ -87,7 +93,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261112-hqfix';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261112-player';
 // The PREVIOUS client version's URL — last-resort fallback for
 // serveClient (see the header comment): that build was live long
 // enough that its edge copies are warm in the POPs, so when a fresh
@@ -106,6 +112,8 @@ const CARDS_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/cards/';
 const CARPETS_URL_BASE_DEFAULT =
   'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/carpets/';
+const MUSIC_URL_BASE_DEFAULT =
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/music/';
 const CLIENT_MIN_BYTES = 500_000; // speed pass: the bundle is code-only now (~0.82 MB; was 13.8 MB with the images inlined)
 // Bounds for serveClient's upstream fetches. Worst case for a page
 // load when everything upstream stalls: 8s (current URL) + 5s
@@ -452,6 +460,33 @@ async function serveRepoAsset(env, base, rel, contentType) {
   return new Response('not found', { status: 404 });
 }
 
+// The music player's songs (up41): streamed, never buffered —
+// the client's Range header is relayed to GitHub Raw (which
+// honours it) and the 200/206 response streams straight back
+// with the byte headers a media element needs to seek.
+async function serveMusic(env, request, name) {
+  const src = (env.MUSIC_URL || MUSIC_URL_BASE_DEFAULT) + name;
+  const headers = { 'User-Agent': 'tore-game-worker' };
+  const range = request.headers.get('Range');
+  if (range) headers.Range = range;
+  try {
+    const res = await fetch(src, { headers });
+    if (res.status !== 200 && res.status !== 206) {
+      return new Response('not found', { status: 404 });
+    }
+    const out = new Headers();
+    out.set('Content-Type', 'audio/mpeg');
+    out.set('Cache-Control', 'public, max-age=' + CLIENT_CACHE_TTL);
+    out.set('Accept-Ranges', 'bytes');
+    for (const h of ['Content-Length', 'Content-Range']) {
+      const v = res.headers.get(h);
+      if (v) out.set(h, v);
+    }
+    return new Response(res.body, { status: res.status, headers: out });
+  } catch { /* fall through to 404 */ }
+  return new Response('not found', { status: 404 });
+}
+
 // The PWA statics: manifest.webmanifest + sw.js + the app icons,
 // static files in the repo (cloudflare/manifest.webmanifest,
 // cloudflare/sw.js, cloudflare/icons/*.png,
@@ -729,6 +764,20 @@ export default {
     if (path === '/carpet.jpg' && request.method === 'GET') {
       // The original carpet (JS preload legacy path; ASSET-rooted).
       return serveRepoAsset(env, env.PWA_URL || PWA_URL_BASE_DEFAULT, 'carpet.jpg', 'image/jpeg');
+    }
+
+    if (path.startsWith('/music/') && request.method === 'GET') {
+      // up41 music player files: the nine songs (m1..m9.mp3) and
+      // their real covers (c1..c9.jpg), static repo files like the
+      // cards. Covers ride the generic cached fetcher; the songs
+      // STREAM with Range relayed upstream (serveMusic) so a
+      // phone can seek and the Worker never buffers a whole song.
+      const name = path.slice('/music/'.length);
+      if (/^c[1-9]\.jpg$/.test(name)) {
+        return serveRepoAsset(env, env.MUSIC_URL || MUSIC_URL_BASE_DEFAULT, name, 'image/jpeg');
+      }
+      if (/^m[1-9]\.mp3$/.test(name)) return serveMusic(env, request, name);
+      return new Response('not found', { status: 404 });
     }
 
     if (path === '/club-cover' && request.method === 'POST') {
