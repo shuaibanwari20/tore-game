@@ -93,8 +93,9 @@ function tawanOf(cards) {
  * Input: cardTawan = tawan from captured cards ONLY. A takan adds NO
  * round tawan (user's clarified model, 2026-11-06): it only creates a
  * PENDING claim on the other team's BANK, executed by Match (تکان
- * معلق — see Match.onRoundFinished). The two teams' card tawan always
- * sums to exactly 30, and the FINAL round tawan IS the card tawan —
+ * معلق — see Match.onRoundFinished). In a FULL round the two teams'
+ * card tawan sums to exactly 30; a round ended early by a «۱۳»
+ * declaration (up46) banks only the tawan captured so far. The FINAL round tawan IS the card tawan —
  * nothing rewrites it (the old >21→30 "bump" is gone; the tens-banding
  * in bankAmount now happens at BANK time, in Match).
  * There are NO match points (removed at the user's explicit order,
@@ -157,7 +158,8 @@ class Round {
     this.takanBy = [[], []];               // seats that gave each تکان, per team
     this.takanSuits = [[], [], [], []];    // suits each SEAT has takan'd this round (BOT NO-REPEAT LAW reads this)
     this.botSeats = [false, false, false, false]; // seats held by bots (hosts set this; Match copies its own in startRound) — a BOT seat's repeat takan of a suit creates no claim
-    this.declared13 = false;               // leader declared «13» for the current trick
+    this.armed13 = false;                  // up46: the leader ARMED «13» for the pending lead (see arm13/play)
+    this.thirteen = null;                  // up46: a resolved «13»: { seat, team, suit, card, count } — count = that suit in the other three hands (partner included)
     this.finished = false;
     this.result = null;                    // see finish()
   }
@@ -174,22 +176,19 @@ class Round {
   }
 
   /**
-   * True when `seat` is leading the FINAL trick (everyone holds 1 card)
-   * with a card whose suit nobody else holds — i.e. playing it would be a
-   * takan unless they first declare «13».
+   * up46 — the NEW «۱۳» rule (owner-locked 2026-11-12; replaces the
+   * old final-trick-only declaration): available on EVERY lead; only
+   * the current leader (his turn, trick empty) may arm it. arm13
+   * TOGGLES; play() resolves the declaration (see there).
    */
-  canDeclare13(seat) {
-    if (this.finished || this.declared13) return false;
-    if (seat !== this.turn || this.trick.length) return false;
-    if (!this.hands.every((h) => h.length === 1)) return false;
-    return this.othersVoidIn(suitOf(this.hands[seat][0]), seat);
+  canArm13(seat) {
+    return !this.finished && seat === this.turn && this.trick.length === 0;
   }
 
-  /** Declare «13» for the current (final) trick. Throws when not allowed. */
-  declare13(seat) {
-    if (!this.canDeclare13(seat)) throw new Error('cannot declare 13 now');
-    this.declared13 = true;
-    this.emit({ type: 'declared13', seat });
+  arm13(seat) {
+    if (!this.canArm13(seat)) throw new Error('cannot arm 13 now');
+    this.armed13 = !this.armed13;
+    return this.armed13;
   }
 
   legalMovesFor(seat) {
@@ -208,14 +207,36 @@ class Round {
       throw new Error('must follow suit (' + SUIT_NAMES[this.ledSuit()] + ')');
     }
 
+    // «۱۳» DECLARATION (up46; full text in TORE-PROMPT.md): the leader
+    // armed «13» for THIS lead — the round ENDS IMMEDIATELY either
+    // way; the lead card forms no trick, captured by nobody. The suit
+    // is counted in the OTHER THREE hands (partner included): 0 →
+    // CLEAN, nothing created; N > 0 → N pending claims AGAINST the
+    // declaring team (Match level, no cancellation). Earlier captured
+    // tawan banks normally; the unplayed remainder is discarded.
+    if (this.trick.length === 0 && this.armed13) {
+      this.armed13 = false;
+      const suit = suitOf(card);
+      let held = 0;
+      for (const s of [0, 1, 2, 3]) {
+        if (s === seat) continue;
+        for (const c of this.hands[s]) if (suitOf(c) === suit) held++;
+      }
+      hand.splice(idx, 1); // the card is played — but it forms no trick
+      this.thirteen = { seat, team: teamOf(seat), suit, card, count: held };
+      this.emit({
+        type: 'declared13', seat, suit, card, count: held, clean: held === 0,
+      });
+      this.finish();
+      return;
+    }
+
     // TAKAN (تکان): leading a suit NONE of the other three players currently
-    // holds (checked now, before the card leaves the leader's hand). A «13»
-    // declaration for this trick cancels it. A takan adds NO round tawan —
-    // it only counts toward a pending BANK claim at Match level (تکان معلق).
+    // holds (checked now, before the card leaves the leader's hand). A takan
+    // adds NO round tawan — it only counts toward a pending BANK claim at
+    // Match level (تکان معلق).
     if (this.trick.length === 0) {
-      const declared = this.declared13;
-      this.declared13 = false; // the flag belongs to this one lead only
-      if (!declared && this.othersVoidIn(suitOf(card), seat)) {
+      if (this.othersVoidIn(suitOf(card), seat)) {
         const suit = suitOf(card);
         // Per-seat takan history (BOT NO-REPEAT LAW, owner order
         // 2026-11-09: «فقط دفعهٔ اول تکان حساب می‌شود»): every takan
@@ -271,7 +292,8 @@ class Round {
     const qsTeam = this.captured[0].includes('QS') ? 0 : 1;
     const s = scoreRound(cardTawan);
     this.result = {
-      cardTawan,                                  // tawan from captured cards (sums to 30)
+      cardTawan,                                  // tawan from captured cards (sums to 30 in a full round; less when a «13» ended it early — the unplayed remainder is discarded)
+      thirteen: this.thirteen ? { ...this.thirteen } : null, // up46: the resolved «13», or null
       takanCount: this.takanCount.slice(),        // تکان count per team this round (claims only — no round tawan)
       takanBy: [this.takanBy[0].slice(), this.takanBy[1].slice()], // seats that gave the takans
       tawan: s.tawan,                             // FINAL round tawan per team (= card tawan; nothing rewrites it)
@@ -298,7 +320,7 @@ class Match {
     this.pendingTakan = [0, 0];  // تکان معلق: pending claims per team — each claim takes TAKAN_CLAIM_AMOUNT from the OTHER team's bank once it reaches TAKAN_CLAIM_MIN_BANK
     this.botSeats = [false, false, false, false]; // seats held by bots — hosts set this; copied into every new Round (BOT NO-REPEAT LAW)
     this.roundNo = 0;
-    this.history = [];   // per-round: {roundNo, cardTawan, takanCount, takanBy, tawan, banked, qsTieBoost, takanCancelled, claimsCreated, claimsExecuted, pendingTakan, bankedTawan, qsTeam}
+    this.history = [];   // per-round: {roundNo, cardTawan, thirteen, thirteenPenalty, takanCount, takanBy, tawan, banked, qsTieBoost, takanCancelled, claimsCreated, claimsExecuted, pendingTakan, bankedTawan, qsTeam}
     this.finished = false;
     this.winner = null;   // the team that did NOT cross the target
     this.loser = null;    // the team whose banked tawan reached BANK_LOSE_TARGET
@@ -341,8 +363,7 @@ class Match {
     // takan from each team annihilate each other with no accounting, so
     // a team only creates claims for its SURPLUS takans:
     // claimsCreated[t] = max(0, takanCount[t] − takanCount[1−t]).
-    // (Equal counts → no claims; a «13»-cancelled takan never reaches
-    // takanCount, so it creates nothing either.) Then — AFTER this
+    // (Equal counts → no claims.) Then — AFTER this
     // round's banking — pending claims execute: while a team holds
     // claims and the VICTIM's banked tawan is ≥ TAKAN_CLAIM_MIN_BANK,
     // one claim moves exactly TAKAN_CLAIM_AMOUNT from the victim's bank
@@ -358,6 +379,17 @@ class Match {
     ];
     this.pendingTakan[0] += claimsCreated[0];
     this.pendingTakan[1] += claimsCreated[1];
+
+    // «۱۳» PENALTY (up46): a WRONG «13» creates count pending claims
+    // ON THE DECLARING TEAM ITSELF («برای تیم من اضافه میشه» — the
+    // stars sit beside the declarer; holding claims is the burden,
+    // banked tawan loses at 210). NO pairwise cancellation; they join
+    // before the execution loop and can execute this same round.
+    let thirteenPenalty = 0;
+    if (r.thirteen && r.thirteen.count > 0) {
+      thirteenPenalty = r.thirteen.count;
+      this.pendingTakan[r.thirteen.team] += thirteenPenalty;
+    }
     const claimsExecuted = [0, 0];
     for (const t of [0, 1]) {
       const victim = 1 - t;
@@ -372,6 +404,8 @@ class Match {
 
     this.history.push({
       roundNo: this.roundNo, cardTawan: r.cardTawan.slice(),
+      thirteen: r.thirteen ? { ...r.thirteen } : null, // up46: the resolved «13», or null
+      thirteenPenalty,                                 // up46: penalty claims a wrong «13» put on the declaring team itself (0 when clean/none)
       takanCount: r.takanCount.slice(),
       takanBy: r.takanBy ? r.takanBy.map((a) => a.slice()) : [[], []],
       tawan: r.tawan.slice(), banked: banked.slice(),

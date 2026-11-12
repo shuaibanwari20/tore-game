@@ -9,7 +9,7 @@
  *
  * Protocol parity: the WebSocket message shapes are IDENTICAL to the
  * Node server (types: create/join/reconnect/start/leave/play/
- * declare13/chat/voice/rtc in; room/state/error/takan/declared13/
+ * arm13/chat/voice/rtc in; room/state/error/takan/declared13/
  * chat/voice/rtc/roomClosed out) so the existing client works
  * unchanged apart from the /ws path.
  *
@@ -36,7 +36,7 @@
  */
 
 import * as G from './game.js';
-import { chooseCard, maybeDeclare13 } from './bots.js';
+import { chooseCard, plan13 } from './bots.js';
 import { SocialCore } from './social-core.js';
 
 // ---- Tunables (same values as ../server.js) ----
@@ -172,7 +172,7 @@ function snapshotRound(r) {
   return {
     hands: r.hands, leader: r.leader, turn: r.turn, trick: r.trick,
     captured: r.captured, tricksPlayed: r.tricksPlayed, wonTricks: r.wonTricks,
-    takanCount: r.takanCount, takanBy: r.takanBy, declared13: r.declared13,
+    takanCount: r.takanCount, takanBy: r.takanBy, armed13: r.armed13, thirteen: r.thirteen,
     takanSuits: r.takanSuits, botSeats: r.botSeats,
     finished: r.finished, result: r.result,
   };
@@ -183,6 +183,9 @@ function reviveRound(snap, match) {
   // Legacy snapshots (pre BOT NO-REPEAT LAW) lack these — default them.
   if (!r.takanSuits) r.takanSuits = [[], [], [], []];
   if (!r.botSeats) r.botSeats = [false, false, false, false];
+  // up46 snapshots: pre-«13»-rework snapshots carry declared13 instead.
+  if (r.armed13 === undefined) r.armed13 = false;
+  if (r.thirteen === undefined) r.thirteen = null;
   r.emit = (evt) => {
     match.emit(evt);
     if (evt.type === 'roundFinished') match.onRoundFinished(r);
@@ -1410,8 +1413,8 @@ export class GameServer {
       takanCount: round ? round.takanCount.slice() : [0, 0],
       pendingTakan: room.match ? room.match.pendingTakan.slice() : [0, 0],
       piles: round ? round.wonTricks.slice() : [0, 0, 0, 0],
-      canDeclare13: round && !room.trickHold ? round.canDeclare13(seatIdx) : false,
-      declared13: round ? round.declared13 : false,
+      canArm13: round && !room.trickHold ? round.canArm13(seatIdx) : false,
+      armed13: round ? !!round.armed13 : false,
       roundNo: room.match ? room.match.roundNo : 0,
       roundResult: (room.phase === 'roundEnd' || room.phase === 'matchEnd') ? last : null,
       matchWinner: room.match && room.match.finished ? room.match.winner : null,
@@ -1430,7 +1433,7 @@ export class GameServer {
   // Clubs v8 — the SPECTATOR state: the full public table (seats,
   // badges, trick, won piles, scores, turn) with every hand
   // stripped. Built from a seat's push with the private fields
-  // blanked — hand [], legal [], no declare-13, mySeat -1. The
+  // blanked — hand [], legal [], no arm-13, mySeat -1. The
   // roundResult rides along: game.js history carries only round
   // aggregates (tawan/banked counts), never a card in hand.
   _publicStateFor(room) {
@@ -1439,7 +1442,7 @@ export class GameServer {
     st.spectator = true;
     st.hand = [];
     st.legal = [];
-    st.canDeclare13 = false;
+    st.canArm13 = false;
     return st;
   }
 
@@ -1473,7 +1476,11 @@ export class GameServer {
     if (evt.type === 'takan') {
       this._broadcastEvent(room, { type: 'takan', seat: evt.seat, team: evt.team, count: evt.count });
     } else if (evt.type === 'declared13') {
-      this._broadcastEvent(room, { type: 'declared13', seat: evt.seat });
+      // up46: the declaration RESOLVED at the lead — carry the outcome.
+      this._broadcastEvent(room, {
+        type: 'declared13', seat: evt.seat, suit: evt.suit,
+        card: evt.card, count: evt.count, clean: evt.clean,
+      });
     }
     if (evt.type === 'roundFinished') {
       room.phase = 'roundEnd';
@@ -1529,21 +1536,23 @@ export class GameServer {
 
   /**
    * Play a seat by bot logic. `mayDeclare` is true only for real bot seats:
-   * a bot declares «13» ONLY for the forced final-trick REPEAT of a suit
-   * it already takan'd this round (BOT NO-REPEAT LAW — see bots.js).
-   * A human seat auto-played by the turn timer plays WITHOUT declaring
-   * (spec: on timeout the takan stands).
+   * a bot declares «13» (up46) ONLY on a provably-clean call that is not
+   * worse for its team (see bots.plan13) — it arms the declaration and
+   * leads the planned card at once, which resolves it and ends the round.
+   * A human seat auto-played by the turn timer plays WITHOUT declaring.
    */
   _botPlay(room, seat, mayDeclare) {
     const round = room.match && room.match.round;
     if (room.frozen) return; // F35: frozen matches never advance (stale-timer guard)
     if (!round || round.finished || round.turn !== seat) return;
     if (room.trickHold) return;
-    if (mayDeclare && maybeDeclare13(round, seat)) {
-      round.declare13(seat);        // emits declared13 → clients toast it…
-      this._broadcastState(room);    // …the state shows the declaration…
-      this._pumpTurn(room);          // …then the bot plays its card on the next tick
-      return;
+    if (mayDeclare) {
+      const plan = plan13(round, seat);
+      if (plan) {
+        round.arm13(seat);          // arm the «13» declaration…
+        this._doPlay(room, seat, plan); // …the lead resolves it — the round ends
+        return;
+      }
     }
     let card;
     try { card = chooseCard(round, seat); } catch { return; }
@@ -1914,17 +1923,20 @@ export class GameServer {
         this._saveAttachment(ws, att);
         break;
       }
-      case 'declare13': {
+      case 'arm13': {
+        // up46: toggle the «13» arm for the pending lead (leader only —
+        // the engine enforces turn + empty trick); the declaration
+        // resolves when the leader plays his lead card.
         const room = this.rooms.get(att.code);
         if (!room || room.phase !== 'playing') return;
         if (room.trickHold) { send(ws, this._stateFor(room, att.seat)); return; } // trick on display — resync silently
         const round = room.match && room.match.round;
         if (!round) return;
         try {
-          round.declare13(att.seat); // emits declared13 → clients toast it
+          round.arm13(att.seat);
           this._broadcastState(room);
         } catch {
-          sendError(ws, 'الآن نمی‌توانی «13» بگویی', 'cannotDeclare13');
+          sendError(ws, 'الآن نمی‌توانی «13» را فعال کنی', 'cannotArm13');
           send(ws, this._stateFor(room, att.seat));
         }
         break;
