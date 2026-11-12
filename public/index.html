@@ -252,13 +252,21 @@
     80% { opacity: 1; }
     100% { opacity: 0; transform: translate(-50%, -56%) scale(1); }
   }
+  /* up46: the «13» button lives ON the table — above the player's
+     cards, LEFT side; leader's lead only; .armed = pressed-in. */
   #btn-13 {
-    width: auto; margin: 8px auto 0; display: block; padding: 11px 30px;
+    position: absolute; left: 10px; bottom: 10px; z-index: 8;
+    width: auto; margin: 0; display: block; padding: 11px 22px;
     font-size: 19px; font-weight: 900; border-radius: 999px; cursor: pointer;
     background: linear-gradient(#e0342c, #9c1c14); color: #fff;
     border: 2px solid #ffd75e; box-shadow: 0 4px 14px rgba(0,0,0,.5);
   }
   #btn-13:active { transform: scale(.97); }
+  #btn-13.armed {
+    background: linear-gradient(#ffd75e, #e0a92c); color: #57121f;
+    border-color: #fff0b3;
+    box-shadow: 0 4px 14px rgba(0,0,0,.5), 0 0 0 5px rgba(255,215,94,.45);
+  }
 
   /* ---------- won-trick piles: plain card-back rows on the carpet ----------
      One loose back per won trick, in front of the player who won it.
@@ -3144,7 +3152,7 @@
     <div id="home-rules" class="hidden">
       <button class="hm-back" id="btn-rules-back">→ مینو ته وګرځه</button>
       <div class="cardbox legend" id="rules-body">
-      📜 <b>د لوبې قوانین (له تاوانه وتښته؛ څومره کم، هومره ښه):</b><br>هر ورق <span class="red">♥</span> <b>لال</b> = 1 تاوان (ټول 13)<br><b>غلام پشه</b> (J♣) = 5 تاوان · <b>ماتکه کالا</b> (Q♠) = 9 تاوان · <b>لس خښت</b> (10♦) = 3 تاوان<br>هر لاس 30 تاوان لري او په دې لوبه کې <b>نومرې نشته</b> — یوازې تاوان دی.<br>هغه ټیم چې <b>جمع شوی</b> تاوان (بانک) یې <b>210</b> ته ورسېږي، لوبه <b>بایلي</b> او بل ټیم ګټونکی دی.<br>⭐ <b>تکان:</b> که هغه خال پیل کړې چې بل هېڅوک یې نه لري → یوازې یو <b>سور ستوری (★)</b> ستا ټیم ته؛ تکان دې لاس ته هېڅ تاوان نه ورزیاتوي.<br>⭐ <b>ځنډېدلی تکان:</b> هغه ستوری یعنې د سیال ټیم له جمع شوي څخه د <b>30 تاوان</b> غوښتنه — کله چې د سیال جمع شوی <b>30</b> ته ورسېږي یا ترې تېر شي، 30 تاوان د هغه له بانکه کمېږي او د تکان لرونکي ټیم بانک ته ورځي؛ تر هغه وخته یوازې ستوری پاتې کېږي او هېڅ تاوان نه بدلېږي. که دواړه ټیمونه په یوه لاس کې تکان ورکړي، <b>تکانونه جوړه جوړه یو له بله خلاصېږي</b> او له منځه ځي — یوازې د یوه ټیم زیات تکان ستوری کېږي.<br>🙋 وروستی لاس: که له لوبې مخکې ووایې <b>«13 یم»</b>، تکان درته نه حسابېږي.<br>🏦 <b>په بانک کې جمع کول (لسي بندونه):</b> د هر لاس وروستی تاوان په بانک کې داسې جمع کېږي: 0 تر 9 → <b>0</b> · 10 تر 15 → <b>10</b> · 16 تر 20 → <b>20</b> · 21 تر 30 → <b>30</b>.<br>⚖️ <b>برابر 15-15:</b> هغه ټیم چې <b>ماتکه کالا</b> (Q♠) یې نیولې، <b>20</b> جمع کوي او بل ټیم <b>10</b>.
+      📜 <b>د لوبې قوانین (له تاوانه وتښته؛ څومره کم، هومره ښه):</b><br>هر ورق <span class="red">♥</span> <b>لال</b> = 1 تاوان (ټول 13)<br><b>غلام پشه</b> (J♣) = 5 تاوان · <b>ماتکه کالا</b> (Q♠) = 9 تاوان · <b>لس خښت</b> (10♦) = 3 تاوان<br>هر لاس 30 تاوان لري او په دې لوبه کې <b>نومرې نشته</b> — یوازې تاوان دی.<br>هغه ټیم چې <b>جمع شوی</b> تاوان (بانک) یې <b>210</b> ته ورسېږي، لوبه <b>بایلي</b> او بل ټیم ګټونکی دی.<br>⭐ <b>تکان:</b> که هغه خال پیل کړې چې بل هېڅوک یې نه لري → یوازې یو <b>سور ستوری (★)</b> ستا ټیم ته؛ تکان دې لاس ته هېڅ تاوان نه ورزیاتوي.<br>⭐ <b>ځنډېدلی تکان:</b> هغه ستوری یعنې د سیال ټیم له جمع شوي څخه د <b>30 تاوان</b> غوښتنه — کله چې د سیال جمع شوی <b>30</b> ته ورسېږي یا ترې تېر شي، 30 تاوان د هغه له بانکه کمېږي او د تکان لرونکي ټیم بانک ته ورځي؛ تر هغه وخته یوازې ستوری پاتې کېږي او هېڅ تاوان نه بدلېږي. که دواړه ټیمونه په یوه لاس کې تکان ورکړي، <b>تکانونه جوړه جوړه یو له بله خلاصېږي</b> او له منځه ځي — یوازې د یوه ټیم زیات تکان ستوری کېږي.<br>🙋 <b>«۱۳»:</b> پیل کوونکی هر وخت کولای شي مخکې له ورقې اچولو «۱۳» ووهي — لاس سمدلاسه پای ته رسېږي او تر هغه وخته نیول شوی تاوان په بانک کې جمع کېږي. که بل هېڅوک هغه رنګ نه لري، پاک «۱۳» دی او هېڅ نه کېږي؛ که یې لري، د هرې ورقې په بدل کې یو سور ستوری (د 30 تاوان دعوه) د اعلان کوونکي پر خپل ټیم راځي.<br>🏦 <b>په بانک کې جمع کول (لسي بندونه):</b> د هر لاس وروستی تاوان په بانک کې داسې جمع کېږي: 0 تر 9 → <b>0</b> · 10 تر 15 → <b>10</b> · 16 تر 20 → <b>20</b> · 21 تر 30 → <b>30</b>.<br>⚖️ <b>برابر 15-15:</b> هغه ټیم چې <b>ماتکه کالا</b> (Q♠) یې نیولې، <b>20</b> جمع کوي او بل ټیم <b>10</b>.
       </div>
     </div>
   </section>
@@ -3309,9 +3317,9 @@
       <div class="pilerow" data-pos="left" id="pile-left"></div>
       <div class="pilerow" data-pos="bottom" id="pile-bottom"></div>
       <div class="trick" id="trick"></div>
+      <button id="btn-13" class="hidden">🙋 13 یم!</button>
     </div>
 
-    <button id="btn-13" class="hidden">🙋 13 یم!</button>
     <div id="cardloader" class="hidden"><span class="cl-spin"></span><span id="cardloader-txt">کارتونه بارېږي…</span></div>
     <div class="hand" id="hand"></div>
     <div class="actionrow">
@@ -4215,6 +4223,7 @@
       <div class="ovr-row" id="ov-tk-row"><span class="ovr-lbl" id="ovr-tk-lbl">تکان ⭐</span><b class="ovr-v ovr-stars" id="ov-tk-us">—</b><b class="ovr-v ovr-stars" id="ov-tk-them">—</b></div>
     </div>
     <div class="ovr-note" id="ov-cancel" style="display:none"></div>
+    <div class="ovr-note" id="ov-13" style="display:none"></div>
     <div class="ovr-note" id="ov-pend" style="display:none"></div>
     <div class="ovr-note" id="ov-exec" style="display:none"></div>
     <div class="ovr-grid">
@@ -4557,7 +4566,7 @@ const STR = {
     tutTrickWin: 'شاباس! ستاسو ټیم دا لاس وګاټه او تاوان یې ونیوه',
     tutBank: 'د لاس په پای کې تاوان په لسو بندو کې جمع کېږي: ۰–۹ ← ۰، ۱۰–۱۵ ← ۱۰، ۱۶–۲۰ ← ۲۰، ۲۱–۳۰ ← ۳۰',
     tutTakan: 'تکان: که داسې رنګ واچوې چې هېڅوک یې نه لري — ۳۰ جمع شوی تاوان دې دعوه کېږي!',
-    tut13: 'په وروستي لاس کې، که ستا د رنګ کارت هېڅوک نه لري، «۱۳» ووهه — خپل تکان دې لغوه کېږي',
+    tut13: '«۱۳»: مخکې له ورقې اچولو یې ووهه چې لاس سمدلاسه پای ته ورسوې — که بل هېڅوک ستا رنګ نه لري پاک دی؛ که یې لري، د هرې ورقې په بدل کې یو سور ستوری ستا پر ټیم راځي!',
     tutDone: 'زده کړه دې وکړه! اوس اصلي لوبه وکړه',
     tutBots: 'له روباتانو سره لوبه',
     tutHome: 'کور ته ستون شه',
@@ -4817,7 +4826,7 @@ const STR = {
     homeFootA: 'څلور کسيزه ورق لوبه',
     homeFootB: 'دوه ټیمه، دوه پر دوه',
     rulesBack: '→ مینو ته وګرځه',
-    rulesHtml: '📜 <b>د لوبې قوانین (له تاوانه وتښته؛ څومره کم، هومره ښه):</b><br>هر ورق <span class="red">♥</span> <b>لال</b> = 1 تاوان (ټول 13)<br><b>غلام پشه</b> (J♣) = 5 تاوان · <b>ماتکه کالا</b> (Q♠) = 9 تاوان · <b>لس خښت</b> (10♦) = 3 تاوان<br>هر لاس 30 تاوان لري او په دې لوبه کې <b>نومرې نشته</b> — یوازې تاوان دی.<br>هغه ټیم چې <b>جمع شوی</b> تاوان (بانک) یې <b>210</b> ته ورسېږي، لوبه <b>بایلي</b> او بل ټیم ګټونکی دی.<br>⭐ <b>تکان:</b> که هغه خال پیل کړې چې بل هېڅوک یې نه لري → یوازې یو <b>سور ستوری (★)</b> ستا ټیم ته؛ تکان دې لاس ته هېڅ تاوان نه ورزیاتوي.<br>⭐ <b>ځنډېدلی تکان:</b> هغه ستوری یعنې د سیال ټیم له جمع شوي څخه د <b>30 تاوان</b> غوښتنه — کله چې د سیال جمع شوی <b>30</b> ته ورسېږي یا ترې تېر شي، 30 تاوان د هغه له بانکه کمېږي او د تکان لرونکي ټیم بانک ته ورځي؛ تر هغه وخته یوازې ستوری پاتې کېږي او هېڅ تاوان نه بدلېږي. که دواړه ټیمونه په یوه لاس کې تکان ورکړي، <b>تکانونه جوړه جوړه یو له بله خلاصېږي</b> او له منځه ځي — یوازې د یوه ټیم زیات تکان ستوری کېږي.<br>🙋 وروستی لاس: که له لوبې مخکې ووایې <b>«13 یم»</b>، تکان درته نه حسابېږي.<br>🏦 <b>په بانک کې جمع کول (لسي بندونه):</b> د هر لاس وروستی تاوان په بانک کې داسې جمع کېږي: 0 تر 9 → <b>0</b> · 10 تر 15 → <b>10</b> · 16 تر 20 → <b>20</b> · 21 تر 30 → <b>30</b>.<br>⚖️ <b>برابر 15-15:</b> هغه ټیم چې <b>ماتکه کالا</b> (Q♠) یې نیولې، <b>20</b> جمع کوي او بل ټیم <b>10</b>.',
+    rulesHtml: '📜 <b>د لوبې قوانین (له تاوانه وتښته؛ څومره کم، هومره ښه):</b><br>هر ورق <span class="red">♥</span> <b>لال</b> = 1 تاوان (ټول 13)<br><b>غلام پشه</b> (J♣) = 5 تاوان · <b>ماتکه کالا</b> (Q♠) = 9 تاوان · <b>لس خښت</b> (10♦) = 3 تاوان<br>هر لاس 30 تاوان لري او په دې لوبه کې <b>نومرې نشته</b> — یوازې تاوان دی.<br>هغه ټیم چې <b>جمع شوی</b> تاوان (بانک) یې <b>210</b> ته ورسېږي، لوبه <b>بایلي</b> او بل ټیم ګټونکی دی.<br>⭐ <b>تکان:</b> که هغه خال پیل کړې چې بل هېڅوک یې نه لري → یوازې یو <b>سور ستوری (★)</b> ستا ټیم ته؛ تکان دې لاس ته هېڅ تاوان نه ورزیاتوي.<br>⭐ <b>ځنډېدلی تکان:</b> هغه ستوری یعنې د سیال ټیم له جمع شوي څخه د <b>30 تاوان</b> غوښتنه — کله چې د سیال جمع شوی <b>30</b> ته ورسېږي یا ترې تېر شي، 30 تاوان د هغه له بانکه کمېږي او د تکان لرونکي ټیم بانک ته ورځي؛ تر هغه وخته یوازې ستوری پاتې کېږي او هېڅ تاوان نه بدلېږي. که دواړه ټیمونه په یوه لاس کې تکان ورکړي، <b>تکانونه جوړه جوړه یو له بله خلاصېږي</b> او له منځه ځي — یوازې د یوه ټیم زیات تکان ستوری کېږي.<br>🙋 <b>«۱۳»:</b> پیل کوونکی هر وخت کولای شي مخکې له ورقې اچولو «۱۳» ووهي — لاس سمدلاسه پای ته رسېږي او تر هغه وخته نیول شوی تاوان په بانک کې جمع کېږي. که بل هېڅوک هغه رنګ نه لري، پاک «۱۳» دی او هېڅ نه کېږي؛ که یې لري، د هرې ورقې په بدل کې یو سور ستوری (د 30 تاوان دعوه) د اعلان کوونکي پر خپل ټیم راځي.<br>🏦 <b>په بانک کې جمع کول (لسي بندونه):</b> د هر لاس وروستی تاوان په بانک کې داسې جمع کېږي: 0 تر 9 → <b>0</b> · 10 تر 15 → <b>10</b> · 16 تر 20 → <b>20</b> · 21 تر 30 → <b>30</b>.<br>⚖️ <b>برابر 15-15:</b> هغه ټیم چې <b>ماتکه کالا</b> (Q♠) یې نیولې، <b>20</b> جمع کوي او بل ټیم <b>10</b>.',
     lobbyHint: 'د کوټې کوډ — ملګرو ته یې ووایه',
     startGame: 'لوبه پیل کړه',
     lobbyNoteHost: 'کله چې چمتو یې پیل یې کړه — تش ځایونه په روباتونو ډکېږي.',
@@ -4844,7 +4853,10 @@ const STR = {
     roundLbl: 'لاس ',
     loseRule: '210 ته رسېدل = بایلل',
     declare13: '🙋 13 یم!',
-    declaredToast: (name) => '🙋 ' + name + ': 13 یم!',
+    thir13clean: (name) => '🙋 ' + name + ' «۱۳» وواهه — پاک و! لاس پای ته ورسېد',
+    thir13wrong: (name, n) => '🙋 ' + name + ' «۱۳» وواهه — ناسم و! ' + n + ' سور ستوري د هغه پر ټیم',
+    sum13clean: (names) => '🙋 ' + names + ' «۱۳» وواهه — پاک و! لاس پای ته ورسېد',
+    sum13wrong: (names, n) => '🙋 ' + names + ' «۱۳» وواهه — ناسم و! ' + n + ' سور ستوري د دوی پر ټیم راغلل',
     chatTitle: 'ګپ شپ',
     chatAria: 'پیغام',
     micAria: 'مایکروفون',
@@ -4953,7 +4965,7 @@ const STR = {
     tutTrickWin: 'آفرین! تیمت این دست را برد و تاوان گرفت',
     tutBank: 'در پایان دست، تاوان ده‌بندی جمع می‌شود: ۰–۹ ← ۰، ۱۰–۱۵ ← ۱۰، ۱۶–۲۰ ← ۲۰، ۲۱–۳۰ ← ۳۰',
     tutTakan: 'تکان: اگر رنگی را بیندازی که هیچ‌کس دیگری ندارد — ۳۰ تاوان جمع‌شده ادعا می‌کنی!',
-    tut13: 'در دست آخر، اگر رنگت را هیچ‌کس ندارد، «۱۳» بزن — تکان خودت لغو می‌شود',
+    tut13: '«۱۳»: پیش از انداختن ورق بزن تا دست همان لحظه تمام شود — اگر رنگت را هیچ‌کس دیگری ندارد پاک است؛ اگر دارند، به ازای هر ورق یک ستارهٔ قرمز علیه تیمت می‌آید!',
     tutDone: 'یاد گرفتی! حالا بازی واقعی را بازی کن',
     tutBots: 'بازی با ربات‌ها',
     tutHome: 'برگشت به خانه',
@@ -5213,7 +5225,7 @@ const STR = {
     homeFootA: 'بازی ورق چهار نفره',
     homeFootB: 'دو تیم، دو به دو',
     rulesBack: '→ برگشت به منو',
-    rulesHtml: '📜 <b>قانون بازی (از تاوان فرار کن؛ کمتر بهتر است):</b><br>هر ورق <span class="red">♥</span> <b>لال</b> = 1 تاوان (جمعاً 13)<br><b>غلام پشه</b> (J♣) = 5 تاوان · <b>ماتکه کالا</b> (Q♠) = 9 تاوان · <b>ده خشت</b> (10♦) = 3 تاوان<br>هر دست 30 تاوان دارد و در این بازی <b>امتیاز نیست</b> — فقط تاوان است.<br>تیمی که تاوانِ <b>جمع‌شده‌اش</b> (بانک) به <b>210</b> برسد، مسابقه را <b>می‌بازد</b> و تیمِ دیگر برنده است.<br>⭐ <b>تکان:</b> خالی را شروع کنی که هیچ‌کس ندارد → فقط یک <b>ستارهٔ قرمز (★)</b> برای تیمت؛ تکان هیچ تاوانی به این دست اضافه نمی‌کند.<br>⭐ <b>تکان معلق:</b> آن ستاره یعنی طلبِ <b>30 تاوان</b> از جمع‌شدهٔ تیمِ حریف — هر وقت جمع‌شدهٔ حریف به <b>30</b> برسد یا از آن بگذرد، 30 تاوان از بانک او کم و به بانک تیمِ تکان‌دار داده می‌شود؛ تا آن وقت فقط ستاره می‌ماند و هیچ پولی جابه‌جا نمی‌شود. اگر هر دو تیم در یک دست تکان بدهند، <b>تکان‌ها جفت‌جفت با هم ادا می‌شوند</b> و حذف می‌شوند — فقط تکانِ اضافهٔ یک تیم ستاره می‌شود.<br>🙋 دست آخر: اگر پیش از بازی بگویی <b>«13 هست»</b>، تکان برایت حساب نمی‌شود.<br>🏦 <b>جمع‌شدن در بانک (بندهای ده‌تایی):</b> تاوانِ نهایی هر دست این‌طور در بانکت جمع می‌شود: 0 تا 9 → <b>0</b> · 10 تا 15 → <b>10</b> · 16 تا 20 → <b>20</b> · 21 تا 30 → <b>30</b>.<br>⚖️ <b>مساوی 15-15:</b> تیمی که <b>ماتکه کالا</b> (Q♠) را گرفته، <b>20</b> جمع می‌کند و تیمِ دیگر <b>10</b>.',
+    rulesHtml: '📜 <b>قانون بازی (از تاوان فرار کن؛ کمتر بهتر است):</b><br>هر ورق <span class="red">♥</span> <b>لال</b> = 1 تاوان (جمعاً 13)<br><b>غلام پشه</b> (J♣) = 5 تاوان · <b>ماتکه کالا</b> (Q♠) = 9 تاوان · <b>ده خشت</b> (10♦) = 3 تاوان<br>هر دست 30 تاوان دارد و در این بازی <b>امتیاز نیست</b> — فقط تاوان است.<br>تیمی که تاوانِ <b>جمع‌شده‌اش</b> (بانک) به <b>210</b> برسد، مسابقه را <b>می‌بازد</b> و تیمِ دیگر برنده است.<br>⭐ <b>تکان:</b> خالی را شروع کنی که هیچ‌کس ندارد → فقط یک <b>ستارهٔ قرمز (★)</b> برای تیمت؛ تکان هیچ تاوانی به این دست اضافه نمی‌کند.<br>⭐ <b>تکان معلق:</b> آن ستاره یعنی طلبِ <b>30 تاوان</b> از جمع‌شدهٔ تیمِ حریف — هر وقت جمع‌شدهٔ حریف به <b>30</b> برسد یا از آن بگذرد، 30 تاوان از بانک او کم و به بانک تیمِ تکان‌دار داده می‌شود؛ تا آن وقت فقط ستاره می‌ماند و هیچ پولی جابه‌جا نمی‌شود. اگر هر دو تیم در یک دست تکان بدهند، <b>تکان‌ها جفت‌جفت با هم ادا می‌شوند</b> و حذف می‌شوند — فقط تکانِ اضافهٔ یک تیم ستاره می‌شود.<br>🙋 <b>«۱۳»:</b> شروع‌کننده هر وقت می‌تواند پیش از انداختن ورق «۱۳» بزند — دست فوراً تمام می‌شود و تاوانِ تا آن لحظه گرفته‌شده در بانک جمع می‌شود. اگر هیچ‌کس دیگری آن رنگ را ندارد، «۱۳» پاک است و هیچ اتفاقی نمی‌افتد؛ اگر دارند، به ازای هر ورق یک ستارهٔ قرمز (طلب ۳۰ تاوان) علیه تیمِ خودِ اعلام‌کننده می‌آید.<br>🏦 <b>جمع‌شدن در بانک (بندهای ده‌تایی):</b> تاوانِ نهایی هر دست این‌طور در بانکت جمع می‌شود: 0 تا 9 → <b>0</b> · 10 تا 15 → <b>10</b> · 16 تا 20 → <b>20</b> · 21 تا 30 → <b>30</b>.<br>⚖️ <b>مساوی 15-15:</b> تیمی که <b>ماتکه کالا</b> (Q♠) را گرفته، <b>20</b> جمع می‌کند و تیمِ دیگر <b>10</b>.',
     lobbyHint: 'کد اتاق — به دوست‌هایت بگو',
     startGame: 'شروع بازی',
     lobbyNoteHost: 'هر وقت آماده بودی شروع کن — جای‌های خالی با ربات پر می‌شود.',
@@ -5240,7 +5252,10 @@ const STR = {
     roundLbl: 'دست ',
     loseRule: 'رسیدن به 210 = باخت',
     declare13: '🙋 13 هست!',
-    declaredToast: (name) => '🙋 ' + name + ': 13 هست!',
+    thir13clean: (name) => '🙋 ' + name + ' «۱۳» زد — درست بود! دست تمام شد',
+    thir13wrong: (name, n) => '🙋 ' + name + ' «۱۳» زد — اشتباه بود! ' + n + ' ستارهٔ قرمز علیه تیمش',
+    sum13clean: (names) => '🙋 ' + names + ' «۱۳» زد — پاک بود! دست تمام شد',
+    sum13wrong: (names, n) => '🙋 ' + names + ' «۱۳» زد — اشتباه بود! ' + n + ' ستارهٔ قرمز علیه تیمشان آمد',
     chatTitle: 'گفت‌وگو',
     chatAria: 'پیام',
     micAria: 'میکروفون',
@@ -5349,7 +5364,7 @@ const STR = {
     tutTrickWin: 'Nice! Your team won this trick and captured tawan',
     tutBank: 'At round end, tawan banks in tens: 0–9 → 0, 10–15 → 10, 16–20 → 20, 21–30 → 30',
     tutTakan: 'Takan: lead a suit nobody else holds — a claim of 30 banked tawan!',
-    tut13: 'On the final trick, if nobody holds your suit, call «13» — it cancels your own takan',
+    tut13: '“13”: call it before leading to end the hand at once — clean if nobody else holds your suit; if they do, one red star lands on YOUR team for every card of it they hold!',
     tutDone: 'You learned it! Now play the real game',
     tutBots: 'Play with bots',
     tutHome: 'Back home',
@@ -5609,7 +5624,7 @@ const STR = {
     homeFootA: 'Four-player card game',
     homeFootB: 'Two teams, two vs two',
     rulesBack: '← Back to menu',
-    rulesHtml: '📜 <b>Game rules (run from tawan; less is better):</b><br>Every <span class="red">♥</span> <b>heart</b> = 1 tawan (13 in total)<br><b>Jack of Clubs</b> (J♣) = 5 tawan · <b>Queen of Spades</b> (Q♠) = 9 tawan · <b>10 of Diamonds</b> (10♦) = 3 tawan<br>Each hand holds 30 tawan and there are <b>no points</b> in this game — only tawan.<br>The team whose <b>banked</b> tawan reaches <b>210</b> <b>loses</b> the match and the other team wins.<br>⭐ <b>Takan:</b> lead a suit nobody else holds → just one <b>red star (★)</b> for your team; a takan adds no tawan to the hand.<br>⭐ <b>Pending takan:</b> that star is a claim of <b>30 tawan</b> from the rival team\u2019s bank — whenever the rivals\u2019 bank reaches <b>30</b> or more, 30 tawan moves from their bank to the takan team\u2019s bank; until then only the star stays and nothing moves. If both teams takan in one hand, <b>the takans cancel each other in pairs</b> and vanish — only one team\u2019s extra takan becomes a star.<br>🙋 Last trick: if you say <b>\u201c13!\u201d</b> before playing, the takan does not count against you.<br>🏦 <b>Banking (bands of ten):</b> a hand\u2019s final tawan banks like this: 0 to 9 → <b>0</b> · 10 to 15 → <b>10</b> · 16 to 20 → <b>20</b> · 21 to 30 → <b>30</b>.<br>⚖️ <b>15-15 tie:</b> the team that took the <b>Queen of Spades</b> (Q♠) banks <b>20</b> and the other team <b>10</b>.',
+    rulesHtml: '📜 <b>Game rules (run from tawan; less is better):</b><br>Every <span class="red">♥</span> <b>heart</b> = 1 tawan (13 in total)<br><b>Jack of Clubs</b> (J♣) = 5 tawan · <b>Queen of Spades</b> (Q♠) = 9 tawan · <b>10 of Diamonds</b> (10♦) = 3 tawan<br>Each hand holds 30 tawan and there are <b>no points</b> in this game — only tawan.<br>The team whose <b>banked</b> tawan reaches <b>210</b> <b>loses</b> the match and the other team wins.<br>⭐ <b>Takan:</b> lead a suit nobody else holds → just one <b>red star (★)</b> for your team; a takan adds no tawan to the hand.<br>⭐ <b>Pending takan:</b> that star is a claim of <b>30 tawan</b> from the rival team\u2019s bank — whenever the rivals\u2019 bank reaches <b>30</b> or more, 30 tawan moves from their bank to the takan team\u2019s bank; until then only the star stays and nothing moves. If both teams takan in one hand, <b>the takans cancel each other in pairs</b> and vanish — only one team\u2019s extra takan becomes a star.<br>🙋 <b>\u201c13\u201d:</b> the leader may call \u201c13\u201d before leading, at any time — the hand ends at once and the tawan captured so far banks as usual. If nobody else holds that suit, the call is clean and nothing happens; if they do, one red star (a claim of 30 tawan) lands on the CALLER\u2019S OWN team for every card of that suit the others hold.<br>🏦 <b>Banking (bands of ten):</b> a hand\u2019s final tawan banks like this: 0 to 9 → <b>0</b> · 10 to 15 → <b>10</b> · 16 to 20 → <b>20</b> · 21 to 30 → <b>30</b>.<br>⚖️ <b>15-15 tie:</b> the team that took the <b>Queen of Spades</b> (Q♠) banks <b>20</b> and the other team <b>10</b>.',
     lobbyHint: 'Room code — tell your friends',
     startGame: 'Start Game',
     lobbyNoteHost: 'Start whenever you are ready — empty seats fill with bots.',
@@ -5636,7 +5651,10 @@ const STR = {
     roundLbl: 'Hand ',
     loseRule: 'Reaching 210 = losing',
     declare13: '🙋 I call 13!',
-    declaredToast: (name) => '🙋 ' + name + ': calls 13!',
+    thir13clean: (name) => '🙋 ' + name + ' called 13 — clean! The hand ends',
+    thir13wrong: (name, n) => '🙋 ' + name + ' called 13 — wrong! ' + n + ' red stars against their own team',
+    sum13clean: (names) => '🙋 ' + names + ' called 13 — clean! The hand ended',
+    sum13wrong: (names, n) => '🙋 ' + names + ' called 13 — wrong! ' + n + ' red stars landed on their own team',
     chatTitle: 'Chat',
     chatAria: 'Message',
     micAria: 'Microphone',
@@ -6717,8 +6735,9 @@ $('#lobby-code').addEventListener('keydown', (e) => {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); copyRoomCode(); }
 });
 $('#btn-13').onclick = () => {
-  send({ type: 'declare13' });
-  $('#btn-13').classList.add('hidden'); // until the confirming state arrives
+  // up46: toggle the «13» arm for the pending lead (state confirms).
+  send({ type: 'arm13' });
+  $('#btn-13').classList.toggle('armed'); // optimistic
 };
 // Leaving a game from the TABLE — the exit confirm below and the
 // match-end card's «نوې لوبه» — is an IN-APP teardown: the page
@@ -9551,7 +9570,7 @@ function tutRenderSteps(st) {
       const led = suitOf(st.trick[0].card);
       if (st.hand.some((c) => suitOf(c) === led)) { tut.follow = true; showCoach(T('tutFollow'), true); }
     }
-    if (!tut.s13 && st.canDeclare13) { tut.s13 = true; showCoach(T('tut13'), true); }
+    if (!tut.s13 && st.canArm13) { tut.s13 = true; showCoach(T('tut13'), true); }
   }
   const ps = st.piles ? st.piles.reduce((a, b) => a + b, 0) : 0;
   if (ps > tut.piles) {
@@ -9798,10 +9817,10 @@ class LocalHost {
       takanCount: round ? round.takanCount.slice() : [0, 0],
       pendingTakan: room.match ? room.match.pendingTakan.slice() : [0, 0],
       piles: round ? round.wonTricks.slice() : [0, 0, 0, 0],
-      canDeclare13: round && !room.trickHold ? round.canDeclare13(seatIdx) : false,
+      canArm13: round && !room.trickHold ? round.canArm13(seatIdx) : false,
       coachCard: (this.tutOpts && seatIdx === 0 && round && room.phase === 'playing' && !room.trickHold && round.turn === 0)
         ? (() => { try { return this.bots.chooseCard(round, 0); } catch (e) { return null; } })() : null,
-      declared13: round ? round.declared13 : false,
+      armed13: round ? !!round.armed13 : false,
       roundNo: room.match ? room.match.roundNo : 0,
       roundResult: (room.phase === 'roundEnd' || room.phase === 'matchEnd') ? last : null,
       matchWinner: room.match && room.match.finished ? room.match.winner : null,
@@ -9823,7 +9842,11 @@ class LocalHost {
     if (evt.type === 'takan') {
       this.emit({ type: 'takan', seat: evt.seat, team: evt.team, count: evt.count });
     } else if (evt.type === 'declared13') {
-      this.emit({ type: 'declared13', seat: evt.seat });
+      // up46: carry the resolution outcome.
+      this.emit({
+        type: 'declared13', seat: evt.seat, suit: evt.suit,
+        card: evt.card, count: evt.count, clean: evt.clean,
+      });
     }
     if (evt.type === 'roundFinished') {
       room.phase = 'roundEnd';
@@ -9885,11 +9908,13 @@ class LocalHost {
     const round = room.match && room.match.round;
     if (!round || round.finished || round.turn !== seat) return;
     if (room.trickHold) return;
-    if (mayDeclare && this.bots.maybeDeclare13(round, seat)) {
-      round.declare13(seat); // emits declared13 → the client toasts it
-      this.broadcastState(room);
-      this.pumpTurn(room);   // then the bot plays on the next tick
-      return;
+    if (mayDeclare) {
+      const plan = this.bots.plan13(round, seat);
+      if (plan) {
+        round.arm13(seat);        // arm the «13» declaration…
+        this.doPlay(room, seat, plan); // …the lead resolves it — the round ends
+        return;
+      }
     }
     let card;
     try { card = this.bots.chooseCard(round, seat); } catch (e) { return; }
@@ -9904,7 +9929,9 @@ class LocalHost {
     const seat = round.turn;
     const info = room.seats[seat];
     const delay = info.kind === 'bot' ? (this.tutOpts ? this.tutOpts.botMs : 750) : (this.tutOpts ? this.tutOpts.turnMs : 30000); // BOT_DELAY_MS : TURN_TIMEOUT_MS
-    room.turnTimer = this.later(() => this.botPlay(room, seat, info.kind === 'bot'), delay);
+    // up46: in the TUTORIAL bots never declare «13» — the scripted
+    // lesson stays deterministic; offline games declare like online.
+    room.turnTimer = this.later(() => this.botPlay(room, seat, info.kind === 'bot' && !this.tutOpts), delay);
   }
   startMatch(room) {
     this.cancelT(room.trickTimer); room.trickTimer = null;
@@ -10033,13 +10060,12 @@ class LocalHost {
         }
         return;
       }
-      case 'declare13': {
+      case 'arm13': {
         if (!room) return;
         const round = room.match && room.match.round;
-        if (round && room.phase === 'playing' && !room.trickHold && round.canDeclare13(0)) {
-          round.declare13(0);
+        if (round && room.phase === 'playing' && !room.trickHold && round.canArm13(0)) {
+          round.arm13(0); // toggle the «13» arm for the pending lead
           this.broadcastState(room);
-          this.pumpTurn(room);
         }
         return;
       }
@@ -11681,10 +11707,11 @@ function onMsg(msg) {
       b.classList.add('show');
     }
   } else if (msg.type === 'declared13') {
+    // up46: resolved at the lead — announce the outcome.
     const nm = state && state.seats[msg.seat] ? (dispName(state.seats[msg.seat]) || T('playerName')) : T('playerName');
     if (tut && !tut.s13) { tut.s13 = true; showCoach(T('tut13'), true); }
     show13Burst(nm); // F28: «۱۳!» bursts for ALL players, not only the declarer
-    toast(T('declaredToast', nm));
+    toast(msg.clean ? T('thir13clean', nm) : T('thir13wrong', nm, faNum(msg.count || 0)));
   } else if (msg.type === 'rematch-cancelled') {
     toast(msg.reason === 'declined' ? T('rematchDeclinedToast')
       : msg.reason === 'left' ? T('rematchLeftToast') : T('rematchExpiredToast'));
@@ -15947,10 +15974,11 @@ function render(st) {
   // «13 هست» declaration arrives as a toast, and round/match ends have
   // their own overlays.)
 
-  // «13 هست!» button: only in the exact final-trick takan situation,
-  // on my turn, before I play (and not after I already declared)
-  $('#btn-13').classList.toggle('hidden',
-    !(st.phase === 'playing' && st.canDeclare13 && !st.declared13));
+  // «13» button (up46): shown only on my own lead (canArm13 is the
+  // server-computed arm window); .armed mirrors the engine flag.
+  const b13 = $('#btn-13');
+  b13.classList.toggle('hidden', !(st.phase === 'playing' && st.canArm13));
+  b13.classList.toggle('armed', !!st.armed13);
 
   // my hand — grouped by suit (قره، لال، پشه، خشت), rank ascending low → high (A last), like the reference fan
   const handEl = $('#hand');
@@ -16016,6 +16044,15 @@ function render(st) {
       $('#ov-cancel').textContent = T('cancelLine', teamNames(0), faNum(r.takanCount[0]),
         teamNames(1), faNum(r.takanCount[1]), faNum(cancelled));
     }
+    // up46: a «13» ended this hand early — name the declaring team
+    // and the outcome (clean, or the star penalty on that team).
+    const th13 = r.thirteen || null;
+    $('#ov-13').style.display = th13 ? '' : 'none';
+    if (th13) {
+      $('#ov-13').textContent = th13.count > 0
+        ? T('sum13wrong', teamNames(th13.team), faNum(th13.count))
+        : T('sum13clean', teamNames(th13.team));
+    }
     // Pending takan (تکان معلق): a claim created this round that did NOT
     // execute stays pending — its line says so and the ★ stays on the
     // scoreboard. An executed claim moved exactly 30 per claim from the
@@ -16023,7 +16060,10 @@ function render(st) {
     // names, like every other per-team line in this summary.
     const created = r.claimsCreated || [0, 0];
     const executed = r.claimsExecuted || [0, 0];
-    const pendTeams = [0, 1].filter((t) => created[t] > executed[t]);
+    // up46: count thirteenPenalty as created too — on the DECLARING team itself.
+    const createdFx = [0, 1].map((t) => created[t] +
+      (th13 && th13.team === t ? (r.thirteenPenalty || 0) : 0));
+    const pendTeams = [0, 1].filter((t) => createdFx[t] > executed[t]);
     $('#ov-pend').style.display = pendTeams.length ? '' : 'none';
     if (pendTeams.length) {
       $('#ov-pend').textContent = pendTeams.map((t) => T('pendLine', teamNames(t))).join(' · ');
