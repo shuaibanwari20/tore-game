@@ -45,6 +45,7 @@ const BOT_DELAY_MS = 750;         // bot "thinking" delay (watchable pace)
 const ROUND_PAUSE_MS = 8000;      // round-summary pause before next round (6s -> 8s, owner 2026-11-11; a tap dismisses the card early on the tapper's screen only)
 const TRICK_PAUSE_MS = 1600;      // completed trick stays on the table before it is collected
 const RECONNECT_GRACE_MS = 120000; // seat+hand kept for a reconnecting player
+const FROZEN_MAX_MS = 24 * 3600 * 1000; // F35: a frozen match dissolves after 24 h
 const SPECTATOR_CAP = 20;          // clubs v8: watchers per club-game room
 const SWEEP_MS = 10000;           // seat-expiry sweep cadence (was setInterval)
 const REMATCH_OFFER_MS = 30000;   // a rematch offer lives 30 s, then expires
@@ -79,6 +80,9 @@ function cleanCountry(c) {
 }
 function cleanPhoto(p) {
   if (typeof p !== 'string' || p.length > 300) return null;
+  // F17: the player's uploaded own photo rides the same 'google'
+  // kind — addressed by this exact same-origin pattern only.
+  if (/^\/p-photo\/\d{6}\.jpg\?v=\d{1,6}$/.test(p)) return p;
   if (!p.startsWith('https://')) return null;
   if (!p.includes('googleusercontent.com')) return null;
   return p;
@@ -226,6 +230,9 @@ export class GameServer {
     // production uses the reconnect grace.
     const bgv = Number(env && env.TORE_BUSY_GRACE_MS);
     this.busyGraceMs = (Number.isFinite(bgv) && bgv >= 0) ? bgv : RECONNECT_GRACE_MS;
+    // F35 test lever (same pattern): production freezes last 24 h.
+    const fzv = Number(env && env.TORE_FROZEN_MS);
+    this.frozenMaxMs = (Number.isFinite(fzv) && fzv > 0) ? fzv : FROZEN_MAX_MS;
 
     state.blockConcurrencyWhile(async () => {
       // Timers (their own small key; the legacy blob carried them too).
@@ -306,6 +313,8 @@ export class GameServer {
         return seat;
       }),
       trickHold: snap.trickHold || null,
+      frozen: !!snap.frozen, // F35: a frozen match revives frozen
+      frozenAt: snap.frozenAt || null,
       club: snap.club || null, // clubs v8: {cid, name} club-game stamp (spectators are runtime-only)
       felt: cleanFelt(snap.felt), // creator's table felt; pre-felt snapshots revive as 11 (the original-carpet default)
       back: cleanBack(snap.back), // creator's card back (1..6); pre-back snapshots revive as 1
@@ -333,6 +342,8 @@ export class GameServer {
         token: s.token, connected: s.connected, disconnectAt: s.disconnectAt,
       })),
       trickHold: room.trickHold,
+      frozen: !!room.frozen, // F35
+      frozenAt: room.frozenAt || null, // F35
       club: room.club || null,
       felt: room.felt || 11,
       back: room.back || 1,
@@ -500,6 +511,18 @@ export class GameServer {
         if (deadSids.length) this._syncBusyFor(null, deadSids);
         continue;
       }
+      // F35: frozen matches hold their seats past the reconnect
+      // grace — no bot conversion — until the freeze itself
+      // expires (24 h), when the room dissolves with no stats.
+      if (this._maybeFreeze(room)) this._persistRoom(room);
+      if (room.frozen) {
+        if (now - (room.frozenAt || now) > this.frozenMaxMs) {
+          const sids = room.seats.filter((s) => s.kind === 'human' && s.sid).map((s) => s.sid);
+          this._dissolveRoom(room);
+          if (sids.length) this._syncBusyFor(null, sids);
+        }
+        continue;
+      }
       // Rematch expiry backstop (the 'rematch' alarm timer is the
       // primary mechanism; the sweep catches any offer whose
       // timer was lost with an eviction).
@@ -547,6 +570,10 @@ export class GameServer {
     const reqPath = new URL(request.url).pathname;
     if (reqPath === '/club-cover' && request.method === 'POST') return this._coverUpload(request);
     if (reqPath.startsWith('/club-cover/') && request.method === 'GET') return this._coverGet(reqPath.slice('/club-cover/'.length));
+    // Uploaded PROFILE photos (F17): POST /p-photo stores the
+    // caller's own photo; GET /p-photo/<uid>.jpg serves it back.
+    if (reqPath === '/p-photo' && request.method === 'POST') return this._pPhotoUpload(request);
+    if (reqPath.startsWith('/p-photo/') && request.method === 'GET') return this._pPhotoGet(reqPath.slice('/p-photo/'.length));
     if (request.headers.get('Upgrade') !== 'websocket') {
       return new Response('expected a websocket upgrade', { status: 426 });
     }
@@ -719,6 +746,94 @@ export class GameServer {
     if (!blob) return new Response('not found', { status: 404 });
     return new Response(blob.body, {
       headers: { 'Content-Type': blob.type, 'Cache-Control': 'public, max-age=31536000, immutable' },
+    });
+  }
+
+  // --------------------------------------- uploaded profile photos
+  // A player's own photo (F17) lives under pimg:<uid> with the
+  // same chunked shape as the covers (96 KB chunks; the 200 KB
+  // cap needs at most 3). A re-upload overwrites in place and
+  // drops stale tail chunks. Nothing deletes a photo blob: the
+  // directory record simply stops pointing at it when the player
+  // switches back to a portrait/Google photo.
+  async _putPhotoBlob(uid, type, buf) {
+    const CH = 96 * 1024;
+    const u8 = new Uint8Array(buf);
+    const chunks = Math.max(1, Math.ceil(u8.byteLength / CH));
+    const old = await this.state.storage.get('pimg:' + uid).catch(() => null);
+    const puts = {};
+    for (let i = 0; i < chunks; i++) puts['pimg:' + uid + ':' + i] = u8.slice(i * CH, (i + 1) * CH).buffer;
+    puts['pimg:' + uid] = { type, len: u8.byteLength, chunks };
+    await this.state.storage.put(puts);
+    if (old && old.chunks > chunks) {
+      const stale = [];
+      for (let i = chunks; i < old.chunks; i++) stale.push('pimg:' + uid + ':' + i);
+      if (stale.length) await this.state.storage.delete(stale).catch(() => {});
+    }
+  }
+  async _getPhotoBlob(uid) {
+    const meta = await this.state.storage.get('pimg:' + uid).catch(() => null);
+    if (!meta || !meta.chunks) return null;
+    const keys = [];
+    for (let i = 0; i < meta.chunks; i++) keys.push('pimg:' + uid + ':' + i);
+    const got = await this.state.storage.get(keys).catch(() => null);
+    if (!got) return null;
+    const out = new Uint8Array(meta.len);
+    let off = 0;
+    for (const k of keys) {
+      const part = got.get(k);
+      if (!part) return null;
+      out.set(new Uint8Array(part), off);
+      off += part.byteLength;
+    }
+    return { type: meta.type || 'image/jpeg', body: out };
+  }
+  // POST /p-photo: identity exactly like _coverUpload (verified
+  // session with the gate on; the pid header with it off). The
+  // record flips through the core, so the new photo fans out to
+  // every friends list at once. Rules: JPEG only (magic bytes
+  // checked — the client always sends canvas JPEG), ≤ 200 KB.
+  async _pPhotoUpload(request) {
+    const json = (status, obj) => new Response(JSON.stringify(obj), {
+      status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
+    });
+    let user = null;
+    const userHeader = request.headers.get('x-tore-user');
+    if (userHeader) { try { user = JSON.parse(userHeader); } catch { user = null; } }
+    if (this.authEnabled && !user) return json(401, { error: 'unauthorized' });
+    let identity = null;
+    if (user && user.sub) identity = 'g:' + user.sub;
+    else {
+      const pid = request.headers.get('x-tore-pid');
+      if (typeof pid === 'string' && /^[A-Za-z0-9_-]{6,64}$/.test(pid)) identity = 'p:' + pid;
+    }
+    if (!identity) return json(401, { error: 'unauthorized' });
+    const type = String(request.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (type !== 'image/jpeg') return json(415, { error: 'photoBadType' });
+    const buf = await request.arrayBuffer();
+    if (!buf.byteLength) return json(400, { error: 'photoEmpty' });
+    if (buf.byteLength > 200 * 1024) return json(413, { error: 'photoTooBig' });
+    const u8 = new Uint8Array(buf);
+    if (u8.length < 3 || u8[0] !== 0xFF || u8[1] !== 0xD8 || u8[2] !== 0xFF) {
+      return json(415, { error: 'photoBadType' });
+    }
+    const core = await this._ensureSocial();
+    const uid = core.uidOf(identity);
+    if (!uid) return json(403, { error: 'photoNoPerm' });
+    await this._putPhotoBlob(uid, 'image/jpeg', buf);
+    const out = core.setUploadedPhoto(identity);
+    if (!out) return json(403, { error: 'photoNoPerm' });
+    return json(200, { ok: true, uid: out.uid, v: out.v, photo: out.photo });
+  }
+  // GET /p-photo/<uid>.jpg: public read; the ?v=<photoV> query
+  // versions the URL, so a day of cache is plenty.
+  async _pPhotoGet(rest) {
+    const m = /^(\d{6})\.jpg$/.exec(rest);
+    if (!m) return new Response('not found', { status: 404 });
+    const blob = await this._getPhotoBlob(m[1]);
+    if (!blob) return new Response('not found', { status: 404 });
+    return new Response(blob.body, {
+      headers: { 'Content-Type': blob.type, 'Cache-Control': 'public, max-age=86400' },
     });
   }
 
@@ -1132,6 +1247,9 @@ export class GameServer {
     seat.ws = null;
     seat.connected = false;
     seat.disconnectAt = Date.now();
+    // F35: if that was the last connected human, the match
+    // freezes here (the sweep backstops any path that misses it).
+    this._maybeFreeze(room);
     if (seat.voiceMic) {
       seat.voiceMic = false;
       this._broadcastEvent(room, { type: 'voice', seat: att.seat, mic: false, speaker: seat.voiceSpeaker !== false, on: false });
@@ -1161,6 +1279,8 @@ export class GameServer {
       vs: null, // club-vs-club stamp {a, b} (cids) — only the social core's vsStartMatch hook sets it
       vsNames: null, // {a, b} display names for the vs stamp
       rematch: null, // runtime-only rematch offer {bySid, bySeat, expires, accepts:Set<sid>}
+      frozen: false, // F35: true while every human is unintentionally gone (timers disarmed)
+      frozenAt: null, // F35: when the freeze began (24 h dissolve clock)
       statsRecorded: false, // match-end stats guard: set when recorded, cleared when a new match starts
       spectators: new Set(), // clubs v8: receive-only sockets watching the public state
     };
@@ -1168,6 +1288,68 @@ export class GameServer {
     this.rooms.set(room.code, room);
     this._ensureSweep();
     return room;
+  }
+
+  // ------------------------------------------------------------ F35 freeze / resume
+  // An UNINTENTIONALLY interrupted match (every human's socket
+  // died without a leave frame) FREEZES instead of playing out
+  // under bots: timers disarm, seats stay reserved, and the home
+  // Continue entry reattaches a returning player, which unfreezes
+  // play. An explicit leave is untouched — it frees the seat at
+  // once and bots play on, exactly as before. Club games and
+  // club-vs rooms are team events and never freeze. A frozen
+  // match dissolves after frozenMaxMs (24 h) with no stats — and
+  // a player holds at most ONE frozen match: seating himself
+  // into a different room dissolves the frozen one (see
+  // _dissolveFrozenFor at the create/join funnels).
+  _freezable(room) {
+    return !!room && room.phase !== 'lobby' && room.phase !== 'matchEnd' && !room.club && !room.vs;
+  }
+  _maybeFreeze(room) {
+    if (!this._freezable(room) || room.frozen) return false;
+    if (room.seats.some((s) => s.kind === 'human' && s.connected)) return false;
+    if (!room.seats.some((s) => s.kind === 'human')) return false;
+    room.frozen = true;
+    room.frozenAt = Date.now();
+    this._cancelTimers(room.code, 'turn');
+    this._cancelTimers(room.code, 'trick');
+    this._cancelTimers(room.code, 'round');
+    return true;
+  }
+  _maybeUnfreeze(room) {
+    if (!room || !room.frozen) return;
+    room.frozen = false;
+    room.frozenAt = null;
+    this._broadcastState(room);
+    if (room.phase === 'roundEnd') {
+      this._cancelTimers(room.code, 'round');
+      this._schedule('round', ROUND_PAUSE_MS, { code: room.code });
+    } else if (room.trickHold) {
+      // Froze mid trick-hold: its timer was cancelled too, and
+      // _pumpTurn defers to it — re-arm it or the match stalls.
+      this._cancelTimers(room.code, 'trick');
+      this._schedule('trick', TRICK_PAUSE_MS, { code: room.code });
+    } else {
+      this._pumpTurn(room);
+    }
+  }
+  _dissolveRoom(room) {
+    this._cancelTimers(room.code);
+    this._sendToSpectators(room, { type: 'roomClosed', code: 'roomCancelled' });
+    this.rooms.delete(room.code);
+    this._pendingDeletes.add(room.code);
+    this._syncClubGame(room);
+  }
+  _dissolveFrozenFor(sid, exceptCode) {
+    if (!sid) return;
+    for (const room of [...this.rooms.values()]) {
+      if (!room.frozen || room.code === exceptCode) continue;
+      if (room.seats.some((s) => s.kind === 'human' && s.sid === sid)) {
+        const sids = room.seats.filter((s) => s.kind === 'human' && s.sid).map((s) => s.sid);
+        this._dissolveRoom(room);
+        if (sids.length) this._syncBusyFor(null, sids);
+      }
+    }
   }
 
   _hostSeat(room) {
@@ -1343,6 +1525,7 @@ export class GameServer {
    */
   _botPlay(room, seat, mayDeclare) {
     const round = room.match && room.match.round;
+    if (room.frozen) return; // F35: frozen matches never advance (stale-timer guard)
     if (!round || round.finished || round.turn !== seat) return;
     if (room.trickHold) return;
     if (mayDeclare && maybeDeclare13(round, seat)) {
@@ -1358,6 +1541,7 @@ export class GameServer {
 
   /** (Re)arm the action for whoever is on turn: bot → quick, human → 30 s. */
   _pumpTurn(room) {
+    if (room.frozen) return; // F35: a frozen match never advances
     this._cancelTimers(room.code, 'turn');
     if (room.trickHold) return; // the trick-pause timer re-arms the turn when it fires
     if (room.phase !== 'playing' || !room.match || !room.match.round) return;
@@ -1419,6 +1603,7 @@ export class GameServer {
     att.seat = seatIdx;
     att.token = seat.token;
     this._saveAttachment(ws, att);
+    this._maybeUnfreeze(room); // F35: a live seat wakes the match
     // The caller sends the room reply AFTER persisting the room
     // (_sendRoomReply) — a code is never announced before it is
     // durable, so a shared code can never point at a memory-only room.
@@ -1461,6 +1646,7 @@ export class GameServer {
     att.seat = seatIdx;
     att.token = seat.token;
     this._saveAttachment(ws, att);
+    this._maybeUnfreeze(room); // F35: reattaching resumes a frozen match
   }
 
   _sendRoomReply(ws, room, seatIdx) {
@@ -1494,6 +1680,9 @@ export class GameServer {
     }
     switch (msg.type) {
       case 'create': {
+        // F35: one frozen match per player — a fresh create
+        // dissolves his frozen match (never the one being made).
+        this._dissolveFrozenFor(this._joinSid(att, msg), null);
         const room = this._createRoom();
         room.felt = cleanFelt(msg.felt); // creator's felt, validated; fixed at creation, persisted below
         room.back = cleanBack(msg.back); // creator's card back, validated the same way
@@ -1586,6 +1775,10 @@ export class GameServer {
         if (room.phase !== 'lobby') return sendError(ws, 'بازی این اتاق شروع شده است', 'gameStarted');
         const idx = room.seats.findIndex((s) => s.kind === 'empty');
         if (idx === -1) return sendError(ws, 'اتاق پر است', 'roomFull');
+        // F35: taking a seat in a DIFFERENT room dissolves his
+        // frozen match (joining the frozen room itself reattaches
+        // above and never reaches here).
+        this._dissolveFrozenFor(sid, room.code);
         this._attachPlayer(ws, att, room, idx, displayName(msg, att.user), msg);
         await this._persistRoom(room);
         this._sendRoomReply(ws, room, idx);
@@ -1622,6 +1815,9 @@ export class GameServer {
         this._sendRoomReply(ws, room, idx);
         this._broadcastState(room);
         this._maybeStartVs(room); // a token reconnect can be a vs room's 4th connection
+        // F35: the Continue flow lands here — a frozen match
+        // resumes (this also re-arms the turn, below).
+        this._maybeUnfreeze(room);
         // A read-repaired in-match room may have lost its turn timer
         // with the in-memory state — re-arm it (cancels any duplicate).
         if (room.phase === 'playing') this._pumpTurn(room);
