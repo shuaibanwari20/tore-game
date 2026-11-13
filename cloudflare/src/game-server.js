@@ -38,6 +38,7 @@
 import * as G from './game.js';
 import { chooseCard, plan13 } from './bots.js';
 import { SocialCore } from './social-core.js';
+import { TicketStore } from './tickets.js';
 
 // ---- Tunables (same values as ../server.js) ----
 const TURN_TIMEOUT_MS = 30000;    // a stalled human seat is played by a bot
@@ -594,6 +595,9 @@ export class GameServer {
     // /club-cover stores the owner's photo; GET /club-cover/<cid>
     // serves it back publicly. Everything else is a socket.
     const reqPath = new URL(request.url).pathname;
+    // U60 internal login tickets — only the Worker calls these
+    // (no public route proxies /internal/* to the DO).
+    if (reqPath.startsWith('/internal/tickets/') && request.method === 'POST') return this._ticketRoute(reqPath, request);
     if (reqPath === '/club-cover' && request.method === 'POST') return this._coverUpload(request);
     if (reqPath.startsWith('/club-cover/') && request.method === 'GET') return this._coverGet(reqPath.slice('/club-cover/'.length));
     // Uploaded PROFILE photos (F17): POST /p-photo stores the
@@ -626,6 +630,22 @@ export class GameServer {
     this.state.acceptWebSocket(server);
     server.serializeAttachment({ code: null, seat: -1, token: null, user });
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  // ------------------------------------------------------ tickets
+  // U60: one-time login tickets for the installed-app sign-in (see
+  // tickets.js). The Worker creates one for the gate, the Google
+  // callback completes it, and the gate's poll consumes it. All
+  // state lives in this object's storage under ticket:<id>.
+  async _ticketRoute(reqPath, request) {
+    if (!this.tickets) this.tickets = new TicketStore(this.state.storage);
+    let body = {};
+    try { body = await request.json(); } catch { /* empty body */ }
+    if (reqPath === '/internal/tickets/create') return Response.json({ ticket: await this.tickets.create() });
+    if (reqPath === '/internal/tickets/complete') return Response.json({ ok: !!(body && body.user) && (await this.tickets.complete(body.ticket, body.user)) });
+    if (reqPath === '/internal/tickets/fail') return Response.json({ ok: await this.tickets.fail(body.ticket) });
+    if (reqPath === '/internal/tickets/status') return Response.json(await this.tickets.status(body.ticket));
+    return new Response('not found', { status: 404 });
   }
 
   // ---------------------------------------------------------- social
