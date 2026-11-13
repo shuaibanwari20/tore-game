@@ -78,9 +78,9 @@ const httpServer = http.createServer((req, res) => {
   if (!full.startsWith(PUBLIC_DIR) || !fs.existsSync(full) || fs.statSync(full).isDirectory()) {
     res.writeHead(404); return res.end('not found');
   }
-  // up41: the music player's files (pinned set m1..m9.mp3 +
-  // c1..c9.jpg) stream with Range support + the long cache.
-  if (/^\/music\/[mc][1-9]\.(mp3|jpg)$/.test(pathOnly)) {
+  // up41: the music player's files (pinned set m1..m30.mp3 +
+  // c1..c30.jpg, up56) stream with Range support + the long cache.
+  if (/^\/music\/[mc]([1-9]|[12][0-9]|30)\.(mp3|jpg)$/.test(pathOnly)) {
     return serveFileRange(req, res, full, MIME[path.extname(full)] || 'application/octet-stream');
   }
   // The game IMAGE files (speed pass) ride the long cache like the

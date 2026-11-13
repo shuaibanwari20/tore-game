@@ -122,7 +122,7 @@ if (nCarpets !== 22) throw new Error('expected 22 carpet files (11 full + 11 thu
 // up41: the music player's files (1 song + 1 real cover — the owner
 // cut the list to his single pick on 2026-11-13).
 const nMusic = copyDir(path.join(PUB, 'music'), path.join(DEPLOY, 'music'), (f) => /\.(mp3|jpe?g)$/i.test(f));
-if (nMusic !== 2) throw new Error('expected 2 music files (1 song + 1 cover), copied ' + nMusic);
+if (nMusic !== 60) throw new Error('expected 60 music files (30 songs + 30 covers), copied ' + nMusic);
 
 for (const f of ['manifest.webmanifest', 'sw.js', 'apple-touch-icon.png']) fs.copyFileSync(path.join(PUB, f), path.join(DEPLOY, f));
 const nIcons = copyDir(path.join(PUB, 'icons'), path.join(DEPLOY, 'icons'), (f) => /\.png$/i.test(f));
