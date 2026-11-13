@@ -46,7 +46,7 @@ const dist = fs.readFileSync(path.join(ROOT, 'cloudflare/dist-client.html'), 'ut
 check('dist stays code-only (< 1 MB)', Buffer.byteLength(dist) < 1_000_000, Buffer.byteLength(dist) + ' B');
 check('dist headrow has NO direction:ltr hack', !dist.includes('.cl-headrow { display: flex; align-items: center; gap: 11px; direction: ltr;'));
 const workerSrc = fs.readFileSync(path.join(ROOT, 'cloudflare/src/worker.js'), 'utf8');
-check('worker.js serves ?v=20261113-searchright', workerSrc.includes('dist-client.html?v=20261113-searchright'));
+check('worker.js serves ?v=20261113-stickyhead', workerSrc.includes('dist-client.html?v=20261113-stickyhead'));
 
 function spawnServer(args, port) {
   const s = spawn(process.execPath, args, { cwd: ROOT, env: { ...process.env, PORT: port }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -111,11 +111,49 @@ try {
   });
   check('country chips are smaller now (height <= 30px)', chipH > 0 && chipH <= 30, 'chipH=' + chipH);
   await page.screenshot({ path: path.join(SHOTS, 'up50-clubs-createbeside-FRESH.jpg'), type: 'jpeg', quality: 88 });
+
+  // up51: the header band must STAY pinned while the page scrolls.
+  // The proof account has no clubs, so the page is too short to
+  // scroll — inject a tall spacer, scroll, and measure.
+  const sticky = await page.evaluate(async () => {
+    const scroller = document.querySelector('#cl-disc-scroll');
+    const inner = scroller.querySelector('.fr-inner');
+    const spacer = document.createElement('div');
+    spacer.style.height = '1400px';
+    inner.appendChild(spacer);
+    await new Promise(r => setTimeout(r, 120));
+    scroller.scrollTop = 520;
+    await new Promise(r => setTimeout(r, 250));
+    const hr = document.querySelector('.cl-headrow').getBoundingClientRect();
+    const chip = document.querySelector('#scr-clubs .cl-chip').getBoundingClientRect();
+    return { headTop: Math.round(hr.top), chipTop: Math.round(chip.top), st: scroller.scrollTop };
+  });
+  check('header stays pinned at the top while scrolled (top <= 2)', sticky.headTop <= 2 && sticky.st > 400, JSON.stringify(sticky));
+  check('content scrolled under the pinned header (first chip above viewport top area)', sticky.chipTop < 185, 'chipTop=' + sticky.chipTop);
+  await page.screenshot({ path: path.join(SHOTS, 'up51-clubs-sticky-FRESH.jpg'), type: 'jpeg', quality: 88 });
   // the toggle still opens the search row
   await page.click('#btn-cl-search-toggle');
   await sleep(500);
   const rowOpen = await page.evaluate(() => !document.querySelector('#cl-searchrow').classList.contains('hidden'));
   check('toggle still opens the search row', rowOpen);
+  // up51b: podium shrink — inject a fake top-3 (proof data only) and
+  // measure + photograph the stage.
+  const pod = await page.evaluate(async () => {
+    renderPodium([
+      { name: 'Shuaib Anwari', cover: 'mosque', cid: '111111' },
+      { name: 'کلب دوهم', cover: 'trophy', cid: '222222' },
+      { name: 'کلب درېیم', cover: 'carpet', cid: '333333' },
+    ]);
+    await new Promise(r => setTimeout(r, 900));
+    const st = document.querySelector('.cl-podium-stage').getBoundingClientRect();
+    const first = document.querySelector('.cl-pod.first').getBoundingClientRect();
+    const nm = document.querySelector('.cl-pod.first .cl-pod-name');
+    return { stageH: Math.round(st.height), stageW: Math.round(st.width), firstW: Math.round(first.width), nameFits: nm.scrollWidth <= nm.clientWidth + 1 };
+  });
+  check('podium stage is smaller now (height <= 200px at 390px vw)', pod.stageH > 0 && pod.stageH <= 200, JSON.stringify(pod));
+  check('first podium card is smaller now (width <= 100px)', pod.firstW > 0 && pod.firstW <= 100, 'firstW=' + pod.firstW);
+  check('first club name fully visible on the smaller podium (no ellipsis)', pod.nameFits, '');
+  await page.locator('.cl-podium-stage').screenshot({ path: path.join(SHOTS, 'up51-podium-small-FRESH.jpg'), type: 'jpeg', quality: 90 });
   await ctx.close();
 } finally {
   await browser.close();
