@@ -26,6 +26,8 @@
  * still validated below.
  */
 
+import { isTicketId } from './tickets.js';
+
 const SESSION_COOKIE = 'tore_session';
 const OAUTH_COOKIE = 'tore_oauth';
 const SESSION_TTL_MS = 30 * 24 * 3600 * 1000; // 30 days
@@ -113,6 +115,11 @@ async function startOAuth(request, env, provider) {
   const redirectUri = origin + '/auth/' + provider + '/callback';
   const state = randomHex(16);
   const stash = { state, provider, exp: Date.now() + OAUTH_TTL_MS };
+  // U60: an installed-app login ticket (minted via /auth/ticket)
+  // rides the stash, so the callback can complete the ticket for
+  // the gate that is waiting back inside the app.
+  const ticketParam = new URL(request.url).searchParams.get('ticket');
+  if (isTicketId(ticketParam)) stash.ticket = ticketParam;
   let authUrl;
   if (isGoogle) {
     // PKCE (S256) on top of the plain code flow.
@@ -162,12 +169,12 @@ async function readStash(request, env, provider, stateParam) {
   return stash;
 }
 
-async function finishLogin(env, sessionPayload) {
+async function finishLogin(env, sessionPayload, location = '/') {
   const value = await signValue({ ...sessionPayload, exp: Date.now() + SESSION_TTL_MS }, env.SESSION_SECRET);
   return new Response(null, {
     status: 302,
     headers: {
-      Location: '/',
+      Location: location,
       'Set-Cookie': cookieHeader(SESSION_COOKIE, value, SESSION_TTL_MS / 1000),
     },
   });
@@ -176,9 +183,18 @@ async function finishLogin(env, sessionPayload) {
 async function callbackGoogle(request, env) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
-  if (!code || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return failRedirect();
   const stash = await readStash(request, env, 'google', url.searchParams.get('state'));
-  if (!stash || !stash.verifier) return failRedirect();
+  const ticket = stash && isTicketId(stash.ticket) ? stash.ticket : null;
+  // With a ticket in play, failures also land on the friendly
+  // /auth/done page and release the gate waiting in the app.
+  const fail = async () => {
+    if (ticket) {
+      await ticketCall(env, 'fail', { ticket });
+      return new Response(null, { status: 302, headers: { Location: '/auth/done?fail=1' } });
+    }
+    return failRedirect();
+  };
+  if (!code || !stash || !stash.verifier || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return fail();
   const redirectUri = url.origin + '/auth/google/callback';
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -192,24 +208,33 @@ async function callbackGoogle(request, env) {
       code_verifier: stash.verifier,
     }),
   });
-  if (!tokenRes.ok) return failRedirect();
+  if (!tokenRes.ok) return fail();
   const tokens = await tokenRes.json();
-  if (!tokens.id_token) return failRedirect();
+  if (!tokens.id_token) return fail();
   let claims;
   try {
     claims = JSON.parse(td.decode(b64urlDecode(tokens.id_token.split('.')[1])));
-  } catch { return failRedirect(); }
+  } catch { return fail(); }
   const issOk = claims.iss === 'https://accounts.google.com' || claims.iss === 'accounts.google.com';
   if (!issOk || claims.aud !== env.GOOGLE_CLIENT_ID || !claims.exp || Date.now() > claims.exp * 1000) {
-    return failRedirect();
+    return fail();
   }
-  return finishLogin(env, {
+  const payload = {
     provider: 'google',
     sub: String(claims.sub || ''),
     name: claims.name || '',
     email: claims.email || '',
     picture: claims.picture || '',
-  });
+  };
+  if (!payload.sub) return fail();
+  if (ticket) {
+    // Complete the ticket FIRST (the app gate is polling for it),
+    // then land this browser on the done page — its own session
+    // cookie is set too, harmless and sometimes shared back.
+    await ticketCall(env, 'complete', { ticket, user: payload });
+    return finishLogin(env, payload, '/auth/done');
+  }
+  return finishLogin(env, payload);
 }
 
 async function callbackFacebook(request, env) {
@@ -345,6 +370,44 @@ export async function handleFirebaseToken(request, env) {
     email,
     picture: typeof claims.picture === 'string' ? claims.picture : '',
   };
+  const value = await signValue({ ...payload, exp: Date.now() + SESSION_TTL_MS }, env.SESSION_SECRET);
+  return Response.json({ ok: true, user: payload }, {
+    headers: { 'Set-Cookie': cookieHeader(SESSION_COOKIE, value, SESSION_TTL_MS / 1000) },
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* U60 login tickets — the Worker-side helpers for /auth/ticket and   */
+/* /auth/ticket-status. The store itself lives in the global DO      */
+/* (tickets.js); these calls ride the same stub the game uses.       */
+
+async function ticketCall(env, action, payload) {
+  try {
+    const stub = env.GAME.get(env.GAME.idFromName('global'));
+    const res = await stub.fetch(new Request('https://do/internal/tickets/' + action, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    }));
+    return res.ok ? await res.json() : null;
+  } catch { return null; }
+}
+
+export async function createLoginTicket(env) {
+  const j = await ticketCall(env, 'create', {});
+  return j && isTicketId(j.ticket) ? j.ticket : null;
+}
+
+export async function loginTicketStatus(env, ticket) {
+  if (!isTicketId(ticket)) return { state: 'gone' };
+  const j = await ticketCall(env, 'status', { ticket });
+  return j && j.state ? j : { state: 'gone' };
+}
+
+/** The /auth/ticket-status success answer: the session cookie is
+ *  minted HERE, on a response the app's own gate requested — so it
+ *  lands in the app's cookie jar, not Safari's. */
+export async function ticketLoginResponse(env, payload) {
   const value = await signValue({ ...payload, exp: Date.now() + SESSION_TTL_MS }, env.SESSION_SECRET);
   return Response.json({ ok: true, user: payload }, {
     headers: { 'Set-Cookie': cookieHeader(SESSION_COOKIE, value, SESSION_TTL_MS / 1000) },
