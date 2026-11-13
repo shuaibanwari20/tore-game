@@ -342,8 +342,8 @@ const GATE_HTML = `<!DOCTYPE html>
     return authMod.signInWithRedirect(auth, provider);
   }
   // --- U60: the ticket flow (installed apps) ----------------------
-  // The gate mints a one-time ticket, opens the server-side Google
-  // flow (/auth/google?ticket=…) in the Safari sheet, and polls
+  // The gate mints a one-time ticket, opens the Firebase
+  // bridge page (/auth/fb?ticket=…) in the Safari sheet, and polls
   // /auth/ticket-status. When Google verifies the player there, the
   // poll's response carries the session cookie — minted into THIS
   // context — and the gate reloads into the game.
@@ -390,7 +390,7 @@ const GATE_HTML = `<!DOCTYPE html>
         storeTicket(j.ticket);
         startTicketPoll();
         armWatchdog();
-        window.open('/auth/google?ticket=' + encodeURIComponent(j.ticket), '_blank');
+        window.open('/auth/fb?ticket=' + encodeURIComponent(j.ticket), '_blank');
       })
       .catch(function () { gateFail(GL().errFail); });
   }

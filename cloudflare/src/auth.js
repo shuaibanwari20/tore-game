@@ -376,6 +376,46 @@ export async function handleFirebaseToken(request, env) {
   });
 }
 
+/**
+/**
+ * POST /auth/fb-complete  { ticket, idToken } — U61: the Firebase
+ * bridge for the installed app. The sheet page (/auth/fb) signs
+ * the player in with Firebase INSIDE Safari, then POSTs the ID
+ * token here together with the gate's one-time ticket. The token
+ * is verified exactly like /auth/firebase (public JWKS, no client
+ * secret) and the ticket is completed with the SAME payload
+ * /auth/firebase would mint — so the app session is the very same
+ * identity (Firebase sub) as a browser-tab sign-in, wallet and
+ * clubs included.
+ */
+export async function handleFirebaseTicketComplete(request, env) {
+  if (!env.SESSION_SECRET) {
+    return Response.json({ ok: false, error: 'sign-in is not configured on this server' }, { status: 500 });
+  }
+  let body = null;
+  try { body = await request.json(); } catch { body = null; }
+  const ticket = body && body.ticket;
+  if (!isTicketId(ticket)) {
+    return Response.json({ ok: false, error: 'bad ticket' }, { status: 400 });
+  }
+  const projectId = env.FIREBASE_PROJECT_ID || 'tore-game';
+  const claims = await verifyFirebaseIdToken(body && body.idToken, projectId);
+  if (!claims) return Response.json({ ok: false, error: 'unauthorized' }, { status: 401 });
+  const email = typeof claims.email === 'string' ? claims.email : '';
+  const payload = {
+    provider: 'firebase',
+    sub: claims.sub,
+    name: (typeof claims.name === 'string' && claims.name) || (email ? email.split('@')[0] : ''),
+    email,
+    picture: typeof claims.picture === 'string' ? claims.picture : '',
+  };
+  const j = await ticketCall(env, 'complete', { ticket, user: payload });
+  if (!j || !j.ok) {
+    return Response.json({ ok: false, error: 'ticket gone' }, { status: 409 });
+  }
+  return Response.json({ ok: true });
+}
+
 /* ------------------------------------------------------------------ */
 /* U60 login tickets — the Worker-side helpers for /auth/ticket and   */
 /* /auth/ticket-status. The store itself lives in the global DO      */

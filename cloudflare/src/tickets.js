@@ -67,11 +67,14 @@ export class TicketStore {
     return rec;
   }
 
-  /** The Google callback verified an identity: attach it. */
+  /** A verified sign-in attaches its identity — ONCE: a second
+   *  completion (even with a different identity) is refused, so a
+   *  completed ticket's payload can never be overwritten while
+   *  the gate is still polling for it. */
   async complete(id, user) {
     if (!user || !user.sub) return false;
     const rec = await this._live(id);
-    if (!rec || rec.failed) return false;
+    if (!rec || rec.failed || rec.user) return false;
     rec.user = user;
     await this.storage.put(this.key(id), rec);
     return true;
