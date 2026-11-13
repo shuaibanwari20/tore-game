@@ -107,7 +107,7 @@ check('dist carries the never-blank card path (faceready + gateFaces + cardsLoad
   dist.includes('faceready') && dist.includes('gateFaces') && dist.includes('cardsLoading'));
 check('dist stays code-only (< 1 MB)', Buffer.byteLength(dist) < 1_000_000, Buffer.byteLength(dist) + ' B');
 const workerSrc = fs.readFileSync(path.join(ROOT, 'cloudflare/src/worker.js'), 'utf8');
-check('worker.js serves ?v=20261113-noselect', workerSrc.includes('dist-client.html?v=20261113-noselect'));
+check('worker.js serves ?v=20261113-viewportfit', workerSrc.includes('dist-client.html?v=20261113-viewportfit'));
 
 // ---------------- server ----------------
 function spawnServer(args, port) {
