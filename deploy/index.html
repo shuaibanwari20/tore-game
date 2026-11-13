@@ -616,6 +616,24 @@
   /* Top bar straight on the carpet: profile cluster at the RTL start,
      the settings gear at the far end. */
   .hm-topbar { display: flex; align-items: flex-start; justify-content: space-between; }
+  /* up47: wallet pills in the home top bar — dark plum pills with
+     a gold edge, the Ludo money look; the ＋ opens the shop. */
+  .hm-wallet { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+  .hm-pill { width: auto; margin: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(43,6,54,.78); border: 1.5px solid #eec95f; border-radius: 16px;
+    color: #ffe98a; font-size: 14px; font-weight: 800; padding: 5px 10px; line-height: 1.15;
+    box-shadow: 0 3px 8px rgba(0,0,0,.4); }
+  .hm-pill b { color: #fff; font-weight: 800; }
+  .hm-pill.gem { border-color: #7dd7ff; color: #bdeaff; }
+  .hm-pill.plus { color: #ffd75e; font-size: 16px; padding: 4px 9px; }
+  .hm-pill:active { transform: scale(.96); }
+  /* up47: the daily-bonus gift chip under the top bar. */
+  .hm-bonus { width: auto; margin: 8px auto 0; display: block; cursor: pointer;
+    background: linear-gradient(180deg, #ffb52e, #f08c00); border: 1.5px solid #ffe98a; border-radius: 18px;
+    color: #4a2400; font-size: 14.5px; font-weight: 900; padding: 7px 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.45); }
+  .hm-bonus.hidden { display: none; }
+  .hm-bonus:active { transform: scale(.97); }
   /* Profile cluster — the avatar with the player's NAME pill beside it.
      Tapping either opens the profile popup. */
   .hm-profilebtn { width: auto; margin: 0; padding: 0; background: none; border: 0;
@@ -2322,6 +2340,64 @@
   #ld-list .fr-name { color: #fff; }
   #ld-list .ld-rank { flex: 0 0 30px; text-align: center; font-size: 17px; font-weight: 900; color: #ffd75e; }
   #ld-list .ld-wins { margin-inline-start: auto; flex: 0 0 auto; font-weight: 800; color: #ffd75e; white-space: nowrap; }
+  /* up47 SHOP (پلورنځی) — the leaders/profile card family: magenta
+     card on the purple shell, gold headings, dark-plum rows. */
+  #scr-shop { background: linear-gradient(180deg, #3d0a4e, #2a0638); }
+  .shop-bal { display: flex; gap: 8px; justify-content: center; margin: 4px 14px 10px; }
+  .shop-tabs { display: flex; gap: 6px; margin: 0 14px 10px; }
+  .shop-tab { flex: 1 1 0; width: auto; margin: 0; cursor: pointer; padding: 9px 2px;
+    background: rgba(43,6,54,.72); border: 1.5px solid rgba(255,255,255,.25); border-radius: 14px;
+    color: #ffd7f2; font-size: 14px; font-weight: 800; }
+  .shop-tab.sel { background: linear-gradient(180deg, #d81b74, #8f1160); border-color: #ffd75e; color: #fff; }
+  #shop-body { margin: 0 14px 18px; padding: 12px 14px; border-radius: 22px;
+    background: linear-gradient(180deg, #d81b74, #67124e); border: 1.5px solid rgba(255,215,94,.55);
+    box-shadow: 0 10px 24px rgba(0,0,0,.4); color: #fff; }
+  .shop-h { font-size: 16px; font-weight: 900; color: #ffd75e; margin: 4px 0 8px; }
+  .shop-note { font-size: 13.5px; line-height: 1.7; opacity: .92; margin: 6px 0; }
+  .shop-earn { font-size: 14px; line-height: 1.9; }
+  .shop-claim { width: 100%; margin: 8px 0 2px; cursor: pointer; padding: 11px;
+    background: linear-gradient(180deg, #ffb52e, #f08c00); border: 1.5px solid #ffe98a; border-radius: 16px;
+    color: #4a2400; font-size: 15px; font-weight: 900; }
+  .shop-claim[disabled] { opacity: .45; cursor: default; }
+  .shop-chest-art { font-size: 54px; text-align: center; line-height: 1.2; }
+  .shop-count { text-align: center; font-size: 15px; font-weight: 800; color: #ffd75e; margin-top: 6px; }
+  .shop-ledger { margin-top: 10px; }
+  .shop-led-row { display: flex; justify-content: space-between; gap: 8px;
+    border-bottom: 1px solid rgba(255,255,255,.14); padding: 7px 2px; font-size: 13.5px; }
+  .shop-led-row:last-child { border-bottom: none; }
+  .shop-led-amt { font-weight: 800; white-space: nowrap; }
+  .shop-led-amt.plus { color: #9dff9d; }
+  .shop-led-amt.minus { color: #ffb3b3; }
+  .shop-items { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .shop-item { background: rgba(43,6,54,.55); border: 1.5px solid rgba(255,255,255,.22);
+    border-radius: 16px; padding: 8px; text-align: center; }
+  .shop-item .si-art { height: 64px; border-radius: 10px; background-size: cover; background-position: center;
+    display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
+  .shop-item .si-name { font-size: 13px; font-weight: 800; margin-top: 6px; min-height: 32px; }
+  .shop-item .si-btn { width: 100%; margin: 4px 0 0; cursor: pointer; padding: 8px 4px; border-radius: 12px;
+    background: linear-gradient(180deg, #ffb52e, #f08c00); border: 1px solid #ffe98a;
+    color: #4a2400; font-size: 13.5px; font-weight: 900; }
+  .shop-item .si-btn.owned { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.3); color: #c8ffc8; cursor: default; }
+  /* up47: a LOCKED felt/back swatch in Settings is dimmed and its
+     name label carries the price instead — tapping it explains
+     itself and opens the shop (paintFelts / paintBacks own the
+     behaviour). */
+  .felt-sw.locked, .back-sw.locked { filter: saturate(.55) brightness(.72); }
+  .felt-sw.locked .felt-nm, .back-sw.locked .felt-nm { color: #ffd75e; font-weight: 900; }
+  /* up47: the lobby stake line + the picker's tier chips. */
+  #lobby-stake { text-align: center; font-size: 13.5px; font-weight: 700; color: #ffd75e;
+    background: rgba(43,6,54,.55); border: 1px solid rgba(255,215,94,.5); border-radius: 12px;
+    padding: 6px 10px; margin: 8px 4px 0; line-height: 1.6; }
+  #lobby-stake.hidden { display: none; }
+  #lobby-stake .ls-note { display: block; font-size: 12px; font-weight: 600; color: #ffd7f2; opacity: .85; }
+  .pk-tier { margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .pk-tier.hidden { display: none; }
+  .pk-tier-lbl { font-size: 14px; font-weight: 900; color: #ffd75e; }
+  .pk-tiers { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
+  .pk-tierchip { width: auto; margin: 0; cursor: pointer; padding: 6px 11px; border-radius: 13px;
+    background: rgba(43,6,54,.72); border: 1.5px solid rgba(255,255,255,.3);
+    color: #ffd7f2; font-size: 13.5px; font-weight: 800; }
+  .pk-tierchip.sel { background: linear-gradient(180deg, #ffb52e, #f08c00); border-color: #ffe98a; color: #4a2400; }
   #ov-match #btn-rematch { margin-top: 10px; width: 100%; padding: 11px; border-radius: 14px; font-size: 17px;
     font-weight: 900; color: #33270a; cursor: pointer; font-family: inherit;
     background: linear-gradient(180deg, #ffd75e, #d9a83c); border: 2px solid #ffd75e; }
@@ -3070,10 +3146,22 @@
           <span id="home-avatar-slot"></span>
           <span class="hm-pname" id="home-name">د تورې لوبغاړی</span>
         </button>
+        <!-- up47: wallet pills (سکه / الماس) — the balances are the
+             SERVER's word (s-wallet / s-init); tapping either pill
+             or the ＋ opens the shop. -->
+        <div class="hm-wallet">
+          <button type="button" class="hm-pill" id="btn-wallet-coins" aria-label="سکه">🪙 <b id="wallet-coins">–</b></button>
+          <button type="button" class="hm-pill gem" id="btn-wallet-gems" aria-label="الماس">💎 <b id="wallet-gems">–</b></button>
+          <button type="button" class="hm-pill plus" id="btn-shop-open" aria-label="پلورنځی">＋</button>
+        </div>
         <button class="hm-gear" id="btn-settings" aria-label="امادګي">
           <svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="gearG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cdbfe8"/></linearGradient></defs><path fill-rule="evenodd" fill="url(#gearG)" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg>
         </button>
       </div>
+
+      <!-- up47: the daily-bonus claim chip — visible only while
+           the server says today's bonus is unclaimed. -->
+      <button type="button" class="hm-bonus hidden" id="btn-bonus">🎁 <span id="btn-bonus-txt">ورځنۍ جایزه</span></button>
 
       <div class="hm-hero">
         <div class="hm-suits"><span class="w">♠</span><span class="r">♥</span><span class="w">♣</span><span class="r">♦</span></div>
@@ -3265,6 +3353,7 @@
         <div class="roomcode" id="lobby-code" role="button" tabindex="0" title="کوډ کاپي کړه">····</div>
       </div>
       <div id="lobby-clubtag" class="hidden"></div>
+      <div id="lobby-stake" class="hidden"></div>
       <div id="lobby-seats"></div>
       <button id="btn-start">لوبه پیل کړه</button>
       <button id="btn-lobby-friends" class="ghost">👥 <span id="lobby-friends-lbl">ملګري</span></button>
@@ -3486,6 +3575,14 @@
             <h3 class="pk-gname" id="pk-g-tore">توره</h3>
             <div class="pk-shelf" id="pk-shelf-tore"></div>
             <div class="pk-sub" id="pk-sub-tore">څلور کسیزه ورق لوبه • دوه ټیمه</div>
+            <!-- up47: the stake-tier selector — online/club games
+                 only (the bots tab hides it: bot games are always
+                 free). The picked tier rides the create frame; the
+                 server validates it against the fixed ladder. -->
+            <div class="pk-tier" id="pk-tier-row">
+              <span class="pk-tier-lbl" id="pk-tier-lbl">شرط</span>
+              <div class="pk-tiers" id="pk-tiers"></div>
+            </div>
             <button type="button" class="pk-play" id="btn-pk-play">لوبه وکړه</button>
           </article>
           <article class="pk-card" dir="rtl">
@@ -3718,6 +3815,37 @@
       <span class="nl" id="ldnav-chat-lbl">چت</span>
     </button>
   </nav>
+</section>
+
+<!-- ======== SHOP (پلورنځی — up47 money system, phases 1+2) ========
+     Balances + ownership are the SERVER's word (s-wallet); this
+     page only renders them and sends intents (claim / buy). Tabs:
+     سکه (balance + how coins are earned + the daily bonus +
+     recent movements), الماس (balance + به‌زودی — gems land in
+     phase 3), صندوق‌ها (the free timed chest), ظاهری (cosmetics:
+     card backs + carpets, bought with سکه, equipped afterwards
+     in Settings exactly as before). NO purchase offers anywhere:
+     there is no payment rail yet. -->
+<section id="scr-shop" class="hidden">
+  <div class="fr-scroll">
+    <div class="fr-inner">
+      <div class="cp-head">
+        <button class="fr-back" id="btn-shop-back">→</button>
+        <h2 id="shop-title">پلورنځی</h2>
+      </div>
+      <div class="shop-bal">
+        <span class="hm-pill">🪙 <b id="shop-coins">–</b></span>
+        <span class="hm-pill gem">💎 <b id="shop-gems">–</b></span>
+      </div>
+      <div class="shop-tabs" id="shop-tabs">
+        <button type="button" class="shop-tab" data-tab="coins"></button>
+        <button type="button" class="shop-tab" data-tab="gems"></button>
+        <button type="button" class="shop-tab" data-tab="chests"></button>
+        <button type="button" class="shop-tab" data-tab="look"></button>
+      </div>
+      <div id="shop-body"></div>
+    </div>
+  </div>
 </section>
 
 <!-- ======== CLUBS (کلبونه) ======== -->
@@ -4612,6 +4740,49 @@ const STR = {
     statLost: 'بایللي',
     leadersTitle: 'د اونۍ غوره لوبغاړي',
     leadersEmpty: 'تر اوسه چا نه ده ګټلې',
+    coinsLbl: 'سکه',
+    gemsLbl: 'الماس',
+    shopTitle: 'پلورنځی',
+    shopTabCoins: 'سکه',
+    shopTabGems: 'الماس',
+    shopTabChests: 'صندوق‌ها',
+    shopTabLook: 'ظاهري',
+    bonusTitle: 'ورځنۍ جایزه',
+    bonusClaim: 'جایزه واخله',
+    bonusDone: 'د نن جایزه دې واخیسته ✓',
+    chestTitle: 'وړیا صندوق',
+    chestClaim: 'صندوق پرانیزه',
+    chestWait: (t) => 'بل صندوق په ' + t + ' کې',
+    shopBuy: 'واخله',
+    shopOwned: 'لرې یې ✓',
+    shopSoon: 'ژر راځي',
+    gemsSoonTxt: 'الماس په بل پړاو کې راځي — اوس یې له لارې نشي اخیستل کېدای.',
+    coinsHowTitle: 'سکه څنګه ترلاسه کېږي؟',
+    earnGrant: 'د پیل ډالۍ: ۱۰۰۰ سکه',
+    earnBonus: 'ورځنۍ جایزه: هره ورځ ۱۰۰ سکه',
+    earnChest: 'وړیا صندوق: هر ۴ ساعته ۵۰ سکه',
+    earnWin: 'په شرطي لوبه کې ګټل: د شرط دوه برابره',
+    ledgerTitle: 'وروستي حرکتونه',
+    ledGrant: 'د پیل ډالۍ',
+    ledBonus: 'ورځنۍ جایزه',
+    ledChest: 'وړیا صندوق',
+    ledStake: 'شرط',
+    ledWin: 'ګټل',
+    ledRefund: 'شرط بېرته',
+    ledBuy: 'اخیستل',
+    ledForfeit: 'شرط پرېښودل',
+    stakeLbl: 'شرط',
+    stakeFree: 'وړیا',
+    stakeLine: (n) => 'د دې کوټې شرط: ' + n + ' سکه',
+    stakeFreeNote: 'که کوم لوبغاړی سکه ونه لري یا روبات لوبه وکړي، لوبه وړیا کېږي.',
+    stakeTaken: (n) => 'شرط ونیول شو — هر لوبغاړي ' + n + ' سکه ورکړه',
+    lockedPrice: (n) => '🪙 ' + n,
+    shopLockedHint: 'دا توکی په پلورنځي کې اخیستل کېږي',
+    errWalletPoor: 'سکه دې نه بسېږي',
+    errWalletOwned: 'دا توکی لا لرې',
+    errWalletBonusWait: 'د نن جایزه دې لا اخیستې ده',
+    errWalletChestWait: 'صندوق لا نه دی پرانیستل شوی',
+    errWalletBadSku: 'توکی ونه موندل شو',
     pollTitle: 'رایه‌اچونه',
     pollQuestionPh: 'پوښتنه ولیکه…',
     pollOptionPh: (n) => 'ټاکنه ' + n,
@@ -5011,6 +5182,49 @@ const STR = {
     statLost: 'باخت‌ها',
     leadersTitle: 'بهترین‌های هفته',
     leadersEmpty: 'هنوز کسی نبرده',
+    coinsLbl: 'سکه',
+    gemsLbl: 'الماس',
+    shopTitle: 'فروشگاه',
+    shopTabCoins: 'سکه',
+    shopTabGems: 'الماس',
+    shopTabChests: 'صندوق‌ها',
+    shopTabLook: 'ظاهری',
+    bonusTitle: 'جایزهٔ روزانه',
+    bonusClaim: 'گرفتن جایزه',
+    bonusDone: 'جایزهٔ امروز را گرفتی ✓',
+    chestTitle: 'صندوق رایگان',
+    chestClaim: 'باز کردن صندوق',
+    chestWait: (t) => 'صندوق بعدی در ' + t,
+    shopBuy: 'خریدن',
+    shopOwned: 'داریش ✓',
+    shopSoon: 'به‌زودی',
+    gemsSoonTxt: 'الماس در مرحلهٔ بعدی می‌آید — فعلاً قابل خرید نیست.',
+    coinsHowTitle: 'سکه چطور به دست می‌آید؟',
+    earnGrant: 'هدیهٔ شروع: ۱۰۰۰ سکه',
+    earnBonus: 'جایزهٔ روزانه: هر روز ۱۰۰ سکه',
+    earnChest: 'صندوق رایگان: هر ۴ ساعت ۵۰ سکه',
+    earnWin: 'برد در بازی شرطی: دو برابر شرط',
+    ledgerTitle: 'حرکت‌های اخیر',
+    ledGrant: 'هدیهٔ شروع',
+    ledBonus: 'جایزهٔ روزانه',
+    ledChest: 'صندوق رایگان',
+    ledStake: 'شرط',
+    ledWin: 'برد',
+    ledRefund: 'برگشت شرط',
+    ledBuy: 'خرید',
+    ledForfeit: 'ترک شرط',
+    stakeLbl: 'شرط',
+    stakeFree: 'رایگان',
+    stakeLine: (n) => 'شرط این اتاق: ' + n + ' سکه',
+    stakeFreeNote: 'اگر بازیکنی سکه نداشته باشد یا ربات بازی کند، بازی رایگان می‌شود.',
+    stakeTaken: (n) => 'شرط گرفته شد — هر بازیکن ' + n + ' سکه داد',
+    lockedPrice: (n) => '🪙 ' + n,
+    shopLockedHint: 'این مورد از فروشگاه خریده می‌شود',
+    errWalletPoor: 'سکه‌ات کافی نیست',
+    errWalletOwned: 'این مورد را از قبل داری',
+    errWalletBonusWait: 'جایزهٔ امروز را قبلاً گرفته‌ای',
+    errWalletChestWait: 'صندوق هنوز باز نشده',
+    errWalletBadSku: 'مورد پیدا نشد',
     pollTitle: 'رأی‌گیری',
     pollQuestionPh: 'سؤال را بنویس…',
     pollOptionPh: (n) => 'گزینهٔ ' + n,
@@ -5410,6 +5624,49 @@ const STR = {
     statLost: 'Lost',
     leadersTitle: 'Weekly best',
     leadersEmpty: 'No wins yet this week',
+    coinsLbl: 'Coins',
+    gemsLbl: 'Gems',
+    shopTitle: 'Shop',
+    shopTabCoins: 'Coins',
+    shopTabGems: 'Gems',
+    shopTabChests: 'Chests',
+    shopTabLook: 'Looks',
+    bonusTitle: 'Daily bonus',
+    bonusClaim: 'Claim bonus',
+    bonusDone: "Today's bonus claimed ✓",
+    chestTitle: 'Free chest',
+    chestClaim: 'Open chest',
+    chestWait: (t) => 'Next chest in ' + t,
+    shopBuy: 'Buy',
+    shopOwned: 'Owned ✓',
+    shopSoon: 'Coming soon',
+    gemsSoonTxt: 'Gems arrive in the next phase — they cannot be bought yet.',
+    coinsHowTitle: 'How do you earn coins?',
+    earnGrant: 'Start gift: 1000 coins',
+    earnBonus: 'Daily bonus: 100 coins every day',
+    earnChest: 'Free chest: 50 coins every 4 hours',
+    earnWin: 'Winning a staked game: twice your stake',
+    ledgerTitle: 'Recent activity',
+    ledGrant: 'Start gift',
+    ledBonus: 'Daily bonus',
+    ledChest: 'Free chest',
+    ledStake: 'Stake',
+    ledWin: 'Winnings',
+    ledRefund: 'Stake refund',
+    ledBuy: 'Purchase',
+    ledForfeit: 'Stake forfeited',
+    stakeLbl: 'Stake',
+    stakeFree: 'Free',
+    stakeLine: (n) => 'Room stake: ' + n + ' coins',
+    stakeFreeNote: 'If any player lacks coins or a bot plays, the game runs free.',
+    stakeTaken: (n) => 'Stakes taken — each player paid ' + n + ' coins',
+    lockedPrice: (n) => '🪙 ' + n,
+    shopLockedHint: 'This item is bought in the shop',
+    errWalletPoor: 'Not enough coins',
+    errWalletOwned: 'You already own this',
+    errWalletBonusWait: "Today's bonus is already claimed",
+    errWalletChestWait: 'The chest is not open yet',
+    errWalletBadSku: 'Item not found',
     pollTitle: 'Poll',
     pollQuestionPh: 'Write the question…',
     pollOptionPh: (n) => 'Option ' + n,
@@ -5754,7 +6011,7 @@ function applyI18n() {
   document.title = T('docTitle');
   const ltr = LANG === 'en';
   ['scr-home', 'scr-lobby', 'chatpanel', 'ov-round', 'ov-match', 'ov-settings', 'ov-exit', 'ov-join', 'ov-install', 'ov-nonet',
-   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-pview', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-clubseatreqs', 'scr-picker', 'scr-leaders', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-friendmenu', 'ov-feltpick', 'ov-feltview', 'ov-backpick', 'ov-backview', 'ov-pollcreate', 'ov-clubvs', 'ov-clubvsinv', 'ov-pfedit', 'ov-photoview']
+   'scr-friends', 'scr-dm', 'scr-chats', 'scr-profile', 'scr-pview', 'scr-clubs', 'scr-clubpage', 'scr-clubmembers', 'scr-clubseatreqs', 'scr-picker', 'scr-leaders', 'scr-shop', 'ov-invite', 'ov-confirm', 'ov-playermenu', 'ov-friendmenu', 'ov-feltpick', 'ov-feltview', 'ov-backpick', 'ov-backview', 'ov-pollcreate', 'ov-clubvs', 'ov-clubvsinv', 'ov-pfedit', 'ov-photoview']
     .forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.setAttribute('dir', ltr ? 'ltr' : 'rtl');
@@ -5968,6 +6225,12 @@ function applyI18n() {
   set('#pv2-stat-won-lbl', 'statWon');
   set('#pv2-stat-lost-lbl', 'statLost');
   set('#ld-title', 'leadersTitle');
+  set('#shop-title', 'shopTitle');
+  set('#btn-bonus-txt', 'bonusTitle');
+  aria('#btn-wallet-coins', 'coinsLbl');
+  aria('#btn-wallet-gems', 'gemsLbl');
+  aria('#btn-shop-open', 'shopTitle');
+  aria('#btn-shop-back', 'frBack');
   set('#ldnav-friends-lbl', 'navFriends');
   set('#ldnav-clubs-lbl', 'navClubs');
   set('#ldnav-home-lbl', 'navHome');
@@ -6006,6 +6269,9 @@ function setLang(code) {
   refreshCountryOptions();
   if (state) render(state);
   if (!$('#scr-profile').classList.contains('hidden')) { pfRenderGrid(); pfRenderPreview(); }
+  paintWallet();
+  paintTierRow();
+  if (!$('#scr-shop').classList.contains('hidden')) renderShop();
 }
 const RANK_VAL = { '2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,T:10,J:11,Q:12,K:13,A:14 };
 const suitOf = (c) => c[c.length - 1];
@@ -10234,6 +10500,41 @@ function paintPickerTabs() {
     const t = $('#pktab-' + m);
     if (t) t.classList.toggle('sel', m === pkMode);
   });
+  paintTierRow();
+}
+// ----- up47: the stake-tier selector (picker). The tier rides
+// the create frame for ONLINE and ROOM/CLUB games; the bots tab
+// hides the row (bot games are always free and never touch a
+// wallet). Persisted across sessions; the server validates the
+// value against the fixed ladder, so a stale/forged pick can
+// only ever land on a real tier or on free.
+const STAKE_TIERS_UI = [0, 100, 500, 1000, 5000];
+let pkTier = 0;
+try {
+  const v = parseInt(localStorage.getItem('tore.tier'), 10);
+  if (STAKE_TIERS_UI.includes(v)) pkTier = v;
+} catch (e) { /* storage unavailable */ }
+function paintTierRow() {
+  const row = $('#pk-tier-row');
+  if (!row) return;
+  row.classList.toggle('hidden', pkMode === 'bots');
+  const lbl = $('#pk-tier-lbl');
+  if (lbl) lbl.textContent = T('stakeLbl');
+  const box = $('#pk-tiers');
+  if (!box) return;
+  box.innerHTML = '';
+  STAKE_TIERS_UI.forEach((t2) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pk-tierchip' + (pkTier === t2 ? ' sel' : '');
+    b.textContent = t2 === 0 ? T('stakeFree') : '🪙 ' + t2;
+    b.onclick = () => {
+      pkTier = t2;
+      try { localStorage.setItem('tore.tier', String(t2)); } catch (e) { /* ignore */ }
+      paintTierRow();
+    };
+    box.appendChild(b);
+  });
 }
 function pkCards() { return Array.prototype.slice.call(document.querySelectorAll('#pk-track .pk-card')); }
 function pkIndex() {
@@ -10301,7 +10602,7 @@ function startPickedGame() {
   gateFaces(); // CARDSFIX: the deck loads before the table can open
   closePicker();
   if (mode === 'bots') { startBotGame(club); return; }
-  connect(() => send({ type: 'create', ...(club ? { club } : {}), felt: validFelt(profile.felt), back: validBack(profile.back), ...profilePayload() }));
+  connect(() => send({ type: 'create', ...(club ? { club } : {}), tier: pkTier, felt: validFelt(profile.felt), back: validBack(profile.back), ...profilePayload() }));
 }
 $('#btn-pk-close').onclick = () => closePicker();
 ['online', 'bots', 'room'].forEach((m) => {
@@ -11002,9 +11303,23 @@ function paintFelts() {
     b.appendChild(chk);
     const nm = document.createElement('span');
     nm.className = 'felt-nm';
-    nm.textContent = T('felt' + n);
+    // up47: a carpet I don't own wears its price, not its name —
+    // and tapping it explains itself and opens the shop instead
+    // of equipping (the servers enforce the same rule at create).
+    const ownedF = walletOwns('felt' + n);
+    if (!ownedF) b.classList.add('locked');
+    nm.textContent = ownedF ? T('felt' + n) : '🔒 ' + T('lockedPrice', SHOP_PRICES['felt' + n]);
     b.appendChild(nm);
-    b.onclick = () => { profile.felt = n; saveProfile(); paintFelts(); closeFeltPick(); };
+    b.onclick = () => {
+      if (!walletOwns('felt' + n)) {
+        closeFeltPick();
+        closeSettings();
+        toast(T('shopLockedHint'));
+        openShop('look');
+        return;
+      }
+      profile.felt = n; saveProfile(); paintFelts(); closeFeltPick();
+    };
     grid.appendChild(b);
   }
 }
@@ -11091,9 +11406,22 @@ function paintBacks() {
     b.appendChild(chk);
     const nm = document.createElement('span');
     nm.className = 'felt-nm';
-    nm.textContent = T('back' + n);
+    // up47: same locked rule as the carpets — price instead of
+    // the name, and the tap goes to the shop, never to equip.
+    const ownedB = walletOwns('back' + n);
+    if (!ownedB) b.classList.add('locked');
+    nm.textContent = ownedB ? T('back' + n) : '🔒 ' + T('lockedPrice', SHOP_PRICES['back' + n]);
     b.appendChild(nm);
-    b.onclick = () => { profile.back = n; saveProfile(); paintBacks(); closeBackPick(); };
+    b.onclick = () => {
+      if (!walletOwns('back' + n)) {
+        closeBackPick();
+        closeSettings();
+        toast(T('shopLockedHint'));
+        openShop('look');
+        return;
+      }
+      profile.back = n; saveProfile(); paintBacks(); closeBackPick();
+    };
     grid.appendChild(b);
   }
 }
@@ -11881,7 +12209,10 @@ function onSocialMsg(m) {
     if (typeof m.dnd === 'boolean') setToreSetting('dnd', m.dnd);
     if (typeof m.invisible === 'boolean') setToreSetting('invisible', m.invisible);
     renderMyId();
+    if (m.wallet) setWallet(m.wallet); // up47: the wallet rides s-init
     applySocialLists(m);
+  } else if (m.type === 's-wallet') {
+    setWallet(m.wallet); // up47: balance/ownership push (claim, buy, escrow, settle…)
   } else if (m.type === 's-friends') {
     applySocialLists(m);
   } else if (m.type === 's-profile-result') {
@@ -12112,6 +12443,188 @@ function onSocialMsg(m) {
     }
   }
 }
+
+// ================= WALLET + SHOP (up47) =================
+// Balances, ownership and claim states are the SERVER's word:
+// they arrive on s-init and on every s-wallet push, and this
+// client only renders them and sends intents (claim / buy /
+// stake tier). The price table below is a DISPLAY copy of the
+// server catalogue in social-core.js — the server never trusts
+// a client number, so a stale copy here can only mislabel, never
+// mischarge.
+const SHOP_PRICES = { back2: 300, back3: 500, back4: 800, back5: 1200, back6: 2000, felt1: 400, felt2: 400, felt3: 600, felt4: 600, felt5: 800, felt6: 800, felt7: 1000, felt8: 1000, felt9: 1500, felt10: 1500 };
+let myWallet = null;   // last wallet state from the server; null = not loaded yet
+let shopTab = 'coins';
+let chestTimer = null;
+
+function walletOwns(sku) {
+  if (sku === 'back1' || sku === 'felt11') return true; // the free defaults
+  if (!myWallet) return true; // unknown (offline / not loaded): never lock on a guess
+  return (myWallet.owned || []).includes(sku);
+}
+function setWallet(w) {
+  if (!w || typeof w.coins !== 'number') return;
+  myWallet = w;
+  paintWallet();
+  if (!$('#scr-shop').classList.contains('hidden')) renderShop();
+  if ($('#ov-settings').classList.contains('show')) { paintFelts(); paintBacks(); }
+}
+function paintWallet() {
+  const set = (sel, v) => { const el = $(sel); if (el) el.textContent = v; };
+  set('#wallet-coins', myWallet ? String(myWallet.coins) : '–');
+  set('#wallet-gems', myWallet ? String(myWallet.gems) : '–');
+  set('#shop-coins', myWallet ? String(myWallet.coins) : '–');
+  set('#shop-gems', myWallet ? String(myWallet.gems) : '–');
+  const chip = $('#btn-bonus');
+  if (chip) chip.classList.toggle('hidden', !(myWallet && myWallet.bonusReady));
+}
+function fmtCountdown(ms) {
+  let s = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(s / 3600); s -= h * 3600;
+  const m = Math.floor(s / 60); s -= m * 60;
+  const p = (n) => String(n).padStart(2, '0');
+  return (h > 0 ? h + ':' + p(m) : String(m)) + ':' + p(s);
+}
+function openShop(tab) {
+  if (tab) shopTab = tab;
+  $('#scr-home').classList.add('hidden');
+  $('#scr-shop').classList.remove('hidden');
+  connectSocial();
+  socialSend({ type: 's-wallet' }); // fresh pull (s-init also carries it)
+  renderShop();
+}
+function closeShop() {
+  stopChestTimer();
+  $('#scr-shop').classList.add('hidden');
+  $('#scr-home').classList.remove('hidden');
+}
+function stopChestTimer() { if (chestTimer) { clearInterval(chestTimer); chestTimer = null; } }
+function shopEl(tag, cls, text) {
+  const el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (text != null) el.textContent = text;
+  return el;
+}
+function renderShop() {
+  const title = $('#shop-title'); if (title) title.textContent = T('shopTitle');
+  document.querySelectorAll('#shop-tabs .shop-tab').forEach((b) => {
+    b.classList.toggle('sel', b.dataset.tab === shopTab);
+    b.textContent = T('shopTab' + b.dataset.tab.charAt(0).toUpperCase() + b.dataset.tab.slice(1));
+  });
+  paintWallet();
+  const body = $('#shop-body');
+  if (!body) return;
+  body.innerHTML = '';
+  stopChestTimer();
+  if (shopTab === 'coins') renderShopCoins(body);
+  else if (shopTab === 'gems') renderShopGems(body);
+  else if (shopTab === 'chests') renderShopChests(body);
+  else renderShopLook(body);
+}
+function renderShopCoins(body) {
+  body.appendChild(shopEl('div', 'shop-h', '🎁 ' + T('bonusTitle')));
+  if (myWallet && myWallet.bonusReady) {
+    const b = shopEl('button', 'shop-claim', T('bonusClaim') + ' · 100 🪙');
+    b.type = 'button';
+    b.onclick = () => { connectSocial(); socialSend({ type: 's-wallet-bonus' }); };
+    body.appendChild(b);
+  } else {
+    body.appendChild(shopEl('div', 'shop-note', T('bonusDone')));
+  }
+  body.appendChild(shopEl('div', 'shop-h', '🪙 ' + T('coinsHowTitle')));
+  const earn = shopEl('div', 'shop-earn');
+  earn.innerHTML = '';
+  [T('earnGrant'), T('earnBonus'), T('earnChest'), T('earnWin')].forEach((line) => {
+    earn.appendChild(shopEl('div', '', '• ' + line));
+  });
+  body.appendChild(earn);
+  const led = (myWallet && myWallet.ledger) || [];
+  if (led.length) {
+    body.appendChild(shopEl('div', 'shop-h', '🧾 ' + T('ledgerTitle')));
+    const box = shopEl('div', 'shop-ledger');
+    const kindKey = { grant: 'ledGrant', bonus: 'ledBonus', chest: 'ledChest', stake: 'ledStake', win: 'ledWin', refund: 'ledRefund', buy: 'ledBuy', forfeit: 'ledForfeit' };
+    led.forEach((e) => {
+      const row = shopEl('div', 'shop-led-row');
+      let label = T(kindKey[e.kind] || 'ledBuy');
+      if (e.kind === 'buy' && e.ref) {
+        const m = /^(felt|back)(\d+)$/.exec(e.ref);
+        if (m) label += ' · ' + T(m[1] + Number(m[2]));
+      }
+      row.appendChild(shopEl('span', '', label));
+      const amt = shopEl('span', 'shop-led-amt ' + (e.amount > 0 ? 'plus' : (e.amount < 0 ? 'minus' : '')), (e.amount > 0 ? '+' : '') + e.amount + ' 🪙');
+      row.appendChild(amt);
+      box.appendChild(row);
+    });
+    body.appendChild(box);
+  }
+}
+function renderShopGems(body) {
+  body.appendChild(shopEl('div', 'shop-h', '💎 ' + T('gemsLbl')));
+  body.appendChild(shopEl('div', 'shop-note', T('gemsSoonTxt')));
+  const chip = shopEl('div', 'shop-count', T('shopSoon'));
+  body.appendChild(chip);
+}
+function renderShopChests(body) {
+  body.appendChild(shopEl('div', 'shop-chest-art', '🧰'));
+  body.appendChild(shopEl('div', 'shop-h', T('chestTitle')));
+  const next = myWallet ? (myWallet.chestNext || 0) : 0;
+  if (myWallet && next <= Date.now()) {
+    const b = shopEl('button', 'shop-claim', T('chestClaim') + ' · 50 🪙');
+    b.type = 'button';
+    b.onclick = () => { connectSocial(); socialSend({ type: 's-wallet-chest' }); };
+    body.appendChild(b);
+  } else if (myWallet) {
+    const b = shopEl('button', 'shop-claim', T('chestClaim'));
+    b.type = 'button';
+    b.disabled = true;
+    body.appendChild(b);
+    const cd = shopEl('div', 'shop-count', T('chestWait', fmtCountdown(next - Date.now())));
+    cd.id = 'shop-chest-count';
+    body.appendChild(cd);
+    chestTimer = setInterval(() => {
+      const el = $('#shop-chest-count');
+      if (!el) { stopChestTimer(); return; }
+      const left = (myWallet ? (myWallet.chestNext || 0) : 0) - Date.now();
+      if (left <= 0) { stopChestTimer(); renderShop(); return; }
+      el.textContent = T('chestWait', fmtCountdown(left));
+    }, 1000);
+  } else {
+    body.appendChild(shopEl('div', 'shop-note', '…'));
+  }
+}
+function renderShopLook(body) {
+  const grid = shopEl('div', 'shop-items');
+  const addItem = (sku, artEl, name) => {
+    const cell = shopEl('div', 'shop-item');
+    cell.appendChild(artEl);
+    cell.appendChild(shopEl('div', 'si-name', name));
+    const owned = walletOwns(sku);
+    const btn = shopEl('button', 'si-btn' + (owned ? ' owned' : ''), owned ? T('shopOwned') : T('shopBuy') + ' · 🪙 ' + SHOP_PRICES[sku]);
+    btn.type = 'button';
+    if (owned) btn.disabled = true;
+    else btn.onclick = () => { connectSocial(); socialSend({ type: 's-wallet-buy', sku }); };
+    cell.appendChild(btn);
+    grid.appendChild(cell);
+  };
+  for (let n = 2; n <= 6; n++) {
+    const art = shopEl('div', 'si-art cback cback-' + n);
+    addItem('back' + n, art, T('back' + n));
+  }
+  for (let n = 1; n <= 10; n++) {
+    const art = shopEl('div', 'si-art');
+    art.style.backgroundImage = 'url("' + THUMB('carpets/felt' + n + '.jpg') + '")';
+    addItem('felt' + n, art, T('felt' + n));
+  }
+  body.appendChild(grid);
+}
+$('#btn-shop-back').onclick = () => closeShop();
+$('#btn-wallet-coins').onclick = () => openShop('coins');
+$('#btn-wallet-gems').onclick = () => openShop('gems');
+$('#btn-shop-open').onclick = () => openShop();
+$('#btn-bonus').onclick = () => { connectSocial(); socialSend({ type: 's-wallet-bonus' }); };
+document.querySelectorAll('#shop-tabs .shop-tab').forEach((b) => {
+  b.onclick = () => { shopTab = b.dataset.tab; renderShop(); };
+});
 
 // ---------- friends screen ----------
 function myLobbyCode() {
@@ -15846,8 +16359,17 @@ let prevPhase = ''; // matchEnd edge for the vibration buzz
 let fxRoundNo = -1;    // last round number the round-end FX ran for
 let ovRoundNo = -1;      // roundNo of the round summary currently on screen
 let ovRoundDismissed = -1; // roundNo this player tapped away (this screen only)
+// up47: the «stakes taken» toast fires once per match (the first
+// playing state that reports the escrow landed); a lobby state
+// re-arms it for the next match.
+let stakeToastArmed = true;
 function render(st) {
-  if (st.phase === 'lobby') { renderLobby(st); show('scr-lobby'); return; }
+  if (st.phase === 'lobby') { stakeToastArmed = true; renderLobby(st); show('scr-lobby'); return; }
+  if (st.phase === 'matchEnd') stakeToastArmed = true; // a rematch escrows anew
+  if (stakeToastArmed && st.phase === 'playing' && st.staked && st.tier > 0 && !spectating) {
+    stakeToastArmed = false;
+    toast(T('stakeTaken', st.tier));
+  }
   show('scr-game');
   // Felts: the table wears the ROOM CREATOR's felt, stamped on the
   // room at creation and carried on every state push (spectator
@@ -16255,6 +16777,25 @@ function renderLobby(st) {
   $('#btn-start').disabled = !isHost;
   $('#lobby-note').textContent = spectating ? '👁 ' + T('clWatching')
     : isHost ? T('lobbyNoteHost') : T('lobbyNoteGuest');
+  // up47: the room's stake tier, with the free-match rule spelled
+  // out BEFORE anyone starts (if a player is short or a bot ends
+  // up playing, no wallet moves at all).
+  const stakeEl = $('#lobby-stake');
+  if (stakeEl) {
+    if (st.tier > 0) {
+      stakeEl.classList.remove('hidden');
+      stakeEl.innerHTML = '';
+      const l1 = document.createElement('span');
+      l1.textContent = '🪙 ' + T('stakeLine', st.tier);
+      const l2 = document.createElement('span');
+      l2.className = 'ls-note';
+      l2.textContent = T('stakeFreeNote');
+      stakeEl.appendChild(l1);
+      stakeEl.appendChild(l2);
+    } else {
+      stakeEl.classList.add('hidden');
+    }
+  }
   renderLobbyClub(st);
   validatePlayerMenu();
 }
