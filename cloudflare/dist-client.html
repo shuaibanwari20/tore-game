@@ -881,7 +881,7 @@
      behind a dark emerald veil, its own scroll. Opened from the
      bottom nav (and from the lobby's friends button); it floats
      above home/lobby/table without disturbing the game screens. */
-  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-pview, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders, #scr-shop {
+  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-pview, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders, #scr-shop, #scr-playlist {
     position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 30;
     overflow-x: hidden;
     /* The home screen's dark emerald veil, without the carpet photo:
@@ -907,7 +907,7 @@
      section inside .wrap over the body's GREEN base, rendered as
      a floating card cut off at the bottom with no nav; it is a
      shell screen now, plum stack like the rest.) */
-  #scr-profile, #scr-pview, #scr-leaders, #scr-shop {
+  #scr-profile, #scr-pview, #scr-leaders, #scr-shop, #scr-playlist {
     background-color: #6d0d3f;
     background-image:
       linear-gradient(45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
@@ -927,7 +927,7 @@
   #scr-friends { display: flex; flex-direction: column; overflow-y: hidden; }
   /* Chat + profile pages (owner order 2026-11-08): same family as the
      friends screen — scrolling content, bottom nav pinned at the foot. */
-  #scr-chats, #scr-profile, #scr-pview, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders, #scr-shop { display: flex; flex-direction: column; overflow-y: hidden; }
+  #scr-chats, #scr-profile, #scr-pview, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders, #scr-shop, #scr-playlist { display: flex; flex-direction: column; overflow-y: hidden; }
   .fr-scroll { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; width: 100%; }
   #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav, #scr-clubpage .hm-nav, #scr-clubmembers .hm-nav, #scr-clubseatreqs .hm-nav, #scr-picker .hm-nav, #scr-leaders .hm-nav, #scr-shop .hm-nav { margin: 0; flex: none; width: 100%; }
   /* chat list rows: the whole row is the tap target into the DM view */
@@ -3165,27 +3165,68 @@
   }
   #mp-chip-badge svg { width: 10px; height: 10px; }
   #mp-chip-badge svg path, #mp-chip-badge svg rect { fill: #f7c54a; stroke: none; }
-  /* playlist sheet */
-  .mp-sheet-panel { max-width: 430px; text-align: start; padding: 14px 12px 10px; }
-  .mp-sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 6px 10px; }
-  .mp-sheet-head h2 { margin: 0; font-size: 19px; }
-  /* up42: the sheet joins the Ludo card family (it shipped in
-     the old brown .panel) with the popui recipe; its rows go
-     dark-plum, the title stays gold. The ✖ also moves INSIDE
-     the sheet's top corner at a normal size: the stock .ce-x
-     anchored to the VIEWPORT (the panel was not positioned)
-     and hung half off-screen over the player's avatar — now
-     the panel is positioned and the button is scoped to it,
-     clear of the title (the head reserves its corner). */
-  #ov-playlist .panel { position: relative; border: 2px solid rgba(255,183,224,.4); border-radius: 22px; color: #fff;
-    background: linear-gradient(180deg, #d81b74 0%, #b3126e 34%, #8e1a63 70%, #67124e 100%);
-    box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -14px 26px rgba(40,0,35,.35);
-    padding: 18px 16px 14px; }
-  #ov-playlist .mp-sheet-head { padding: 2px 52px 10px 6px; }
-  #ov-playlist .mp-sheet-head h2 { color: #ffd75e; text-shadow: 0 2px 5px rgba(0,0,0,.5); }
-  #ov-playlist .ce-x { top: 10px; right: 10px; width: 40px; height: 40px; }
-  #ov-playlist .ce-x svg { width: 18px; height: 18px; }
-  #mp-rows { max-height: 62dvh; overflow-y: auto; }
+  /* up54: the playlist is a full PAGE now (owner design v8,
+     approved 2026-11-13): header (round X - small title - gold
+     search button), the songs list, and the player docked at the
+     bottom of the page. The old sheet (#ov-playlist) is gone.
+     Rows stay the .mp-row family, a touch slimmer on this page
+     (his repeated "make it smaller" passes). */
+  #scr-playlist .pl-head { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: calc(10px + env(safe-area-inset-top)) 14px 8px; flex: none; }
+  #scr-playlist .pl-head h2 { margin: 0; font-size: 17px; font-weight: 800; color: #fff; }
+  .pl-hbtn { width: 40px; height: 40px; border-radius: 50%; flex: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0; margin: 0;
+    background: rgba(14,9,22,.55); border: 1.5px solid rgba(247,197,74,.75); }
+  .pl-hbtn svg { width: 18px; height: 18px; display: block; }
+  .pl-hbtn svg path { fill: none; stroke: #f7c54a; stroke-width: 2.4; stroke-linecap: round; }
+  .pl-hbtn.gold { background: linear-gradient(180deg, #ffe98a, #e0a408); border-color: #ffe98a; }
+  .pl-hbtn.gold svg path, .pl-hbtn.gold svg circle { fill: none; stroke: #4a2c00; stroke-width: 2.2; }
+  .pl-hgroup { display: flex; gap: 8px; flex: none; }
+  #btn-pl-fav.on { background: rgba(255,91,127,.18); border-color: #ff5b7f; }
+  #btn-pl-fav.on svg path { fill: #ff5b7f; stroke: #ff5b7f; }
+  .mp-fav { width: 34px; height: 34px; border-radius: 50%; flex: none; cursor: pointer; padding: 0; margin: 0;
+    background: transparent; border: none; display: flex; align-items: center; justify-content: center; }
+  .mp-fav svg { width: 19px; height: 19px; display: block; }
+  .mp-fav svg path { fill: none; stroke: rgba(245,242,250,.75); stroke-width: 1.9; }
+  .mp-fav.on svg path { fill: #ff5b7f; stroke: #ff5b7f; }
+  .pl-searchrow { flex: none; padding: 2px 14px 8px; }
+  .pl-searchrow.hidden { display: none; }
+  #pl-search { width: 100%; box-sizing: border-box; padding: 9px 14px; border-radius: 999px;
+    border: 1px solid rgba(247,197,74,.5); background: rgba(14,9,22,.6); color: #fff;
+    font-family: inherit; font-size: 14px; outline: none; }
+  #pl-search::placeholder { color: #b9b0c9; }
+  #scr-playlist .fr-scroll { padding: 4px 12px 10px; box-sizing: border-box; }
+  #pl-noresult { text-align: center; color: #b9b0c9; font-size: 13.5px; padding: 22px 0; }
+  #pl-noresult.hidden { display: none; }
+  .pl-bar { flex: none; position: relative; margin: 0 10px calc(10px + env(safe-area-inset-bottom));
+    padding: 9px 12px 5px; border-radius: 20px; background: rgba(14,9,22,.93);
+    border: 1px solid rgba(247,197,74,.55); box-shadow: 0 10px 30px rgba(0,0,0,.55); color: #f5f2fa; }
+  .pl-bar.locked .mp-btn { opacity: .35; }
+  .pl-bar-row { display: flex; align-items: center; gap: 10px; }
+  #pl-cover { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; flex: none;
+    border: 1px solid rgba(247,197,74,.7); background: #2a1440; }
+  .pl-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  #pl-title { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
+  #pl-artist { font-size: 10.5px; color: #b9b0c9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+  .pl-controls { display: flex; align-items: center; gap: 6px; flex: none; direction: ltr; }
+  .pl-seekrow { display: flex; align-items: center; gap: 8px; direction: ltr; margin-top: 1px; }
+  .pl-time { font-size: 9.5px; font-weight: 600; color: #b9b0c9; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #pl-prog { position: relative; flex: 1; height: 3px; border-top: 9px solid transparent;
+    border-bottom: 6px solid transparent; border-radius: 2px; cursor: pointer; touch-action: none; }
+  #pl-prog::before { content: ''; position: absolute; left: 0; right: 0; top: 50%;
+    transform: translateY(-50%); height: 3px; border-radius: 2px; background: rgba(255,255,255,.18); }
+  #pl-prog-fill { position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+    height: 3px; width: 0%; background: #f7c54a; border-radius: 2px; z-index: 1; }
+  #pl-knob { position: absolute; top: 50%; right: 0; width: 11px; height: 11px; z-index: 2;
+    border-radius: 50%; background: #f7c54a; pointer-events: none;
+    border: 1.5px solid rgba(24,14,2,.6); box-shadow: 0 1px 4px rgba(0,0,0,.55); transform: translate(50%,-50%); }
+  #pl-prog { cursor: pointer; }
+  .pl-bar.locked #pl-prog { cursor: default; }
+  .pl-bar.locked #pl-knob { opacity: .35; }
+  #mp-rows { padding: 2px 0 8px; }
+  #scr-playlist .mp-row { padding: 6px 8px; border-radius: 12px; }
+  #scr-playlist .mp-row img { width: 40px; height: 40px; border-radius: 9px; }
+  #scr-playlist .mp-row .mp-row-title { font-size: 13.5px; }
   .mp-row {
     display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box;
     padding: 7px 8px; margin: 0 0 4px; border-radius: 14px; cursor: pointer;
@@ -4721,15 +4762,47 @@
   <img id="mp-chip-img" alt="">
   <span id="mp-chip-badge"></span>
 </button>
-<div class="overlay" id="ov-playlist">
-  <div class="panel mp-sheet-panel">
-    <div class="mp-sheet-head">
-      <h2 id="mp-list-title">د سندرو لیست</h2>
-      <button type="button" class="ce-x" id="btn-playlist-x" aria-label="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
-    </div>
-    <div id="mp-rows"></div>
+<!-- up54: the playlist is a full PAGE (owner design v8): header
+     with close / title / search, the songs list, and the player
+     docked at the bottom of the page. -->
+<section id="scr-playlist" class="hidden">
+  <div class="pl-head">
+    <button type="button" class="pl-hbtn" id="btn-playlist-x" aria-label="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+    <h2 id="mp-list-title">د سندرو لیست</h2>
+    <span class="pl-hgroup">
+      <button type="button" class="pl-hbtn" id="btn-pl-fav" aria-label="favorites"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5C7 16.5 3.5 13.3 3.5 9.6 3.5 7 5.5 5 8 5c1.6 0 3.1.8 4 2.1C12.9 5.8 14.4 5 16 5c2.5 0 4.5 2 4.5 4.6 0 3.7-3.5 6.9-8.5 10.9z"/></svg></button>
+      <button type="button" class="pl-hbtn gold" id="btn-pl-search" aria-label="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg></button>
+    </span>
   </div>
-</div>
+  <div class="pl-searchrow hidden" id="pl-searchrow"><input id="pl-search" type="text" autocomplete="off"></div>
+  <div class="fr-scroll">
+    <div id="mp-rows"></div>
+    <div id="pl-noresult" class="hidden"></div>
+  </div>
+  <div class="pl-bar" id="pl-bar">
+    <div class="pl-bar-row">
+      <img id="pl-cover" alt="">
+      <div class="pl-meta">
+        <div id="pl-title"></div>
+        <div id="pl-artist"></div>
+      </div>
+      <div class="pl-controls">
+        <button type="button" class="mp-btn" id="pl-prev" aria-label="previous">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h2.4v14H7zM19 5v14L9.8 12z"/></svg>
+        </button>
+        <button type="button" class="mp-btn" id="pl-play" aria-label="play / pause"></button>
+        <button type="button" class="mp-btn" id="pl-next" aria-label="next">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.6 5H17v14h-2.4zM5 5v14l9.2-7z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="pl-seekrow">
+      <span class="pl-time" id="pl-cur">0:00</span>
+      <div id="pl-prog" role="slider" aria-label="seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="pl-prog-fill"></div><div id="pl-knob"></div></div>
+      <span class="pl-time" id="pl-dur">9:18</span>
+    </div>
+  </div>
+</section>
 
 <!-- ======== VOICE DIAGNOSTICS (long-press the mic button) ======== -->
 <div id="vdiag" class="hidden">
@@ -4774,6 +4847,8 @@ const STR = {
     setInvisible: "\u067E\u067C \u062D\u0627\u0644\u062A",
     setMusic: "\u062F \u0634\u0627\u0644\u064A\u062F \u0645\u0648\u0633\u064A\u0642\u064A",
     musList: "\u062F \u0633\u0646\u062F\u0631\u0648 \u0644\u06CC\u0633\u062A",
+    musSearchPh: "\u062F \u0633\u0646\u062F\u0631\u06D0 \u0646\u0648\u0645 \u0648\u0644\u06CC\u06A9\u0647\u2026",
+    musNoSong: "\u0633\u0646\u062F\u0631\u0647 \u0648\u0646\u0647 \u0645\u0648\u0646\u062F\u0644 \u0634\u0648\u0647",
     musBroadcast: "\u067C\u0648\u0644 \u06A9\u0644\u0628 \u062A\u0647 \u067E\u062E\u0648\u0647",
     musBroadcasting: "\u0645\u0648\u0633\u0633 \u06CC\u06D0 \u067C\u0648\u0644 \u06A9\u0644\u0628 \u062A\u0647 \u067E\u062E\u0648\u064A",
     musBcEnded: "\u062F \u06A9\u0644\u0628 \u062E\u067E\u0631\u0648\u0646\u0647 \u067E\u0627\u06CC \u062A\u0647 \u0648\u0631\u0633\u06D0\u062F\u0647",
@@ -5235,6 +5310,8 @@ const STR = {
     setInvisible: "\u062D\u0627\u0644\u062A \u0646\u0627\u0645\u0631\u0626\u06CC",
     setMusic: "\u0645\u0648\u0633\u06CC\u0642\u06CC \u067E\u0633\u200C\u0632\u0645\u06CC\u0646\u0647",
     musList: "\u0644\u06CC\u0633\u062A \u0622\u0647\u0646\u06AF\u200C\u0647\u0627",
+    musSearchPh: "\u0646\u0627\u0645 \u0622\u0647\u0646\u06AF \u0631\u0627 \u0628\u0646\u0648\u06CC\u0633\u2026",
+    musNoSong: "\u0622\u0647\u0646\u06AF\u06CC \u067E\u06CC\u062F\u0627 \u0646\u0634\u062F",
     musBroadcast: "\u067E\u062E\u0634 \u0628\u0631\u0627\u06CC \u06A9\u0644 \u0628\u0627\u0634\u06AF\u0627\u0647",
     musBroadcasting: "\u0645\u0648\u0633\u0633 \u0628\u0631\u0627\u06CC \u06A9\u0644 \u0628\u0627\u0634\u06AF\u0627\u0647 \u067E\u062E\u0634 \u0645\u06CC\u200C\u06A9\u0646\u062F",
     musBcEnded: "\u067E\u062E\u0634 \u0628\u0627\u0634\u06AF\u0627\u0647 \u062A\u0645\u0627\u0645 \u0634\u062F",
@@ -5696,6 +5773,8 @@ const STR = {
     setInvisible: "Invisible mode",
     setMusic: "Background music",
     musList: "Songs",
+    musSearchPh: "Type a song name\u2026",
+    musNoSong: "No song found",
     musBroadcast: "Play for the whole club",
     musBroadcasting: "The founder is playing for the club",
     musBcEnded: "Club broadcast ended",
@@ -6178,6 +6257,7 @@ function applyI18n() {
     "scr-picker",
     "scr-leaders",
     "scr-shop",
+    "scr-playlist",
     "ov-invite",
     "ov-confirm",
     "ov-playermenu",
@@ -6396,6 +6476,9 @@ function applyI18n() {
   set("#st-invisible-lbl", "setInvisible");
   set("#st-music-lbl", "setMusic");
   set("#mp-list-title", "musList");
+  const plSearchEl = $("#pl-search");
+  if (plSearchEl) plSearchEl.placeholder = T("musSearchPh");
+  set("#pl-noresult", "musNoSong");
   aria("#mp-bc", "musBroadcast");
   set("#pf-upload-lbl", "pfUploadPhoto");
   set("#tut-tile-lbl", "tutTitle");
@@ -10281,8 +10364,8 @@ function fxReducedMotion() {
 function burstsAllowed() {
   const g = $("#scr-game");
   if (!g || g.classList.contains("hidden")) return false;
-  const pl = $("#ov-playlist");
-  if (pl && pl.classList.contains("show")) return false;
+  const pl = $("#scr-playlist");
+  if (pl && !pl.classList.contains("hidden")) return false;
   return true;
 }
 function hideBursts() {
@@ -10324,15 +10407,7 @@ function processRoundEndFx(r, myTeam2) {
 }
 window.ToreFx = { takanRoundFx, processRoundEndFx };
 const MP_TRACKS = [
-  { t: { ps: "\u062F \u06A9\u0646\u062F\u0647\u0627\u0631 \u0647\u0644\u06A9\u0647", fa: "\u067E\u0633\u0631 \u06A9\u0646\u062F\u0647\u0627\u0631", en: "Da Kandahar Halaka" }, a: { ps: "\u0646\u063A\u0645\u0647", fa: "\u0646\u063A\u0645\u0647", en: "Naghma" }, dur: "4:36" },
-  { t: { ps: "\u0627\u062A\u06BC \u0633\u0646\u062F\u0631\u0647", fa: "\u0622\u0647\u0646\u06AF \u0627\u062A\u0646", en: "Attan Song" }, a: { ps: "\u06A9\u062C\u0627\u0648\u06D0", fa: "\u06A9\u062C\u0627\u0648\u0647", en: "Kajaweh" }, dur: "5:19" },
-  { t: { ps: "\u06A9\u0646\u062F\u0647\u0627\u0631\u06CC \u062C\u06CC\u0646\u06CD", fa: "\u062F\u062E\u062A\u0631 \u06A9\u0646\u062F\u0647\u0627\u0631\u06CC", en: "Kandahari Jenay" }, a: { ps: "\u0644\u0637\u06CC\u0641 \u0646\u0646\u06AB\u0631\u0647\u0627\u0631\u06CC", fa: "\u0644\u0637\u06CC\u0641 \u0646\u0646\u06AF\u0631\u0647\u0627\u0631\u06CC", en: "Latif Nangarhari" }, dur: "6:01" },
-  { t: { ps: "\u06A9\u0646\u062F\u0647\u0627\u0631", fa: "\u06A9\u0646\u062F\u0647\u0627\u0631", en: "Kandahar Masali" }, a: { ps: "\u0645\u062B\u0627\u0644\u064A \u0633\u0646\u062F\u0631\u0647", fa: "\u0622\u0647\u0646\u06AF \u0645\u062B\u0627\u0644\u06CC", en: "Masali Song" }, dur: "5:16" },
-  { t: { ps: "\u062C\u0627\u0646\u0627\u0646", fa: "\u062C\u0627\u0646\u0627\u0646", en: "Janan" }, a: { ps: "\u0627\u06A9\u0628\u0631 \u0634\u0627\u0647 \u0646\u06CC\u06A9\u0632\u0627\u062F", fa: "\u0627\u06A9\u0628\u0631 \u0634\u0627\u0647 \u0646\u06CC\u06A9\u0632\u0627\u062F", en: "Akbar Shah Nikzad" }, dur: "5:13" },
-  { t: { ps: "\u0632\u0645\u0627 \u0645\u063A\u0631\u0648\u0631 \u062C\u0627\u0646\u0627\u0646", fa: "\u062C\u0627\u0646\u0627\u0646 \u0645\u063A\u0631\u0648\u0631 \u0645\u0646", en: "Zma Maghroor Janan" }, a: { ps: "\u0627\u06A9\u0628\u0631 \u0634\u0627\u0647 \u0646\u06CC\u06A9\u0632\u0627\u062F", fa: "\u0627\u06A9\u0628\u0631 \u0634\u0627\u0647 \u0646\u06CC\u06A9\u0632\u0627\u062F", en: "Akbar Shah Nikzad" }, dur: "6:38" },
-  { t: { ps: "\u0634\u0627\u06CC\u0633\u062A\u0647", fa: "\u0634\u0627\u06CC\u0633\u062A\u0647", en: "Shaista" }, a: { ps: "\u0627\u06A9\u0628\u0631 \u0634\u0627\u0647 \u0646\u06CC\u06A9\u0632\u0627\u062F", fa: "\u0627\u06A9\u0628\u0631 \u0634\u0627\u0647 \u0646\u06CC\u06A9\u0632\u0627\u062F", en: "Akbar Shah Nikzad" }, dur: "5:07" },
-  { t: { ps: "\u0633\u062A\u0631\u06AB\u06D0 \u0627\u0641\u063A\u0627\u0646\u064A \u0644\u0627\u0631\u06D0", fa: "\u0686\u0634\u0645\u200C\u0647\u0627\u06CC \u0627\u0641\u063A\u0627\u0646\u06CC", en: "Starge Afghani Lare" }, a: { ps: "\u0627\u06A9\u0628\u0631 \u0634\u0627\u0647 \u0646\u06CC\u06A9\u0632\u0627\u062F", fa: "\u0627\u06A9\u0628\u0631 \u0634\u0627\u0647 \u0646\u06CC\u06A9\u0632\u0627\u062F", en: "Akbar Shah Nikzad" }, dur: "9:18" },
-  { t: { ps: "\u0634\u06A9\u0644\u064A \u0633\u0646\u062F\u0631\u0647", fa: "\u0622\u0647\u0646\u06AF \u0634\u06CC\u06A9", en: "Shikli Song" }, a: { ps: "\u0647\u0644\u0645\u0646\u062F\u064A", fa: "\u0647\u0644\u0645\u0646\u062F\u06CC", en: "Helmandi" }, dur: "6:59" }
+  { t: { ps: "\u0633\u062A\u0631\u06AB\u06D0 \u0627\u0641\u063A\u0627\u0646\u064A \u0644\u0627\u0631\u06D0", fa: "\u0686\u0634\u0645\u200C\u0647\u0627\u06CC \u0627\u0641\u063A\u0627\u0646\u06CC", en: "Starge Afghani Lare" }, a: { ps: "\u0627\u06A9\u0628\u0631 \u0634\u0627\u0647 \u0646\u06CC\u06A9\u0632\u0627\u062F", fa: "\u0627\u06A9\u0628\u0631 \u0634\u0627\u0647 \u0646\u06CC\u06A9\u0632\u0627\u062F", en: "Akbar Shah Nikzad" }, dur: "9:18" }
 ];
 const TorePlayer = (() => {
   const $p = (s) => document.querySelector(s);
@@ -10340,13 +10415,28 @@ const TorePlayer = (() => {
   const coverEl = $p("#mp-cover"), titleEl = $p("#mp-title"), artistEl = $p("#mp-artist");
   const playBtn = $p("#mp-play"), fillEl = $p("#mp-prog-fill");
   const progEl = $p("#mp-prog"), knobEl = $p("#mp-knob");
+  const plPage = $p("#scr-playlist"), plBar = $p("#pl-bar");
+  const plCover = $p("#pl-cover"), plTitle = $p("#pl-title"), plArtist = $p("#pl-artist"), plPlayBtn = $p("#pl-play");
+  const plProgEl = $p("#pl-prog"), plFillEl = $p("#pl-prog-fill"), plKnobEl = $p("#pl-knob"), plCurEl = $p("#pl-cur"), plDurEl = $p("#pl-dur");
+  let pageOpen = false;
+  let favs = /* @__PURE__ */ new Set();
+  try {
+    favs = new Set(JSON.parse(localStorage.getItem("tore.mpFavs") || "[]"));
+  } catch (e) {
+  }
+  const saveFavs = () => {
+    try {
+      localStorage.setItem("tore.mpFavs", JSON.stringify([...favs]));
+    } catch (e) {
+    }
+  };
   const curEl = $p("#mp-cur"), durEl = $p("#mp-dur");
   const bcBtn = $p("#mp-bc"), chipImg = $p("#mp-chip-img"), chipBadge = $p("#mp-chip-badge");
   const SVG_PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
   const SVG_PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></svg>';
   const audio = new Audio();
   audio.preload = "metadata";
-  let idx = 7;
+  let idx = 0;
   let collapsed = false;
   let chipPos = null;
   let errChain = 0;
@@ -10435,6 +10525,11 @@ const TorePlayer = (() => {
     if (curEl) curEl.textContent = fmtT(cur);
     if (durEl) durEl.textContent = have ? fmtT(d) : MP_TRACKS[idx].dur || "0:00";
     if (progEl) progEl.setAttribute("aria-valuenow", String(Math.round(f * 100)));
+    if (plFillEl) plFillEl.style.width = f * 100 + "%";
+    if (plKnobEl) plKnobEl.style.right = f * 100 + "%";
+    if (plCurEl) plCurEl.textContent = fmtT(cur);
+    if (plDurEl) plDurEl.textContent = have ? fmtT(d) : MP_TRACKS[idx].dur || "0:00";
+    if (plProgEl) plProgEl.setAttribute("aria-valuenow", String(Math.round(f * 100)));
   }
   function seekCommit(f) {
     const d = audio.duration;
@@ -10449,39 +10544,42 @@ const TorePlayer = (() => {
     paintProg();
     bcSend();
   }
-  if (progEl) {
+  const bindSeek = (el) => {
+    if (!el) return;
     const fracAt = (e) => {
-      const r = progEl.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
       if (!r.width) return 0;
       return Math.min(1, Math.max(0, (r.right - e.clientX) / r.width));
     };
-    progEl.addEventListener("pointerdown", (e) => {
+    el.addEventListener("pointerdown", (e) => {
       if (bc.mode === "follow") return;
       if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
       e.preventDefault();
       scrub = { id: e.pointerId, frac: fracAt(e) };
       try {
-        progEl.setPointerCapture(e.pointerId);
+        el.setPointerCapture(e.pointerId);
       } catch (err) {
       }
       paintProg();
     });
-    progEl.addEventListener("pointermove", (e) => {
+    el.addEventListener("pointermove", (e) => {
       if (!scrub || e.pointerId !== scrub.id) return;
       scrub.frac = fracAt(e);
       paintProg();
     });
-    progEl.addEventListener("pointerup", (e) => {
+    el.addEventListener("pointerup", (e) => {
       if (!scrub || e.pointerId !== scrub.id) return;
       const f = scrub.frac;
       scrub = null;
       seekCommit(f);
     });
-    progEl.addEventListener("pointercancel", () => {
+    el.addEventListener("pointercancel", () => {
       scrub = null;
       paintProg();
     });
-  }
+  };
+  bindSeek(progEl);
+  bindSeek(plProgEl);
   const DUCK_BASE = 0.33, DUCK_LOW = 0.15, DUCK_HOLD_MS = 1300;
   let duckTarget = 1, lastLoudAt = 0;
   function clubVoiceLive() {
@@ -10645,15 +10743,20 @@ const TorePlayer = (() => {
     if (artistEl) artistEl.textContent = tr.a[LANG] || tr.a.ps;
     if (coverEl && coverEl.getAttribute("src") !== coverOf(idx)) coverEl.src = coverOf(idx);
     if (chipImg && chipImg.getAttribute("src") !== coverOf(idx)) chipImg.src = coverOf(idx);
+    if (plTitle) plTitle.textContent = tr.t[LANG] || tr.t.ps;
+    if (plArtist) plArtist.textContent = tr.a[LANG] || tr.a.ps;
+    if (plCover && plCover.getAttribute("src") !== coverOf(idx)) plCover.src = coverOf(idx);
+    if (plPlayBtn) plPlayBtn.innerHTML = audio.paused ? SVG_PLAY : SVG_PAUSE;
     if (playBtn) playBtn.innerHTML = audio.paused ? SVG_PLAY : SVG_PAUSE;
     if (chipBadge) chipBadge.innerHTML = audio.paused ? SVG_PLAY : SVG_PAUSE;
     if (pill) {
-      pill.classList.toggle("hidden", !on || collapsed);
+      pill.classList.toggle("hidden", !on || collapsed || pageOpen);
       pill.classList.toggle("locked", bc.mode === "follow");
       pill.classList.toggle("paused", audio.paused);
     }
+    if (plBar) plBar.classList.toggle("locked", bc.mode === "follow");
     if (chip) {
-      chip.classList.toggle("hidden", !on || !collapsed);
+      chip.classList.toggle("hidden", !on || !collapsed || pageOpen);
       if (on && collapsed) placeChip();
     }
     const rc = inRoomClub();
@@ -10662,7 +10765,7 @@ const TorePlayer = (() => {
       bcBtn.classList.toggle("hidden", !canBc);
       bcBtn.classList.toggle("on", bc.mode === "owner");
     }
-    const showBcChip = on && bc.mode === "follow" && !!lastBc && lastBc.on;
+    const showBcChip = on && bc.mode === "follow" && !!lastBc && lastBc.on && !pageOpen;
     if (bcChip) {
       bcChip.classList.toggle("hidden", !showBcChip);
       bcChip.classList.toggle("detached", bc.detached);
@@ -10695,6 +10798,12 @@ const TorePlayer = (() => {
       r.classList.toggle("paused", audio.paused);
     });
   }
+  function paintFavs() {
+    document.querySelectorAll("#mp-rows .mp-row").forEach((r, i) => {
+      const f = r.querySelector(".mp-fav");
+      if (f) f.classList.toggle("on", favs.has(i));
+    });
+  }
   function buildRows() {
     const host = $p("#mp-rows");
     if (!host) return;
@@ -10720,17 +10829,32 @@ const TorePlayer = (() => {
       const dur = document.createElement("span");
       dur.className = "mp-row-dur";
       dur.textContent = tr.dur;
+      const fav = document.createElement("button");
+      fav.type = "button";
+      fav.className = "mp-fav";
+      fav.setAttribute("aria-label", "favorite");
+      fav.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5C7 16.5 3.5 13.3 3.5 9.6 3.5 7 5.5 5 8 5c1.6 0 3.1.8 4 2.1C12.9 5.8 14.4 5 16 5c2.5 0 4.5 2 4.5 4.6 0 3.7-3.5 6.9-8.5 10.9z"/></svg>';
+      fav.onclick = (e) => {
+        e.stopPropagation();
+        if (favs.has(i)) favs.delete(i);
+        else favs.add(i);
+        saveFavs();
+        paintFavs();
+        applyPlFilter();
+      };
       b.appendChild(img);
       b.appendChild(meta);
       b.appendChild(eq);
       b.appendChild(dur);
+      b.appendChild(fav);
       b.onclick = () => {
         playTrack(i);
-        closePlaylist();
       };
       host.appendChild(b);
     });
     paintRowsLang();
+    paintFavs();
+    applyPlFilter();
   }
   function paintRowsLang() {
     document.querySelectorAll("#mp-rows .mp-row").forEach((r, i) => {
@@ -10742,15 +10866,17 @@ const TorePlayer = (() => {
     });
   }
   function openPlaylist() {
-    const o = $p("#ov-playlist");
-    if (o) {
+    pageOpen = true;
+    if (plPage) {
       paintRows();
-      o.classList.add("show");
+      plPage.classList.remove("hidden");
     }
+    paint();
   }
   function closePlaylist() {
-    const o = $p("#ov-playlist");
-    if (o) o.classList.remove("show");
+    pageOpen = false;
+    if (plPage) plPage.classList.add("hidden");
+    paint();
   }
   audio.addEventListener("ended", () => {
     step(1);
@@ -10788,9 +10914,49 @@ const TorePlayer = (() => {
   if ($p("#mp-meta")) $p("#mp-meta").onclick = () => openPlaylist();
   const plX = $p("#btn-playlist-x");
   if (plX) plX.onclick = () => closePlaylist();
-  const plOv = $p("#ov-playlist");
-  if (plOv) plOv.addEventListener("click", (e) => {
-    if (e.target === e.currentTarget) closePlaylist();
+  const plPrev = $p("#pl-prev");
+  if (plPrev) plPrev.onclick = () => step(-1);
+  const plNext = $p("#pl-next");
+  if (plNext) plNext.onclick = () => step(1);
+  if (plPlayBtn) plPlayBtn.onclick = () => toggle();
+  const plFavBtn = $p("#btn-pl-fav");
+  if (plFavBtn) plFavBtn.onclick = () => {
+    favOnly = !favOnly;
+    plFavBtn.classList.toggle("on", favOnly);
+    applyPlFilter();
+  };
+  let plQuery = "";
+  let favOnly = false;
+  function applyPlFilter() {
+    const q = plQuery.trim().toLowerCase();
+    let visible = 0;
+    document.querySelectorAll("#mp-rows .mp-row").forEach((r, i) => {
+      const tr = MP_TRACKS[i];
+      const hay = [tr.t.ps, tr.t.fa, tr.t.en, tr.a.ps, tr.a.fa, tr.a.en].join(" ").toLowerCase();
+      const showRow = (!q || hay.includes(q)) && (!favOnly || favs.has(i));
+      r.style.display = showRow ? "" : "none";
+      if (showRow) visible++;
+    });
+    const nr = $p("#pl-noresult");
+    if (nr) nr.classList.toggle("hidden", visible > 0);
+  }
+  const plSearchBtn = $p("#btn-pl-search");
+  const plSearchRow = $p("#pl-searchrow");
+  const plSearchIn = $p("#pl-search");
+  if (plSearchBtn && plSearchRow) plSearchBtn.onclick = () => {
+    const opening = plSearchRow.classList.contains("hidden");
+    plSearchRow.classList.toggle("hidden", !opening);
+    if (opening) {
+      if (plSearchIn) plSearchIn.focus();
+    } else {
+      plQuery = "";
+      if (plSearchIn) plSearchIn.value = "";
+      applyPlFilter();
+    }
+  };
+  if (plSearchIn) plSearchIn.addEventListener("input", () => {
+    plQuery = plSearchIn.value;
+    applyPlFilter();
   });
   if (bcChip) bcChip.onclick = () => {
     if (bc.detached) rejoin();
@@ -15871,7 +16037,7 @@ function attachPlayHandlers(el, code) {
 }
 document.addEventListener("touchmove", (e) => {
   if ($("#scr-game").classList.contains("hidden")) return;
-  if (e.target && e.target.closest && e.target.closest("#chatpanel, #scr-friends, #scr-dm, #mplayer, #mp-chip, #ov-playlist")) return;
+  if (e.target && e.target.closest && e.target.closest("#chatpanel, #scr-friends, #scr-dm, #mplayer, #mp-chip, #scr-playlist")) return;
   e.preventDefault();
 }, { passive: false });
 function show(id) {
