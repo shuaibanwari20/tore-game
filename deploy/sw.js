@@ -107,7 +107,7 @@ self.addEventListener('fetch', (event) => {
   //     versioned asset cache; a miss fetches once and stores the
   //     copy. Only 200s are stored. A new SW_VERSION (shipped with
   //     any client rebuild that changes the art) retires the lot.
-  if (path.startsWith('/cards/') || path.startsWith('/carpets/') || path === '/carpet.jpg' || /^\/music\/c[1-9]\.jpg$/.test(path)) {
+  if (path.startsWith('/cards/') || path.startsWith('/carpets/') || path === '/carpet.jpg' || /^\/music\/c([1-9]|[12][0-9]|30)\.jpg$/.test(path)) {
     event.respondWith(
       caches.open(ASSET_CACHE).then((cache) => cache.match(req, { ignoreSearch: true }).then((hit) => hit || fetch(req).then((res) => {
         if (res && res.status === 200) {

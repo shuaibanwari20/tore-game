@@ -179,12 +179,12 @@ const httpServer = http.createServer((req, res) => {
     }
     res.writeHead(404); return res.end('not found');
   }
-  // up41: the music player's files — nine songs + their real
-  // covers, copied here by build-deploy.js from public/music.
+  // up41: the music player's files — the songs + their own
+  // covers (up56: 30), copied here by build-deploy.js from public/music.
   // Range-aware (a media element seeks); pinned to the known set.
   if (url.startsWith('/music/')) {
     const name = url.slice('/music/'.length);
-    if (/^[mc][1-9]\.(mp3|jpg)$/.test(name)) {
+    if (/^[mc]([1-9]|[12][0-9]|30)\.(mp3|jpg)$/.test(name)) {
       const full = path.join(MUSIC_DIR, name);
       if (fs.existsSync(full)) {
         return serveFileRange(req, res, full, name.endsWith('.mp3') ? 'audio/mpeg' : 'image/jpeg');

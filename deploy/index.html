@@ -10954,8 +10954,8 @@ window.ToreFx = { takanRoundFx, processRoundEndFx };
 // ================= up41: the music player =================
 // The F41 procedural WebAudio pad is GONE (owner order
 // 2026-11-12): in its place a REAL player — nine full Kandahari
-// songs served as files from /music/ (m1..m9.mp3 + their real
-// covers c1..c9.jpg), one persistent <audio> living outside the
+// songs served as files from /music/ (m1..m30.mp3 + their own
+// covers c1..c30.jpg — up56: his full 30-song Kandahari list), one persistent <audio> living outside the
 // screen system so playback survives every navigation. The pill
 // floats over EVERY screen; tapping its cover collapses it to a
 // cover-only chip that can be dragged anywhere (spot persists).
@@ -10966,6 +10966,35 @@ window.ToreFx = { takanRoundFx, processRoundEndFx };
 // every room member's player in sync (server: s-club-music).
 const MP_TRACKS = [
   { t: { ps: 'سترګې افغاني لارې', fa: 'چشم‌های افغانی', en: 'Starge Afghani Lare' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '9:18' },
+  { t: { ps: 'د کندهار هلکه', fa: 'د کندهار هلکه', en: 'Da Kandahar Halaka' }, a: { ps: 'نغمه', fa: 'نغمه', en: 'Naghma' }, dur: '4:36' },
+  { t: { ps: 'جانان', fa: 'جانان', en: 'Janan' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '5:12' },
+  { t: { ps: 'زما مغرور جانان', fa: 'زما مغرور جانان', en: 'Zma Maghroor Janan' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '6:37' },
+  { t: { ps: 'شایسته', fa: 'شایسته', en: 'Shaista' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '5:05' },
+  { t: { ps: 'کندهار مثالي سندره', fa: 'کندهار مثالي سندره', en: 'Kandahar Misali Sandara' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '5:16' },
+  { t: { ps: 'شکلي سندره هلمندي', fa: 'شکلي سندره هلمندي', en: 'Shakli Sandara Helmandi' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '6:58' },
+  { t: { ps: 'کندهاري جينۍ', fa: 'کندهاري جينۍ', en: 'Kandahari Jinai' }, a: { ps: 'لطیف ننګرهاری', fa: 'لطیف ننګرهاری', en: 'Latif Nangarhari' }, dur: '6:00' },
+  { t: { ps: 'اتڼ سندره (کجاوې)', fa: 'اتڼ سندره (کجاوې)', en: 'Attan Sandara (Kajawe)' }, a: { ps: 'لطیف ننګرهاری', fa: 'لطیف ننګرهاری', en: 'Latif Nangarhari' }, dur: '5:19' },
+  { t: { ps: 'کاکړي غاړي', fa: 'کاکړي غاړي', en: 'Kakari Ghari' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '8:07' },
+  { t: { ps: 'اې جانانه و جانانه کله راځې', fa: 'اې جانانه و جانانه کله راځې', en: 'Ae Janana Wa Janana Kala Raze' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '6:58' },
+  { t: { ps: 'سترګې زما سرې', fa: 'سترګې زما سرې', en: 'Starge Zama Sre' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '5:06' },
+  { t: { ps: 'پورته کړه له مخه ټیله پکې', fa: 'پورته کړه له مخه ټیله پکې', en: 'Porta Ka La Makha Tilaye Pakey' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '5:07' },
+  { t: { ps: 'بېوفا جانان', fa: 'بېوفا جانان', en: 'Bewafa Janan' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '4:57' },
+  { t: { ps: 'زما مینه پښتنه ده', fa: 'زما مینه پښتنه ده', en: 'Zama Meena Pashtana Da' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '9:12' },
+  { t: { ps: 'یو د زړه جانان', fa: 'یو د زړه جانان', en: 'Yo Da Zra Janan' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '7:18' },
+  { t: { ps: 'ډېر شایسته شایسته یاران', fa: 'ډېر شایسته شایسته یاران', en: 'Der Shaista Shaista Yaran' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '5:45' },
+  { t: { ps: 'شنه شنه زلفان', fa: 'شنه شنه زلفان', en: 'Shana Shana Zulfan' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '6:10' },
+  { t: { ps: 'ولاړې جانان ولاړې', fa: 'ولاړې جانان ولاړې', en: 'Walarai Janan Walarai' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '8:04' },
+  { t: { ps: 'سترګې ماتې ماتې', fa: 'سترګې ماتې ماتې', en: 'Starge Mate Mate' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '11:38' },
+  { t: { ps: 'یاره غمژن دي', fa: 'یاره غمژن دي', en: 'Yara Ghamazan Di' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '6:45' },
+  { t: { ps: 'مرحبا جانان جانان', fa: 'مرحبا جانان جانان', en: 'Marhaba Janan Janan' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '9:05' },
+  { t: { ps: 'لاچي لونګ جانان', fa: 'لاچي لونګ جانان', en: 'Lachi Lawang Janan' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '5:46' },
+  { t: { ps: 'تعویذ', fa: 'تعویذ', en: 'Taweez' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '4:59' },
+  { t: { ps: 'د زرګي له درده', fa: 'د زرګي له درده', en: 'Da Zargi La Darda' }, a: { ps: 'اکبر شاه نیکزاد', fa: 'اکبر شاه نیکزاد', en: 'Akbar Shah Nikzad' }, dur: '8:14' },
+  { t: { ps: 'دا زموږ ښېبا وطن', fa: 'دا زموږ ښېبا وطن', en: 'Da Zamong Zeba Watan' }, a: { ps: 'استاد اول میر', fa: 'استاد اول میر', en: 'Ustad Awalmir' }, dur: '3:54' },
+  { t: { ps: 'شونډو اور', fa: 'شونډو اور', en: 'Da Shondo Orr' }, a: { ps: 'استاد اول میر', fa: 'استاد اول میر', en: 'Ustad Awalmir' }, dur: '4:07' },
+  { t: { ps: 'نازولی جینۍ', fa: 'نازولی جینۍ', en: 'Nazawaly Jeny' }, a: { ps: 'استاد اول میر', fa: 'استاد اول میر', en: 'Ustad Awalmir' }, dur: '4:07' },
+  { t: { ps: 'رنګین جهان', fa: 'رنګین جهان', en: 'Rangeen Jahan' }, a: { ps: 'شاه ولي', fa: 'شاه ولی', en: 'Shah Wali' }, dur: '4:03' },
+  { t: { ps: 'شاه لیلی راشه', fa: 'شاه لیلی راشه', en: 'Shah Laila Rasha' }, a: { ps: 'شاه ولي', fa: 'شاه ولی', en: 'Shah Wali' }, dur: '5:13' },
 ];
 const TorePlayer = (() => {
   const $p = (s) => document.querySelector(s);
