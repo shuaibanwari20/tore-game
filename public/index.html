@@ -1487,6 +1487,9 @@
      empty purple shows at the right, left or top. */
   #scr-clubs .cl-headrow { box-sizing: border-box; min-height: 185px; padding: 12px;
     margin: -14px -14px 11px; border-radius: 0; align-items: flex-start;
+    /* up51 (owner order 2026-11-13): the header band is STICKY — it
+       stays pinned at the top while the page scrolls under it. */
+    position: sticky; top: 0; z-index: 30;
     border: none; border-bottom: 1.5px solid rgba(255,215,94,.4);
     background-image: linear-gradient(rgba(43,6,54,.40), rgba(43,6,54,.62)), url('/covers/trophy.jpg');
     background-size: cover; background-position: center 32%;
@@ -1524,6 +1527,20 @@
     box-shadow: 0 3px 7px rgba(0,0,0,.4); }
   #scr-clubs .cl-pod.second .cl-pod-name { background: linear-gradient(180deg, #5f7078, #333f46); border-color: #cfd8dc; color: #fff; }
   #scr-clubs .cl-pod.third .cl-pod-name { background: linear-gradient(180deg, #74491e, #452a10); border-color: #e8ab6d; color: #ffdcae; }
+  /* up51b (owner order 2026-11-13): the whole podium stage and its
+     inner items SMALLER (~30%) so it displays properly. */
+  #scr-clubs .cl-podium-stage { border-width: 2px; border-radius: 15px; }
+  #scr-clubs .cl-curtain { width: 30px; }
+  #scr-clubs .cl-crowd { height: 34px; }
+  #scr-clubs .cl-podium { padding: 2px 40px 0; gap: 8px; }
+  #scr-clubs .cl-pod { width: 27%; }
+  #scr-clubs .cl-pod.first { width: 31%; }
+  #scr-clubs .cl-podium-title { padding: 2px 20px 5px; font-size: 14px; }
+  #scr-clubs .cl-pod-frame { padding: 3.5px; border-radius: 12px; }
+  #scr-clubs .cl-pod-cov { border-radius: 8px; }
+  #scr-clubs .cl-crown { width: 28px; height: 22px; top: -16px; }
+  #scr-clubs .cl-pod.first .cl-crown { width: 36px; height: 29px; top: -21px; }
+  #scr-clubs .cl-pod-name { font-size: 11.5px; padding: 2px 7px; border-radius: 8px; max-width: 145%; }
   /* --- country chips: a 4-wide grid of dark pills, selected = pink.
      up50b (owner order 2026-11-13): a bit SMALLER — tighter padding,
      smaller text, tighter gaps. --- */
