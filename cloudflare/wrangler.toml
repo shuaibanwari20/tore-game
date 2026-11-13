@@ -43,6 +43,16 @@ FB_LIVE = "0"
 # ID tokens /auth/firebase verifies (iss/aud). Public identifier, not
 # a secret; the matching public web config lives in auth-gate.js.
 FIREBASE_PROJECT_ID = "tore-game"
+# U60: the Google OAuth client for the installed-app ticket flow
+# (auth.js /auth/google). The client ID is a PUBLIC identifier —
+# it travels in every sign-in URL — so it lives here as a var. Its
+# SECRET (GOOGLE_CLIENT_SECRET) stays a dashboard secret and must
+# NEVER be written into this file. Client: "Web client (auto
+# created by Google Service)" in the tore-game GCP project; its
+# authorized redirect URIs already include
+# https://tore-game.shuaibanwari20.workers.dev/auth/google/callback
+# (verified 2026-11-13).
+GOOGLE_CLIENT_ID = "162385253173-d6kvmg8vvutsb4577lpuuufvtt7vv9os.apps.googleusercontent.com"
 # ExpressTURN for game voice — the PREFERRED provider: its free
 # plan is 1,000 GB/month, needs no card, and issues LONG-TERM
 # (static) TURN credentials, so the Worker never fetches anything
