@@ -1,42 +1,60 @@
-/** up60 proof — the installed-app gate signs in by TICKET.
- *  S (standalone): the tap mints a ticket, opens /auth/fb?ticket=
- *     in a new sheet, polls the status, and when the (mimicked)
- *     completion lands, the gate reloads ITSELF with the session
- *     cookie set in THIS context. Firebase is never used.
- *  T (browser tab): regression — the Firebase popup still runs
- *     first, hangs (stubbed), and falls back to redirect. */
+/** Gate proof — drives the REAL gate page (served by the local
+ *  gate61 server with EMAIL_ON) in Chromium:
+ *    S  standalone (installed app): email form only, Google
+ *       hidden, send → code row → verify → gate reloads.
+ *    T  browser tab regression: the Google popup flow still runs
+ *       (popup first; a hung popup falls back to redirect).
+ *    F  the /auth/fb bridge page, visited directly, bridges a
+ *       PERSISTED Firebase user (the page still exists; the gate
+ *       itself no longer opens it — U64).
+ *    E  browser tab: Google AND the email form side by side;
+ *       the email flow completes and the gate reloads.
+ *  Firebase is stubbed at the CDN routes; the modular SDK is
+ *  stubbed for the gate, the compat SDK for the bridge page. */
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 
-const require = createRequire(import.meta.url);
-const chromium = require(path.join(os.homedir(), 'workspace/projects/vault-rental-online/node_modules/playwright-core')).chromium;
+const req = createRequire(path.join(os.homedir(), 'workspace/projects/vault-rental-online/package.json'));
+const { chromium } = req('playwright-core');
+const BASE = 'http://127.0.0.1:8913';
+const TICKET = '0123456789abcdef0123456789abcdef';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 function findChrome() {
   const base = path.join(os.homedir(), '.cache/ms-playwright');
-  for (const dir of fs.readdirSync(base).sort().reverse()) {
-    for (const rel of ['chrome-linux/chrome', 'chrome-linux/headless_shell', 'chrome-headless-shell-linux/headless_shell']) {
-      const p = path.join(base, dir, rel);
+  const dirs = fs.readdirSync(base).filter((d) => d.startsWith('chromium')).sort().reverse();
+  for (const d of dirs) {
+    for (const sub of ['chrome-linux64/chrome', 'chrome-linux/chrome', 'chrome-headless-shell-linux/headless_shell']) {
+      const p = path.join(base, d, sub);
       if (fs.existsSync(p)) return p;
     }
   }
-  return null;
+  throw new Error('no chrome build found');
 }
-const BASE = 'http://127.0.0.1:8913';
+
 let failures = 0;
 const check = (name, ok, extra = '') => {
   console.log((ok ? 'PASS' : 'FAIL') + '  ' + name + (extra ? ' — ' + extra : ''));
   if (!ok) failures++;
 };
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-async function waitFor(fn, timeoutMs, stepMs = 300) {
+async function waitFor(fn, timeout = 6000) {
   const t0 = Date.now();
-  while (Date.now() - t0 < timeoutMs) { if (await fn()) return true; await sleep(stepMs); }
-  return false;
+  while (Date.now() - t0 < timeout) {
+    try { const v = await fn(); if (v) return v; } catch { /* keep waiting */ }
+    await sleep(120);
+  }
+  return null;
 }
-async function reset() { await fetch(BASE + '/__mode', { method: 'POST', body: 'x' }); }
-async function stats() { const r = await fetch(BASE + '/__stats'); return r.json(); }
+const stats = async () => {
+  const r = await fetch(BASE + '/__stats');
+  return r.json();
+};
+const reset = async () => {
+  await fetch(BASE + '/__mode', { method: 'POST', body: '{}' });
+};
 
 const APP_STUB = 'export function initializeApp() { return {}; }';
 const AUTH_STUB = [
@@ -47,11 +65,25 @@ const AUTH_STUB = [
   'export function signInWithRedirect() { window.__fb.redirect++; return new Promise(function () {}); }',
   'export function getRedirectResult() { return Promise.resolve(null); }',
 ].join('\n');
+const COMPAT_STUB = [
+  'window.__sheet = { popup: 0, redirect: 0 };',
+  'window.firebase = {',
+  '  initializeApp: function () { return {}; },',
+  '  auth: function () { return {',
+  '    currentUser: null,',
+  '    getRedirectResult: function () { return Promise.resolve(null); },',
+  '    onAuthStateChanged: function (cb) { setTimeout(function () { cb(null); }, 30); },',
+  '    signInWithPopup: function () { window.__sheet.popup++; return new Promise(function () {}); },',
+  '    signInWithRedirect: function () { window.__sheet.redirect++; return new Promise(function () {}); }',
+  '  }; }',
+  '};',
+  'window.firebase.auth.GoogleAuthProvider = function () {};',
+].join('\n');
 
 let server = null;
 let browser = null;
 try {
-  server = spawn('node', [path.join(os.homedir(), 'workspace/tmp-build/gate61-server.mjs')], { stdio: 'pipe' });
+  server = spawn('node', [path.join(os.homedir(), 'workspace/tmp-build/gate61-server.mjs')], { stdio: 'ignore' });
   const up = await waitFor(async () => {
     try { const r = await fetch(BASE + '/__stats'); return r.ok; } catch { return false; }
   }, 8000);
@@ -69,19 +101,6 @@ try {
       r.fulfill({ contentType: 'text/javascript', body: APP_STUB }));
     await ctx.route('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js', (r) =>
       r.fulfill({ contentType: 'text/javascript', body: AUTH_STUB }));
-    const COMPAT_STUB = [
-      'window.__sheet = { redirect: 0 };',
-      'window.firebase = {',
-      '  initializeApp: function () { return {}; },',
-      '  auth: function () { return {',
-      '    getRedirectResult: function () { return Promise.resolve(null); },',
-      '    currentUser: null,',
-      '    onAuthStateChanged: function (cb) { setTimeout(function () { cb(null); }, 30); },',
-      '    signInWithRedirect: function () { window.__sheet.redirect++; return new Promise(function () {}); }',
-      '  }; }',
-      '};',
-      'window.firebase.auth.GoogleAuthProvider = function () {};',
-    ].join('\n');
     await ctx.route('https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js', (r) =>
       r.fulfill({ contentType: 'text/javascript', body: COMPAT_STUB }));
     await ctx.route('https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js', (r) =>
@@ -90,50 +109,38 @@ try {
     const errs = [];
     page.on('pageerror', (e) => errs.push(String(e)));
     await page.goto(BASE + '/', { waitUntil: 'load' });
-    await page.waitForSelector('#btn-google', { timeout: 8000 });
+    // 'attached', not visible: in standalone the gate hides the
+    // Google button by design (U65) — it is still in the DOM.
+    await page.waitForSelector('#btn-google', { state: 'attached', timeout: 8000 });
     await sleep(400);
     return { ctx, page, errs };
   }
 
-  // ---- S: standalone ticket flow --------------------------------
+  // ---- S: standalone email sign-in (up65) -----------------------
   await reset();
   {
     const { ctx, page, errs } = await newGatePage(true);
-    const opened = [];
-    let sheetPage = null;
-    ctx.on('page', (p) => { opened.push(p.url()); sheetPage = p; });
-    await page.click('#btn-google');
-    const sheetOk = await waitFor(() => opened.some((u) => u.includes('/auth/fb?ticket=0123456789abcdef0123456789abcdef')), 5000);
-    check('S1 fb bridge page opened with the ticket', sheetOk, opened.join(' , '));
-    const codeShown = await waitFor(async () => {
-      const v = await page.evaluate(() => {
-        const el = document.getElementById('gate-code');
-        const box = document.getElementById('gate-codebox');
-        return el && box ? { t: el.textContent, vis: box.style.display !== 'none' } : null;
-      }).catch(() => null);
-      return v && v.t === '12345678' && v.vis ? v : null;
-    }, 5000);
-    check('S8 sign-in code shown on the app gate', !!codeShown, JSON.stringify(codeShown));
-    const reloaded = await waitFor(async () => (await stats()).rootHits >= 2, 14000);
-    check('S2 ticket poll completed and the gate reloaded itself', reloaded, JSON.stringify(await stats()));
-    const cookies = await ctx.cookies(BASE);
-    const sess = cookies.find((c) => c.name === 'tore_session');
-    check('S3 session cookie landed in THIS context', !!sess && sess.value === 'proof-cookie', JSON.stringify(cookies.map((c) => c.name)));
-    await waitFor(async () => (await page.evaluate(() => typeof window.__fb !== 'undefined').catch(() => false)), 6000);
-    const f = await page.evaluate(() => window.__fb || { popup: -1, redirect: -1 }).catch(() => ({ popup: -2, redirect: -2 }));
-    check('S4 Firebase sign-in never used in standalone', f.popup === 0 && f.redirect === 0, JSON.stringify(f));
+    await page.waitForSelector('#btn-email-send', { timeout: 8000 });
+    const vis = await page.evaluate(() => {
+      const ge = document.getElementById('gate-email');
+      const gb = document.getElementById('btn-google');
+      return { email: !!ge && ge.style.display !== 'none', google: !!gb && gb.style.display !== 'none' };
+    });
+    check('S1 standalone shows the email form and hides Google', vis.email && !vis.google, JSON.stringify(vis));
+    await page.fill('#email-input', 'unit@example.com');
+    await page.click('#btn-email-send');
+    const started = await waitFor(async () => (await stats()).startHits >= 1, 6000);
+    check('S2 email-start posted', started, JSON.stringify(await stats()));
+    const rowVis = await page.evaluate(() => {
+      const r = document.getElementById('gate-email-code-row');
+      return !!r && r.style.display !== 'none';
+    });
+    check('S3 code row revealed after send', rowVis);
+    await page.fill('#email-code', '654321');
+    await page.click('#btn-email-verify');
+    const reloaded = await waitFor(async () => (await stats()).rootHits >= 2, 8000);
+    check('S4 verify ok and the gate reloaded', reloaded, JSON.stringify(await stats()));
     check('S5 no page errors', errs.length === 0, errs.join(' | '));
-    if (sheetPage) {
-      await sheetPage.waitForSelector('#btn', { timeout: 6000 }).catch(() => {});
-      const tk = await sheetPage.evaluate(() => (typeof TICKET !== 'undefined' ? TICKET : '')).catch(() => '');
-      check('S6 sheet page is the real fb page with the ticket', tk === '0123456789abcdef0123456789abcdef', tk);
-      await sheetPage.click('#btn').catch(() => {});
-      const redir = await waitFor(async () => (await sheetPage.evaluate(() => window.__sheet || { redirect: -1 })).redirect === 1, 5000).catch(() => false);
-      check('S7 sheet button starts Firebase redirect sign-in', !!redir);
-    } else {
-      check('S6 sheet page is the real fb page with the ticket', false, 'no sheet page');
-      check('S7 sheet button starts Firebase redirect sign-in', false, 'no sheet page');
-    }
     await ctx.close();
   }
 
@@ -142,15 +149,15 @@ try {
   {
     const { ctx, page, errs } = await newGatePage(false);
     await page.click('#btn-google');
-    await sleep(1500);
-    const f1 = await page.evaluate(() => window.__fb);
-    check('T1 tab still tries the popup first', f1.popup === 1 && f1.redirect === 0, JSON.stringify(f1));
-    const fell = await waitFor(async () => (await page.evaluate(() => window.__fb)).redirect === 1, 16000);
-    check('T2 hung popup still falls back to redirect', fell);
+    const popped = await waitFor(async () => (await page.evaluate(() => (window.__fb || {}).popup || 0)) >= 1, 6000);
+    check('T1 tab still tries the popup first', !!popped, JSON.stringify(await page.evaluate(() => window.__fb || {})));
+    const fellBack = await waitFor(async () => (await page.evaluate(() => (window.__fb || {}).redirect || 0)) >= 1, 16000);
+    check('T2 hung popup still falls back to redirect', !!fellBack);
     check('T3 no page errors', errs.length === 0, errs.join(' | '));
     await ctx.close();
   }
-  // ---- F: fb page bridges a PERSISTED user (up62) ----------------
+
+  // ---- F: fb page bridges a PERSISTED user (up62) ---------------
   await reset();
   {
     const ctx = await browser.newContext();
@@ -171,47 +178,33 @@ try {
     await ctx.route('https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js', (r) =>
       r.fulfill({ contentType: 'text/javascript', body: '' }));
     const page = await ctx.newPage();
-    await page.goto(BASE + '/auth/fb?ticket=0123456789abcdef0123456789abcdef', { waitUntil: 'load' });
+    await page.goto(BASE + '/auth/fb?ticket=' + TICKET, { waitUntil: 'load' });
     const landed = await waitFor(() => page.url().endsWith('/auth/done'), 6000);
     check('F1 persisted user bridges and lands on /auth/done', landed, page.url());
     check('F2 bridge posted the token to /auth/fb-complete', (await stats()).fbCompleteHits >= 1, JSON.stringify(await stats()));
     await ctx.close();
   }
-  // ---- C: the code rescue from a browser tab (up63) --------------
+
+  // ---- E: the email flow from a browser tab (up65) --------------
   await reset();
   {
-    const ctx = await browser.newContext();
-    const AUTH_OK = [
-      'window.__fb = { popup: 0, redirect: 0 };',
-      'export function getAuth() { return {}; }',
-      'export class GoogleAuthProvider {}',
-      'export function signInWithPopup() { window.__fb.popup++; return Promise.resolve({ user: { getIdToken: function () { return Promise.resolve("tok-abc"); } } }); }',
-      'export function signInWithRedirect() { window.__fb.redirect++; return new Promise(function () {}); }',
-      'export function getRedirectResult() { return Promise.resolve(null); }',
-    ].join('\n');
-    await ctx.route('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js', (r) =>
-      r.fulfill({ contentType: 'text/javascript', body: APP_STUB }));
-    await ctx.route('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js', (r) =>
-      r.fulfill({ contentType: 'text/javascript', body: AUTH_OK }));
-    const page = await ctx.newPage();
-    const errs = [];
-    page.on('pageerror', (e) => errs.push(String(e)));
-    await page.goto(BASE + '/', { waitUntil: 'load' });
-    await page.waitForSelector('#btn-google', { timeout: 8000 });
-    await sleep(400);
-    const haveVisible = await page.evaluate(() => {
-      const row = document.getElementById('gate-codehave-row');
-      return !!row && row.style.display !== 'none';
+    const { ctx, page, errs } = await newGatePage(false);
+    await page.waitForSelector('#btn-email-send', { timeout: 8000 });
+    const vis = await page.evaluate(() => {
+      const ge = document.getElementById('gate-email');
+      const gb = document.getElementById('btn-google');
+      return { email: !!ge && ge.style.display !== 'none', google: !!gb && gb.style.display !== 'none' };
     });
-    check('C1 code entry offered in a browser tab', haveVisible);
-    await page.click('#btn-codehave');
-    await page.fill('#code-input', '12345678');
-    await page.click('#btn-codego');
-    const coded = await waitFor(async () => (await stats()).codeHits >= 1, 8000);
-    check('C2 code completed with the sign-in token', coded, JSON.stringify(await stats()));
-    const reloaded = await waitFor(async () => (await stats()).rootHits >= 2, 8000);
-    check('C3 tab gate then signed itself in and reloaded', reloaded, JSON.stringify(await stats()));
-    check('C4 no page errors', errs.length === 0, errs.join(' | '));
+    check('E1 tab shows Google AND the email form', vis.email && vis.google, JSON.stringify(vis));
+    await page.fill('#email-input', 'unit@example.com');
+    await page.click('#btn-email-send');
+    const started = await waitFor(async () => (await stats()).startHits >= 1, 6000);
+    check('E2 email-start posted', started, JSON.stringify(await stats()));
+    await page.fill('#email-code', '654321');
+    await page.click('#btn-email-verify');
+    const done = await waitFor(async () => (await stats()).verifyHits >= 1 && (await stats()).rootHits >= 2, 8000);
+    check('E3 verify ok and the gate reloaded', done, JSON.stringify(await stats()));
+    check('E4 no page errors', errs.length === 0, errs.join(' | '));
     await ctx.close();
   }
 } catch (e) {

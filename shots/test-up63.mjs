@@ -114,8 +114,8 @@ check('F2 failed ticket reports failed once', (await store.status(made2.id)).sta
 const workerSrc = fs.readFileSync('/home/hatch/workspace/projects/tore-game/cloudflare/src/worker.js', 'utf8');
 const gateSrc = fs.readFileSync('/home/hatch/workspace/projects/tore-game/cloudflare/src/gate-page.js', 'utf8');
 check('S1 worker routes /auth/fb-code-complete', workerSrc.includes("path === '/auth/fb-code-complete'") && workerSrc.includes('handleFirebaseCodeComplete'));
-check('S2 gate has the code box + code entry + endpoint call', gateSrc.includes('gate-codebox')
-  && gateSrc.includes('btn-codehave') && gateSrc.includes("'/auth/fb-code-complete'") && gateSrc.includes('codeYours'));
+check('S2 fb-code-complete endpoint still routed (gate UI moved to email in U65)', workerSrc.includes("path === '/auth/fb-code-complete'")
+  && workerSrc.includes('handleFirebaseCodeComplete'));
 
 console.log(failures ? '\n' + failures + ' FAILURES' : '\nALL PASS');
 process.exit(failures ? 1 : 0);
