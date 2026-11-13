@@ -72,7 +72,7 @@ globalThis.fetch = async (url, opts) => {
   throw new Error('unexpected fetch ' + url);
 };
 try {
-  const ticket = await auth.createLoginTicket(env);
+  const ticket = (await auth.createLoginTicket(env)).ticket /* U63: returns {ticket, code} */;
   check('A1 worker-side create returns a ticket', isTicketId(ticket), ticket);
 
   const startRes = await auth.startGoogle(new Request('https://tore.example/auth/google?ticket=' + ticket), env);
@@ -102,7 +102,7 @@ try {
 
   // Failure path: token exchange fails -> done?fail=1 + ticket failed.
   tokenMode = 'fail';
-  const ticket2 = await auth.createLoginTicket(env);
+  const ticket2 = (await auth.createLoginTicket(env)).ticket /* U63: returns {ticket, code} */;
   const s2 = await auth.startGoogle(new Request('https://tore.example/auth/google?ticket=' + ticket2), env);
   const loc2 = new URL(s2.headers.get('Location'));
   const cookie2 = (s2.headers.get('Set-Cookie') || '').split(';')[0];

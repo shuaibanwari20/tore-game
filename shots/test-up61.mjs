@@ -108,7 +108,7 @@ check('B6 wrong signing key -> 401', r.status === 401, 'got ' + r.status);
 r = await auth.handleFirebaseTicketComplete(post('/auth/fb-complete', { ticket: validTicket, idToken: makeToken() }), env);
 check('B7 valid token + unknown ticket -> 409', r.status === 409, 'got ' + r.status);
 
-const ticket = await auth.createLoginTicket(env);
+const ticket = (await auth.createLoginTicket(env)).ticket; // U63: createLoginTicket returns {ticket, code}
 check('B8a create returns a ticket', isTicketId(ticket), ticket);
 r = await auth.handleFirebaseTicketComplete(post('/auth/fb-complete', { ticket, idToken: makeToken() }), env);
 const rj = await r.json().catch(() => ({}));

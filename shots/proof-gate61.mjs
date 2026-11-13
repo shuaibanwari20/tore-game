@@ -105,6 +105,15 @@ try {
     await page.click('#btn-google');
     const sheetOk = await waitFor(() => opened.some((u) => u.includes('/auth/fb?ticket=0123456789abcdef0123456789abcdef')), 5000);
     check('S1 fb bridge page opened with the ticket', sheetOk, opened.join(' , '));
+    const codeShown = await waitFor(async () => {
+      const v = await page.evaluate(() => {
+        const el = document.getElementById('gate-code');
+        const box = document.getElementById('gate-codebox');
+        return el && box ? { t: el.textContent, vis: box.style.display !== 'none' } : null;
+      }).catch(() => null);
+      return v && v.t === '12345678' && v.vis ? v : null;
+    }, 5000);
+    check('S8 sign-in code shown on the app gate', !!codeShown, JSON.stringify(codeShown));
     const reloaded = await waitFor(async () => (await stats()).rootHits >= 2, 14000);
     check('S2 ticket poll completed and the gate reloaded itself', reloaded, JSON.stringify(await stats()));
     const cookies = await ctx.cookies(BASE);
@@ -166,6 +175,43 @@ try {
     const landed = await waitFor(() => page.url().endsWith('/auth/done'), 6000);
     check('F1 persisted user bridges and lands on /auth/done', landed, page.url());
     check('F2 bridge posted the token to /auth/fb-complete', (await stats()).fbCompleteHits >= 1, JSON.stringify(await stats()));
+    await ctx.close();
+  }
+  // ---- C: the code rescue from a browser tab (up63) --------------
+  await reset();
+  {
+    const ctx = await browser.newContext();
+    const AUTH_OK = [
+      'window.__fb = { popup: 0, redirect: 0 };',
+      'export function getAuth() { return {}; }',
+      'export class GoogleAuthProvider {}',
+      'export function signInWithPopup() { window.__fb.popup++; return Promise.resolve({ user: { getIdToken: function () { return Promise.resolve("tok-abc"); } } }); }',
+      'export function signInWithRedirect() { window.__fb.redirect++; return new Promise(function () {}); }',
+      'export function getRedirectResult() { return Promise.resolve(null); }',
+    ].join('\n');
+    await ctx.route('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js', (r) =>
+      r.fulfill({ contentType: 'text/javascript', body: APP_STUB }));
+    await ctx.route('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js', (r) =>
+      r.fulfill({ contentType: 'text/javascript', body: AUTH_OK }));
+    const page = await ctx.newPage();
+    const errs = [];
+    page.on('pageerror', (e) => errs.push(String(e)));
+    await page.goto(BASE + '/', { waitUntil: 'load' });
+    await page.waitForSelector('#btn-google', { timeout: 8000 });
+    await sleep(400);
+    const haveVisible = await page.evaluate(() => {
+      const row = document.getElementById('gate-codehave-row');
+      return !!row && row.style.display !== 'none';
+    });
+    check('C1 code entry offered in a browser tab', haveVisible);
+    await page.click('#btn-codehave');
+    await page.fill('#code-input', '12345678');
+    await page.click('#btn-codego');
+    const coded = await waitFor(async () => (await stats()).codeHits >= 1, 8000);
+    check('C2 code completed with the sign-in token', coded, JSON.stringify(await stats()));
+    const reloaded = await waitFor(async () => (await stats()).rootHits >= 2, 8000);
+    check('C3 tab gate then signed itself in and reloaded', reloaded, JSON.stringify(await stats()));
+    check('C4 no page errors', errs.length === 0, errs.join(' | '));
     await ctx.close();
   }
 } catch (e) {
