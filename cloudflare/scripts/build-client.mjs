@@ -45,6 +45,35 @@ const gate = fs.readFileSync(path.join(CF, 'auth-gate.js'), 'utf8');
 if (html.split('</body>').length - 1 !== 1) throw new Error('</body> not found exactly once');
 html = html.replace('</body>', '<script>\n' + gate + '\n</script>\n</body>');
 
+// 3) Comment strip (up47): the dist is the file every phone
+// downloads from GitHub Raw, and the cardsfix budget keeps it
+// under 1 MB. The heavily-commented sources stay the source of
+// truth (deploy/index.html, which the Node hosts serve, is NOT
+// stripped) — only this committed dist loses its JS comments,
+// via esbuild's parser (never a regex: strings, template
+// literals and regexes survive untouched; identifiers and
+// formatting are preserved — legalComments:'none' with no
+// minification). A block whose transform fails or comes out
+// LARGER is kept verbatim. If esbuild is unavailable the build
+// proceeds unstripped with a warning.
+try {
+  const { createRequire } = await import('node:module');
+  const req = createRequire(path.join(CF, 'package.json'));
+  const esbuild = req('esbuild');
+  let savedTotal = 0;
+  html = html.replace(/<script>([\s\S]*?)<\/script>/g, (whole, code) => {
+    if (!code.trim()) return whole;
+    try {
+      const out = esbuild.transformSync(code, { loader: 'js', legalComments: 'none' }).code;
+      if (out.length < code.length) { savedTotal += code.length - out.length; return '<script>' + out + '</script>'; }
+    } catch (e) { /* keep the block verbatim */ }
+    return whole;
+  });
+  console.log('build-client: comment strip saved ' + savedTotal + ' bytes');
+} catch (e) {
+  console.log('build-client: WARNING — esbuild unavailable, dist NOT comment-stripped (' + (e && e.message) + ')');
+}
+
 const out = path.join(CF, 'client', 'index.html');
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, html);
