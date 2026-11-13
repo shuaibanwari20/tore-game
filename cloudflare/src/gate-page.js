@@ -23,6 +23,12 @@
  * raced against a 12 s timeout elsewhere, and the gate polls
  * /auth/me while a redirect is in flight so a Safari-finished
  * sign-in reloads the gate into the game on its own.
+ * U60 (same evening): the real-iPhone test showed even the
+ * redirect dies in the Firebase handler inside the Safari sheet,
+ * so standalone no longer uses Firebase at all — the gate mints a
+ * one-time login ticket, opens the server-side Google flow in
+ * Safari, and polls /auth/ticket-status; the session cookie is
+ * minted on the poll's own response, inside the app's context.
  * because the session cookie is set). The Facebook button is added
  * client-side only while /auth/config reports fbLive — while Facebook
  * login is parked it simply never appears.
@@ -318,27 +324,87 @@ const GATE_HTML = `<!DOCTYPE html>
       }).catch(function () { /* keep polling */ });
     }, 2500);
   }
-  function startRedirect(auth, provider) {
-    markPending();
-    startAuthPoll();
-    // If the browser never actually leaves (in-app webview) or the
-    // player comes back without a session, free the button again —
-    // the poll keeps running for a late success either way.
+  // If the browser never actually leaves (in-app webview) or the
+  // player comes back without a session, free the button again —
+  // the polls keep running for a late success either way.
+  function armWatchdog() {
     setTimeout(function () {
       if (!gBtn.disabled) return;
       gBtn.disabled = false;
       gLabel.textContent = GL().google;
       errBox.textContent = GL().errConn;
     }, 30000);
+  }
+  function startRedirect(auth, provider) {
+    markPending();
+    startAuthPoll();
+    armWatchdog();
     return authMod.signInWithRedirect(auth, provider);
+  }
+  // --- U60: the ticket flow (installed apps) ----------------------
+  // The gate mints a one-time ticket, opens the server-side Google
+  // flow (/auth/google?ticket=…) in the Safari sheet, and polls
+  // /auth/ticket-status. When Google verifies the player there, the
+  // poll's response carries the session cookie — minted into THIS
+  // context — and the gate reloads into the game.
+  var TICKET_KEY = 'tore.gate.ticket';
+  function storedTicket() {
+    try { return sessionStorage.getItem(TICKET_KEY) || ''; } catch (e) { return ''; }
+  }
+  function storeTicket(t) {
+    try {
+      if (t) sessionStorage.setItem(TICKET_KEY, t);
+      else sessionStorage.removeItem(TICKET_KEY);
+    } catch (e) { /* ignore */ }
+  }
+  var ticketTimer = null;
+  function stopTicketPoll() {
+    if (ticketTimer) { clearInterval(ticketTimer); ticketTimer = null; }
+  }
+  function startTicketPoll() {
+    if (ticketTimer) return;
+    var t = storedTicket();
+    if (!t) return;
+    ticketTimer = setInterval(function () {
+      if (!pendingFresh()) { stopTicketPoll(); return; }
+      fetch('/auth/ticket-status?ticket=' + encodeURIComponent(t), { credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (!j) return;
+          if (j.ok) {
+            stopTicketPoll(); storeTicket(''); clearPending();
+            location.reload();
+          } else if (j.failed) {
+            stopTicketPoll(); storeTicket(''); clearPending();
+            gateFail(GL().errFail);
+          }
+        }).catch(function () { /* keep polling */ });
+    }, 2500);
+  }
+  function startTicketFlow() {
+    fetch('/auth/ticket', { method: 'POST', credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || !j.ticket) throw new Error('no ticket');
+        markPending();
+        storeTicket(j.ticket);
+        startTicketPoll();
+        armWatchdog();
+        window.open('/auth/google?ticket=' + encodeURIComponent(j.ticket), '_blank');
+      })
+      .catch(function () { gateFail(GL().errFail); });
   }
   gBtn.onclick = function () {
     busy();
+    if (isStandalone) {
+      // U60: neither the popup nor the redirect result can come
+      // back into an installed app — the ticket flow delivers the
+      // session through our own poll in THIS context instead.
+      startTicketFlow();
+      return;
+    }
     loadAuth().then(function (auth) {
       var provider = new authMod.GoogleAuthProvider();
-      if (isStandalone) {
-        return startRedirect(auth, provider);
-      }
       var popup = authMod.signInWithPopup(auth, provider);
       var timeout = new Promise(function (resolve, reject) {
         setTimeout(function () {
@@ -364,13 +430,16 @@ const GATE_HTML = `<!DOCTYPE html>
   };
   // Back in the app with a sign-in possibly finished elsewhere
   // (Safari): resume the session poll whenever the flag is fresh.
-  if (pendingFresh()) startAuthPoll();
+  function resumePolls() {
+    if (!pendingFresh()) return;
+    startAuthPoll();
+    if (storedTicket()) startTicketPoll();
+  }
+  resumePolls();
   document.addEventListener('visibilitychange', function () {
-    if (!document.hidden && pendingFresh()) startAuthPoll();
+    if (!document.hidden) resumePolls();
   });
-  window.addEventListener('pageshow', function () {
-    if (pendingFresh()) startAuthPoll();
-  });
+  window.addEventListener('pageshow', resumePolls);
   // Returning from the redirect flow: pick up the result once.
   loadAuth().then(function (auth) {
     return authMod.getRedirectResult(auth);
