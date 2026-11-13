@@ -375,6 +375,91 @@ function kabulWeekKey(ts) {
   return isoYear + '-W' + String(week).padStart(2, '0');
 }
 
+// ============================================================ WALLET
+// Money system (up47, phases 1+2 — owner-approved plan, modelled
+// on Ludo Star): two VIRTUAL currencies — سکه (coins) and الماس
+// (gems). NO real money in these phases, NO player-to-player
+// transfers, NO cash-out, cosmetics NEVER affect play.
+//
+// The wallet lives HERE (the social layer) so every host — Node
+// and the Durable Object — shares one implementation and one
+// persisted state (it rides serialize()/load() under social:v1):
+//   wallet record (per identity): {coins, gems, owned: [sku…],
+//     ledger: [{ts, kind, amount, balance, ref}] (append-only,
+//     capped at the newest WALLET_LEDGER_CAP entries),
+//     lastBonusDay: 'YYYY-MM-DD' (KABUL calendar day of the last
+//     daily-bonus claim), chestAt: ts of the last free-chest
+//     claim, created: ts}.
+//   escrow record (per match, keyed by the host's matchId):
+//     {tier, stakes: [{id, seat}], forfeits: [id…], closed, ts} —
+//     persisted WITH the wallet state so a DO hibernation between
+//     escrow and settlement can never lose a stake.
+//
+// HARD RULES (the hosts only ever call these methods; no host
+// code touches a balance directly):
+//  - the server never trusts a client amount: the only numbers
+//    that ever move are the constants below and the tier the
+//    host validated at room creation;
+//  - balances never go negative: every debit is preceded by an
+//    affordability check inside the same synchronous call;
+//  - escrow is all-or-nothing: if ANY of the 4 humans cannot pay
+//    (or a bot holds a seat — the hosts don't even call then),
+//    NO wallet moves and the match simply runs free;
+//  - settlement/refund are idempotent per matchId: the escrow
+//    record's `closed` flag flips exactly once, so a doubled
+//    match-end event can never pay twice;
+//  - every movement writes a ledger entry (a forfeit writes a
+//    zero-amount marker — the stake itself already left the
+//    wallet at escrow; the marker is the audit trail for the
+//    share that settlement will burn).
+//
+// Numbers (phase 1+2): start grant 1000 سکه once at wallet
+// creation; daily bonus +100 سکه once per Kabul calendar day
+// (claimed with s-wallet-bonus — the client surfaces it as a
+// gift chip on the home screen and as a button in the shop);
+// free chest +50 سکه every 4 hours (s-wallet-chest, shop tab
+// صندوق‌ها); stake tiers free/100/500/1000/5000 — a staked match
+// escrows each human's tier at match start and pays each member
+// of the WINNING team 2× tier at match end (pot 4× tier, rake
+// 0%). An explicit mid-match LEAVE forfeits: the leaver's
+// would-be payout share is burned at settlement. A disconnected
+// seat (up44 cover / freeze) is NOT a forfeit. A void match
+// (frozen expiry, dissolved frozen match) refunds every staker
+// who did not forfeit. Bot matches and offline play never touch
+// a wallet (the hosts only escrow all-human matches).
+// Protocol (client -> server): s-wallet (pull), s-wallet-bonus,
+// s-wallet-chest, s-wallet-buy {sku}.
+// Protocol (server -> client): s-wallet (full state, also riding
+// s-init), s-error (new codes: walletPoor, walletOwned,
+// walletBonusWait, walletChestWait, walletBadSku).
+const WALLET_START_GRANT = 1000;      // سکه, once, at wallet creation
+const WALLET_DAILY_BONUS = 100;       // سکه, once per Kabul day
+const WALLET_CHEST_COINS = 50;        // سکه per free chest
+const WALLET_CHEST_MS = 4 * 3600 * 1000; // chest cooldown: 4 hours
+const WALLET_LEDGER_CAP = 100;        // newest entries kept per wallet
+const STAKE_TIERS = [0, 100, 500, 1000, 5000]; // validated by the hosts too
+// The shop catalogue (ظاهری tab) — COSMETICS ONLY. sku -> price in
+// سکه. The default card back (back1) and the default cream carpet
+// (felt11) are NOT listed: they are free forever and always owned.
+// A Map (not a plain object) so a forged sku like '__proto__' or
+// 'constructor' can never resolve to anything.
+const SHOP_ITEMS = new Map([
+  ['back2', 300], ['back3', 500], ['back4', 800], ['back5', 1200], ['back6', 2000],
+  ['felt1', 400], ['felt2', 400], ['felt3', 600], ['felt4', 600], ['felt5', 800],
+  ['felt6', 800], ['felt7', 1000], ['felt8', 1000], ['felt9', 1500], ['felt10', 1500],
+]);
+const FREE_COSMETICS = new Set(['back1', 'felt11']);
+
+// Kabul calendar day ('YYYY-MM-DD') for a timestamp: shift by
+// +4:30 and read the UTC fields — the same trick kabulWeekKey
+// uses (Afghanistan Time has no DST, so the shift is exact).
+function kabulDayKey(ts) {
+  const shifted = new Date((typeof ts === 'number' ? ts : Date.now()) + 4.5 * 3600 * 1000);
+  return shifted.getUTCFullYear() + '-' +
+    String(shifted.getUTCMonth() + 1).padStart(2, '0') + '-' +
+    String(shifted.getUTCDate()).padStart(2, '0');
+}
+
 // ---- profile field hygiene (mirrors the game servers' rules) ------
 function cleanName(v) {
   if (typeof v !== 'string') return '';
@@ -448,6 +533,11 @@ class SocialCore {
     // (a restart just restarts the counter; clients never compare
     // across sessions — any signal means "re-query now").
     this.clubsVersion = 0;
+    // Wallet (up47): identity -> wallet record; matchId -> the
+    // match's stake escrow. Both persist WITH the social state
+    // (serialize/load) — see the WALLET banner above the class.
+    this.wallets = new Map();
+    this.escrows = new Map();
   }
 
   // ---------- persistence (DO host; Node ignores) ----------
@@ -460,6 +550,8 @@ class SocialCore {
       requests: [...this.requests.values()],
       dm: Object.fromEntries(this.dm),
       stats: Object.fromEntries(this.stats),
+      wallets: Object.fromEntries(this.wallets),
+      escrows: Object.fromEntries(this.escrows),
     };
   }
   load(data) {
@@ -471,6 +563,28 @@ class SocialCore {
     this.requests = new Map((Array.isArray(data.requests) ? data.requests : []).map((r) => [reqKey(r.from, r.to), r]));
     this.dm = new Map(Object.entries(data.dm || {}));
     this.stats = new Map(Object.entries(data.stats || {}));
+    // Wallet migration: snapshots written before up47 carry no
+    // wallets/escrows at all — both default to empty (a wallet is
+    // (re)created lazily by _wallet(id, true) with its grant).
+    // Loaded records are shape-normalized in place so every
+    // reader can trust the fields.
+    this.wallets = new Map(Object.entries(data.wallets || {}));
+    for (const w of this.wallets.values()) {
+      if (!w || typeof w !== 'object') continue;
+      if (typeof w.coins !== 'number' || !(w.coins >= 0)) w.coins = 0;
+      if (typeof w.gems !== 'number' || !(w.gems >= 0)) w.gems = 0;
+      if (!Array.isArray(w.owned)) w.owned = [];
+      if (!Array.isArray(w.ledger)) w.ledger = [];
+      if (typeof w.lastBonusDay !== 'string') w.lastBonusDay = '';
+      if (typeof w.chestAt !== 'number' || !(w.chestAt >= 0)) w.chestAt = 0;
+    }
+    this.escrows = new Map(Object.entries(data.escrows || {}));
+    for (const e of this.escrows.values()) {
+      if (!e || typeof e !== 'object') continue;
+      if (!Array.isArray(e.stakes)) e.stakes = [];
+      if (!Array.isArray(e.forfeits)) e.forfeits = [];
+      e.closed = !!e.closed;
+    }
   }
   _persist() { if (this.hooks.persist) { try { this.hooks.persist(this.serialize()); } catch (e) { /* host logs */ } } }
   // Clubs persist through their OWN hook so the DO host can store
@@ -730,6 +844,209 @@ class SocialCore {
     this._send(id, { type: 's-stats', stats: this.statsOf(id), leaders: this.weeklyLeaders(10) });
   }
 
+  // ---------- wallet (up47 — see the WALLET banner) ----------
+  // The record itself, or null. create=true mints it WITH the
+  // one-time start grant (ledger kind 'grant') — the ONLY place
+  // a wallet is born, so the grant can never land twice.
+  _wallet(id, create) {
+    if (typeof id !== 'string' || !id) return null;
+    let w = this.wallets.get(id);
+    if (w) return w;
+    if (!create) return null;
+    w = {
+      coins: WALLET_START_GRANT, gems: 0, owned: [], ledger: [],
+      lastBonusDay: '', chestAt: 0, created: Date.now(),
+    };
+    w.ledger.push({ ts: Date.now(), kind: 'grant', amount: WALLET_START_GRANT, balance: w.coins, ref: '' });
+    this.wallets.set(id, w);
+    this._persist();
+    return w;
+  }
+  _ledger(w, kind, amount, ref) {
+    w.ledger.push({ ts: Date.now(), kind, amount, balance: w.coins, ref: ref || '' });
+    if (w.ledger.length > WALLET_LEDGER_CAP) w.ledger.splice(0, w.ledger.length - WALLET_LEDGER_CAP);
+  }
+  // The client-facing state: balances, owned skus, whether the
+  // daily bonus is claimable NOW, when the chest next opens, and
+  // the newest few ledger entries (the shop's movement list).
+  walletState(id) {
+    const w = this._wallet(id, false);
+    const now = Date.now();
+    if (!w) {
+      return {
+        coins: 0, gems: 0, owned: [],
+        bonusReady: false, chestNext: 0, ledger: [],
+      };
+    }
+    return {
+      coins: w.coins, gems: w.gems, owned: w.owned.slice(),
+      bonusReady: w.lastBonusDay !== kabulDayKey(now),
+      chestNext: Math.max(0, (w.chestAt || 0) + WALLET_CHEST_MS - now) > 0
+        ? (w.chestAt || 0) + WALLET_CHEST_MS : 0,
+      ledger: w.ledger.slice(-8).reverse(),
+    };
+  }
+  walletSend(id) {
+    this._wallet(id, true); // a pull from a brand-new player mints (grant included)
+    if (this.isOnline(id)) this._send(id, { type: 's-wallet', wallet: this.walletState(id) });
+  }
+  // Host read path: {coins, gems, owned} or null when the player
+  // has NO wallet record yet. The hosts' create-frame cosmetic
+  // filter consults this — no record means "cannot judge", and
+  // the filter stays out of the way (see ownsCosmetic).
+  walletView(id) {
+    const w = this._wallet(id, false);
+    if (!w) return null;
+    return { coins: w.coins, gems: w.gems, owned: w.owned.slice() };
+  }
+  ownsCosmetic(id, sku) {
+    if (FREE_COSMETICS.has(sku)) return true;
+    if (!SHOP_ITEMS.has(sku)) return false;
+    const w = this._wallet(id, false);
+    return !!w && w.owned.includes(sku);
+  }
+  // Daily bonus: +100 سکه once per KABUL calendar day. The date
+  // check is server-side only — a client clock can never mint a
+  // second claim.
+  walletClaimBonus(id) {
+    const w = this._wallet(id, true);
+    const today = kabulDayKey(Date.now());
+    if (w.lastBonusDay === today) { this._error(id, 'walletBonusWait'); this.walletSend(id); return false; }
+    w.lastBonusDay = today;
+    w.coins += WALLET_DAILY_BONUS;
+    this._ledger(w, 'bonus', WALLET_DAILY_BONUS, '');
+    this._persist();
+    this.walletSend(id);
+    return true;
+  }
+  // Free chest: +50 سکه, then a server-enforced 4 h cooldown.
+  walletClaimChest(id) {
+    const w = this._wallet(id, true);
+    const now = Date.now();
+    if (w.chestAt && now - w.chestAt < WALLET_CHEST_MS) { this._error(id, 'walletChestWait'); this.walletSend(id); return false; }
+    w.chestAt = now;
+    w.coins += WALLET_CHEST_COINS;
+    this._ledger(w, 'chest', WALLET_CHEST_COINS, '');
+    this._persist();
+    this.walletSend(id);
+    return true;
+  }
+  // Shop purchase: the price comes from the server catalogue —
+  // the frame carries ONLY the sku, never an amount.
+  walletBuy(id, sku) {
+    if (typeof sku !== 'string' || !SHOP_ITEMS.has(sku)) { this._error(id, 'walletBadSku'); return false; }
+    const w = this._wallet(id, true);
+    if (w.owned.includes(sku)) { this._error(id, 'walletOwned'); this.walletSend(id); return false; }
+    const price = SHOP_ITEMS.get(sku);
+    if (w.coins < price) { this._error(id, 'walletPoor'); this.walletSend(id); return false; }
+    w.coins -= price;
+    w.owned.push(sku);
+    this._ledger(w, 'buy', -price, sku);
+    this._persist();
+    this.walletSend(id);
+    return true;
+  }
+  _pruneEscrows() {
+    const cutoff = Date.now() - 24 * 3600 * 1000;
+    for (const [mid, e] of this.escrows) {
+      if (e && e.closed && (e.ts || 0) < cutoff) this.escrows.delete(mid);
+    }
+  }
+  // MATCH START (host-called): escrow `tier` from each of the 4
+  // stakers. stakes = [{id, seat}]. All-or-nothing — see the
+  // banner. Returns true when the stakes were taken (the match
+  // is a money match), false when it must run free.
+  walletEscrow(matchId, tier, stakes) {
+    if (typeof matchId !== 'string' || !matchId || matchId.length > 80) return false;
+    if (!STAKE_TIERS.includes(tier) || !(tier > 0)) return false;
+    if (!Array.isArray(stakes) || stakes.length !== 4) return false;
+    if (this.escrows.has(matchId)) return false; // never deduct twice for one match
+    const ids = new Set(), seats = new Set();
+    for (const s of stakes) {
+      if (!s || typeof s.id !== 'string' || !s.id) return false;
+      if (!Number.isInteger(s.seat) || s.seat < 0 || s.seat > 3) return false;
+      if (ids.has(s.id) || seats.has(s.seat)) return false;
+      ids.add(s.id); seats.add(s.seat);
+    }
+    // Mint every wallet first (a first-time player gets his
+    // grant, then stakes like everyone else), THEN judge
+    // affordability across the whole table before moving a
+    // single coin.
+    const ws = stakes.map((s) => this._wallet(s.id, true));
+    if (ws.some((w) => !w || w.coins < tier)) return false;
+    stakes.forEach((s, i) => {
+      ws[i].coins -= tier;
+      this._ledger(ws[i], 'stake', -tier, matchId);
+    });
+    this.escrows.set(matchId, {
+      tier,
+      stakes: stakes.map((s) => ({ id: s.id, seat: s.seat })),
+      forfeits: [], closed: false, ts: Date.now(),
+    });
+    this._pruneEscrows();
+    this._persist();
+    for (const s of stakes) this.walletSend(s.id);
+    return true;
+  }
+  // Explicit mid-match leave (host-called from the leave frame
+  // ONLY — a disconnect is never routed here): the leaver's
+  // would-be payout share burns at settlement.
+  walletForfeit(matchId, id) {
+    const e = this.escrows.get(matchId);
+    if (!e || e.closed) return false;
+    if (!e.stakes.some((s) => s.id === id)) return false;
+    if (e.forfeits.includes(id)) return false;
+    e.forfeits.push(id);
+    const w = this._wallet(id, false);
+    if (w) this._ledger(w, 'forfeit', 0, matchId);
+    this._persist();
+    this.walletSend(id);
+    return true;
+  }
+  // MATCH END (host-called with the server's own result):
+  // each member of the winning team who did not forfeit receives
+  // 2× tier; a forfeited winner's share is burned (documented
+  // sink — it simply never moves); losers' stakes fund the pot.
+  // Exactly-once via the closed flag.
+  walletSettle(matchId, winnerTeam) {
+    const e = this.escrows.get(matchId);
+    if (!e || e.closed) return false;
+    if (winnerTeam !== 0 && winnerTeam !== 1) return false;
+    e.closed = true;
+    for (const s of e.stakes) {
+      if ((s.seat % 2) !== winnerTeam) continue;
+      if (e.forfeits.includes(s.id)) continue; // burned
+      const w = this._wallet(s.id, false);
+      if (!w) continue;
+      w.coins += 2 * e.tier;
+      this._ledger(w, 'win', 2 * e.tier, matchId);
+    }
+    this._pruneEscrows();
+    this._persist();
+    for (const s of e.stakes) this.walletSend(s.id);
+    return true;
+  }
+  // VOID match (host-called when a staked match dies without a
+  // result — frozen expiry / dissolved frozen match): every
+  // staker who did not forfeit gets his tier back. Exactly-once
+  // via the closed flag, like settlement.
+  walletRefund(matchId) {
+    const e = this.escrows.get(matchId);
+    if (!e || e.closed) return false;
+    e.closed = true;
+    for (const s of e.stakes) {
+      if (e.forfeits.includes(s.id)) continue; // a forfeit stays a forfeit
+      const w = this._wallet(s.id, false);
+      if (!w) continue;
+      w.coins += e.tier;
+      this._ledger(w, 'refund', e.tier, matchId);
+    }
+    this._pruneEscrows();
+    this._persist();
+    for (const s of e.stakes) this.walletSend(s.id);
+    return true;
+  }
+
   // ---------- spectate friends (feature 3) ----------
   // A seat list is watchable BY id when any seat belongs to a
   // friend of id or to a member of id's own club. The hosts use
@@ -823,7 +1140,11 @@ class SocialCore {
       lastSeen: Date.now(),
     });
     this._persist();
-    this._send(id, { type: 's-init', me: id, uid: uid || null, dnd: !!(prev && prev.dnd), invisible: !!(prev && prev.invisible), ...this.listsFor(id), stats: this.statsOf(id), leaders: this.weeklyLeaders(10) });
+    // up47: the wallet is minted at first hello (start grant
+    // included) and its state rides s-init, so the home balance
+    // pills paint with the very first social frame.
+    this._wallet(id, true);
+    this._send(id, { type: 's-init', me: id, uid: uid || null, dnd: !!(prev && prev.dnd), invisible: !!(prev && prev.invisible), ...this.listsFor(id), stats: this.statsOf(id), leaders: this.weeklyLeaders(10), wallet: this.walletState(id) });
     this.refreshClub(id, true); // the clubs state rides right behind the init
   }
 
@@ -900,6 +1221,10 @@ class SocialCore {
       case 's-dnd': return this.setDnd(id, msg.on);
       case 's-invisible': return this.setInvisible(id, msg.on);
       case 's-stats': return this.statsReply(id);
+      case 's-wallet': return this.walletSend(id);
+      case 's-wallet-bonus': return this.walletClaimBonus(id);
+      case 's-wallet-chest': return this.walletClaimChest(id);
+      case 's-wallet-buy': return this.walletBuy(id, msg.sku);
       case 's-watch': return this.watch(id, msg.to);
       case 's-club-create': return this.clubCreate(id, msg);
       case 's-club-search': return this.clubSearch(id, msg.q);
@@ -2325,4 +2650,4 @@ class SocialCore {
   }
 }
 
-export { SocialCore, INVITE_COOLDOWN_MS, INVITE_PENDING_MS, CLUB_CAP, CLUB_EMBLEMS, CLUB_COVERS, CLUB_COVER_CUSTOM, CLUB_CATEGORIES, CLUB_LANGS, CLUB_SEATS, clubLevel };
+export { SocialCore, INVITE_COOLDOWN_MS, INVITE_PENDING_MS, CLUB_CAP, CLUB_EMBLEMS, CLUB_COVERS, CLUB_COVER_CUSTOM, CLUB_CATEGORIES, CLUB_LANGS, CLUB_SEATS, clubLevel, STAKE_TIERS, SHOP_ITEMS, WALLET_START_GRANT, WALLET_DAILY_BONUS, WALLET_CHEST_COINS, WALLET_CHEST_MS };

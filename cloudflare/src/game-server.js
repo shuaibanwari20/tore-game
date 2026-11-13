@@ -115,6 +115,15 @@ function cleanFelt(v) {
 function cleanBack(v) {
   return (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 6) ? v : 1;
 }
+// Stake tiers (up47): the create frame carries the creator's
+// tier — one of the fixed ladder (0 = free), validated exactly
+// like the felt/back; anything else falls back to 0 = a free
+// room. The AMOUNT itself only ever comes from this ladder and
+// the wallet constants in social-core.js — never from the client.
+const STAKE_TIERS = [0, 100, 500, 1000, 5000];
+function cleanTier(v) {
+  return (typeof v === 'number' && Number.isInteger(v) && STAKE_TIERS.includes(v)) ? v : 0;
+}
 // Chat / voice relay — same rules as the Node server: chat is
 // PRESET-ONLY (no free text): {type:'chat', kind, value} is relayed
 // only when value is an exact member of the allowlist for its kind;
@@ -326,6 +335,10 @@ export class GameServer {
       club: snap.club || null, // clubs v8: {cid, name} club-game stamp (spectators are runtime-only)
       felt: cleanFelt(snap.felt), // creator's table felt; pre-felt snapshots revive as 11 (the original-carpet default)
       back: cleanBack(snap.back), // creator's card back (1..6); pre-back snapshots revive as 1
+      tier: cleanTier(snap.tier), // up47: creator's stake tier; pre-money snapshots revive as 0 (free)
+      matchId: snap.matchId || null, // up47: the live match's escrow id — settlement/refund must find it after a wake
+      matchSeq: snap.matchSeq || 0,
+      staked: !!snap.staked,
       vs: snap.vs || null, // club-vs-club stamp {a, b} (cids); team 0 = club A, team 1 = club B
       vsNames: snap.vsNames || null, // {a, b} display names for the vs stamp
       rematch: null, // runtime-only: a live rematch offer never survives a revive
@@ -355,6 +368,10 @@ export class GameServer {
       club: room.club || null,
       felt: room.felt || 11,
       back: room.back || 1,
+      tier: room.tier || 0,
+      matchId: room.matchId || null,
+      matchSeq: room.matchSeq || 0,
+      staked: !!room.staked,
       vs: room.vs || null,
       vsNames: room.vsNames || null,
       match: snapshotMatch(room.match),
@@ -561,6 +578,7 @@ export class GameServer {
       if (goneSids.length) this._syncBusyFor(null, goneSids);
       const anyHuman = room.seats.some((s) => s.kind === 'human');
       if (!anyHuman) {
+        this._refundRoomStake(room); // up47: the room dies mid-match — void, stakes refund
         this._cancelTimers(room.code);
         this._sendToSpectators(room, { type: 'roomClosed', code: 'roomCancelled' });
         this.rooms.delete(room.code);
@@ -923,6 +941,7 @@ export class GameServer {
         this._broadcastState(room);
         const anyHuman = room.seats.some((s) => s.kind === 'human');
         if (!anyHuman) {
+          this._refundRoomStake(room); // up47: the room dies mid-match — void, stakes refund
           this._cancelTimers(room.code);
           this._sendToSpectators(room, { type: 'roomClosed', code: 'roomCancelled' });
           this.rooms.delete(room.code);
@@ -1199,6 +1218,14 @@ export class GameServer {
           if (r && typeof r.catch === 'function') r.catch(() => {});
         }
       } catch { /* social never breaks the game */ }
+      // up47: settle the match's stake escrow from the SERVER's
+      // own result. The core's escrow record is the idempotency
+      // key — this can never pay twice.
+      try {
+        if (room.matchId && typeof core.walletSettle === 'function') {
+          core.walletSettle(room.matchId, m.winner);
+        }
+      } catch { /* social never breaks the game */ }
     };
     if (this.social) apply(this.social);
     else this._ensureSocial().then(apply).catch(() => {});
@@ -1290,6 +1317,10 @@ export class GameServer {
       club: null, // clubs v8: {cid, name} when a club manager created this room as a club game
       felt: 11, // the creator's table felt (1..11) — set from the create frame, fixed for the room's life
       back: 1, // the creator's card back (1..6) — set from the create frame, fixed for the room's life
+      tier: 0, // up47: the creator's stake tier (0/100/500/1000/5000) — set from the create frame, fixed for the room's life
+      matchId: null, // up47: the live match's wallet-escrow id (set by _startMatch)
+      matchSeq: 0, // up47: per-room match counter (a rematch is a NEW match with a NEW escrow)
+      staked: false, // up47: the live match's stakes were actually escrowed
       vs: null, // club-vs-club stamp {a, b} (cids) — only the social core's vsStartMatch hook sets it
       vsNames: null, // {a, b} display names for the vs stamp
       rematch: null, // runtime-only rematch offer {bySid, bySeat, expires, accepts:Set<sid>}
@@ -1347,7 +1378,47 @@ export class GameServer {
       this._pumpTurn(room);
     }
   }
+  // ---------------------------------------------------------- up47 wallet
+  // The DO never touches a balance: it announces lifecycle
+  // moments to the social core's wallet (escrow at match start,
+  // settle at match end, forfeit on an explicit leave, refund
+  // when a staked match dies without a result). The core is
+  // lazily built, so the call rides the same sync-if-present /
+  // ensure-then pattern as _recordMatchStats.
+  _walletCall(fn) {
+    const apply = (core) => {
+      if (!core) return;
+      try { fn(core); } catch { /* social never breaks the game */ }
+    };
+    if (this.social) apply(this.social);
+    else this._ensureSocial().then(apply).catch(() => {});
+  }
+  _refundRoomStake(room) {
+    if (!room || !room.matchId) return;
+    const matchId = room.matchId;
+    this._walletCall((core) => {
+      if (typeof core.walletRefund === 'function') core.walletRefund(matchId);
+    });
+  }
+  _escrowRoomStake(room) {
+    if (!room || !(room.tier > 0) || !room.matchId) return;
+    if (!room.seats.every((s) => s.kind === 'human' && s.sid)) return;
+    const stakes = room.seats.map((s, i) => ({ id: s.sid, seat: i }));
+    const matchId = room.matchId, tier = room.tier;
+    this._walletCall((core) => {
+      if (typeof core.walletEscrow !== 'function') return;
+      const ok = !!core.walletEscrow(matchId, tier, stakes);
+      if (ok && !room.staked) {
+        room.staked = true;
+        // A cold core resolves after _startMatch's own push —
+        // re-push so the table learns the match is staked.
+        if (room.phase === 'playing' && this.rooms.get(room.code) === room) this._broadcastState(room);
+      }
+    });
+  }
+
   _dissolveRoom(room) {
+    this._refundRoomStake(room); // up47: a dissolved staked match is void — stakes refund
     this._cancelTimers(room.code);
     this._sendToSpectators(room, { type: 'roomClosed', code: 'roomCancelled' });
     this.rooms.delete(room.code);
@@ -1383,6 +1454,8 @@ export class GameServer {
       club: room.club ? { cid: room.club.cid, name: room.club.name } : null,
       felt: room.felt || 11,
       back: room.back || 1,
+      tier: room.tier || 0, // up47: the room's stake tier (the lobby shows it before the start)
+      staked: !!room.staked, // up47: this match's stakes really were escrowed
       vs: room.vs ? {
         a: { cid: room.vs.a, name: (room.vsNames && room.vsNames.a) || room.vs.a },
         b: { cid: room.vs.b, name: (room.vsNames && room.vsNames.b) || room.vs.b },
@@ -1595,6 +1668,15 @@ export class GameServer {
         s.voiceSpeaker = false;
       }
     });
+    // up47: a fresh match id per match (a rematch escrows anew).
+    // Escrow happens ONLY when the tier is real AND all four
+    // seats stayed human — a bot match never touches a wallet.
+    // The core judges affordability across the whole table:
+    // anyone short → the match runs free and NO wallet moves.
+    room.matchSeq = (room.matchSeq || 0) + 1;
+    room.matchId = room.code + ':' + room.matchSeq + ':' + Date.now().toString(36);
+    room.staked = false;
+    this._escrowRoomStake(room);
     room.match = new G.Match(room.emit);
     room.match.botSeats = room.seats.map((s) => s.kind === 'bot');
     room.phase = 'playing';
@@ -1718,6 +1800,26 @@ export class GameServer {
         const room = this._createRoom();
         room.felt = cleanFelt(msg.felt); // creator's felt, validated; fixed at creation, persisted below
         room.back = cleanBack(msg.back); // creator's card back, validated the same way
+        room.tier = cleanTier(msg.tier); // up47: creator's stake tier, validated the same way
+        // up47: a LOCKED cosmetic never reaches a table — when
+        // the creator HAS a wallet record and does not own the
+        // felt / back he named, the room falls back to the free
+        // defaults (felt 11 / back 1). Judged on the SEAT identity
+        // _attachPlayer is about to store (the signed-in account
+        // wins over the client pid, exactly as there).
+        if (room.felt !== 11 || room.back !== 1) {
+          const csid = att.user && att.user.sub ? 'g:' + String(att.user.sub) : this._joinSid(att, msg);
+          if (csid) {
+            const core = await this._ensureSocial();
+            try {
+              if (core && typeof core.walletView === 'function' && core.walletView(csid) &&
+                  typeof core.ownsCosmetic === 'function') {
+                if (!core.ownsCosmetic(csid, 'felt' + room.felt)) room.felt = 11;
+                if (!core.ownsCosmetic(csid, 'back' + room.back)) room.back = 1;
+              }
+            } catch { /* social never breaks the game */ }
+          }
+        }
         this._attachPlayer(ws, att, room, 0, displayName(msg, att.user), msg);
         // Clubs v8: a club stamp is granted ONLY by the social
         // core, which verifies the creator is a manager of that
@@ -1901,6 +2003,16 @@ export class GameServer {
             if (leavingSid) this._syncBusyFor(null, [leavingSid]);
           }
         } else {
+          // up47: an EXPLICIT mid-match leave forfeits the stake
+          // — his would-be payout share burns at settlement. (A
+          // disconnect never reaches this frame: the up44 cover /
+          // freeze path is NOT a forfeit.)
+          if (room.matchId && leavingSid) {
+            const matchId = room.matchId;
+            this._walletCall((core) => {
+              if (typeof core.walletForfeit === 'function') core.walletForfeit(matchId, leavingSid);
+            });
+          }
           const botNo = room.seats.filter((s) => s.kind === 'bot').length;
           seat.kind = 'bot'; // bot takes over the seat and its hand
           seat.name = 'ربات ' + (botNo + 1);
