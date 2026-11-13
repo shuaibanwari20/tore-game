@@ -2931,6 +2931,11 @@
      (filled rows, host view); touch-action:none keeps a touch
      drag from scrolling the lobby away mid-gesture. */
   #scr-lobby .seatrow.draggable { touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+  /* up57: the WHOLE lobby is unselectable — a press-and-move on
+     any row (empty seats and the non-host view included) used to
+     start a native text selection on iOS instead of the drag. */
+  #scr-lobby, #scr-lobby * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .seatdrag-ghost { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   #scr-lobby .seatrow.dragsrc { opacity: .45; }
   #scr-lobby .seatrow.droptarget { outline: 2.5px solid #ffd94d; outline-offset: 2px; }
   .seatdrag-ghost { position: fixed; z-index: 400; pointer-events: none; margin: 0 !important;
@@ -16397,6 +16402,10 @@ $("#btn-rematch-decline").onclick = () => {
   if (state) paintRematch(state);
 };
 let seatDragEndedAt = 0;
+{
+  const lb = document.getElementById("scr-lobby");
+  if (lb) lb.addEventListener("selectstart", (e) => e.preventDefault());
+}
 function startSeatDrag(e, seatIdx, srcRow) {
   if (e.button !== void 0 && e.button > 0) return;
   const pid = e.pointerId;
@@ -16418,6 +16427,8 @@ function startSeatDrag(e, seatIdx, srcRow) {
     const row = curRow();
     if (!row) return false;
     active = true;
+    const _sel = window.getSelection && window.getSelection();
+    if (_sel) _sel.removeAllRanges();
     const rect = row.getBoundingClientRect();
     ghost = row.cloneNode(true);
     ghost.classList.add("seatdrag-ghost");
