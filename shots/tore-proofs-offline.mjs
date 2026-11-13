@@ -68,7 +68,7 @@ for (const rel of ['public/sw.js', 'deploy/sw.js', 'cloudflare/sw.js']) {
   check(rel + " is SW_VERSION 'v5'", sw.includes("const SW_VERSION = 'v5';"));
 }
 const workerSrc = fs.readFileSync(path.join(ROOT, 'cloudflare/src/worker.js'), 'utf8');
-check('worker.js serves ?v=20261113-thirteen', workerSrc.includes('dist-client.html?v=20261113-thirteen'));
+check('worker.js serves ?v=20261113-money', workerSrc.includes('dist-client.html?v=20261113-money'));
 
 // ---------------- server ----------------
 function spawnServer(args, port) {

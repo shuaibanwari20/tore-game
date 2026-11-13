@@ -86,7 +86,7 @@ const FB_BUF = fs.readFileSync(path.join(H, 'workspace/tmp-build/up37/cloudflare
 check('fixtures: current and feat2 dists differ', !CUR_BUF.equals(FB_BUF),
   CUR_BUF.length + 'B vs ' + FB_BUF.length + 'B');
 const workerSrc = fs.readFileSync(path.join(CF, 'src/worker.js'), 'utf8');
-check('worker.js serves ?v=20261113-thirteen', workerSrc.includes('dist-client.html?v=20261113-thirteen'));
+check('worker.js serves ?v=20261113-money', workerSrc.includes('dist-client.html?v=20261113-money'));
 check('worker.js fallback keeps the feat2 URL', workerSrc.includes('dist-client.html?v=20261112-feat2'));
 check('worker.js has the bounded fetch (AbortController + timeouts)',
   workerSrc.includes('CLIENT_FETCH_TIMEOUT_MS = 8000') && workerSrc.includes('FALLBACK_FETCH_TIMEOUT_MS = 5000'));
