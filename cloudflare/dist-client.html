@@ -430,7 +430,16 @@
   @keyframes clspin { to { transform: rotate(360deg); } }
 
   /* ---------- card flight (throw animation) ---------- */
-  .flycard { position: fixed; z-index: 80; margin: 0; pointer-events: none; }
+  /* up48: the selector MUST stay compound (.pcard.flycard). The
+     plain .flycard lost the cascade to .cback's position:relative
+     (later rule, equal specificity) — every clone cardEl() makes
+     carries .cback, so the "fixed" clone was really RELATIVE and
+     its left/top acted as offsets from its static spot in the
+     body flow (+182,+46 in the shell layout): the thrown card
+     visibly jumped right, flew parallel-shifted and snapped back
+     when the real slot card appeared (owner video 2026-11-13).
+     .pcard.collectfly above already uses the compound form. */
+  .pcard.flycard { position: fixed; z-index: 80; margin: 0; pointer-events: none; }
   @keyframes flyin { from { opacity: .2; } to { opacity: 1; } }
   .trick .pcard.flyin { animation: flyin .3s ease-out; }
 
@@ -819,8 +828,10 @@
 
   /* Bottom nav — the shared shell nav (a copy lives in every shell
      screen; clubs hide theirs, ludoclub v6.1). Friends and clubs open
-     their real pages (the social layer); profile opens the profile
-     page. ludomenu round 2: LARGE colorful 3D-style icons and the
+     their real pages (the social layer); up48: پلورنځی (shop) took
+     پروفایل's slot in EVERY copy — the profile page still opens
+     from the home header's avatar/name button (#btn-profile).
+     ludomenu round 2: LARGE colorful 3D-style icons and the
      ACTIVE item on a RAISED MAGENTA PANEL like the reference's home
      pillar (on the home screen the raised centre item is کور). */
   .hm-nav { margin: auto -16px -14px; min-height: 86px; flex: none;
@@ -869,7 +880,7 @@
      behind a dark emerald veil, its own scroll. Opened from the
      bottom nav (and from the lobby's friends button); it floats
      above home/lobby/table without disturbing the game screens. */
-  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-pview, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders {
+  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-pview, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders, #scr-shop {
     position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 30;
     overflow-x: hidden;
     /* The home screen's dark emerald veil, without the carpet photo:
@@ -890,8 +901,12 @@
      friends/picker/chats reskins already carry for themselves;
      the screens still on the veil (clubs family) keep it until
      he says otherwise. (F14, up37: #scr-leaders joined this
-     override — the weekly-leaders screen wears the shell too.) */
-  #scr-profile, #scr-pview, #scr-leaders {
+     override — the weekly-leaders screen wears the shell too.)
+     (up48: #scr-shop joined too — the shop used to be an in-flow
+     section inside .wrap over the body's GREEN base, rendered as
+     a floating card cut off at the bottom with no nav; it is a
+     shell screen now, plum stack like the rest.) */
+  #scr-profile, #scr-pview, #scr-leaders, #scr-shop {
     background-color: #6d0d3f;
     background-image:
       linear-gradient(45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
@@ -911,9 +926,9 @@
   #scr-friends { display: flex; flex-direction: column; overflow-y: hidden; }
   /* Chat + profile pages (owner order 2026-11-08): same family as the
      friends screen — scrolling content, bottom nav pinned at the foot. */
-  #scr-chats, #scr-profile, #scr-pview, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders { display: flex; flex-direction: column; overflow-y: hidden; }
+  #scr-chats, #scr-profile, #scr-pview, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders, #scr-shop { display: flex; flex-direction: column; overflow-y: hidden; }
   .fr-scroll { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; width: 100%; }
-  #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav, #scr-clubpage .hm-nav, #scr-clubmembers .hm-nav, #scr-clubseatreqs .hm-nav, #scr-picker .hm-nav, #scr-leaders .hm-nav { margin: 0; flex: none; width: 100%; }
+  #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav, #scr-clubpage .hm-nav, #scr-clubmembers .hm-nav, #scr-clubseatreqs .hm-nav, #scr-picker .hm-nav, #scr-leaders .hm-nav, #scr-shop .hm-nav { margin: 0; flex: none; width: 100%; }
   /* chat list rows: the whole row is the tap target into the DM view */
   .ch-row { cursor: pointer; border-radius: 8px; }
   .ch-row:active { background: rgba(255, 215, 94, .08); }
@@ -1909,9 +1924,16 @@
   #toast {
     position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(90px);
     background: #7f1d1d; color: #fff; padding: 11px 18px; border-radius: 10px; font-size: 15px;
-    z-index: 60; transition: transform .25s; max-width: 92vw; text-align: center;
+    z-index: 60; transition: transform .25s, opacity .2s, visibility 0s linear .25s; max-width: 92vw; text-align: center;
+    /* up48: the hidden toast used to rely on the translateY alone —
+       on webviews whose fixed-bottom anchor sits lower than the
+       visible bottom (Telegram iOS), its maroon top edge stayed
+       visible as a small red bar peeking under the bottom nav.
+       Opacity/visibility now gate it fully: not .show = invisible,
+       whatever the geometry. */
+    opacity: 0; visibility: hidden; pointer-events: none;
   }
-  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; transition: transform .25s, opacity .2s; }
   /* ---------- voice diagnostics overlay (long-press the mic) ----------
      A small dark LTR monospace card, toggled by a ~600 ms press on
      the mic button. Pointer events land only on the card itself, so
@@ -2333,8 +2355,11 @@
   #ld-list .ld-rank { flex: 0 0 30px; text-align: center; font-size: 17px; font-weight: 900; color: #ffd75e; }
   #ld-list .ld-wins { margin-inline-start: auto; flex: 0 0 auto; font-weight: 800; color: #ffd75e; white-space: nowrap; }
   /* up47 SHOP (پلورنځی) — the leaders/profile card family: magenta
-     card on the purple shell, gold headings, dark-plum rows. */
-  #scr-shop { background: linear-gradient(180deg, #3d0a4e, #2a0638); }
+     card on the purple shell, gold headings, dark-plum rows.
+     up48: the screen's own background no longer lives here — as a
+     shell screen #scr-shop wears the shared plum stack (the
+     #scr-profile override above); only the magenta #shop-body
+     card keeps its gradient below. */
   .shop-bal { display: flex; gap: 8px; justify-content: center; margin: 4px 14px 10px; }
   .shop-tabs { display: flex; gap: 6px; margin: 0 14px 10px; }
   .shop-tab { flex: 1 1 0; width: auto; margin: 0; cursor: pointer; padding: 9px 2px;
@@ -3140,11 +3165,11 @@
         </button>
         <!-- up47: wallet pills (سکه / الماس) — the balances are the
              SERVER's word (s-wallet / s-init); tapping either pill
-             or the ＋ opens the shop. -->
+             opens the shop. up48: the separate ＋ pill is REMOVED
+             (owner order) — پلورنځی lives in the bottom nav now. -->
         <div class="hm-wallet">
           <button type="button" class="hm-pill" id="btn-wallet-coins" aria-label="سکه">🪙 <b id="wallet-coins">–</b></button>
           <button type="button" class="hm-pill gem" id="btn-wallet-gems" aria-label="الماس">💎 <b id="wallet-gems">–</b></button>
-          <button type="button" class="hm-pill plus" id="btn-shop-open" aria-label="پلورنځی">＋</button>
         </div>
         <button class="hm-gear" id="btn-settings" aria-label="امادګي">
           <svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="gearG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cdbfe8"/></linearGradient></defs><path fill-rule="evenodd" fill="url(#gearG)" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg>
@@ -3217,9 +3242,9 @@
           <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
           <span class="nl" id="nav-home-lbl">کور</span>
         </button>
-        <button class="hm-navitem" id="nav-profile">
-          <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
-          <span class="nl" id="nav-profile-lbl">پروفایل</span>
+        <button class="hm-navitem" id="nav-shop">
+          <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10.5 21h27v20a2.5 2.5 0 0 1-2.5 2.5H13a2.5 2.5 0 0 1-2.5-2.5z" fill="url(#nvWhite)"/><path d="M20.8 43.5V33a3.2 3.2 0 0 1 6.4 0v10.5z" fill="#a86e00"/><rect x="30" y="27.5" width="5.4" height="5.4" rx="1.2" fill="url(#nvGold)"/><path d="M7 7.5h34l2.5 11.5h-39z" fill="url(#nvPink)"/><circle cx="12" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="24" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="36" cy="19" r="3.4" fill="url(#nvPink)"/><path d="M24 10.1l.95 1.95 2.15.3-1.55 1.5.37 2.13L24 15l-1.92 1.02.37-2.13-1.55-1.5 2.15-.3z" fill="#fff3c4"/></svg></span>
+          <span class="nl" id="nav-shop-lbl">پلورنځی</span>
         </button>
         <button class="hm-navitem" id="nav-chat">
           <span class="nav-badge hidden" id="nav-chat-badge">0</span>
@@ -3265,9 +3290,9 @@
     var L0 = localStorage.getItem('tore.lang');
     if (L0 !== 'fa' && L0 !== 'en') L0 = 'ps';
     var MINI = {
-      ps: { playerPlaceholder: 'د تورې لوبغاړی', menuQuick: 'له روباتونو سره لوبه', menuQuickSub: 'همدا اوس پیل — تمرین او تفریح', menuCreate: 'کوټه جوړه کړه', menuCreateSub: 'کوټه جوړه کړه او کوډ ملګرو ته ولېږه', menuJoin: 'له کوډ سره ورګډ شه', menuJoinSub: 'د ملګري د کوټې 4 توريز کوډ دننه کړه', roomCodeLabel: 'د کوټې کوډ', joinRoom: 'کوټې ته ننوځه', continueGame: 'لوبې ته دوام ورکړه', installApp: 'اپ نصب کړه', rulesBtn: 'د لوبې قوانین', homeFootA: 'څلور کسيزه ورق لوبه', homeFootB: 'دوه ټیمه، دوه پر دوه', menuOnline: 'انلاین لوبه', menuFriends: 'له ملګرو سره لوبه', navFriends: 'ملګري', navClubs: 'کلبونه', navHome: 'کور', navProfile: 'پروفایل', navChat: 'چت', rulesBack: '→ مینو ته وګرځه' },
-      fa: { playerPlaceholder: 'بازیکن توره', menuQuick: 'بازی با ربات‌ها', menuQuickSub: 'شروع فوری — تمرین و سرگرمی', menuCreate: 'ساختن اتاق', menuCreateSub: 'اتاق بساز و کد را به دوست‌ها بفرست', menuJoin: 'پیوستن با کد اتاق', menuJoinSub: 'کد 4 حرفی اتاق دوستت را وارد کن', roomCodeLabel: 'کد اتاق', joinRoom: 'ورود به اتاق', continueGame: 'ادامهٔ بازی', installApp: 'نصب اپ', rulesBtn: 'قانون‌های بازی', homeFootA: 'بازی ورق چهار نفره', homeFootB: 'دو تیم، دو به دو', menuOnline: 'بازی آنلاین', menuFriends: 'دوستان', navClubs: 'باشگاه‌ها', navHome: 'خانه', navProfile: 'پروفایل', navChat: 'چت', rulesBack: '→ برگشت به منو' },
-      en: { playerPlaceholder: 'Tore Player', menuQuick: 'Play with Bots', menuQuickSub: 'Instant start — practice & fun', menuCreate: 'Create a Room', menuCreateSub: 'Make a room and send the code to friends', menuJoin: 'Join with Room Code', menuJoinSub: "Enter your friend's 4-letter room code", roomCodeLabel: 'Room code', joinRoom: 'Enter Room', continueGame: 'Continue Game', installApp: 'Install app', rulesBtn: 'Game Rules', homeFootA: 'Four-player card game', homeFootB: 'Two teams, two vs two', menuOnline: 'Play Online', menuFriends: 'Play with Friends', navFriends: 'Friends', navClubs: 'Clubs', navHome: 'Home', navProfile: 'Profile', navChat: 'Chat', rulesBack: '← Back to menu' }
+      ps: { playerPlaceholder: 'د تورې لوبغاړی', menuQuick: 'له روباتونو سره لوبه', menuQuickSub: 'همدا اوس پیل — تمرین او تفریح', menuCreate: 'کوټه جوړه کړه', menuCreateSub: 'کوټه جوړه کړه او کوډ ملګرو ته ولېږه', menuJoin: 'له کوډ سره ورګډ شه', menuJoinSub: 'د ملګري د کوټې 4 توريز کوډ دننه کړه', roomCodeLabel: 'د کوټې کوډ', joinRoom: 'کوټې ته ننوځه', continueGame: 'لوبې ته دوام ورکړه', installApp: 'اپ نصب کړه', rulesBtn: 'د لوبې قوانین', homeFootA: 'څلور کسيزه ورق لوبه', homeFootB: 'دوه ټیمه، دوه پر دوه', menuOnline: 'انلاین لوبه', menuFriends: 'له ملګرو سره لوبه', navFriends: 'ملګري', navClubs: 'کلبونه', navHome: 'کور', navProfile: 'پروفایل', shopTitle: 'پلورنځی', navChat: 'چت', rulesBack: '→ مینو ته وګرځه' },
+      fa: { playerPlaceholder: 'بازیکن توره', menuQuick: 'بازی با ربات‌ها', menuQuickSub: 'شروع فوری — تمرین و سرگرمی', menuCreate: 'ساختن اتاق', menuCreateSub: 'اتاق بساز و کد را به دوست‌ها بفرست', menuJoin: 'پیوستن با کد اتاق', menuJoinSub: 'کد 4 حرفی اتاق دوستت را وارد کن', roomCodeLabel: 'کد اتاق', joinRoom: 'ورود به اتاق', continueGame: 'ادامهٔ بازی', installApp: 'نصب اپ', rulesBtn: 'قانون‌های بازی', homeFootA: 'بازی ورق چهار نفره', homeFootB: 'دو تیم، دو به دو', menuOnline: 'بازی آنلاین', menuFriends: 'دوستان', navClubs: 'باشگاه‌ها', navHome: 'خانه', navProfile: 'پروفایل', shopTitle: 'فروشگاه', navChat: 'چت', rulesBack: '→ برگشت به منو' },
+      en: { playerPlaceholder: 'Tore Player', menuQuick: 'Play with Bots', menuQuickSub: 'Instant start — practice & fun', menuCreate: 'Create a Room', menuCreateSub: 'Make a room and send the code to friends', menuJoin: 'Join with Room Code', menuJoinSub: "Enter your friend's 4-letter room code", roomCodeLabel: 'Room code', joinRoom: 'Enter Room', continueGame: 'Continue Game', installApp: 'Install app', rulesBtn: 'Game Rules', homeFootA: 'Four-player card game', homeFootB: 'Two teams, two vs two', menuOnline: 'Play Online', menuFriends: 'Play with Friends', navFriends: 'Friends', navClubs: 'Clubs', navHome: 'Home', navProfile: 'Profile', shopTitle: 'Shop', navChat: 'Chat', rulesBack: '← Back to menu' }
     }[L0];
     document.documentElement.lang = L0;
     var home0 = document.getElementById('scr-home');
@@ -3292,7 +3317,7 @@
     set0('#nav-friends-lbl', MINI.navFriends);
     set0('#nav-clubs-lbl', MINI.navClubs);
     set0('#nav-home-lbl', MINI.navHome);
-    set0('#nav-profile-lbl', MINI.navProfile);
+    set0('#nav-shop-lbl', MINI.shopTitle);
     set0('#nav-chat-lbl', MINI.navChat);
     set0('#continue-txt', MINI.continueGame);
     set0('#install-txt', MINI.installApp);
@@ -3488,9 +3513,9 @@
       <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="frnav-home-lbl">کور</span>
     </button>
-    <button class="hm-navitem" id="frnav-profile">
-      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
-      <span class="nl" id="frnav-profile-lbl">پروفایل</span>
+    <button class="hm-navitem" id="frnav-shop">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10.5 21h27v20a2.5 2.5 0 0 1-2.5 2.5H13a2.5 2.5 0 0 1-2.5-2.5z" fill="url(#nvWhite)"/><path d="M20.8 43.5V33a3.2 3.2 0 0 1 6.4 0v10.5z" fill="#a86e00"/><rect x="30" y="27.5" width="5.4" height="5.4" rx="1.2" fill="url(#nvGold)"/><path d="M7 7.5h34l2.5 11.5h-39z" fill="url(#nvPink)"/><circle cx="12" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="24" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="36" cy="19" r="3.4" fill="url(#nvPink)"/><path d="M24 10.1l.95 1.95 2.15.3-1.55 1.5.37 2.13L24 15l-1.92 1.02.37-2.13-1.55-1.5 2.15-.3z" fill="#fff3c4"/></svg></span>
+      <span class="nl" id="frnav-shop-lbl">پلورنځی</span>
     </button>
     <button class="hm-navitem" id="frnav-chat">
       <span class="nav-badge hidden" id="frnav-chat-badge">0</span>
@@ -3525,9 +3550,9 @@
       <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="chnav-home-lbl">کور</span>
     </button>
-    <button class="hm-navitem" id="chnav-profile">
-      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
-      <span class="nl" id="chnav-profile-lbl">پروفایل</span>
+    <button class="hm-navitem" id="chnav-shop">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10.5 21h27v20a2.5 2.5 0 0 1-2.5 2.5H13a2.5 2.5 0 0 1-2.5-2.5z" fill="url(#nvWhite)"/><path d="M20.8 43.5V33a3.2 3.2 0 0 1 6.4 0v10.5z" fill="#a86e00"/><rect x="30" y="27.5" width="5.4" height="5.4" rx="1.2" fill="url(#nvGold)"/><path d="M7 7.5h34l2.5 11.5h-39z" fill="url(#nvPink)"/><circle cx="12" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="24" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="36" cy="19" r="3.4" fill="url(#nvPink)"/><path d="M24 10.1l.95 1.95 2.15.3-1.55 1.5.37 2.13L24 15l-1.92 1.02.37-2.13-1.55-1.5 2.15-.3z" fill="#fff3c4"/></svg></span>
+      <span class="nl" id="chnav-shop-lbl">پلورنځی</span>
     </button>
     <button class="hm-navitem home" id="chnav-chat">
       <span class="nav-badge hidden" id="chnav-chat-badge">0</span>
@@ -3613,9 +3638,9 @@
       <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="pknav-home-lbl">کور</span>
     </button>
-    <button class="hm-navitem" id="pknav-profile">
-      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
-      <span class="nl" id="pknav-profile-lbl">پروفایل</span>
+    <button class="hm-navitem" id="pknav-shop">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10.5 21h27v20a2.5 2.5 0 0 1-2.5 2.5H13a2.5 2.5 0 0 1-2.5-2.5z" fill="url(#nvWhite)"/><path d="M20.8 43.5V33a3.2 3.2 0 0 1 6.4 0v10.5z" fill="#a86e00"/><rect x="30" y="27.5" width="5.4" height="5.4" rx="1.2" fill="url(#nvGold)"/><path d="M7 7.5h34l2.5 11.5h-39z" fill="url(#nvPink)"/><circle cx="12" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="24" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="36" cy="19" r="3.4" fill="url(#nvPink)"/><path d="M24 10.1l.95 1.95 2.15.3-1.55 1.5.37 2.13L24 15l-1.92 1.02.37-2.13-1.55-1.5 2.15-.3z" fill="#fff3c4"/></svg></span>
+      <span class="nl" id="pknav-shop-lbl">پلورنځی</span>
     </button>
     <button class="hm-navitem" id="pknav-chat">
       <span class="nav-badge hidden" id="pknav-chat-badge">0</span>
@@ -3687,9 +3712,9 @@
       <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="pfnav-home-lbl">کور</span>
     </button>
-    <button class="hm-navitem home" id="pfnav-profile">
-      <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
-      <span class="nl" id="pfnav-profile-lbl">پروفایل</span>
+    <button class="hm-navitem" id="pfnav-shop">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10.5 21h27v20a2.5 2.5 0 0 1-2.5 2.5H13a2.5 2.5 0 0 1-2.5-2.5z" fill="url(#nvWhite)"/><path d="M20.8 43.5V33a3.2 3.2 0 0 1 6.4 0v10.5z" fill="#a86e00"/><rect x="30" y="27.5" width="5.4" height="5.4" rx="1.2" fill="url(#nvGold)"/><path d="M7 7.5h34l2.5 11.5h-39z" fill="url(#nvPink)"/><circle cx="12" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="24" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="36" cy="19" r="3.4" fill="url(#nvPink)"/><path d="M24 10.1l.95 1.95 2.15.3-1.55 1.5.37 2.13L24 15l-1.92 1.02.37-2.13-1.55-1.5 2.15-.3z" fill="#fff3c4"/></svg></span>
+      <span class="nl" id="pfnav-shop-lbl">پلورنځی</span>
     </button>
     <button class="hm-navitem" id="pfnav-chat">
       <span class="nav-badge hidden" id="pfnav-chat-badge">0</span>
@@ -3797,9 +3822,9 @@
       <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="ldnav-home-lbl">کور</span>
     </button>
-    <button class="hm-navitem" id="ldnav-profile">
-      <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
-      <span class="nl" id="ldnav-profile-lbl">پروفایل</span>
+    <button class="hm-navitem" id="ldnav-shop">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10.5 21h27v20a2.5 2.5 0 0 1-2.5 2.5H13a2.5 2.5 0 0 1-2.5-2.5z" fill="url(#nvWhite)"/><path d="M20.8 43.5V33a3.2 3.2 0 0 1 6.4 0v10.5z" fill="#a86e00"/><rect x="30" y="27.5" width="5.4" height="5.4" rx="1.2" fill="url(#nvGold)"/><path d="M7 7.5h34l2.5 11.5h-39z" fill="url(#nvPink)"/><circle cx="12" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="24" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="36" cy="19" r="3.4" fill="url(#nvPink)"/><path d="M24 10.1l.95 1.95 2.15.3-1.55 1.5.37 2.13L24 15l-1.92 1.02.37-2.13-1.55-1.5 2.15-.3z" fill="#fff3c4"/></svg></span>
+      <span class="nl" id="ldnav-shop-lbl">پلورنځی</span>
     </button>
     <button class="hm-navitem" id="ldnav-chat">
       <span class="nav-badge hidden" id="ldnav-chat-badge">0</span>
@@ -3838,6 +3863,34 @@
       <div id="shop-body"></div>
     </div>
   </div>
+  <!-- up48: the shop is a shell screen now and carries its own
+       copy of the bottom nav like every sibling page, with
+       پلورنځی raised as the active item. -->
+  <nav class="hm-nav">
+    <button class="hm-navitem" id="shnav-friends">
+      <span class="nav-badge hidden" id="shnav-friends-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M1.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M27.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M10.5 43c.8-9.5 6.3-15 13.5-15s12.7 5.5 13.5 15z" fill="url(#nvBlue)"/><circle cx="11" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="37" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="24" cy="19.5" r="8.4" fill="url(#nvWhite)"/></svg></span>
+      <span class="nl" id="shnav-friends-lbl">ملګري</span>
+    </button>
+    <button class="hm-navitem" id="shnav-clubs">
+      <span class="nav-badge hidden" id="shnav-clubs-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M15 5h18v6.5a9 9 0 0 1-18 0z" fill="url(#nvGold)"/><path d="M15 8.5H8a7 7 0 0 0 7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M33 8.5h7a7 7 0 0 1-7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M22 20h4v13h-4z" fill="url(#nvGold)"/><path d="M15 33h18l2.6 6H12.4z" fill="url(#nvGold)"/><rect x="11.5" y="39" width="25" height="4.6" rx="2.3" fill="url(#nvGold)"/><path d="M24 7.6l1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5z" fill="#fff3c4"/></svg></span>
+      <span class="nl" id="shnav-clubs-lbl">کلبونه</span>
+    </button>
+    <button class="hm-navitem" id="shnav-home">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
+      <span class="nl" id="shnav-home-lbl">کور</span>
+    </button>
+    <button class="hm-navitem home" id="shnav-shop">
+      <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10.5 21h27v20a2.5 2.5 0 0 1-2.5 2.5H13a2.5 2.5 0 0 1-2.5-2.5z" fill="url(#nvWhite)"/><path d="M20.8 43.5V33a3.2 3.2 0 0 1 6.4 0v10.5z" fill="#a86e00"/><rect x="30" y="27.5" width="5.4" height="5.4" rx="1.2" fill="url(#nvGold)"/><path d="M7 7.5h34l2.5 11.5h-39z" fill="url(#nvPink)"/><circle cx="12" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="24" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="36" cy="19" r="3.4" fill="url(#nvPink)"/><path d="M24 10.1l.95 1.95 2.15.3-1.55 1.5.37 2.13L24 15l-1.92 1.02.37-2.13-1.55-1.5 2.15-.3z" fill="#fff3c4"/></svg></span>
+      <span class="nl" id="shnav-shop-lbl">پلورنځی</span>
+    </button>
+    <button class="hm-navitem" id="shnav-chat">
+      <span class="nav-badge hidden" id="shnav-chat-badge">0</span>
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="19" y="4" width="25" height="20" rx="7" fill="url(#nvGreen)"/><path d="M35 22.5 35 30l-7.5-6.5z" fill="#28b751"/><rect x="4" y="15" width="29" height="22" rx="8" fill="url(#nvPink)"/><path d="M11 35.5 11 43l8-6.6z" fill="#e84393"/><ellipse cx="29" cy="9" rx="7" ry="2.6" fill="#fff" opacity=".35"/><ellipse cx="13" cy="20" rx="8" ry="2.8" fill="#fff" opacity=".35"/><circle cx="12.5" cy="26" r="2.1" fill="#fff"/><circle cx="18.5" cy="26" r="2.1" fill="#fff"/><circle cx="24.5" cy="26" r="2.1" fill="#fff"/></svg></span>
+      <span class="nl" id="shnav-chat-lbl">چت</span>
+    </button>
+  </nav>
 </section>
 
 <!-- ======== CLUBS (کلبونه) ======== -->
@@ -3968,9 +4021,9 @@
       <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="clnav-home-lbl">کور</span>
     </button>
-    <button class="hm-navitem" id="clnav-profile">
-      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
-      <span class="nl" id="clnav-profile-lbl">پروفایل</span>
+    <button class="hm-navitem" id="clnav-shop">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10.5 21h27v20a2.5 2.5 0 0 1-2.5 2.5H13a2.5 2.5 0 0 1-2.5-2.5z" fill="url(#nvWhite)"/><path d="M20.8 43.5V33a3.2 3.2 0 0 1 6.4 0v10.5z" fill="#a86e00"/><rect x="30" y="27.5" width="5.4" height="5.4" rx="1.2" fill="url(#nvGold)"/><path d="M7 7.5h34l2.5 11.5h-39z" fill="url(#nvPink)"/><circle cx="12" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="24" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="36" cy="19" r="3.4" fill="url(#nvPink)"/><path d="M24 10.1l.95 1.95 2.15.3-1.55 1.5.37 2.13L24 15l-1.92 1.02.37-2.13-1.55-1.5 2.15-.3z" fill="#fff3c4"/></svg></span>
+      <span class="nl" id="clnav-shop-lbl">پلورنځی</span>
     </button>
     <button class="hm-navitem" id="clnav-chat">
       <span class="nav-badge hidden" id="clnav-chat-badge">0</span>
@@ -4024,9 +4077,9 @@
       <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="cpnav-home-lbl">کور</span>
     </button>
-    <button class="hm-navitem" id="cpnav-profile">
-      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
-      <span class="nl" id="cpnav-profile-lbl">پروفایل</span>
+    <button class="hm-navitem" id="cpnav-shop">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10.5 21h27v20a2.5 2.5 0 0 1-2.5 2.5H13a2.5 2.5 0 0 1-2.5-2.5z" fill="url(#nvWhite)"/><path d="M20.8 43.5V33a3.2 3.2 0 0 1 6.4 0v10.5z" fill="#a86e00"/><rect x="30" y="27.5" width="5.4" height="5.4" rx="1.2" fill="url(#nvGold)"/><path d="M7 7.5h34l2.5 11.5h-39z" fill="url(#nvPink)"/><circle cx="12" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="24" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="36" cy="19" r="3.4" fill="url(#nvPink)"/><path d="M24 10.1l.95 1.95 2.15.3-1.55 1.5.37 2.13L24 15l-1.92 1.02.37-2.13-1.55-1.5 2.15-.3z" fill="#fff3c4"/></svg></span>
+      <span class="nl" id="cpnav-shop-lbl">پلورنځی</span>
     </button>
     <button class="hm-navitem" id="cpnav-chat">
       <span class="nav-badge hidden" id="cpnav-chat-badge">0</span>
@@ -4070,9 +4123,9 @@
       <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="cmnav-home-lbl">کور</span>
     </button>
-    <button class="hm-navitem" id="cmnav-profile">
-      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
-      <span class="nl" id="cmnav-profile-lbl">پروفایل</span>
+    <button class="hm-navitem" id="cmnav-shop">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10.5 21h27v20a2.5 2.5 0 0 1-2.5 2.5H13a2.5 2.5 0 0 1-2.5-2.5z" fill="url(#nvWhite)"/><path d="M20.8 43.5V33a3.2 3.2 0 0 1 6.4 0v10.5z" fill="#a86e00"/><rect x="30" y="27.5" width="5.4" height="5.4" rx="1.2" fill="url(#nvGold)"/><path d="M7 7.5h34l2.5 11.5h-39z" fill="url(#nvPink)"/><circle cx="12" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="24" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="36" cy="19" r="3.4" fill="url(#nvPink)"/><path d="M24 10.1l.95 1.95 2.15.3-1.55 1.5.37 2.13L24 15l-1.92 1.02.37-2.13-1.55-1.5 2.15-.3z" fill="#fff3c4"/></svg></span>
+      <span class="nl" id="cmnav-shop-lbl">پلورنځی</span>
     </button>
     <button class="hm-navitem" id="cmnav-chat">
       <span class="nav-badge hidden" id="cmnav-chat-badge">0</span>
@@ -4113,9 +4166,9 @@
       <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
       <span class="nl" id="srqnav-home-lbl">کور</span>
     </button>
-    <button class="hm-navitem" id="srqnav-profile">
-      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7.5 43.5c1-10.5 7.8-16.5 16.5-16.5s15.5 6 16.5 16.5z" fill="url(#nvBlue)"/><circle cx="24" cy="18" r="9.2" fill="url(#nvWhite)"/></svg></span>
-      <span class="nl" id="srqnav-profile-lbl">پروفایل</span>
+    <button class="hm-navitem" id="srqnav-shop">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10.5 21h27v20a2.5 2.5 0 0 1-2.5 2.5H13a2.5 2.5 0 0 1-2.5-2.5z" fill="url(#nvWhite)"/><path d="M20.8 43.5V33a3.2 3.2 0 0 1 6.4 0v10.5z" fill="#a86e00"/><rect x="30" y="27.5" width="5.4" height="5.4" rx="1.2" fill="url(#nvGold)"/><path d="M7 7.5h34l2.5 11.5h-39z" fill="url(#nvPink)"/><circle cx="12" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="24" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="36" cy="19" r="3.4" fill="url(#nvPink)"/><path d="M24 10.1l.95 1.95 2.15.3-1.55 1.5.37 2.13L24 15l-1.92 1.02.37-2.13-1.55-1.5 2.15-.3z" fill="#fff3c4"/></svg></span>
+      <span class="nl" id="srqnav-shop-lbl">پلورنځی</span>
     </button>
     <button class="hm-navitem" id="srqnav-chat">
       <span class="nav-badge hidden" id="srqnav-chat-badge">0</span>
@@ -6102,7 +6155,7 @@ function applyI18n() {
   set("#nav-friends-lbl", "navFriends");
   set("#nav-clubs-lbl", "navClubs");
   set("#nav-home-lbl", "navHome");
-  set("#nav-profile-lbl", "navProfile");
+  set("#nav-shop-lbl", "shopTitle");
   set("#nav-chat-lbl", "navChat");
   set("#join-code-lbl", "roomCodeLabel");
   set("#join-title", "menuJoin");
@@ -6145,12 +6198,12 @@ function applyI18n() {
   set("#frnav-friends-lbl", "navFriends");
   set("#frnav-clubs-lbl", "navClubs");
   set("#frnav-home-lbl", "navHome");
-  set("#frnav-profile-lbl", "navProfile");
+  set("#frnav-shop-lbl", "shopTitle");
   set("#frnav-chat-lbl", "navChat");
   set("#chnav-friends-lbl", "navFriends");
   set("#chnav-clubs-lbl", "navClubs");
   set("#chnav-home-lbl", "navHome");
-  set("#chnav-profile-lbl", "navProfile");
+  set("#chnav-shop-lbl", "shopTitle");
   set("#chnav-chat-lbl", "navChat");
   set("#pk-header-txt", "pkHeader");
   set("#pktab-online-lbl", "pkTabOnline");
@@ -6170,27 +6223,27 @@ function applyI18n() {
   set("#pknav-friends-lbl", "navFriends");
   set("#pknav-clubs-lbl", "navClubs");
   set("#pknav-home-lbl", "navHome");
-  set("#pknav-profile-lbl", "navProfile");
+  set("#pknav-shop-lbl", "shopTitle");
   set("#pknav-chat-lbl", "navChat");
   set("#pfnav-friends-lbl", "navFriends");
   set("#pfnav-clubs-lbl", "navClubs");
   set("#pfnav-home-lbl", "navHome");
-  set("#pfnav-profile-lbl", "navProfile");
+  set("#pfnav-shop-lbl", "shopTitle");
   set("#pfnav-chat-lbl", "navChat");
   set("#clnav-friends-lbl", "navFriends");
   set("#clnav-clubs-lbl", "navClubs");
   set("#clnav-home-lbl", "navHome");
-  set("#clnav-profile-lbl", "navProfile");
+  set("#clnav-shop-lbl", "shopTitle");
   set("#clnav-chat-lbl", "navChat");
   set("#cpnav-friends-lbl", "navFriends");
   set("#cpnav-clubs-lbl", "navClubs");
   set("#cpnav-home-lbl", "navHome");
-  set("#cpnav-profile-lbl", "navProfile");
+  set("#cpnav-shop-lbl", "shopTitle");
   set("#cpnav-chat-lbl", "navChat");
   set("#cmnav-friends-lbl", "navFriends");
   set("#cmnav-clubs-lbl", "navClubs");
   set("#cmnav-home-lbl", "navHome");
-  set("#cmnav-profile-lbl", "navProfile");
+  set("#cmnav-shop-lbl", "shopTitle");
   set("#cmnav-chat-lbl", "navChat");
   aria("#btn-cp-back", "frBack");
   aria("#btn-cm-back", "frBack");
@@ -6306,13 +6359,17 @@ function applyI18n() {
   set("#btn-bonus-txt", "bonusTitle");
   aria("#btn-wallet-coins", "coinsLbl");
   aria("#btn-wallet-gems", "gemsLbl");
-  aria("#btn-shop-open", "shopTitle");
   aria("#btn-shop-back", "frBack");
   set("#ldnav-friends-lbl", "navFriends");
   set("#ldnav-clubs-lbl", "navClubs");
   set("#ldnav-home-lbl", "navHome");
-  set("#ldnav-profile-lbl", "navProfile");
+  set("#ldnav-shop-lbl", "shopTitle");
   set("#ldnav-chat-lbl", "navChat");
+  set("#shnav-friends-lbl", "navFriends");
+  set("#shnav-clubs-lbl", "navClubs");
+  set("#shnav-home-lbl", "navHome");
+  set("#shnav-shop-lbl", "shopTitle");
+  set("#shnav-chat-lbl", "navChat");
   aria("#btn-ld-back", "frBack");
   set("#btn-rematch", "rematchBtn");
   set("#btn-rematch-accept", "rematchAccept");
@@ -10076,7 +10133,7 @@ $("#btn-pk-play").onclick = () => startPickedGame();
 $("#pknav-friends").onclick = () => openFriends();
 $("#pknav-clubs").onclick = () => openClubs();
 $("#pknav-home").onclick = () => closePicker();
-$("#pknav-profile").onclick = openProfile;
+$("#pknav-shop").onclick = () => openShop();
 $("#pknav-chat").onclick = () => openChats();
 function openJoin() {
   if (guardOnlineDoor()) return;
@@ -11146,7 +11203,7 @@ $("#nav-clubs").onclick = () => openClubs();
 $("#nav-home").onclick = () => {
   $("#scr-home").scrollTop = 0;
 };
-$("#nav-profile").onclick = openProfile;
+$("#nav-shop").onclick = () => openShop();
 $("#nav-chat").onclick = () => openChats();
 let pfAvatar = null;
 function avatarChoices() {
@@ -11248,7 +11305,7 @@ $("#ldnav-home").onclick = () => {
   $("#scr-leaders").classList.add("hidden");
   closeProfile();
 };
-$("#ldnav-profile").onclick = () => openProfile();
+$("#ldnav-shop").onclick = () => openShop();
 $("#ldnav-chat").onclick = () => openChats();
 function pfRenderGrid() {
   const grid = $("#pf-grid");
@@ -11299,6 +11356,7 @@ $("#pf-id-num").onclick = copyMyId;
 function openProfile() {
   frOrigin = null;
   hidePview();
+  closeShop();
   pfAvatar = profile.avatar;
   renderMyId();
   $("#pf-name").value = profile.name || "";
@@ -12001,7 +12059,9 @@ function fmtCountdown(ms) {
 }
 function openShop(tab) {
   if (tab) shopTab = tab;
-  $("#scr-home").classList.add("hidden");
+  hidePview();
+  frOrigin = null;
+  ["scr-friends", "scr-chats", "scr-profile", "scr-clubs", "scr-clubpage", "scr-clubmembers", "scr-clubseatreqs", "scr-picker", "scr-leaders"].forEach((id) => $("#" + id).classList.add("hidden"));
   $("#scr-shop").classList.remove("hidden");
   connectSocial();
   socialSend({ type: "s-wallet" });
@@ -12010,8 +12070,14 @@ function openShop(tab) {
 function closeShop() {
   stopChestTimer();
   $("#scr-shop").classList.add("hidden");
-  $("#scr-home").classList.remove("hidden");
 }
+$("#shnav-friends").onclick = () => openFriends();
+$("#shnav-clubs").onclick = () => openClubs();
+$("#shnav-home").onclick = () => closeShop();
+$("#shnav-shop").onclick = () => {
+};
+$("#shnav-chat").onclick = () => openChats();
+$("#btn-shop-back").onclick = () => closeShop();
 function stopChestTimer() {
   if (chestTimer) {
     clearInterval(chestTimer);
@@ -12156,7 +12222,6 @@ function renderShopLook(body) {
 $("#btn-shop-back").onclick = () => closeShop();
 $("#btn-wallet-coins").onclick = () => openShop("coins");
 $("#btn-wallet-gems").onclick = () => openShop("gems");
-$("#btn-shop-open").onclick = () => openShop();
 $("#btn-bonus").onclick = () => {
   connectSocial();
   socialSend({ type: "s-wallet-bonus" });
@@ -12176,14 +12241,14 @@ function updateFriendsBadge() {
   dmUnread.forEach((c) => {
     un += c;
   });
-  ["#nav-friends-badge", "#frnav-friends-badge", "#chnav-friends-badge", "#pfnav-friends-badge", "#clnav-friends-badge", "#cpnav-friends-badge", "#cmnav-friends-badge", "#srqnav-friends-badge", "#pknav-friends-badge", "#ldnav-friends-badge"].forEach((sel) => {
+  ["#nav-friends-badge", "#frnav-friends-badge", "#chnav-friends-badge", "#pfnav-friends-badge", "#clnav-friends-badge", "#cpnav-friends-badge", "#cmnav-friends-badge", "#srqnav-friends-badge", "#pknav-friends-badge", "#ldnav-friends-badge", "#shnav-friends-badge"].forEach((sel) => {
     const b = $(sel);
     if (b) {
       b.textContent = faNum(req);
       b.classList.toggle("hidden", req === 0);
     }
   });
-  ["#nav-chat-badge", "#frnav-chat-badge", "#chnav-chat-badge", "#pfnav-chat-badge", "#clnav-chat-badge", "#cpnav-chat-badge", "#cmnav-chat-badge", "#srqnav-chat-badge", "#pknav-chat-badge", "#ldnav-chat-badge"].forEach((sel) => {
+  ["#nav-chat-badge", "#frnav-chat-badge", "#chnav-chat-badge", "#pfnav-chat-badge", "#clnav-chat-badge", "#cpnav-chat-badge", "#cmnav-chat-badge", "#srqnav-chat-badge", "#pknav-chat-badge", "#ldnav-chat-badge", "#shnav-chat-badge"].forEach((sel) => {
     const b = $(sel);
     if (b) {
       b.textContent = faNum(un);
@@ -12201,6 +12266,7 @@ let frOrigin = null;
 function openFriends(origin) {
   if (guardOnlineDoor()) return;
   hidePview();
+  closeShop();
   frOrigin = origin === "lobby" ? "lobby" : null;
   const bb = $("#btn-fr-back");
   if (bb) bb.classList.toggle("hidden", frOrigin !== "lobby");
@@ -12228,6 +12294,7 @@ let dmReturn = "friends";
 function openChats() {
   if (guardOnlineDoor()) return;
   hidePview();
+  closeShop();
   frOrigin = null;
   $("#scr-friends").classList.add("hidden");
   $("#scr-profile").classList.add("hidden");
@@ -12346,19 +12413,18 @@ $("#frnav-friends").onclick = () => {
 };
 $("#frnav-clubs").onclick = () => openClubs();
 $("#frnav-home").onclick = closeFriends;
-$("#frnav-profile").onclick = openProfile;
+$("#frnav-shop").onclick = () => openShop();
 $("#frnav-chat").onclick = () => openChats();
 $("#chnav-friends").onclick = () => openFriends();
 $("#chnav-clubs").onclick = () => openClubs();
 $("#chnav-home").onclick = () => closeChats();
-$("#chnav-profile").onclick = openProfile;
+$("#chnav-shop").onclick = () => openShop();
 $("#chnav-chat").onclick = () => {
 };
 $("#pfnav-friends").onclick = () => openFriends();
 $("#pfnav-clubs").onclick = () => openClubs();
 $("#pfnav-home").onclick = () => closeProfile();
-$("#pfnav-profile").onclick = () => {
-};
+$("#pfnav-shop").onclick = () => openShop();
 $("#pfnav-chat").onclick = () => openChats();
 let pmSeat = null;
 let pmIdx = null;
@@ -13130,6 +13196,7 @@ let clRoomView = false;
 function openClubs() {
   if (guardOnlineDoor()) return;
   hidePview();
+  closeShop();
   frOrigin = null;
   closeClubMenu();
   $("#scr-friends").classList.add("hidden");
@@ -13159,7 +13226,7 @@ function closeClubs() {
 function updateClubsBadge() {
   let n = clubUnread;
   if (clubData && !clubData.club) n += (clubData.invites || []).length;
-  ["#nav-clubs-badge", "#frnav-clubs-badge", "#chnav-clubs-badge", "#pfnav-clubs-badge", "#clnav-clubs-badge", "#cpnav-clubs-badge", "#cmnav-clubs-badge", "#srqnav-clubs-badge", "#ldnav-clubs-badge"].forEach((sel) => {
+  ["#nav-clubs-badge", "#frnav-clubs-badge", "#chnav-clubs-badge", "#pfnav-clubs-badge", "#clnav-clubs-badge", "#cpnav-clubs-badge", "#cmnav-clubs-badge", "#srqnav-clubs-badge", "#ldnav-clubs-badge", "#shnav-clubs-badge"].forEach((sel) => {
     const b = $(sel);
     if (b) {
       b.textContent = faNum(n);
@@ -13171,7 +13238,7 @@ $("#clnav-friends").onclick = () => openFriends();
 $("#clnav-clubs").onclick = () => {
 };
 $("#clnav-home").onclick = () => closeClubs();
-$("#clnav-profile").onclick = openProfile;
+$("#clnav-shop").onclick = () => openShop();
 $("#clnav-chat").onclick = () => openChats();
 $("#btn-cl-home").onclick = () => closeClubs();
 function requestDiscover() {
@@ -14431,7 +14498,7 @@ $("#cpnav-home").onclick = () => {
   closeClubPage();
   closeClubs();
 };
-$("#cpnav-profile").onclick = () => openProfile();
+$("#cpnav-shop").onclick = () => openShop();
 $("#cpnav-chat").onclick = () => openChats();
 $("#btn-cm-back").onclick = () => closeClubMembers();
 $("#btn-cm-invite").onclick = () => openClubInvitePopup();
@@ -14444,7 +14511,7 @@ $("#cmnav-home").onclick = () => {
   closeClubMembers();
   closeClubs();
 };
-$("#cmnav-profile").onclick = () => openProfile();
+$("#cmnav-shop").onclick = () => openShop();
 $("#cmnav-chat").onclick = () => openChats();
 $("#btn-srq-back").onclick = () => closeClubSeatReqs();
 $("#srqnav-friends").onclick = () => openFriends();
@@ -14453,7 +14520,7 @@ $("#srqnav-home").onclick = () => {
   closeClubSeatReqs();
   closeClubs();
 };
-$("#srqnav-profile").onclick = () => openProfile();
+$("#srqnav-shop").onclick = () => openShop();
 $("#srqnav-chat").onclick = () => openChats();
 $("#btn-cl-seatreqs").onclick = () => openClubSeatReqs();
 let clSearchOpen = false;
@@ -15602,13 +15669,15 @@ function flyClone(code, fromRect) {
   el.style.top = fromRect.top + "px";
   el.style.width = fromRect.width + "px";
   el.style.height = fromRect.height + "px";
+  const rot0 = fromRect.rot || 0;
+  if (rot0) el.style.transform = "rotate(" + rot0.toFixed(1) + "deg)";
   document.body.appendChild(el);
   if (target) {
     const dx = target.left + target.width / 2 - (fromRect.left + fromRect.width / 2);
     const dy = target.top + target.height / 2 - (fromRect.top + fromRect.height / 2);
     const s = target.width / fromRect.width;
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      el.style.transition = "transform .38s cubic-bezier(.22,.68,.31,1)";
+      el.style.transition = "transform .32s cubic-bezier(.22,.8,.3,1)";
       el.style.transform = "translate(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px) rotate(" + SLOT_ROT.bottom + "deg) scale(" + s.toFixed(3) + ")";
     }));
   }
@@ -15694,8 +15763,22 @@ function attachPlayHandlers(el, code) {
     drag = null;
     el.classList.remove("dragging");
     if (commit && (dy <= -50 || !wasDrag)) {
+      const r = el.getBoundingClientRect();
+      let ang = 0;
+      const mm = /matrix\(([^)]+)\)/.exec(getComputedStyle(el).transform || "");
+      if (mm) {
+        const p = mm[1].split(",").map(Number);
+        ang = Math.atan2(p[1], p[0]) * 180 / Math.PI;
+      }
+      const fromRect = {
+        left: r.left + r.width / 2 - el.offsetWidth / 2,
+        top: r.top + r.height / 2 - el.offsetHeight / 2,
+        width: el.offsetWidth,
+        height: el.offsetHeight,
+        rot: ang
+      };
       el.style.opacity = "0";
-      playCard(code, el.getBoundingClientRect());
+      playCard(code, fromRect);
     } else {
       el.style.transition = "transform .25s ease";
       el.style.transform = "";
