@@ -46,7 +46,7 @@ const dist = fs.readFileSync(path.join(ROOT, 'cloudflare/dist-client.html'), 'ut
 check('dist stays code-only (< 1 MB)', Buffer.byteLength(dist) < 1_000_000, Buffer.byteLength(dist) + ' B');
 check('dist headrow has NO direction:ltr hack', !dist.includes('.cl-headrow { display: flex; align-items: center; gap: 11px; direction: ltr;'));
 const workerSrc = fs.readFileSync(path.join(ROOT, 'cloudflare/src/worker.js'), 'utf8');
-check('worker.js serves ?v=20261113-dragteams', workerSrc.includes('dist-client.html?v=20261113-dragteams'));
+check('worker.js serves ?v=20261113-listpage', workerSrc.includes('dist-client.html?v=20261113-listpage'));
 
 function spawnServer(args, port) {
   const s = spawn(process.execPath, args, { cwd: ROOT, env: { ...process.env, PORT: port }, stdio: ['ignore', 'pipe', 'pipe'] });
