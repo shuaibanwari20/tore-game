@@ -12,7 +12,7 @@
  * re-renders everyone and each moved client adopts its new
  * mySeat from the state.
  *
- *   STATIC — worker.js serves ?v=20261113-listpage; the dist
+ *   STATIC — worker.js serves ?v=20261113-listbtn; the dist
  *     stays under the 1,000,000 B budget; both Node server twins
  *     (server.js + deploy/server.js), the DO host and the client
  *     all carry 'seatswap'.
@@ -83,7 +83,7 @@ async function waitFor(fn, timeoutMs, stepMs = 350) {
 
 // ---------------- static guards ----------------
 const workerSrc = fs.readFileSync(path.join(ROOT, 'cloudflare/src/worker.js'), 'utf8');
-check('worker.js serves ?v=20261113-listpage', workerSrc.includes('dist-client.html?v=20261113-listpage'));
+check('worker.js serves ?v=20261113-listbtn', workerSrc.includes('dist-client.html?v=20261113-listbtn'));
 const distBytes = fs.statSync(path.join(ROOT, 'cloudflare/dist-client.html')).size;
 check('dist-client.html under the 1,000,000 B budget', distBytes < 1000000, distBytes + ' B');
 for (const f of ['server.js', 'deploy/server.js', 'cloudflare/src/game-server.js', 'public/index.html']) {
