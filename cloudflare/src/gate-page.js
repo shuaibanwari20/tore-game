@@ -17,6 +17,12 @@
  * gstatic, the public Tore web config, signInWithPopup with a
  * signInWithRedirect + getRedirectResult fallback, then POST
  * /auth/firebase and a reload (the reload now returns the game,
+ * because the session cookie is set). U59: inside an installed
+ * app the popup promise never settles (it opens in Safari), so
+ * standalone skips the popup for the redirect flow, the popup is
+ * raced against a 12 s timeout elsewhere, and the gate polls
+ * /auth/me while a redirect is in flight so a Safari-finished
+ * sign-in reloads the gate into the game on its own.
  * because the session cookie is set). The Facebook button is added
  * client-side only while /auth/config reports fbLive — while Facebook
  * login is parked it simply never appears.
@@ -138,6 +144,7 @@ const GATE_HTML = `<!DOCTYPE html>
     </div>
     <div class="gerr" id="gate-err"></div>
     <div class="gnote" id="gate-note">ننوتل یعنې د لوبې قوانین منل</div>
+    <div class="gnote" id="gate-sa-note" style="display:none"></div>
     <div class="glangs" id="gate-langs">
       <button type="button" class="glang" data-lang="ps">پښتو</button>
       <button type="button" class="glang" data-lang="fa">دری</button>
@@ -161,9 +168,9 @@ const GATE_HTML = `<!DOCTYPE html>
   // into the game. Only the texts change — the sign-in flow below is
   // untouched.
   var GATE_STR = {
-    ps: { title: 'توره — ننوتل', sub: 'د لوبې لپاره ننوځه', google: 'په ګوګل ننوځه', busy: 'ننوتل کېږي…', fb: 'په فېسبوک ننوځه', note: 'ننوتل یعنې د لوبې قوانین منل', errFail: 'ننوتل ونه شول — بیا هڅه وکړه', errConn: 'په ننوتلو کې ستونزه — انټرنېټ دې وګوره' },
-    fa: { title: 'توره — ورود', sub: 'برای بازی وارد شوید', google: 'ورود با گوگل', busy: 'در حال ورود…', fb: 'ورود با فیسبوک', note: 'ورود یعنی پذیرش قانون‌های بازی', errFail: 'ورود ناموفق بود — دوباره تلاش کنید', errConn: 'خطا در ورود — اتصال اینترنت را بررسی کنید' },
-    en: { title: 'Tore — Sign in', sub: 'Sign in to play', google: 'Sign in with Google', busy: 'Signing in…', fb: 'Sign in with Facebook', note: 'Signing in means accepting the game rules', errFail: 'Sign-in failed — please try again', errConn: 'Sign-in error — check your internet connection' }
+    ps: { title: 'توره — ننوتل', sub: 'د لوبې لپاره ننوځه', google: 'په ګوګل ننوځه', busy: 'ننوتل کېږي…', fb: 'په فېسبوک ننوځه', note: 'ننوتل یعنې د لوبې قوانین منل', errFail: 'ننوتل ونه شول — بیا هڅه وکړه', errConn: 'په ننوتلو کې ستونزه — انټرنېټ دې وګوره', saNote: 'که ګوګل په سفاري کې پرانستل شو، ننوتل هلته بشپړ کړه او بېرته دې اپ ته راشه — ننوتل به دې پخپله بشپړ شي' },
+    fa: { title: 'توره — ورود', sub: 'برای بازی وارد شوید', google: 'ورود با گوگل', busy: 'در حال ورود…', fb: 'ورود با فیسبوک', note: 'ورود یعنی پذیرش قانون‌های بازی', errFail: 'ورود ناموفق بود — دوباره تلاش کنید', errConn: 'خطا در ورود — اتصال اینترنت را بررسی کنید', saNote: 'اگر گوگل در سافاری باز شد، ورود را همان‌جا کامل کنید و به این برنامه برگردید — ورودتان خودکار کامل می‌شود' },
+    en: { title: 'Tore — Sign in', sub: 'Sign in to play', google: 'Sign in with Google', busy: 'Signing in…', fb: 'Sign in with Facebook', note: 'Signing in means accepting the game rules', errFail: 'Sign-in failed — please try again', errConn: 'Sign-in error — check your internet connection', saNote: 'If Google opens in Safari, finish signing in there, then come back to this app — your sign-in completes automatically' }
   };
   var glang = (window.__glang && GATE_STR[window.__glang]) ? window.__glang : 'ps';
   try {
@@ -180,6 +187,8 @@ const GATE_HTML = `<!DOCTYPE html>
     document.getElementById('gate-sub').textContent = d.sub;
     document.getElementById('btn-google-label').textContent = d.google;
     document.getElementById('gate-note').textContent = d.note;
+    var saN = document.getElementById('gate-sa-note');
+    if (saN) saN.textContent = d.saNote || '';
     var fbLbl = document.getElementById('gate-fb-label');
     if (fbLbl) fbLbl.textContent = d.fb;
     var bs = document.querySelectorAll('.glang');
@@ -259,18 +268,93 @@ const GATE_HTML = `<!DOCTYPE html>
       gateFail(GL().errConn);
     });
   }
+  // --- U59: sign-in must also work inside an installed app --------
+  // In a home-screen app (iOS standalone especially) a Firebase
+  // popup opens in Safari and its promise NEVER settles here, which
+  // used to leave this button stuck on the busy label forever. So:
+  // standalone goes straight to the redirect flow; the popup gets a
+  // 12 s race timeout everywhere else and falls back to redirect;
+  // and while a redirect sign-in is in flight the gate polls
+  // /auth/me, so when the session lands (finished in Safari, cookie
+  // shared back) the gate reloads into the game by itself.
+  var isStandalone = false;
+  try {
+    isStandalone = (window.navigator && window.navigator.standalone === true) ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  } catch (e) { /* detection failed — browser-tab flow stands */ }
+  if (isStandalone) {
+    var saEl = document.getElementById('gate-sa-note');
+    if (saEl) saEl.style.display = '';
+  }
+  var PENDING_KEY = 'tore.gate.pending';
+  function markPending() {
+    try { sessionStorage.setItem(PENDING_KEY, String(Date.now())); } catch (e) { /* ignore */ }
+  }
+  function pendingFresh() {
+    try {
+      var t = parseInt(sessionStorage.getItem(PENDING_KEY) || '0', 10);
+      return t > 0 && (Date.now() - t) < 10 * 60 * 1000;
+    } catch (e) { return false; }
+  }
+  function clearPending() {
+    try { sessionStorage.removeItem(PENDING_KEY); } catch (e) { /* ignore */ }
+  }
+  var pollTimer = null;
+  function stopAuthPoll() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+  function startAuthPoll() {
+    if (pollTimer) return;
+    var tries = 0;
+    pollTimer = setInterval(function () {
+      tries++;
+      if (tries > 48 || !pendingFresh()) { stopAuthPoll(); return; }
+      fetch('/auth/me', { credentials: 'same-origin' }).then(function (r) {
+        return r.ok ? r.json() : null;
+      }).then(function (me) {
+        if (me && (me.id || me.name || me.email)) {
+          stopAuthPoll(); clearPending(); location.reload();
+        }
+      }).catch(function () { /* keep polling */ });
+    }, 2500);
+  }
+  function startRedirect(auth, provider) {
+    markPending();
+    startAuthPoll();
+    // If the browser never actually leaves (in-app webview) or the
+    // player comes back without a session, free the button again —
+    // the poll keeps running for a late success either way.
+    setTimeout(function () {
+      if (!gBtn.disabled) return;
+      gBtn.disabled = false;
+      gLabel.textContent = GL().google;
+      errBox.textContent = GL().errConn;
+    }, 30000);
+    return authMod.signInWithRedirect(auth, provider);
+  }
   gBtn.onclick = function () {
     busy();
     loadAuth().then(function (auth) {
       var provider = new authMod.GoogleAuthProvider();
-      return authMod.signInWithPopup(auth, provider).then(function (cred) {
+      if (isStandalone) {
+        return startRedirect(auth, provider);
+      }
+      var popup = authMod.signInWithPopup(auth, provider);
+      var timeout = new Promise(function (resolve, reject) {
+        setTimeout(function () {
+          var e = new Error('popup hung');
+          e.code = 'auth/popup-timeout-tore';
+          reject(e);
+        }, 12000);
+      });
+      return Promise.race([popup, timeout]).then(function (cred) {
         finishWithUser(cred.user);
       }).catch(function (e) {
         var code = (e && e.code) || '';
         if (code.indexOf('popup') >= 0 || code.indexOf('operation-not-supported') >= 0 ||
             code.indexOf('cancelled') >= 0) {
-          // Popup blocked/unsupported (in-app browsers): full-page flow.
-          return authMod.signInWithRedirect(auth, provider);
+          // Popup blocked/unsupported/hung (in-app browsers): full-page flow.
+          return startRedirect(auth, provider);
         }
         throw e;
       });
@@ -278,11 +362,20 @@ const GATE_HTML = `<!DOCTYPE html>
       gateFail(GL().errFail);
     });
   };
+  // Back in the app with a sign-in possibly finished elsewhere
+  // (Safari): resume the session poll whenever the flag is fresh.
+  if (pendingFresh()) startAuthPoll();
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && pendingFresh()) startAuthPoll();
+  });
+  window.addEventListener('pageshow', function () {
+    if (pendingFresh()) startAuthPoll();
+  });
   // Returning from the redirect flow: pick up the result once.
   loadAuth().then(function (auth) {
     return authMod.getRedirectResult(auth);
   }).then(function (cred) {
-    if (cred && cred.user) { busy(); finishWithUser(cred.user); }
+    if (cred && cred.user) { busy(); clearPending(); finishWithUser(cred.user); }
   }).catch(function () { /* no redirect in flight — ignore */ });
 })();
 </script>
