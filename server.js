@@ -485,6 +485,10 @@ function createRoom() {
     club: null, // clubs v8: {cid, name} when a club manager created this room as a club game
     felt: 11, // the creator's table felt (1..11) — set from the create frame, fixed for the room's life
     back: 1, // the creator's card back (1..6) — set from the create frame, fixed for the room's life
+    tier: 0, // up47: the creator's stake tier (0/100/500/1000/5000) — set from the create frame, fixed for the room's life
+    matchId: null, // up47: the live match's wallet-escrow id (set by startMatch; null = no money match running)
+    matchSeq: 0, // up47: per-room match counter (a rematch is a NEW match with a NEW escrow)
+    staked: false, // up47: the live match's stakes were actually escrowed (all-human + everyone could pay)
     vs: null, // club-vs-club stamp {a, b} (cids) — only the social core's vsStartMatch hook sets it
     vsNames: null, // {a, b} display names for the vs stamp
     rematch: null, // runtime-only rematch offer {bySid, bySeat, expires, accepts:Set<sid>}
@@ -556,7 +560,22 @@ function maybeUnfreeze(room) {
     pumpTurn(room);
   }
 }
+// ------------------------------------------------------------ up47 wallet
+// The hosts never touch a balance: they only announce lifecycle
+// moments to the social core's wallet (escrow at match start,
+// settle at match end, forfeit on an explicit leave, refund when
+// a staked match dies without a result). Every call is defensive
+// — social/wallet trouble must never break the game.
+function refundRoomStake(room) {
+  if (!room || !room.matchId) return;
+  try {
+    const core = social.core;
+    if (core && typeof core.walletRefund === 'function') core.walletRefund(room.matchId);
+  } catch (e) { /* social never breaks the game */ }
+}
+
 function dissolveRoom(room) {
+  refundRoomStake(room); // up47: a dissolved staked match is void — stakes refund
   clearTimeout(room.turnTimer);
   clearTimeout(room.roundTimer);
   clearTimeout(room.trickTimer);
@@ -601,6 +620,8 @@ function stateFor(room, seatIdx) {
     club: room.club ? { cid: room.club.cid, name: room.club.name } : null,
     felt: room.felt || 11,
     back: room.back || 1,
+    tier: room.tier || 0, // up47: the room's stake tier (the lobby shows it before the start)
+    staked: !!room.staked, // up47: this match's stakes really were escrowed
     vs: room.vs ? {
       a: { cid: room.vs.a, name: (room.vsNames && room.vsNames.a) || room.vs.a },
       b: { cid: room.vs.b, name: (room.vsNames && room.vsNames.b) || room.vs.b },
@@ -760,6 +781,14 @@ function recordMatchStats(room) {
       if (r && typeof r.catch === 'function') r.catch(() => {});
     }
   } catch (e) { /* social never breaks the game */ }
+  // up47: settle the match's stake escrow from the SERVER's own
+  // result (winner = the winning team index). The core's escrow
+  // record is the idempotency key — this can never pay twice.
+  try {
+    if (room.matchId && typeof core.walletSettle === 'function') {
+      core.walletSettle(room.matchId, m.winner);
+    }
+  } catch (e) { /* social never breaks the game */ }
 }
 
 function onMatchEvent(room, evt) {
@@ -899,6 +928,25 @@ function startMatch(room) {
       s.voiceSpeaker = false;
     }
   });
+  // up47: a fresh match id per match (a rematch escrows anew).
+  // Escrow happens ONLY when the tier is real AND all four seats
+  // stayed human (the fill above turns any empty seat into a bot)
+  // — a bot match never touches a wallet. The core judges
+  // affordability across the whole table: anyone short → the
+  // match runs free and NO wallet moves (room.staked stays
+  // false, which the state push reports honestly).
+  room.matchSeq = (room.matchSeq || 0) + 1;
+  room.matchId = room.code + ':' + room.matchSeq + ':' + Date.now().toString(36);
+  room.staked = false;
+  if (room.tier > 0 && room.seats.every((s) => s.kind === 'human' && s.sid)) {
+    try {
+      const core = social.core;
+      if (core && typeof core.walletEscrow === 'function') {
+        room.staked = !!core.walletEscrow(room.matchId, room.tier,
+          room.seats.map((s, i) => ({ id: s.sid, seat: i })));
+      }
+    } catch (e) { /* social never breaks the game */ }
+  }
   room.match = new G.Match(room.emit);
   room.match.botSeats = room.seats.map((s) => s.kind === 'bot');
   room.phase = 'playing';
@@ -1107,6 +1155,7 @@ setInterval(() => {
     if (goneSids.length) syncBusyFor(null, goneSids);
     const anyHuman = room.seats.some((s) => s.kind === 'human');
     if (!anyHuman) {
+      refundRoomStake(room); // up47: the room dies mid-match — void, stakes refund
       clearTimeout(room.turnTimer);
       clearTimeout(room.roundTimer);
       clearTimeout(room.trickTimer);
@@ -1190,6 +1239,26 @@ function handleMessage(ws, msg) {
       const room = createRoom();
       room.felt = cleanFelt(msg.felt); // creator's felt, validated; fixed at creation
       room.back = cleanBack(msg.back); // creator's card back, validated the same way
+      room.tier = cleanTier(msg.tier); // up47: creator's stake tier, validated the same way
+      // up47: a LOCKED cosmetic never reaches a table — when the
+      // creator HAS a wallet record and does not own the felt /
+      // back he named, the room falls back to the free defaults
+      // (felt 11 / back 1). No wallet record = nothing to judge
+      // by (he has never said hello on this host) — the filter
+      // stays out of the way; cosmetics are appearance only.
+      {
+        const csid = joinSid(msg);
+        if (csid) {
+          try {
+            const core = social.core;
+            if (core && typeof core.walletView === 'function' && core.walletView(csid) &&
+                typeof core.ownsCosmetic === 'function') {
+              if (!core.ownsCosmetic(csid, 'felt' + room.felt)) room.felt = 11;
+              if (!core.ownsCosmetic(csid, 'back' + room.back)) room.back = 1;
+            }
+          } catch (e) { /* social never breaks the game */ }
+        }
+      }
       // Clubs v8: a club stamp is granted ONLY by the social
       // core, which verifies the creator is a manager of that
       // club — a forged club id in the create frame earns nothing.
@@ -1343,6 +1412,16 @@ function handleMessage(ws, msg) {
           if (leavingSid) syncBusyFor(null, [leavingSid]);
         }
       } else {
+        // up47: an EXPLICIT mid-match leave forfeits the stake —
+        // his would-be payout share burns at settlement. (A
+        // disconnect never reaches this frame: the up44 cover /
+        // freeze path is NOT a forfeit.)
+        if (room.matchId && leavingSid) {
+          try {
+            const core = social.core;
+            if (core && typeof core.walletForfeit === 'function') core.walletForfeit(room.matchId, leavingSid);
+          } catch (e) { /* social never breaks the game */ }
+        }
         const botNo = room.seats.filter((s) => s.kind === 'bot').length;
         seat.kind = 'bot'; // bot takes over the seat and its hand
         seat.name = 'ربات ' + (botNo + 1);
@@ -1522,6 +1601,17 @@ function cleanFelt(v) {
 // creator's backs.
 function cleanBack(v) {
   return (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 6) ? v : 1;
+}
+
+// Stake tiers (up47): the create frame carries the creator's
+// tier — one of the fixed ladder (0 = free), validated exactly
+// like the felt/back; anything else (a forged amount, a string,
+// a fraction) falls back to 0 = a free room. The AMOUNT itself
+// only ever comes from this ladder and the wallet constants in
+// social-core.js — never from the client.
+const STAKE_TIERS = [0, 100, 500, 1000, 5000];
+function cleanTier(v) {
+  return (typeof v === 'number' && Number.isInteger(v) && STAKE_TIERS.includes(v)) ? v : 0;
 }
 
 httpServer.listen(PORT, () => {
