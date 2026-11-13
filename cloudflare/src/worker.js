@@ -89,6 +89,7 @@
 import * as auth from './auth.js';
 import { GameServer } from './game-server.js';
 import { gatePage } from './gate-page.js';
+import { fbPage } from './fb-page.js';
 
 export { GameServer };
 
@@ -929,6 +930,21 @@ export default {
       // against Google's securetoken JWKS and mints the session cookie.
       if (request.method !== 'POST') return new Response('method not allowed', { status: 405 });
       return auth.handleFirebaseToken(request, env);
+    }
+    if (path === '/auth/fb') {
+      // U61: the Firebase bridge page for the installed app. The
+      // gate's Safari sheet lands here; Firebase signs the player
+      // in inside Safari (where its redirect flow works) and the
+      // page bridges the token to the gate's ticket (below).
+      if (request.method !== 'GET') return new Response('method not allowed', { status: 405 });
+      const t = new URL(request.url).searchParams.get('ticket') || '';
+      return new Response(fbPage(t), {
+        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+      });
+    }
+    if (path === '/auth/fb-complete') {
+      if (request.method !== 'POST') return new Response('method not allowed', { status: 405 });
+      return auth.handleFirebaseTicketComplete(request, env);
     }
     if (path === '/auth/ticket' && request.method === 'POST') {
       // U60: the installed-app gate mints a one-time login ticket
