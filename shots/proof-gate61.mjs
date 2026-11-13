@@ -75,6 +75,8 @@ try {
       '  initializeApp: function () { return {}; },',
       '  auth: function () { return {',
       '    getRedirectResult: function () { return Promise.resolve(null); },',
+      '    currentUser: null,',
+      '    onAuthStateChanged: function (cb) { setTimeout(function () { cb(null); }, 30); },',
       '    signInWithRedirect: function () { window.__sheet.redirect++; return new Promise(function () {}); }',
       '  }; }',
       '};',
@@ -137,6 +139,33 @@ try {
     const fell = await waitFor(async () => (await page.evaluate(() => window.__fb)).redirect === 1, 16000);
     check('T2 hung popup still falls back to redirect', fell);
     check('T3 no page errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  }
+  // ---- F: fb page bridges a PERSISTED user (up62) ----------------
+  await reset();
+  {
+    const ctx = await browser.newContext();
+    const PERSISTED_STUB = [
+      'window.firebase = {',
+      '  initializeApp: function () { return {}; },',
+      '  auth: function () { return {',
+      '    currentUser: null,',
+      '    getRedirectResult: function () { return Promise.resolve(null); },',
+      '    onAuthStateChanged: function (cb) { setTimeout(function () { cb({ getIdToken: function () { return Promise.resolve("tok-abc"); } }); }, 60); },',
+      '    signInWithRedirect: function () { return new Promise(function () {}); }',
+      '  }; }',
+      '};',
+      'window.firebase.auth.GoogleAuthProvider = function () {};',
+    ].join('\n');
+    await ctx.route('https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js', (r) =>
+      r.fulfill({ contentType: 'text/javascript', body: PERSISTED_STUB }));
+    await ctx.route('https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js', (r) =>
+      r.fulfill({ contentType: 'text/javascript', body: '' }));
+    const page = await ctx.newPage();
+    await page.goto(BASE + '/auth/fb?ticket=0123456789abcdef0123456789abcdef', { waitUntil: 'load' });
+    const landed = await waitFor(() => page.url().endsWith('/auth/done'), 6000);
+    check('F1 persisted user bridges and lands on /auth/done', landed, page.url());
+    check('F2 bridge posted the token to /auth/fb-complete', (await stats()).fbCompleteHits >= 1, JSON.stringify(await stats()));
     await ctx.close();
   }
 } catch (e) {

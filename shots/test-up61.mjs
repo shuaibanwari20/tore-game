@@ -81,7 +81,8 @@ const validTicket = 'a'.repeat(32);
 const page = fbPage(validTicket);
 check('S1 fb page embeds ticket + Firebase redirect flow', page.includes(validTicket)
   && page.includes('firebase-auth-compat.js') && page.includes('signInWithRedirect')
-  && page.includes('getRedirectResult') && page.includes('/auth/fb-complete'));
+  && page.includes('getRedirectResult') && page.includes('/auth/fb-complete')
+  && page.includes('onAuthStateChanged') && page.includes('tore.fb.sent'));
 const badPage = fbPage('garbage!!');
 check('S2 fb page with a bad ticket embeds none', !/[a-f0-9]{32}/.test(badPage.split('TICKET = ')[1].split(';')[0])
   && badPage.includes('سمه نه ده'));
