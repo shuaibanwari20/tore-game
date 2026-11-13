@@ -39,6 +39,7 @@ import * as G from './game.js';
 import { chooseCard, plan13 } from './bots.js';
 import { SocialCore } from './social-core.js';
 import { TicketStore } from './tickets.js';
+import { OtpStore, IdMap } from './otp.js';
 
 // ---- Tunables (same values as ../server.js) ----
 const TURN_TIMEOUT_MS = 30000;    // a stalled human seat is played by a bot
@@ -598,6 +599,7 @@ export class GameServer {
     // U60 internal login tickets — only the Worker calls these
     // (no public route proxies /internal/* to the DO).
     if (reqPath.startsWith('/internal/tickets/') && request.method === 'POST') return this._ticketRoute(reqPath, request);
+    if (reqPath.startsWith('/internal/authkv/') && request.method === 'POST') return this._authKvRoute(reqPath, request);
     if (reqPath === '/club-cover' && request.method === 'POST') return this._coverUpload(request);
     if (reqPath.startsWith('/club-cover/') && request.method === 'GET') return this._coverGet(reqPath.slice('/club-cover/'.length));
     // Uploaded PROFILE photos (F17): POST /p-photo stores the
@@ -646,6 +648,22 @@ export class GameServer {
     if (reqPath === '/internal/tickets/complete') return Response.json({ ok: !!(body && body.user) && (await this.tickets.complete(body.ticket, body.user)) });
     if (reqPath === '/internal/tickets/fail') return Response.json({ ok: await this.tickets.fail(body.ticket) });
     if (reqPath === '/internal/tickets/status') return Response.json(await this.tickets.status(body.ticket));
+    return new Response('not found', { status: 404 });
+  }
+
+  // U65: email sign-in codes (OtpStore) + the email→identity
+  // bridge (IdMap). Internal only, like the ticket routes.
+  async _authKvRoute(reqPath, request) {
+    if (!this.otp) this.otp = new OtpStore(this.state.storage);
+    if (!this.idmap) this.idmap = new IdMap(this.state.storage);
+    let body = {};
+    try { body = await request.json(); } catch { /* empty body */ }
+    const email = body && typeof body.email === 'string' ? body.email : '';
+    if (reqPath === '/internal/authkv/otp-start') return Response.json(await this.otp.start(email));
+    if (reqPath === '/internal/authkv/otp-clear') { await this.otp.clear(email); return Response.json({ ok: true }); }
+    if (reqPath === '/internal/authkv/otp-verify') return Response.json({ result: await this.otp.verify(email, body && body.code) });
+    if (reqPath === '/internal/authkv/idmap-get') return Response.json({ sub: await this.idmap.get(email) });
+    if (reqPath === '/internal/authkv/idmap-set') return Response.json({ sub: await this.idmap.setIfAbsent(email, body && body.sub) });
     return new Response('not found', { status: 404 });
   }
 

@@ -27,6 +27,7 @@
  */
 
 import { isTicketId, isTicketCode } from './tickets.js';
+import { normalizeEmail, isEmail, emailDerivedSub } from './otp.js';
 
 const SESSION_COOKIE = 'tore_session';
 const OAUTH_COOKIE = 'tore_oauth';
@@ -362,10 +363,10 @@ export async function handleFirebaseToken(request, env) {
   const projectId = env.FIREBASE_PROJECT_ID || 'tore-game';
   const claims = await verifyFirebaseIdToken(body && body.idToken, projectId);
   if (!claims) return unauthorized();
-  const email = typeof claims.email === 'string' ? claims.email : '';
+  const email = normalizeEmail(typeof claims.email === 'string' ? claims.email : '');
   const payload = {
     provider: 'firebase',
-    sub: claims.sub,
+    sub: await canonicalSub(env, email, claims.sub),
     name: (typeof claims.name === 'string' && claims.name) || (email ? email.split('@')[0] : ''),
     email,
     picture: typeof claims.picture === 'string' ? claims.picture : '',
@@ -391,14 +392,151 @@ export async function handleFirebaseToken(request, env) {
 /* Shared tail of both bridge completions: verify the Firebase
  * token and complete the ticket with the /auth/firebase payload.
  * Returns an HTTP status: 200 ok, 401 bad token, 409 ticket gone. */
+/* The DO bridge for the U65 stores (same pattern as ticketCall,
+ * a different route family on the same Durable Object). */
+async function authKvCall(env, action, payload) {
+  try {
+    const id = env.GAME.idFromName('global');
+    const stub = env.GAME.get(id);
+    const res = await stub.fetch(new Request('https://do.internal/internal/authkv/' + action, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    }));
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+async function idmapGet(env, email) {
+  if (!email) return null;
+  const j = await authKvCall(env, 'idmap-get', { email });
+  return j && typeof j.sub === 'string' && j.sub ? j.sub : null;
+}
+
+async function idmapSet(env, email, sub) {
+  if (!email || !sub) return null;
+  const j = await authKvCall(env, 'idmap-set', { email, sub });
+  return j && typeof j.sub === 'string' && j.sub ? j.sub : null;
+}
+
+/**
+ * The ONE canonical sub for a person, whichever door they used:
+ * the registered mapping wins (first writer — a Google sign-in
+ * registers its Firebase UID, so an email-code sign-in with the
+ * same email lands on the same game identity); with no mapping,
+ * `preferred` is registered and used; with neither, the email's
+ * derived sub. Mapping failures never block a sign-in.
+ */
+export async function canonicalSub(env, email, preferred) {
+  if (!email) return preferred || null;
+  const mapped = await idmapGet(env, email);
+  if (mapped) return mapped;
+  if (preferred) {
+    const set = await idmapSet(env, email, preferred);
+    return set || preferred;
+  }
+  const derived = await emailDerivedSub(email);
+  const set = await idmapSet(env, email, derived);
+  return set || derived;
+}
+
+/* Send the 6-digit code through Brevo (the account's verified
+ * sender is "Anwari Tech <shuaibanwari20@gmail.com>"). The API
+ * key is a Worker SECRET (env.BREVO_API_KEY) set by the owner —
+ * it never transits chat or code. */
+async function sendOtpEmail(env, email, code) {
+  try {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': env.BREVO_API_KEY,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name: 'توره', email: env.BREVO_SENDER || 'shuaibanwari20@gmail.com' },
+        to: [{ email }],
+        subject: 'توره — د ننوتلو کوډ / کد ورود',
+        textContent: 'ستا د تورې د ننوتلو کوډ: ' + code + '\nکد ورود تو به توره: ' + code + '\nYour Tore sign-in code: ' + code + '\n\nدا کوډ ۱۰ دقیقې کار کوي. / This code works for 10 minutes.',
+      }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * POST /auth/email-start  { email } — U65: mint a 6-digit code
+ * and email it. 400 bad email · 429 resend cooldown · 502 the
+ * mailer refused · 503 email sign-in not configured (no key).
+ */
+export async function handleEmailStart(request, env) {
+  if (!env.BREVO_API_KEY) {
+    return Response.json({ ok: false, error: 'email sign-in is not configured' }, { status: 503 });
+  }
+  let body = null;
+  try { body = await request.json(); } catch { body = null; }
+  const email = normalizeEmail(body && body.email);
+  if (!isEmail(email)) {
+    return Response.json({ ok: false, error: 'bad email' }, { status: 400 });
+  }
+  const started = await authKvCall(env, 'otp-start', { email });
+  if (!started) return Response.json({ ok: false, error: 'store unavailable' }, { status: 502 });
+  if (!started.ok) {
+    return Response.json({ ok: false, error: 'cooldown', wait: started.waitSec || 60 }, { status: 429 });
+  }
+  const sent = await sendOtpEmail(env, email, started.code);
+  if (!sent) {
+    await authKvCall(env, 'otp-clear', { email });
+    return Response.json({ ok: false, error: 'send failed' }, { status: 502 });
+  }
+  return Response.json({ ok: true });
+}
+
+/**
+ * POST /auth/email-verify  { email, code } — U65: a correct code
+ * mints the session (the response is the standard session one).
+ * 400 bad input · 401 wrong code · 410 no live code · 429 locked.
+ */
+export async function handleEmailVerify(request, env) {
+  if (!env.SESSION_SECRET) {
+    return Response.json({ ok: false, error: 'sign-in is not configured on this server' }, { status: 500 });
+  }
+  let body = null;
+  try { body = await request.json(); } catch { body = null; }
+  const email = normalizeEmail(body && body.email);
+  const code = body && typeof body.code === 'string' ? body.code.trim() : '';
+  if (!isEmail(email) || !/^[0-9]{6}$/.test(code)) {
+    return Response.json({ ok: false, error: 'bad input' }, { status: 400 });
+  }
+  const j = await authKvCall(env, 'otp-verify', { email, code });
+  const result = j && j.result;
+  if (result === 'bad') return Response.json({ ok: false, error: 'wrong code' }, { status: 401 });
+  if (result === 'locked') return Response.json({ ok: false, error: 'locked' }, { status: 429 });
+  if (result !== 'ok') return Response.json({ ok: false, error: 'code gone' }, { status: 410 });
+  const sub = await canonicalSub(env, email, null);
+  const payload = {
+    provider: 'email',
+    sub,
+    name: email.split('@')[0],
+    email,
+    picture: '',
+  };
+  return ticketLoginResponse(env, payload);
+}
+
 async function completeTicketWithFirebase(env, ticket, idToken) {
   const projectId = env.FIREBASE_PROJECT_ID || 'tore-game';
   const claims = await verifyFirebaseIdToken(idToken, projectId);
   if (!claims) return 401;
-  const email = typeof claims.email === 'string' ? claims.email : '';
+  const email = normalizeEmail(typeof claims.email === 'string' ? claims.email : '');
   const payload = {
     provider: 'firebase',
-    sub: claims.sub,
+    sub: await canonicalSub(env, email, claims.sub),
     name: (typeof claims.name === 'string' && claims.name) || (email ? email.split('@')[0] : ''),
     email,
     picture: typeof claims.picture === 'string' ? claims.picture : '',
