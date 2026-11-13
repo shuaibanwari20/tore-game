@@ -12,6 +12,14 @@
  * gate back in the app polls the ticket and mints the session in
  * its own context. No Google client secret is used anywhere in
  * this path — token verification is public-JWKS only (auth.js).
+ *
+ * U62: the return from Google is handled three ways, because in
+ * the iOS sheet the one-time redirect result is often lost even
+ * though the sign-in itself succeeded: (1) getRedirectResult,
+ * (2) onAuthStateChanged / currentUser — Firebase persists the
+ * signed-in user on THIS origin, and a persisted user bridges
+ * exactly the same way, (3) a "we came back but nothing arrived"
+ * message with a tap-to-retry button instead of a silent page.
  */
 
 import { isTicketId } from './tickets.js';
@@ -72,6 +80,11 @@ var MSG_WAIT = 'یوه شېبه… گوګل ته ځي';
 var MSG_BACK = 'بیرته راغلې… ننوتل بشپړېږي';
 var MSG_FAIL = 'ننوتل ونشول — بیا هڅه وکړه';
 var MSG_BAD = 'دا پاڼه سمه نه ده خلاصه شوې — له لوبې یې بیا پیل کړه';
+var MSG_AGAIN = 'ننوتل وشول خو نتیجه دلته ونه رسېده — تڼۍ یو ځل بیا ووهه';
+var SENT_KEY = 'tore.fb.sent';
+function sentBefore() { try { return sessionStorage.getItem(SENT_KEY) === '1'; } catch (e) { return false; } }
+function markSent() { try { sessionStorage.setItem(SENT_KEY, '1'); } catch (e) { /* ignore */ } }
+function clearSent() { try { sessionStorage.removeItem(SENT_KEY); } catch (e) { /* ignore */ } }
 var btn = document.getElementById('btn');
 var msgEl = document.getElementById('msg');
 function msg(t) { msgEl.textContent = t; }
@@ -79,6 +92,7 @@ var bridged = false;
 function bridge(user) {
   if (bridged || !user) return;
   bridged = true;
+  clearSent();
   btn.disabled = true;
   msg(MSG_BACK);
   user.getIdToken().then(function (tok) {
@@ -98,13 +112,24 @@ try {
   firebase.initializeApp(${JSON.stringify(FIREBASE_CONFIG)});
   var auth = firebase.auth();
   if (!TICKET) { btn.disabled = true; msg(MSG_BAD); }
+  var returned = sentBefore();
+  if (returned) msg(MSG_BACK);
+  var decided = false;
   auth.getRedirectResult().then(function (res) {
-    if (res && res.user) bridge(res.user);
-  }).catch(function () { msg(MSG_FAIL); });
+    if (res && res.user) { decided = true; bridge(res.user); }
+  }).catch(function () { if (!bridged) msg(MSG_FAIL); });
+  auth.onAuthStateChanged(function (user) {
+    if (user) { decided = true; bridge(user); }
+  });
+  setTimeout(function () {
+    if (!bridged && returned && !decided) msg(MSG_AGAIN);
+  }, 3500);
   btn.onclick = function () {
     if (!TICKET) { msg(MSG_BAD); return; }
+    if (auth.currentUser) { bridge(auth.currentUser); return; }
     btn.disabled = true;
     msg(MSG_WAIT);
+    markSent();
     auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider())
       .catch(function () { btn.disabled = false; msg(MSG_FAIL); });
   };
