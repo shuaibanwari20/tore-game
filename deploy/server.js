@@ -1466,6 +1466,43 @@ function handleMessage(ws, msg) {
       syncClubGame(room); // clubs v8: the club game is now in progress
       break;
     }
+    case 'seatswap': {
+      // up52: the HOST arranges the teams in the lobby — the client
+      // drags a filled seat row onto another seat row and sends
+      // {type:'seatswap', a, b}. Teams are seat parity (game.js
+      // teamOf: seats 0&2 vs 1&3), so moving a player IS setting
+      // his team. Gates, all silent: the room exists, is in the
+      // LOBBY phase, is not a club-vs room (its seats are RESERVED
+      // for the two clubs' chosen pairs — seat 0&2 = club A — and
+      // must never move), the sender is the host (the same
+      // hostSeat test 'start' uses), a != b, both indices in 0..3,
+      // and at least one of the two seats is non-empty (a filled
+      // seat dragged onto an EMPTY seat simply moves there — the
+      // same swap with the empty record).
+      // SWAP APPROACH: the two seat RECORDS trade places whole.
+      // A record carries identity AND connection together (name,
+      // avatar, country, photo, sid, token, ws, connected,
+      // disconnectAt, voice flags, chat stamp) — all of it is the
+      // same player's, so it all travels; the only fix-up is the
+      // two sockets' _seat back-pointers, re-pointed at their new
+      // indices below. Reconnect (a token scan over the seats),
+      // voice routing and broadcastState (which addresses each
+      // record's own ws with its new index) all follow the player
+      // with no further changes. (Deploy twin of server.js.)
+      const room = rooms.get(ws._roomCode);
+      if (!room || room.phase !== 'lobby' || room.vs) return;
+      if (ws._seat !== hostSeat(room)) return;
+      const a = msg.a, b = msg.b;
+      if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || a > 3 || b < 0 || b > 3 || a === b) return;
+      const sa = room.seats[a], sb = room.seats[b];
+      if (sa.kind === 'empty' && sb.kind === 'empty') return;
+      room.seats[a] = sb;
+      room.seats[b] = sa;
+      if (sa.ws) sa.ws._seat = b;
+      if (sb.ws) sb.ws._seat = a;
+      broadcastState(room);
+      break;
+    }
     case 'leave': {
       // Leaving the WAITING room (the match has not started): a guest's
       // seat is freed at once; the HOST leaving cancels the room for

@@ -2921,6 +2921,30 @@
   #scr-lobby .seatrow:has(.pavatar.empty) .sr-name { color: #ffd7f2; font-weight: 600; text-shadow: none; }
   #scr-lobby .teamtag { color: #ffd7f2; opacity: 1; }
   #scr-lobby .seatrow.tappable:active { background: linear-gradient(180deg, rgba(219,72,155,.95), rgba(143,27,108,.95)); }
+  /* up52: team display + host drag-and-drop in the lobby. Teams
+     are seat parity (0&2 vs 1&3): a colored tab on the row's start
+     edge + a small pill in the meta line, shown to EVERYONE.
+     Team 1 = gold, Team 2 = sky. Empty seats keep their tint too —
+     the seat's team exists whether it is filled or not. */
+  #scr-lobby .seatrow { position: relative; }
+  #scr-lobby .seatrow::before { content: ''; position: absolute; inset-inline-start: 0;
+    top: 9px; bottom: 9px; width: 5px; border-radius: 3px; }
+  #scr-lobby .seatrow.team-a::before { background: #ffd94d; box-shadow: 0 0 7px rgba(255,217,77,.55); }
+  #scr-lobby .seatrow.team-b::before { background: #57c8ff; box-shadow: 0 0 7px rgba(87,200,255,.55); }
+  #scr-lobby .teambadge { display: inline-block; padding: 0 7px; border-radius: 999px;
+    font-size: 11px; font-weight: 800; line-height: 1.75; vertical-align: 1px; }
+  #scr-lobby .teambadge.ta { background: rgba(255,217,77,.18); color: #ffd94d; border: 1px solid rgba(255,217,77,.55); }
+  #scr-lobby .teambadge.tb { background: rgba(87,200,255,.16); color: #8fd8ff; border: 1px solid rgba(87,200,255,.55); }
+  /* The drag itself: only rows the host may drag get .draggable
+     (filled rows, host view); touch-action:none keeps a touch
+     drag from scrolling the lobby away mid-gesture. */
+  #scr-lobby .seatrow.draggable { touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+  #scr-lobby .seatrow.dragsrc { opacity: .45; }
+  #scr-lobby .seatrow.droptarget { outline: 2.5px solid #ffd94d; outline-offset: 2px; }
+  .seatdrag-ghost { position: fixed; z-index: 400; pointer-events: none; margin: 0 !important;
+    opacity: .97; }
+  #lobby-draghint { color: #ffd7f2; font-size: 12.5px; line-height: 1.8;
+    text-align: center; margin: 0 6px 12px; }
   #scr-lobby #btn-start { padding: 13px; border-radius: 14px; font-size: 17px; font-weight: 900; color: #fff;
     background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
     border: 2px solid rgba(255,255,255,.4);
@@ -3418,6 +3442,7 @@
       <div id="lobby-clubtag" class="hidden"></div>
       <div id="lobby-stake" class="hidden"></div>
       <div id="lobby-seats"></div>
+      <div id="lobby-draghint" class="hidden"></div>
       <button id="btn-start">لوبه پیل کړه</button>
       <button id="btn-lobby-friends" class="ghost">👥 <span id="lobby-friends-lbl">ملګري</span></button>
       <button id="btn-lobby-club" class="ghost hidden">🏆 <span id="lobby-club-lbl">د کلب غړي</span></button>
@@ -5091,6 +5116,9 @@ const STR = {
     startGame: 'لوبه پیل کړه',
     lobbyNoteHost: 'کله چې چمتو یې پیل یې کړه — تش ځایونه په روباتونو ډکېږي.',
     lobbyNoteGuest: 'د کوربه په تمه چې لوبه پیل کړي…',
+    teamTag1: 'ټیم 1',
+    teamTag2: 'ټیم 2',
+    dragTeamsHint: 'لوبغاړي کش کړه او پر بلې څوکۍ یې کېږده، تر څو ټیمونه وټاکې — مخامخ لوبغاړي هم‌ټیمي دي',
     leaveRoom: 'له کوټې ووځه',
     roomCancelled: 'کوربه کوټه لغوه کړه',
     copyCode: 'کوډ کاپي کړه',
@@ -5533,6 +5561,9 @@ const STR = {
     startGame: 'شروع بازی',
     lobbyNoteHost: 'هر وقت آماده بودی شروع کن — جای‌های خالی با ربات پر می‌شود.',
     lobbyNoteGuest: 'منتظر میزبان برای شروع بازی…',
+    teamTag1: 'تیم 1',
+    teamTag2: 'تیم 2',
+    dragTeamsHint: 'بازیکنان را بکش و روی صندلی دیگری رها کن تا تیم‌ها را مشخص کنی — بازیکنان روبه‌رو هم‌تیمی‌اند',
     leaveRoom: 'ترک اتاق',
     roomCancelled: 'میزبان اتاق را لغو کرد',
     copyCode: 'کپی کد',
@@ -5975,6 +6006,9 @@ const STR = {
     startGame: 'Start Game',
     lobbyNoteHost: 'Start whenever you are ready — empty seats fill with bots.',
     lobbyNoteGuest: 'Waiting for the host to start the game…',
+    teamTag1: 'Team 1',
+    teamTag2: 'Team 2',
+    dragTeamsHint: 'Drag players onto other seats to set the teams — players facing each other are partners',
     leaveRoom: 'Leave room',
     roomCancelled: 'The host cancelled the room',
     copyCode: 'Copy code',
@@ -12061,8 +12095,21 @@ function onMsg(msg) {
     mySeat = 0;
     $('#connbar').textContent = '';
   } else if (msg.type === 'state') {
+    // up52: remember the outgoing lobby seating — a host seat
+    // swap PERMUTES it (same occupants, new order), which the
+    // voice block below needs to see.
+    const prevLobbySeats = (state && state.seats && state.phase === 'lobby' &&
+      msg.phase === 'lobby' && state.code === msg.code) ? state.seats : null;
     state = msg;
-    if (mySeat === null) mySeat = msg.mySeat;
+    // up52: ADOPT the seat the server attaches this socket to —
+    // it can CHANGE while connected: a host seat swap moves this
+    // player to a new seat (his token/attachment follow him
+    // server-side). The server only ever sends a member the seat
+    // his own socket occupies (spectators get null and keep
+    // their render-only seat 0 below), so adoption is always
+    // safe; the old adopt-only-when-null rule would have left a
+    // swapped player rendering and acting from his OLD seat.
+    if (!spectating && Number.isInteger(msg.mySeat)) mySeat = msg.mySeat;
     // Clubs v8: a spectator's stream is render-only — no voice
     // mesh, no pair healing, no mic/speaker mirroring: the
     // watcher holds no seat and joins no voice pair.
@@ -12093,6 +12140,21 @@ function onMsg(msg) {
       const seat = msg.seats[+s];
       if (!seat || seat.kind !== 'human' || !seat.connected) closePeer(+s, 'seat-gone');
     });
+    // up52: a lobby seat swap permutes the occupants — same
+    // players, new seats. Voice peers are keyed by SEAT, so a
+    // pair slot now points at a different person: drop every
+    // pair and let syncVoicePairs (immediately below) rebuild
+    // the mesh against the new seating. Joins and leaves change
+    // the occupant multiset, so they never trigger this; only a
+    // pure reorder does.
+    if (prevLobbySeats) {
+      const occKey = (s) => (s && s.kind !== 'empty') ? (s.sid || s.name || '?') : '';
+      const nowKeys = msg.seats.map(occKey);
+      const prevKeys = prevLobbySeats.map(occKey);
+      const permuted = nowKeys.some((k, i) => k !== prevKeys[i]) &&
+        nowKeys.slice().sort().join('|') === prevKeys.slice().sort().join('|');
+      if (permuted) Object.keys(peers).forEach((s) => closePeer(+s, 'seat-swap'));
+    }
     syncVoicePairs();
     render(msg);
   } else if (msg.type === 'chat') {
@@ -16853,13 +16915,112 @@ $('#btn-rematch').onclick = () => {
 $('#btn-rematch-accept').onclick = () => { rematchReplied = true; send({ type: 'rematch-reply', accept: true }); if (state) paintRematch(state); };
 $('#btn-rematch-decline').onclick = () => { rematchReplied = true; send({ type: 'rematch-reply', accept: false }); if (state) paintRematch(state); };
 
+// =============================================================
+// up52 — host drag-and-drop team arranging in the lobby.
+// Pointer Events (mouse + touch) on the seat rows: pointerdown
+// only ARMS a drag; past ~10px of movement it becomes one — a
+// fixed clone of the row follows the pointer, the source row
+// dims, the row under the pointer highlights; pointerup on a
+// DIFFERENT row sends {type:'seatswap', a, b} (the server
+// re-gates everything: host, lobby phase, valid indices) and
+// the broadcast re-renders everyone. A press that never moves
+// stays a plain tap, so the row's click (player menu) keeps
+// working exactly as before; `seatDragEndedAt` lets that click
+// handler tell a just-finished drag from a tap. The move/up
+// listeners live on window, filtered by pointerId, because
+// renderLobby may rebuild the rows mid-drag (any state push) —
+// the gesture must survive its own source row being replaced.
+// =============================================================
+let seatDragEndedAt = 0;
+function startSeatDrag(e, seatIdx, srcRow) {
+  if (e.button !== undefined && e.button > 0) return; // primary button / touch only
+  const pid = e.pointerId;
+  const x0 = e.clientX, y0 = e.clientY;
+  let active = false, ghost = null, dropRow = null, lastX = x0, lastY = y0;
+  // renderLobby may swap the source node out mid-gesture; always
+  // measure the row that is actually on screen for this seat.
+  const curRow = () => srcRow.isConnected ? srcRow
+    : document.querySelector('#lobby-seats .seatrow[data-seat="' + seatIdx + '"]');
+  const clearDrop = () => {
+    if (dropRow) { dropRow.classList.remove('droptarget'); dropRow = null; }
+  };
+  const rowAt = (x, y) => {
+    const el = document.elementFromPoint(x, y);
+    const r = el && el.closest ? el.closest('#lobby-seats .seatrow') : null;
+    return (r && Number(r.dataset.seat) !== seatIdx) ? r : null;
+  };
+  const begin = () => {
+    const row = curRow();
+    if (!row) return false;
+    active = true;
+    const rect = row.getBoundingClientRect();
+    ghost = row.cloneNode(true);
+    ghost.classList.add('seatdrag-ghost');
+    ghost.classList.remove('draggable', 'tappable');
+    // The clone leaves #scr-lobby, so copy the lobby look inline.
+    const cs = getComputedStyle(row);
+    for (const p of ['background', 'border', 'borderRadius', 'boxShadow', 'color', 'font', 'padding']) {
+      ghost.style[p] = cs[p];
+    }
+    ghost.style.width = rect.width + 'px';
+    ghost.style.left = rect.left + 'px';
+    ghost.style.top = rect.top + 'px';
+    document.body.appendChild(ghost);
+    row.classList.add('dragsrc');
+    return true;
+  };
+  const onMove = (ev) => {
+    if (ev.pointerId !== pid) return;
+    lastX = ev.clientX; lastY = ev.clientY;
+    if (!active) {
+      if (Math.hypot(lastX - x0, lastY - y0) < 10) return;
+      if (!begin()) { finish(false); return; }
+    }
+    ev.preventDefault();
+    const row = curRow();
+    if (!row || !ghost) return;
+    const rect = row.getBoundingClientRect();
+    ghost.style.left = (rect.left + (lastX - x0)) + 'px';
+    ghost.style.top = (rect.top + (lastY - y0)) + 'px';
+    const r = rowAt(lastX, lastY);
+    if (r !== dropRow) { clearDrop(); if (r) { dropRow = r; r.classList.add('droptarget'); } }
+  };
+  const finish = (commit) => {
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onCancel);
+    if (!active) return; // never became a drag — the tap/click proceeds untouched
+    seatDragEndedAt = Date.now();
+    const target = commit ? rowAt(lastX, lastY) : null;
+    if (ghost) { ghost.remove(); ghost = null; }
+    clearDrop();
+    if (srcRow.isConnected) srcRow.classList.remove('dragsrc');
+    if (target) {
+      const b = Number(target.dataset.seat);
+      if (Number.isInteger(b) && b !== seatIdx) send({ type: 'seatswap', a: seatIdx, b });
+    }
+  };
+  const onUp = (ev) => { if (ev.pointerId === pid) finish(true); };
+  const onCancel = (ev) => { if (ev.pointerId === pid) finish(false); };
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onCancel);
+}
+
 function renderLobby(st) {
   $('#lobby-code').textContent = st.code.split('').join(' ');
   const box = $('#lobby-seats');
   box.innerHTML = '';
+  // up52: computed BEFORE the rows now — the host's team-arranging
+  // drag (below) is wired per row, and the host-only hint line
+  // under the seats is toggled after the loop.
+  const isHost = !spectating && mySeat === st.hostSeat;
+  const dragOn = isHost && !st.vs;
   st.seats.forEach((s, i) => {
     const row = document.createElement('div');
-    row.className = 'seatrow';
+    // up52: the team tint rides on EVERY row (0&2 gold, 1&3 sky —
+    // seat parity IS the team), filled or empty, for every viewer.
+    row.className = 'seatrow ' + (i % 2 === 0 ? 'team-a' : 'team-b');
     row.dataset.seat = i;
     const main = document.createElement('span');
     main.className = 'sr-main';
@@ -16887,9 +17048,12 @@ function renderLobby(st) {
         main.appendChild(dot);
       }
     }
-    // Meta slot: NO team label any more (owner order 2026-11-08) —
-    // a human shows their country's flag + name, a bot shows 🤖, the
-    // host keeps the host mark; empty seats show nothing.
+    // Meta slot: a human shows their country's flag + name, a bot
+    // shows 🤖, the host keeps the host mark — and (up52, the
+    // owner's new order superseding the 2026-11-08 removal) every
+    // OCCUPIED seat also carries its team pill, so the two teams
+    // read at a glance. Empty seats show nothing here; their edge
+    // tab still shows the seat's team.
     const meta = document.createElement('span');
     meta.className = 'teamtag';
     if (s.kind === 'bot') {
@@ -16899,18 +17063,41 @@ function renderLobby(st) {
       meta.textContent = (s.country ? (fl ? fl + ' ' : '') + dispCountry(s.country) + (i === st.hostSeat ? ' · ' : '') : '') +
         (i === st.hostSeat ? T('hostTag') : '');
     }
+    if (s.kind !== 'empty') {
+      if (meta.textContent) meta.appendChild(document.createTextNode(' · '));
+      const badge = document.createElement('span');
+      badge.className = 'teambadge ' + (i % 2 === 0 ? 'ta' : 'tb');
+      badge.textContent = T(i % 2 === 0 ? 'teamTag1' : 'teamTag2');
+      meta.appendChild(badge);
+    }
     // Another HUMAN's row is tappable: it opens the small player
     // menu (friend request + profile view). Bots, empty seats and
-    // my own row open nothing.
+    // my own row open nothing. up52: a tap that just ended a real
+    // drag is NOT a tap — the guard keeps the menu closed then.
     if (!spectating && s.kind === 'human' && i !== mySeat) {
       row.classList.add('tappable');
-      row.addEventListener('click', () => openPlayerMenu(i, row));
+      row.addEventListener('click', () => {
+        if (Date.now() - seatDragEndedAt < 350) return;
+        openPlayerMenu(i, row);
+      });
+    }
+    // up52: for the HOST, every filled row is draggable (his own
+    // included); empty rows are drop targets only. Non-hosts and
+    // spectators get no drag wiring at all.
+    if (dragOn && s.kind !== 'empty') {
+      row.classList.add('draggable');
+      row.addEventListener('pointerdown', (e) => startSeatDrag(e, i, row));
     }
     row.appendChild(main);
     row.appendChild(meta);
     box.appendChild(row);
   });
-  const isHost = !spectating && mySeat === st.hostSeat;
+  // up52: the host-only hint line under the seats.
+  const dh = $('#lobby-draghint');
+  if (dh) {
+    dh.textContent = T('dragTeamsHint');
+    dh.classList.toggle('hidden', !dragOn);
+  }
   $('#btn-start').disabled = !isHost;
   $('#lobby-note').textContent = spectating ? '👁 ' + T('clWatching')
     : isHost ? T('lobbyNoteHost') : T('lobbyNoteGuest');
