@@ -624,13 +624,13 @@
   }
   /* Top bar straight on the carpet: profile cluster at the RTL start,
      the settings gear at the far end. */
-  .hm-topbar { display: flex; align-items: flex-start; justify-content: space-between; }
+  .hm-topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 8px; }
   /* up47: wallet pills in the home top bar — dark plum pills with
      a gold edge, the Ludo money look; the ＋ opens the shop. */
-  .hm-wallet { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
-  .hm-pill { width: auto; margin: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+  .hm-wallet { display: flex; align-items: center; gap: 5px; flex: 0 0 auto; }
+  .hm-pill { width: auto; margin: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;
     background: rgba(43,6,54,.78); border: 1.5px solid #eec95f; border-radius: 16px;
-    color: #ffe98a; font-size: 14px; font-weight: 800; padding: 5px 10px; line-height: 1.15;
+    color: #ffe98a; font-size: 12.5px; font-weight: 800; padding: 4px 7px; line-height: 1.15;
     box-shadow: 0 3px 8px rgba(0,0,0,.4); }
   .hm-pill b { color: #fff; font-weight: 800; }
   .hm-pill.gem { border-color: #7dd7ff; color: #bdeaff; }
@@ -647,16 +647,17 @@
      Tapping either opens the profile popup. */
   .hm-profilebtn { width: auto; margin: 0; padding: 0; background: none; border: 0;
     cursor: pointer; flex: 0 1 auto; min-width: 0;
-    display: flex; align-items: center; gap: 10px; line-height: 1.15; }
+    display: flex; align-items: center; gap: 8px; line-height: 1.15; }
   .hm-profilebtn:active { transform: scale(.97); }
   /* The home avatar is the circular gold-ringed exception to the
      rounded-square portrait tile used everywhere else. */
   #home-avatar-slot .pavatar { border-radius: 50%; border: 3px solid #eec95f;
+    width: 48px !important; height: 48px !important; box-sizing: border-box;
     box-shadow: 0 0 0 2px rgba(0,0,0,.45), 0 4px 10px rgba(0,0,0,.5); }
   /* Player name in a dark plum pill — truncates if long. */
-  .hm-pname { color: #fff; font-size: 15.5px; font-weight: 700;
+  .hm-pname { color: #fff; font-size: 14.5px; font-weight: 700; min-width: 0;
     background: rgba(43,6,54,.72); border: 1.5px solid rgba(255,255,255,.32); border-radius: 16px;
-    padding: 5px 14px; box-shadow: 0 3px 8px rgba(0,0,0,.4); text-shadow: 0 1px 3px rgba(0,0,0,.6);
+    padding: 5px 8px; box-shadow: 0 3px 8px rgba(0,0,0,.4); text-shadow: 0 1px 3px rgba(0,0,0,.6);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
   /* One avatar renderer everywhere (top button, popup, lobby rows):
      a rounded-square portrait tile filled by the avatar's SVG. */
@@ -666,11 +667,11 @@
   .pavatar img { width: 100%; height: 100%; display: block; object-fit: cover; }
   .pavatar.empty { border-radius: 50%; align-items: center; justify-content: center; font-weight: 800; line-height: 1;
     background: rgba(255,255,255,.07); color: rgba(245,231,198,.45); border-style: dashed; box-shadow: none; }
-  .hm-gear { width: 46px; height: 46px; margin: 4px 0 0; padding: 0; flex: 0 0 auto;
+  .hm-gear { width: 38px; height: 38px; margin: 0; padding: 0; flex: 0 0 auto;
     background: none; color: #fff; border: 0; border-radius: 50%; box-shadow: none;
     filter: drop-shadow(0 3px 5px rgba(20,0,20,.55));
     display: flex; align-items: center; justify-content: center; }
-  .hm-gear svg { width: 32px; height: 32px; display: block; }
+  .hm-gear svg { width: 26px; height: 26px; display: block; }
 
   /* Title zone: the suits, the big gold wordmark, the tagline —
      compacted in the ludomenu reskin so the cards own the screen,
