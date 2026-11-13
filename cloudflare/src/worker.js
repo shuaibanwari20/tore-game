@@ -148,6 +148,33 @@ function updatingPage(note) {
 </body></html>`;
 }
 
+function authDonePage() {
+  // U60: where the Safari-side Google flow lands after completing a
+  // login ticket for the installed app. Static + trilingual; the
+  // tiny script swaps in the failure text on ?fail=1.
+  return `<!doctype html>
+<html lang="ps" dir="rtl"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>توره — ننوتل</title>
+<body style="font-family:Tahoma,Arial,sans-serif;background:#4a0727;color:#fdf3e3;text-align:center;padding:3rem 1.2rem;margin:0">
+<div id="done-ok">
+<div style="font-size:64px;line-height:1">✅</div>
+<h1 style="color:#ffd75e;font-size:1.5rem;margin:.8rem 0 .4rem">ننوتل بشپړ شول</h1>
+<p>اوس بېرته د تورې اپ پرانیزئ — لوبه به دې هلته روانه وي.<br>دا پاڼه تړلای شئ.</p>
+<p lang="fa">ورود کامل شد — حالا به برنامهٔ توره برگردید؛ بازی آنجا برایتان باز است. این صفحه را می‌توانید ببندید.</p>
+<p dir="ltr" lang="en" style="opacity:.8;font-size:.9em">You are signed in. Go back to the Tore app — the game is open there. You can close this page.</p>
+</div>
+<div id="done-fail" style="display:none">
+<div style="font-size:64px;line-height:1">⚠️</div>
+<h1 style="color:#ffd75e;font-size:1.5rem;margin:.8rem 0 .4rem">ننوتل ونه شول</h1>
+<p>بېرته اپ ته راشئ او بیا هڅه وکړئ.</p>
+<p lang="fa">ورود ناموفق بود — به برنامه برگردید و دوباره تلاش کنید.</p>
+<p dir="ltr" lang="en" style="opacity:.8;font-size:.9em">Sign-in did not complete. Go back to the app and try again.</p>
+</div>
+<script>if (new URLSearchParams(location.search).get('fail')) { document.getElementById('done-ok').style.display = 'none'; document.getElementById('done-fail').style.display = ''; }</script>
+</body></html>`;
+}
+
 function privacyPage() {
   return `<!doctype html>
 <html lang="fa" dir="rtl"><meta charset="utf-8">
@@ -902,6 +929,32 @@ export default {
       // against Google's securetoken JWKS and mints the session cookie.
       if (request.method !== 'POST') return new Response('method not allowed', { status: 405 });
       return auth.handleFirebaseToken(request, env);
+    }
+    if (path === '/auth/ticket' && request.method === 'POST') {
+      // U60: the installed-app gate mints a one-time login ticket
+      // (stored in the global DO), then opens /auth/google?ticket=…
+      // in Safari; the gate polls /auth/ticket-status for the
+      // result. The ticket carries no identity until the Google
+      // callback completes it.
+      if (!env.SESSION_SECRET) return Response.json({ ok: false, error: 'sign-in is not configured on this server' }, { status: 500 });
+      const ticket = await auth.createLoginTicket(env);
+      if (!ticket) return Response.json({ ok: false, error: 'ticket store unavailable' }, { status: 502 });
+      return Response.json({ ok: true, ticket });
+    }
+    if (path === '/auth/ticket-status') {
+      // One-time read: a completed ticket is consumed here and the
+      // session cookie is minted on THIS response — served into
+      // the app gate's own context, where the cookie belongs.
+      const t = new URL(request.url).searchParams.get('ticket') || '';
+      const st = await auth.loginTicketStatus(env, t);
+      if (st.state === 'done' && st.user) return auth.ticketLoginResponse(env, st.user);
+      if (st.state === 'failed') return Response.json({ ok: false, failed: true });
+      return Response.json({ ok: false });
+    }
+    if (path === '/auth/done') {
+      return new Response(authDonePage(), {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
     }
     if (path === '/auth/google') return auth.startGoogle(request, env);
     if (path === '/auth/google/callback') return auth.handleGoogleCallback(request, env);
