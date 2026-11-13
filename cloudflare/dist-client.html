@@ -2913,6 +2913,30 @@
   #scr-lobby .seatrow:has(.pavatar.empty) .sr-name { color: #ffd7f2; font-weight: 600; text-shadow: none; }
   #scr-lobby .teamtag { color: #ffd7f2; opacity: 1; }
   #scr-lobby .seatrow.tappable:active { background: linear-gradient(180deg, rgba(219,72,155,.95), rgba(143,27,108,.95)); }
+  /* up52: team display + host drag-and-drop in the lobby. Teams
+     are seat parity (0&2 vs 1&3): a colored tab on the row's start
+     edge + a small pill in the meta line, shown to EVERYONE.
+     Team 1 = gold, Team 2 = sky. Empty seats keep their tint too —
+     the seat's team exists whether it is filled or not. */
+  #scr-lobby .seatrow { position: relative; }
+  #scr-lobby .seatrow::before { content: ''; position: absolute; inset-inline-start: 0;
+    top: 9px; bottom: 9px; width: 5px; border-radius: 3px; }
+  #scr-lobby .seatrow.team-a::before { background: #ffd94d; box-shadow: 0 0 7px rgba(255,217,77,.55); }
+  #scr-lobby .seatrow.team-b::before { background: #57c8ff; box-shadow: 0 0 7px rgba(87,200,255,.55); }
+  #scr-lobby .teambadge { display: inline-block; padding: 0 7px; border-radius: 999px;
+    font-size: 11px; font-weight: 800; line-height: 1.75; vertical-align: 1px; }
+  #scr-lobby .teambadge.ta { background: rgba(255,217,77,.18); color: #ffd94d; border: 1px solid rgba(255,217,77,.55); }
+  #scr-lobby .teambadge.tb { background: rgba(87,200,255,.16); color: #8fd8ff; border: 1px solid rgba(87,200,255,.55); }
+  /* The drag itself: only rows the host may drag get .draggable
+     (filled rows, host view); touch-action:none keeps a touch
+     drag from scrolling the lobby away mid-gesture. */
+  #scr-lobby .seatrow.draggable { touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+  #scr-lobby .seatrow.dragsrc { opacity: .45; }
+  #scr-lobby .seatrow.droptarget { outline: 2.5px solid #ffd94d; outline-offset: 2px; }
+  .seatdrag-ghost { position: fixed; z-index: 400; pointer-events: none; margin: 0 !important;
+    opacity: .97; }
+  #lobby-draghint { color: #ffd7f2; font-size: 12.5px; line-height: 1.8;
+    text-align: center; margin: 0 6px 12px; }
   #scr-lobby #btn-start { padding: 13px; border-radius: 14px; font-size: 17px; font-weight: 900; color: #fff;
     background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
     border: 2px solid rgba(255,255,255,.4);
@@ -3410,6 +3434,7 @@
       <div id="lobby-clubtag" class="hidden"></div>
       <div id="lobby-stake" class="hidden"></div>
       <div id="lobby-seats"></div>
+      <div id="lobby-draghint" class="hidden"></div>
       <button id="btn-start">لوبه پیل کړه</button>
       <button id="btn-lobby-friends" class="ghost">👥 <span id="lobby-friends-lbl">ملګري</span></button>
       <button id="btn-lobby-club" class="ghost hidden">🏆 <span id="lobby-club-lbl">د کلب غړي</span></button>
@@ -5088,6 +5113,9 @@ const STR = {
     startGame: "\u0644\u0648\u0628\u0647 \u067E\u06CC\u0644 \u06A9\u0693\u0647",
     lobbyNoteHost: "\u06A9\u0644\u0647 \u0686\u06D0 \u0686\u0645\u062A\u0648 \u06CC\u06D0 \u067E\u06CC\u0644 \u06CC\u06D0 \u06A9\u0693\u0647 \u2014 \u062A\u0634 \u0681\u0627\u06CC\u0648\u0646\u0647 \u067E\u0647 \u0631\u0648\u0628\u0627\u062A\u0648\u0646\u0648 \u0689\u06A9\u06D0\u0696\u064A.",
     lobbyNoteGuest: "\u062F \u06A9\u0648\u0631\u0628\u0647 \u067E\u0647 \u062A\u0645\u0647 \u0686\u06D0 \u0644\u0648\u0628\u0647 \u067E\u06CC\u0644 \u06A9\u0693\u064A\u2026",
+    teamTag1: "\u067C\u06CC\u0645 1",
+    teamTag2: "\u067C\u06CC\u0645 2",
+    dragTeamsHint: "\u0644\u0648\u0628\u063A\u0627\u0693\u064A \u06A9\u0634 \u06A9\u0693\u0647 \u0627\u0648 \u067E\u0631 \u0628\u0644\u06D0 \u0685\u0648\u06A9\u06CD \u06CC\u06D0 \u06A9\u06D0\u0696\u062F\u0647\u060C \u062A\u0631 \u0685\u0648 \u067C\u06CC\u0645\u0648\u0646\u0647 \u0648\u067C\u0627\u06A9\u06D0 \u2014 \u0645\u062E\u0627\u0645\u062E \u0644\u0648\u0628\u063A\u0627\u0693\u064A \u0647\u0645\u200C\u067C\u06CC\u0645\u064A \u062F\u064A",
     leaveRoom: "\u0644\u0647 \u06A9\u0648\u067C\u06D0 \u0648\u0648\u0681\u0647",
     roomCancelled: "\u06A9\u0648\u0631\u0628\u0647 \u06A9\u0648\u067C\u0647 \u0644\u063A\u0648\u0647 \u06A9\u0693\u0647",
     copyCode: "\u06A9\u0648\u0689 \u06A9\u0627\u067E\u064A \u06A9\u0693\u0647",
@@ -5546,6 +5574,9 @@ const STR = {
     startGame: "\u0634\u0631\u0648\u0639 \u0628\u0627\u0632\u06CC",
     lobbyNoteHost: "\u0647\u0631 \u0648\u0642\u062A \u0622\u0645\u0627\u062F\u0647 \u0628\u0648\u062F\u06CC \u0634\u0631\u0648\u0639 \u06A9\u0646 \u2014 \u062C\u0627\u06CC\u200C\u0647\u0627\u06CC \u062E\u0627\u0644\u06CC \u0628\u0627 \u0631\u0628\u0627\u062A \u067E\u0631 \u0645\u06CC\u200C\u0634\u0648\u062F.",
     lobbyNoteGuest: "\u0645\u0646\u062A\u0638\u0631 \u0645\u06CC\u0632\u0628\u0627\u0646 \u0628\u0631\u0627\u06CC \u0634\u0631\u0648\u0639 \u0628\u0627\u0632\u06CC\u2026",
+    teamTag1: "\u062A\u06CC\u0645 1",
+    teamTag2: "\u062A\u06CC\u0645 2",
+    dragTeamsHint: "\u0628\u0627\u0632\u06CC\u06A9\u0646\u0627\u0646 \u0631\u0627 \u0628\u06A9\u0634 \u0648 \u0631\u0648\u06CC \u0635\u0646\u062F\u0644\u06CC \u062F\u06CC\u06AF\u0631\u06CC \u0631\u0647\u0627 \u06A9\u0646 \u062A\u0627 \u062A\u06CC\u0645\u200C\u0647\u0627 \u0631\u0627 \u0645\u0634\u062E\u0635 \u06A9\u0646\u06CC \u2014 \u0628\u0627\u0632\u06CC\u06A9\u0646\u0627\u0646 \u0631\u0648\u0628\u0647\u200C\u0631\u0648 \u0647\u0645\u200C\u062A\u06CC\u0645\u06CC\u200C\u0627\u0646\u062F",
     leaveRoom: "\u062A\u0631\u06A9 \u0627\u062A\u0627\u0642",
     roomCancelled: "\u0645\u06CC\u0632\u0628\u0627\u0646 \u0627\u062A\u0627\u0642 \u0631\u0627 \u0644\u063A\u0648 \u06A9\u0631\u062F",
     copyCode: "\u06A9\u067E\u06CC \u06A9\u062F",
@@ -6004,6 +6035,9 @@ const STR = {
     startGame: "Start Game",
     lobbyNoteHost: "Start whenever you are ready \u2014 empty seats fill with bots.",
     lobbyNoteGuest: "Waiting for the host to start the game\u2026",
+    teamTag1: "Team 1",
+    teamTag2: "Team 2",
+    dragTeamsHint: "Drag players onto other seats to set the teams \u2014 players facing each other are partners",
     leaveRoom: "Leave room",
     roomCancelled: "The host cancelled the room",
     copyCode: "Copy code",
@@ -11568,8 +11602,9 @@ function onMsg(msg) {
     mySeat = 0;
     $("#connbar").textContent = "";
   } else if (msg.type === "state") {
+    const prevLobbySeats = state && state.seats && state.phase === "lobby" && msg.phase === "lobby" && state.code === msg.code ? state.seats : null;
     state = msg;
-    if (mySeat === null) mySeat = msg.mySeat;
+    if (!spectating && Number.isInteger(msg.mySeat)) mySeat = msg.mySeat;
     if (spectating) {
       if (mySeat === null || mySeat < 0) mySeat = 0;
       render(msg);
@@ -11590,6 +11625,13 @@ function onMsg(msg) {
       const seat = msg.seats[+s];
       if (!seat || seat.kind !== "human" || !seat.connected) closePeer(+s, "seat-gone");
     });
+    if (prevLobbySeats) {
+      const occKey = (s) => s && s.kind !== "empty" ? s.sid || s.name || "?" : "";
+      const nowKeys = msg.seats.map(occKey);
+      const prevKeys = prevLobbySeats.map(occKey);
+      const permuted = nowKeys.some((k, i) => k !== prevKeys[i]) && nowKeys.slice().sort().join("|") === prevKeys.slice().sort().join("|");
+      if (permuted) Object.keys(peers).forEach((s) => closePeer(+s, "seat-swap"));
+    }
     syncVoicePairs();
     render(msg);
   } else if (msg.type === "chat") {
@@ -16156,13 +16198,106 @@ $("#btn-rematch-decline").onclick = () => {
   send({ type: "rematch-reply", accept: false });
   if (state) paintRematch(state);
 };
+let seatDragEndedAt = 0;
+function startSeatDrag(e, seatIdx, srcRow) {
+  if (e.button !== void 0 && e.button > 0) return;
+  const pid = e.pointerId;
+  const x0 = e.clientX, y0 = e.clientY;
+  let active = false, ghost = null, dropRow = null, lastX = x0, lastY = y0;
+  const curRow = () => srcRow.isConnected ? srcRow : document.querySelector('#lobby-seats .seatrow[data-seat="' + seatIdx + '"]');
+  const clearDrop = () => {
+    if (dropRow) {
+      dropRow.classList.remove("droptarget");
+      dropRow = null;
+    }
+  };
+  const rowAt = (x, y) => {
+    const el = document.elementFromPoint(x, y);
+    const r = el && el.closest ? el.closest("#lobby-seats .seatrow") : null;
+    return r && Number(r.dataset.seat) !== seatIdx ? r : null;
+  };
+  const begin = () => {
+    const row = curRow();
+    if (!row) return false;
+    active = true;
+    const rect = row.getBoundingClientRect();
+    ghost = row.cloneNode(true);
+    ghost.classList.add("seatdrag-ghost");
+    ghost.classList.remove("draggable", "tappable");
+    const cs = getComputedStyle(row);
+    for (const p of ["background", "border", "borderRadius", "boxShadow", "color", "font", "padding"]) {
+      ghost.style[p] = cs[p];
+    }
+    ghost.style.width = rect.width + "px";
+    ghost.style.left = rect.left + "px";
+    ghost.style.top = rect.top + "px";
+    document.body.appendChild(ghost);
+    row.classList.add("dragsrc");
+    return true;
+  };
+  const onMove = (ev) => {
+    if (ev.pointerId !== pid) return;
+    lastX = ev.clientX;
+    lastY = ev.clientY;
+    if (!active) {
+      if (Math.hypot(lastX - x0, lastY - y0) < 10) return;
+      if (!begin()) {
+        finish(false);
+        return;
+      }
+    }
+    ev.preventDefault();
+    const row = curRow();
+    if (!row || !ghost) return;
+    const rect = row.getBoundingClientRect();
+    ghost.style.left = rect.left + (lastX - x0) + "px";
+    ghost.style.top = rect.top + (lastY - y0) + "px";
+    const r = rowAt(lastX, lastY);
+    if (r !== dropRow) {
+      clearDrop();
+      if (r) {
+        dropRow = r;
+        r.classList.add("droptarget");
+      }
+    }
+  };
+  const finish = (commit) => {
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+    window.removeEventListener("pointercancel", onCancel);
+    if (!active) return;
+    seatDragEndedAt = Date.now();
+    const target = commit ? rowAt(lastX, lastY) : null;
+    if (ghost) {
+      ghost.remove();
+      ghost = null;
+    }
+    clearDrop();
+    if (srcRow.isConnected) srcRow.classList.remove("dragsrc");
+    if (target) {
+      const b = Number(target.dataset.seat);
+      if (Number.isInteger(b) && b !== seatIdx) send({ type: "seatswap", a: seatIdx, b });
+    }
+  };
+  const onUp = (ev) => {
+    if (ev.pointerId === pid) finish(true);
+  };
+  const onCancel = (ev) => {
+    if (ev.pointerId === pid) finish(false);
+  };
+  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointerup", onUp);
+  window.addEventListener("pointercancel", onCancel);
+}
 function renderLobby(st) {
   $("#lobby-code").textContent = st.code.split("").join(" ");
   const box = $("#lobby-seats");
   box.innerHTML = "";
+  const isHost = !spectating && mySeat === st.hostSeat;
+  const dragOn = isHost && !st.vs;
   st.seats.forEach((s, i) => {
     const row = document.createElement("div");
-    row.className = "seatrow";
+    row.className = "seatrow " + (i % 2 === 0 ? "team-a" : "team-b");
     row.dataset.seat = i;
     const main = document.createElement("span");
     main.className = "sr-main";
@@ -16199,15 +16334,33 @@ function renderLobby(st) {
       const fl = s.country ? countryFlag(s.country) : "";
       meta.textContent = (s.country ? (fl ? fl + " " : "") + dispCountry(s.country) + (i === st.hostSeat ? " \xB7 " : "") : "") + (i === st.hostSeat ? T("hostTag") : "");
     }
+    if (s.kind !== "empty") {
+      if (meta.textContent) meta.appendChild(document.createTextNode(" \xB7 "));
+      const badge = document.createElement("span");
+      badge.className = "teambadge " + (i % 2 === 0 ? "ta" : "tb");
+      badge.textContent = T(i % 2 === 0 ? "teamTag1" : "teamTag2");
+      meta.appendChild(badge);
+    }
     if (!spectating && s.kind === "human" && i !== mySeat) {
       row.classList.add("tappable");
-      row.addEventListener("click", () => openPlayerMenu(i, row));
+      row.addEventListener("click", () => {
+        if (Date.now() - seatDragEndedAt < 350) return;
+        openPlayerMenu(i, row);
+      });
+    }
+    if (dragOn && s.kind !== "empty") {
+      row.classList.add("draggable");
+      row.addEventListener("pointerdown", (e) => startSeatDrag(e, i, row));
     }
     row.appendChild(main);
     row.appendChild(meta);
     box.appendChild(row);
   });
-  const isHost = !spectating && mySeat === st.hostSeat;
+  const dh = $("#lobby-draghint");
+  if (dh) {
+    dh.textContent = T("dragTeamsHint");
+    dh.classList.toggle("hidden", !dragOn);
+  }
   $("#btn-start").disabled = !isHost;
   $("#lobby-note").textContent = spectating ? "\u{1F441} " + T("clWatching") : isHost ? T("lobbyNoteHost") : T("lobbyNoteGuest");
   const stakeEl = $("#lobby-stake");
