@@ -18,6 +18,41 @@
       'width=device-width, initial-scale=0.85, maximum-scale=1, user-scalable=no');
   }
 </script>
+<script>
+  // up58: keep the fixed screens fitted to the VISIBLE viewport.
+  // On Android the layout viewport can come back TALLER than the
+  // visible area after a logout/login round-trip (auth tab,
+  // floating windows, display changes) — then 100dvh pushes the
+  // bottom nav below the fold. --app-h tracks the visual viewport
+  // height and the screens prefer it; in a healthy window it
+  // equals 100dvh, so nothing changes. While typing it is left
+  // alone: the keyboard legitimately shrinks the visual viewport.
+  (function () {
+    var root = document.documentElement, applied = 0, timer = 0;
+    function typing() {
+      var a = document.activeElement;
+      return !!(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable));
+    }
+    function fit() {
+      if (typing()) return;
+      var vv = window.visualViewport;
+      var h = Math.round(vv ? vv.height : window.innerHeight);
+      if (h > 0 && Math.abs(h - applied) > 2) {
+        applied = h;
+        root.style.setProperty('--app-h', h + 'px');
+      }
+    }
+    function soon() { clearTimeout(timer); timer = setTimeout(fit, 120); }
+    window.addEventListener('resize', soon);
+    window.addEventListener('orientationchange', soon);
+    window.addEventListener('pageshow', soon);
+    window.addEventListener('focus', soon);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) soon(); });
+    document.addEventListener('focusout', function () { setTimeout(fit, 250); });
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', soon);
+    fit();
+  })();
+</script>
 <title>توره — د قندهار ورق لوبه</title>
 <!-- PWA (Phase 0): installable web app. The manifest, service worker
      and icons are static files served at stable root URLs by every
@@ -51,7 +86,7 @@
   body {
     font-family: system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
     background: radial-gradient(ellipse at top, #1d6a3c 0%, #0d3b21 70%, #082a17 100%);
-    color: #f5f2e8; height: 100vh; height: 100dvh;
+    color: #f5f2e8; height: 100vh; height: 100dvh; height: var(--app-h, 100dvh);
     display: flex; flex-direction: column; align-items: center;
   }
   .wrap { width: 100%; max-width: 520px; padding: 10px 12px 18px; margin: 0 auto; }
@@ -110,7 +145,7 @@
      profile with no saved felt, and every validation fallback
      on client and hosts, lands on 11, not 1. */
   #scr-game {
-    position: fixed; inset: 0; height: 100dvh; z-index: 10;
+    position: fixed; inset: 0; height: 100dvh; height: var(--app-h, 100dvh); z-index: 10;
     display: flex; flex-direction: column; overflow: hidden;
     padding: 10px;
     /* the BOARD under the carpet: horizontal dark-walnut planks
@@ -599,7 +634,7 @@
      rendered by renderMenuFans() from the same ASSET() files as the
      table cards. */
   #scr-home {
-    position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 10;
+    position: fixed; inset: 0; height: 100vh; height: 100dvh; height: var(--app-h, 100dvh); z-index: 10;
     overflow-y: auto; overflow-x: hidden;
     background-color: #6d0d3f;
     background-image:
@@ -890,7 +925,7 @@
      bottom nav (and from the lobby's friends button); it floats
      above home/lobby/table without disturbing the game screens. */
   #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-pview, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders, #scr-shop, #scr-playlist {
-    position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 30;
+    position: fixed; inset: 0; height: 100vh; height: 100dvh; height: var(--app-h, 100dvh); z-index: 30;
     overflow-x: hidden;
     /* The home screen's dark emerald veil, without the carpet photo:
        no CSS carpet reference exists anywhere anymore (home left it
@@ -2871,7 +2906,7 @@
      classes keep serving the table and every other screen
      unchanged; ids, strings, handlers and renderLobby are
      untouched. --- */
-  #scr-lobby { position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 10;
+  #scr-lobby { position: fixed; inset: 0; height: 100vh; height: 100dvh; height: var(--app-h, 100dvh); z-index: 10;
     overflow-y: auto; overflow-x: hidden; padding: 16px 12px 18px;
     background-color: #6d0d3f;
     background-image:
