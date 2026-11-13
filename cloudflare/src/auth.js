@@ -26,7 +26,7 @@
  * still validated below.
  */
 
-import { isTicketId } from './tickets.js';
+import { isTicketId, isTicketCode } from './tickets.js';
 
 const SESSION_COOKIE = 'tore_session';
 const OAUTH_COOKIE = 'tore_oauth';
@@ -388,6 +388,25 @@ export async function handleFirebaseToken(request, env) {
  * identity (Firebase sub) as a browser-tab sign-in, wallet and
  * clubs included.
  */
+/* Shared tail of both bridge completions: verify the Firebase
+ * token and complete the ticket with the /auth/firebase payload.
+ * Returns an HTTP status: 200 ok, 401 bad token, 409 ticket gone. */
+async function completeTicketWithFirebase(env, ticket, idToken) {
+  const projectId = env.FIREBASE_PROJECT_ID || 'tore-game';
+  const claims = await verifyFirebaseIdToken(idToken, projectId);
+  if (!claims) return 401;
+  const email = typeof claims.email === 'string' ? claims.email : '';
+  const payload = {
+    provider: 'firebase',
+    sub: claims.sub,
+    name: (typeof claims.name === 'string' && claims.name) || (email ? email.split('@')[0] : ''),
+    email,
+    picture: typeof claims.picture === 'string' ? claims.picture : '',
+  };
+  const j = await ticketCall(env, 'complete', { ticket, user: payload });
+  return j && j.ok ? 200 : 409;
+}
+
 export async function handleFirebaseTicketComplete(request, env) {
   if (!env.SESSION_SECRET) {
     return Response.json({ ok: false, error: 'sign-in is not configured on this server' }, { status: 500 });
@@ -398,21 +417,36 @@ export async function handleFirebaseTicketComplete(request, env) {
   if (!isTicketId(ticket)) {
     return Response.json({ ok: false, error: 'bad ticket' }, { status: 400 });
   }
-  const projectId = env.FIREBASE_PROJECT_ID || 'tore-game';
-  const claims = await verifyFirebaseIdToken(body && body.idToken, projectId);
-  if (!claims) return Response.json({ ok: false, error: 'unauthorized' }, { status: 401 });
-  const email = typeof claims.email === 'string' ? claims.email : '';
-  const payload = {
-    provider: 'firebase',
-    sub: claims.sub,
-    name: (typeof claims.name === 'string' && claims.name) || (email ? email.split('@')[0] : ''),
-    email,
-    picture: typeof claims.picture === 'string' ? claims.picture : '',
-  };
-  const j = await ticketCall(env, 'complete', { ticket, user: payload });
-  if (!j || !j.ok) {
-    return Response.json({ ok: false, error: 'ticket gone' }, { status: 409 });
+  const st = await completeTicketWithFirebase(env, ticket, body && body.idToken);
+  if (st === 401) return Response.json({ ok: false, error: 'unauthorized' }, { status: 401 });
+  if (st !== 200) return Response.json({ ok: false, error: 'ticket gone' }, { status: 409 });
+  return Response.json({ ok: true });
+}
+
+/**
+ * POST /auth/fb-code-complete  { code, idToken } — U63: the
+ * sign-in-code rescue. The gate in a NORMAL browser (where the
+ * Firebase sign-in works) takes the 8-digit code the app gate
+ * showed, signs the player in there, and completes the app's
+ * ticket with the token — the app gate's poll then mints the
+ * session in the app, with the very same Firebase identity.
+ */
+export async function handleFirebaseCodeComplete(request, env) {
+  if (!env.SESSION_SECRET) {
+    return Response.json({ ok: false, error: 'sign-in is not configured on this server' }, { status: 500 });
   }
+  let body = null;
+  try { body = await request.json(); } catch { body = null; }
+  const code = body && body.code;
+  if (!isTicketCode(code)) {
+    return Response.json({ ok: false, error: 'bad code' }, { status: 400 });
+  }
+  const found = await ticketCall(env, 'bycode', { code });
+  const ticket = found && isTicketId(found.ticket) ? found.ticket : null;
+  if (!ticket) return Response.json({ ok: false, error: 'code gone' }, { status: 404 });
+  const st = await completeTicketWithFirebase(env, ticket, body && body.idToken);
+  if (st === 401) return Response.json({ ok: false, error: 'unauthorized' }, { status: 401 });
+  if (st !== 200) return Response.json({ ok: false, error: 'ticket gone' }, { status: 409 });
   return Response.json({ ok: true });
 }
 
@@ -435,7 +469,9 @@ async function ticketCall(env, action, payload) {
 
 export async function createLoginTicket(env) {
   const j = await ticketCall(env, 'create', {});
-  return j && isTicketId(j.ticket) ? j.ticket : null;
+  return j && isTicketId(j.ticket)
+    ? { ticket: j.ticket, code: isTicketCode(j.code) ? j.code : null }
+    : null;
 }
 
 export async function loginTicketStatus(env, ticket) {

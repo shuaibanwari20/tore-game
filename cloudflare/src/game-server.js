@@ -641,7 +641,8 @@ export class GameServer {
     if (!this.tickets) this.tickets = new TicketStore(this.state.storage);
     let body = {};
     try { body = await request.json(); } catch { /* empty body */ }
-    if (reqPath === '/internal/tickets/create') return Response.json({ ticket: await this.tickets.create() });
+    if (reqPath === '/internal/tickets/create') { const r = await this.tickets.createWithCode(); return Response.json({ ticket: r.id, code: r.code }); }
+    if (reqPath === '/internal/tickets/bycode') return Response.json({ ticket: await this.tickets.lookupByCode(body.code) });
     if (reqPath === '/internal/tickets/complete') return Response.json({ ok: !!(body && body.user) && (await this.tickets.complete(body.ticket, body.user)) });
     if (reqPath === '/internal/tickets/fail') return Response.json({ ok: await this.tickets.fail(body.ticket) });
     if (reqPath === '/internal/tickets/status') return Response.json(await this.tickets.status(body.ticket));

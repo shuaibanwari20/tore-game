@@ -122,6 +122,14 @@ const GATE_HTML = `<!DOCTYPE html>
     font-family: Arial, sans-serif; line-height: 1;
   }
   .gerr { min-height: 20px; margin-top: 14px; font-size: 13.5px; color: #ffc9bd; }
+  .gcodebox { margin-top: 14px; padding: 12px 10px; border: 1.5px dashed rgba(255, 215, 94, .65); border-radius: 14px; background: rgba(40, 0, 35, .35); }
+  .gcodelabel { font-size: 12.5px; color: #ffe9c9; }
+  .gcode { margin-top: 4px; font-size: 30px; font-weight: 900; letter-spacing: 6px; color: #ffd75e; direction: ltr; }
+  .gcodehint { margin-top: 6px; font-size: 12px; line-height: 1.9; color: rgba(255, 233, 201, .9); }
+  .gcodelink { margin-top: 12px; background: none; border: 0; color: #ffd75e; font-family: inherit; font-size: 13.5px; font-weight: 700; text-decoration: underline; cursor: pointer; }
+  .gcodeentry { margin-top: 10px; display: flex; gap: 8px; justify-content: center; }
+  .gcodeentry input { width: 150px; padding: 9px 10px; border-radius: 10px; border: 1.5px solid rgba(255, 215, 94, .6); background: rgba(40, 0, 35, .45); color: #fff; font-size: 17px; font-weight: 800; letter-spacing: 3px; text-align: center; direction: ltr; }
+  .gcodego { padding: 9px 16px; border-radius: 10px; border: 0; background: linear-gradient(180deg, #ffd968, #f5a623); color: #4a0727; font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
   .gnote { margin-top: 10px; font-size: 12.5px; color: rgba(255, 233, 201, .85); }
   .glangs { margin-top: 18px; display: flex; gap: 8px; justify-content: center; }
   .glang {
@@ -149,6 +157,18 @@ const GATE_HTML = `<!DOCTYPE html>
       </button>
     </div>
     <div class="gerr" id="gate-err"></div>
+    <div class="gcodebox" id="gate-codebox" style="display:none">
+      <div class="gcodelabel" id="gate-code-label"></div>
+      <div class="gcode" id="gate-code"></div>
+      <div class="gcodehint" id="gate-code-hint"></div>
+    </div>
+    <div id="gate-codehave-row" style="display:none">
+      <button type="button" class="gcodelink" id="btn-codehave"></button>
+    </div>
+    <div class="gcodeentry" id="gate-codeentry" style="display:none">
+      <input id="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="8">
+      <button type="button" class="gcodego" id="btn-codego"></button>
+    </div>
     <div class="gnote" id="gate-note">ننوتل یعنې د لوبې قوانین منل</div>
     <div class="gnote" id="gate-sa-note" style="display:none"></div>
     <div class="glangs" id="gate-langs">
@@ -174,9 +194,9 @@ const GATE_HTML = `<!DOCTYPE html>
   // into the game. Only the texts change — the sign-in flow below is
   // untouched.
   var GATE_STR = {
-    ps: { title: 'توره — ننوتل', sub: 'د لوبې لپاره ننوځه', google: 'په ګوګل ننوځه', busy: 'ننوتل کېږي…', fb: 'په فېسبوک ننوځه', note: 'ننوتل یعنې د لوبې قوانین منل', errFail: 'ننوتل ونه شول — بیا هڅه وکړه', errConn: 'په ننوتلو کې ستونزه — انټرنېټ دې وګوره', saNote: 'که ګوګل په سفاري کې پرانستل شو، ننوتل هلته بشپړ کړه او بېرته دې اپ ته راشه — ننوتل به دې پخپله بشپړ شي' },
-    fa: { title: 'توره — ورود', sub: 'برای بازی وارد شوید', google: 'ورود با گوگل', busy: 'در حال ورود…', fb: 'ورود با فیسبوک', note: 'ورود یعنی پذیرش قانون‌های بازی', errFail: 'ورود ناموفق بود — دوباره تلاش کنید', errConn: 'خطا در ورود — اتصال اینترنت را بررسی کنید', saNote: 'اگر گوگل در سافاری باز شد، ورود را همان‌جا کامل کنید و به این برنامه برگردید — ورودتان خودکار کامل می‌شود' },
-    en: { title: 'Tore — Sign in', sub: 'Sign in to play', google: 'Sign in with Google', busy: 'Signing in…', fb: 'Sign in with Facebook', note: 'Signing in means accepting the game rules', errFail: 'Sign-in failed — please try again', errConn: 'Sign-in error — check your internet connection', saNote: 'If Google opens in Safari, finish signing in there, then come back to this app — your sign-in completes automatically' }
+    ps: { title: 'توره — ننوتل', sub: 'د لوبې لپاره ننوځه', google: 'په ګوګل ننوځه', busy: 'ننوتل کېږي…', fb: 'په فېسبوک ننوځه', note: 'ننوتل یعنې د لوبې قوانین منل', errFail: 'ننوتل ونه شول — بیا هڅه وکړه', errConn: 'په ننوتلو کې ستونزه — انټرنېټ دې وګوره', saNote: 'که ګوګل په سفاري کې پرانستل شو، ننوتل هلته بشپړ کړه او بېرته دې اپ ته راشه — ننوتل به دې پخپله بشپړ شي', codeYours: 'ستا د ننوتلو کوډ', codeHint: 'که ننوتل دلته بشپړ نه شول: لوبه په سفاري یا ټیلیګرام کې پرانېزه، «د ننوتلو کوډ لرم» ووهه او دا کوډ ولیکه — دا اپ به پخپله ننوځي', codeHave: 'د ننوتلو کوډ لرم', codePh: '۸ عددی کوډ', codeGo: 'سمه ده', errCode: 'کوډ سم نه دی یا یې وخت تېر شوی' },
+    fa: { title: 'توره — ورود', sub: 'برای بازی وارد شوید', google: 'ورود با گوگل', busy: 'در حال ورود…', fb: 'ورود با فیسبوک', note: 'ورود یعنی پذیرش قانون‌های بازی', errFail: 'ورود ناموفق بود — دوباره تلاش کنید', errConn: 'خطا در ورود — اتصال اینترنت را بررسی کنید', saNote: 'اگر گوگل در سافاری باز شد، ورود را همان‌جا کامل کنید و به این برنامه برگردید — ورودتان خودکار کامل می‌شود', codeYours: 'کد ورود تو', codeHint: 'اگر ورود اینجا کامل نشد: بازی را در سافاری یا تلگرام باز کن، «کد ورود دارم» را بزن و این کد را بنویس — این اپ خودش وارد می‌شود', codeHave: 'کد ورود دارم', codePh: 'کد ۸ رقمی', codeGo: 'تایید', errCode: 'کد درست نیست یا وقتش گذشته' },
+    en: { title: 'Tore — Sign in', sub: 'Sign in to play', google: 'Sign in with Google', busy: 'Signing in…', fb: 'Sign in with Facebook', note: 'Signing in means accepting the game rules', errFail: 'Sign-in failed — please try again', errConn: 'Sign-in error — check your internet connection', saNote: 'If Google opens in Safari, finish signing in there, then come back to this app — your sign-in completes automatically', codeYours: 'Your sign-in code', codeHint: 'If sign-in does not finish here: open the game in Safari or Telegram, tap “I have a sign-in code” and enter this code — this app signs in by itself', codeHave: 'I have a sign-in code', codePh: '8-digit code', codeGo: 'OK', errCode: 'Code is wrong or expired' }
   };
   var glang = (window.__glang && GATE_STR[window.__glang]) ? window.__glang : 'ps';
   try {
@@ -197,6 +217,16 @@ const GATE_HTML = `<!DOCTYPE html>
     if (saN) saN.textContent = d.saNote || '';
     var fbLbl = document.getElementById('gate-fb-label');
     if (fbLbl) fbLbl.textContent = d.fb;
+    var cLbl = document.getElementById('gate-code-label');
+    if (cLbl) cLbl.textContent = d.codeYours;
+    var cHint = document.getElementById('gate-code-hint');
+    if (cHint) cHint.textContent = d.codeHint;
+    var cHave = document.getElementById('btn-codehave');
+    if (cHave) cHave.textContent = d.codeHave;
+    var cGo = document.getElementById('btn-codego');
+    if (cGo) cGo.textContent = d.codeGo;
+    var cInp = document.getElementById('code-input');
+    if (cInp) cInp.placeholder = d.codePh;
     var bs = document.querySelectorAll('.glang');
     for (var i = 0; i < bs.length; i++) {
       bs[i].classList.toggle('sel', bs[i].getAttribute('data-lang') === glang);
@@ -258,20 +288,38 @@ const GATE_HTML = `<!DOCTYPE html>
       return authObj;
     });
   }
+  var pendingCode = '';
+  var codeFailed = false;
   function finishWithUser(user) {
     if (!user) return;
     user.getIdToken().then(function (idToken) {
-      return fetch('/auth/firebase', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken: idToken })
+      var first = Promise.resolve();
+      if (pendingCode) {
+        // U63: a sign-in code was entered on THIS gate — complete
+        // the app gate's ticket with the same token first, so the
+        // app signs in with this very identity.
+        first = fetch('/auth/fb-code-complete', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: pendingCode, idToken: idToken })
+        }).then(function (r) {
+          if (!r || !r.ok) { codeFailed = true; throw new Error('code'); }
+        });
+      }
+      return first.then(function () {
+        return fetch('/auth/firebase', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken: idToken })
+        });
       });
     }).then(function (r) {
       if (r && r.ok) { location.reload(); return; }
       gateFail(GL().errFail);
     }).catch(function () {
-      gateFail(GL().errConn);
+      gateFail(codeFailed ? GL().errCode : GL().errConn);
     });
   }
   // --- U59: sign-in must also work inside an installed app --------
@@ -357,6 +405,23 @@ const GATE_HTML = `<!DOCTYPE html>
       else sessionStorage.removeItem(TICKET_KEY);
     } catch (e) { /* ignore */ }
   }
+  var CODE_KEY = 'tore.gate.code';
+  function storedCode() {
+    try { return sessionStorage.getItem(CODE_KEY) || ''; } catch (e) { return ''; }
+  }
+  function storeCode(c) {
+    try {
+      if (c) sessionStorage.setItem(CODE_KEY, c);
+      else sessionStorage.removeItem(CODE_KEY);
+    } catch (e) { /* ignore */ }
+  }
+  function showCodeBox() {
+    var c = storedCode();
+    if (!c) return;
+    var box = document.getElementById('gate-codebox');
+    var el = document.getElementById('gate-code');
+    if (box && el) { el.textContent = c; box.style.display = ''; }
+  }
   var ticketTimer = null;
   function stopTicketPoll() {
     if (ticketTimer) { clearInterval(ticketTimer); ticketTimer = null; }
@@ -372,10 +437,10 @@ const GATE_HTML = `<!DOCTYPE html>
         .then(function (j) {
           if (!j) return;
           if (j.ok) {
-            stopTicketPoll(); storeTicket(''); clearPending();
+            stopTicketPoll(); storeTicket(''); storeCode(''); clearPending();
             location.reload();
           } else if (j.failed) {
-            stopTicketPoll(); storeTicket(''); clearPending();
+            stopTicketPoll(); storeTicket(''); storeCode(''); clearPending();
             gateFail(GL().errFail);
           }
         }).catch(function () { /* keep polling */ });
@@ -388,6 +453,7 @@ const GATE_HTML = `<!DOCTYPE html>
         if (!j || !j.ticket) throw new Error('no ticket');
         markPending();
         storeTicket(j.ticket);
+        if (j.code) { storeCode(j.code); showCodeBox(); }
         startTicketPoll();
         armWatchdog();
         window.open('/auth/fb?ticket=' + encodeURIComponent(j.ticket), '_blank');
@@ -435,6 +501,31 @@ const GATE_HTML = `<!DOCTYPE html>
     startAuthPoll();
     if (storedTicket()) startTicketPoll();
   }
+  // U63 code entry (browser tabs): reveal the row, take the
+  // 8-digit code, then run the normal Google sign-in — its token
+  // completes the app gate's ticket in finishWithUser above.
+  var codeHaveBtn = document.getElementById('btn-codehave');
+  if (codeHaveBtn) codeHaveBtn.onclick = function () {
+    var row = document.getElementById('gate-codeentry');
+    if (row) row.style.display = '';
+    var inp = document.getElementById('code-input');
+    if (inp) inp.focus();
+  };
+  var codeGoBtn = document.getElementById('btn-codego');
+  if (codeGoBtn) codeGoBtn.onclick = function () {
+    var inp = document.getElementById('code-input');
+    var v = ((inp && inp.value) || '').replace(/[^0-9]/g, '');
+    if (!/^[0-9]{8}$/.test(v)) { gateFail(GL().errCode); return; }
+    pendingCode = v;
+    var row = document.getElementById('gate-codeentry');
+    if (row) row.style.display = 'none';
+    gBtn.onclick();
+  };
+  if (!isStandalone) {
+    var chr = document.getElementById('gate-codehave-row');
+    if (chr) chr.style.display = '';
+  }
+  if (storedTicket() && storedCode()) showCodeBox();
   resumePolls();
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) resumePolls();
