@@ -27,9 +27,9 @@
  *   GET  /cards/<face>.png        the deck faces + back.png,
  *   GET  /carpets/feltN.jpg       the eleven table-carpet photos,
  *   GET  /carpets/thumbs/feltN.jpg  their picker thumbnails,
- *   GET  /music/c1..c9.jpg        the music player's real song
+ *   GET  /music/c1..c30.jpg       the music player's real song
  *                                 covers (up41), and
- *   GET  /music/m1..m9.mp3        the nine songs themselves —
+ *   GET  /music/m1..m30.mp3       the thirty songs themselves —
  *                                 STREAMED with the client's Range
  *                                 header relayed upstream
  *                                 (serveMusic), never buffered, and
@@ -93,7 +93,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261113-listbtn';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261113-songs30';
 // The PREVIOUS client version's URL — last-resort fallback for
 // serveClient (see the header comment): that build was live long
 // enough that its edge copies are warm in the POPs, so when a fresh
@@ -767,16 +767,16 @@ export default {
     }
 
     if (path.startsWith('/music/') && request.method === 'GET') {
-      // up41 music player files: the nine songs (m1..m9.mp3) and
-      // their real covers (c1..c9.jpg), static repo files like the
+      // up41 music player files: the songs (m1..m30.mp3, up56) and
+      // their own covers (c1..c30.jpg), static repo files like the
       // cards. Covers ride the generic cached fetcher; the songs
       // STREAM with Range relayed upstream (serveMusic) so a
       // phone can seek and the Worker never buffers a whole song.
       const name = path.slice('/music/'.length);
-      if (/^c[1-9]\.jpg$/.test(name)) {
+      if (/^c([1-9]|[12][0-9]|30)\.jpg$/.test(name)) {
         return serveRepoAsset(env, env.MUSIC_URL || MUSIC_URL_BASE_DEFAULT, name, 'image/jpeg');
       }
-      if (/^m[1-9]\.mp3$/.test(name)) return serveMusic(env, request, name);
+      if (/^m([1-9]|[12][0-9]|30)\.mp3$/.test(name)) return serveMusic(env, request, name);
       return new Response('not found', { status: 404 });
     }
 
