@@ -946,6 +946,12 @@ export default {
       if (request.method !== 'POST') return new Response('method not allowed', { status: 405 });
       return auth.handleFirebaseTicketComplete(request, env);
     }
+    if (path === '/auth/fb-code-complete') {
+      // U63: the sign-in-code rescue — a browser gate completes
+      // the app gate's ticket by its 8-digit code.
+      if (request.method !== 'POST') return new Response('method not allowed', { status: 405 });
+      return auth.handleFirebaseCodeComplete(request, env);
+    }
     if (path === '/auth/ticket' && request.method === 'POST') {
       // U60: the installed-app gate mints a one-time login ticket
       // (stored in the global DO), then opens /auth/google?ticket=…
@@ -953,9 +959,9 @@ export default {
       // result. The ticket carries no identity until the Google
       // callback completes it.
       if (!env.SESSION_SECRET) return Response.json({ ok: false, error: 'sign-in is not configured on this server' }, { status: 500 });
-      const ticket = await auth.createLoginTicket(env);
-      if (!ticket) return Response.json({ ok: false, error: 'ticket store unavailable' }, { status: 502 });
-      return Response.json({ ok: true, ticket });
+      const made = await auth.createLoginTicket(env);
+      if (!made) return Response.json({ ok: false, error: 'ticket store unavailable' }, { status: 502 });
+      return Response.json({ ok: true, ticket: made.ticket, code: made.code });
     }
     if (path === '/auth/ticket-status') {
       // One-time read: a completed ticket is consumed here and the
