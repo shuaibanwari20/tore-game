@@ -1,4 +1,5 @@
 /**
+ *   up56 build marker: 30-song playlist (retrigger).
  * worker.js — Tore on Cloudflare: HTTP entry point.
  *
  * Routes:
