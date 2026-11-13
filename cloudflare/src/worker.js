@@ -946,6 +946,15 @@ export default {
       if (request.method !== 'POST') return new Response('method not allowed', { status: 405 });
       return auth.handleFirebaseTicketComplete(request, env);
     }
+    if (path === '/auth/email-start') {
+      // U65: email + 6-digit code sign-in (the code is emailed).
+      if (request.method !== 'POST') return new Response('method not allowed', { status: 405 });
+      return auth.handleEmailStart(request, env);
+    }
+    if (path === '/auth/email-verify') {
+      if (request.method !== 'POST') return new Response('method not allowed', { status: 405 });
+      return auth.handleEmailVerify(request, env);
+    }
     if (path === '/auth/fb-code-complete') {
       // U63: the sign-in-code rescue — a browser gate completes
       // the app gate's ticket by its 8-digit code.
@@ -1005,7 +1014,7 @@ export default {
       if (authEnabled) {
         const user = await auth.readSession(request, env);
         if (!user) {
-          return new Response(gatePage(), {
+          return new Response(gatePage({ email: !!env.BREVO_API_KEY }), {
             status: 401,
             headers: {
               'Content-Type': 'text/html; charset=utf-8',
