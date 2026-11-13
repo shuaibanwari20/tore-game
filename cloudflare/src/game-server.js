@@ -1968,6 +1968,37 @@ export class GameServer {
         this._syncClubGame(room); // clubs v8: the club game is now in progress
         break;
       }
+      case 'seatswap': {
+        // up52: the HOST arranges the teams in the lobby — twin of
+        // the Node host's seat swap (see server.js 'seatswap' for
+        // the full rationale). The two seat RECORDS trade places
+        // whole (identity + live connection ride together); the
+        // fix-up here is each moved socket's ATTACHMENT seat,
+        // re-pointed at its new index and saved. Same gates, all
+        // silent: lobby phase, not a club-vs room (reserved
+        // seats), sender is the host (the _hostSeat test 'start'
+        // uses), a != b, indices in 0..3, at least one seat
+        // non-empty. The room snapshot serializes seats by value
+        // and webSocketMessage's trailing _persist() stores the
+        // new order, so a hibernated room revives swapped.
+        const room = this.rooms.get(att.code);
+        if (!room || room.phase !== 'lobby' || room.vs) return;
+        if (att.seat !== this._hostSeat(room)) return;
+        const a = msg.a, b = msg.b;
+        if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || a > 3 || b < 0 || b > 3 || a === b) return;
+        const sa = room.seats[a], sb = room.seats[b];
+        if (sa.kind === 'empty' && sb.kind === 'empty') return;
+        room.seats[a] = sb;
+        room.seats[b] = sa;
+        for (const [rec, idx] of [[sa, b], [sb, a]]) {
+          if (rec.ws) {
+            const ra = this._attachment(rec.ws);
+            if (ra) { ra.seat = idx; this._saveAttachment(rec.ws, ra); }
+          }
+        }
+        this._broadcastState(room);
+        break;
+      }
       case 'leave': {
         // Leaving the WAITING room (the match has not started): a
         // guest's seat is freed at once; the HOST leaving cancels the
