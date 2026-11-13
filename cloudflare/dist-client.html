@@ -1451,8 +1451,8 @@
   .cl-xbtn svg, .pk-xbtn svg { width: 21px; height: 21px; stroke: #fff; fill: none; stroke-width: 3.1; stroke-linecap: round;
     filter: drop-shadow(0 1px 1px rgba(90,0,0,.6)); }
   .cl-xbtn:active, .pk-xbtn:active { transform: scale(.92); }
-  .cl-headrow { display: flex; align-items: center; gap: 11px; direction: ltr; margin-bottom: 11px; }
-  .cl-createbtn { flex: 1 1 auto; direction: rtl; margin: 0; padding: 10px 22px; font-family: inherit; font-size: 15px; font-weight: 800;
+  .cl-headrow { display: flex; align-items: center; gap: 11px; margin-bottom: 11px; }
+  .cl-createbtn { flex: 0 1 auto; width: auto; direction: rtl; margin: 0; margin-inline-end: auto; padding: 6px 13px; font-family: inherit; font-size: 12.5px; line-height: 1.3; font-weight: 800;
     color: #fff; background: linear-gradient(180deg, #ff7ad9, #e84393 55%, #cf2f7f);
     border: 1.5px solid #ffadd9; border-radius: 999px; cursor: pointer;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -3px 6px rgba(120,10,70,.35), 0 4px 12px rgba(214,51,132,.45); }
@@ -1465,6 +1465,24 @@
   #scr-clubs .cl-searchbtn svg { width: 24px; height: 24px; stroke: #fff; }
   #scr-clubs .cl-searchbtn.on { background: linear-gradient(180deg, #ff8ade, #dd379b); border-color: #ffc2e8; }
   #scr-clubs .cl-searchbtn.on svg { stroke: #fff; }
+  /* up50c (owner order 2026-11-13): the header's search toggle and
+     ✕ close are a bit SMALLER too (48/46px → 40px), clubs page only */
+  #scr-clubs .cl-searchbtn { flex-basis: 40px; width: 40px; height: 40px; border-radius: 12px; }
+  #scr-clubs .cl-searchbtn svg { width: 20px; height: 20px; }
+  #scr-clubs .cl-xbtn { flex-basis: 40px; width: 40px; height: 40px; }
+  #scr-clubs .cl-xbtn svg { width: 18px; height: 18px; }
+  /* up50e (owner order 2026-11-13): the clubs header gets an IMAGE
+     background (the trophy cover) under a plum veil so the buttons
+     stay readable, and the header is TALLER (112px band — raised
+     twice at the owner's word). up50g: the band BLEEDS edge-to-edge
+     — it cancels the .fr-inner padding (−14px sides/top) so no
+     empty purple shows at the right, left or top. */
+  #scr-clubs .cl-headrow { box-sizing: border-box; min-height: 185px; padding: 12px;
+    margin: -14px -14px 11px; border-radius: 0; align-items: flex-start;
+    border: none; border-bottom: 1.5px solid rgba(255,215,94,.4);
+    background-image: linear-gradient(rgba(43,6,54,.40), rgba(43,6,54,.62)), url('/covers/trophy.jpg');
+    background-size: cover; background-position: center 32%;
+    box-shadow: 0 6px 18px rgba(20,0,25,.45); }
   /* --- the stage: gold frame, red curtains, crowd below --- */
   #scr-clubs .cl-podium-stage { border: 2.5px solid #e9c46a; border-radius: 18px; overflow: hidden;
     background:
@@ -1498,10 +1516,12 @@
     box-shadow: 0 3px 7px rgba(0,0,0,.4); }
   #scr-clubs .cl-pod.second .cl-pod-name { background: linear-gradient(180deg, #5f7078, #333f46); border-color: #cfd8dc; color: #fff; }
   #scr-clubs .cl-pod.third .cl-pod-name { background: linear-gradient(180deg, #74491e, #452a10); border-color: #e8ab6d; color: #ffdcae; }
-  /* --- country chips: a 4-wide grid of dark pills, selected = pink --- */
-  #scr-clubs .cl-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  #scr-clubs .cl-chip { width: 100%; text-align: center; padding: 9px 3px; font-size: 12.5px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 12px;
+  /* --- country chips: a 4-wide grid of dark pills, selected = pink.
+     up50b (owner order 2026-11-13): a bit SMALLER — tighter padding,
+     smaller text, tighter gaps. --- */
+  #scr-clubs .cl-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  #scr-clubs .cl-chip { width: 100%; text-align: center; padding: 5px 2px; font-size: 11.5px; line-height: 1.25;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 10px;
     background: linear-gradient(180deg, #5e1a68, #45114d); border: 1.5px solid rgba(255,255,255,.1); color: #f6e3ff;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 3px 7px rgba(25,2,35,.35); }
   #scr-clubs .cl-chip.sel { background: linear-gradient(180deg, #ff7ad9, #e84393 58%, #d63384);
@@ -3900,16 +3920,14 @@
   <div class="fr-scroll" id="cl-disc-scroll">
     <div class="fr-inner">
       <div class="cl-headrow">
-        <button type="button" class="cl-xbtn" id="btn-cl-home" aria-label="close"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
-        <button type="button" id="btn-cl-create" class="cl-createbtn"></button>
-        <!-- The three discovery tabs (پلټنه / ګرم / زما) were
-             DELETED by the owner 2026-11-12: discovery is ONE
-             listing — the browse content below (top-3 stage,
-             country chips, search, the full grid). Owner order
-             2026-11-12: the search toggle moved UP into this
-             header row, rightmost, beside the create pill (it
-             used to sit alone in its own row underneath). -->
+        <!-- up50 (owner order 2026-11-13): the search toggle must sit
+             at the RIGHT side of the header. The row is RTL-native
+             now (the old direction:ltr hack is gone) and the toggle
+             is FIRST in DOM, which puts it at the far right in every
+             engine; the ✕ close is last (far left). -->
         <button type="button" class="cl-searchbtn" id="btn-cl-search-toggle" aria-label="search"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="M16 16l4.6 4.6"/></svg></button>
+        <button type="button" id="btn-cl-create" class="cl-createbtn"></button>
+        <button type="button" class="cl-xbtn" id="btn-cl-home" aria-label="close"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
       </div>
       <div class="fr-searchrow hidden" id="cl-searchrow">
         <input id="cl-search-inp" type="text" maxlength="40">
