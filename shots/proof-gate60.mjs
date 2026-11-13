@@ -1,0 +1,122 @@
+/** up60 proof — the installed-app gate signs in by TICKET.
+ *  S (standalone): the tap mints a ticket, opens /auth/google?ticket=
+ *     in a new sheet, polls the status, and when the (mimicked)
+ *     completion lands, the gate reloads ITSELF with the session
+ *     cookie set in THIS context. Firebase is never used.
+ *  T (browser tab): regression — the Firebase popup still runs
+ *     first, hangs (stubbed), and falls back to redirect. */
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import { spawn } from 'node:child_process';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const chromium = require(path.join(os.homedir(), 'workspace/projects/vault-rental-online/node_modules/playwright-core')).chromium;
+function findChrome() {
+  const base = path.join(os.homedir(), '.cache/ms-playwright');
+  for (const dir of fs.readdirSync(base).sort().reverse()) {
+    for (const rel of ['chrome-linux/chrome', 'chrome-linux/headless_shell', 'chrome-headless-shell-linux/headless_shell']) {
+      const p = path.join(base, dir, rel);
+      if (fs.existsSync(p)) return p;
+    }
+  }
+  return null;
+}
+const BASE = 'http://127.0.0.1:8912';
+let failures = 0;
+const check = (name, ok, extra = '') => {
+  console.log((ok ? 'PASS' : 'FAIL') + '  ' + name + (extra ? ' — ' + extra : ''));
+  if (!ok) failures++;
+};
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function waitFor(fn, timeoutMs, stepMs = 300) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeoutMs) { if (await fn()) return true; await sleep(stepMs); }
+  return false;
+}
+async function reset() { await fetch(BASE + '/__mode', { method: 'POST', body: 'x' }); }
+async function stats() { const r = await fetch(BASE + '/__stats'); return r.json(); }
+
+const APP_STUB = 'export function initializeApp() { return {}; }';
+const AUTH_STUB = [
+  'window.__fb = { popup: 0, redirect: 0 };',
+  'export function getAuth() { return {}; }',
+  'export class GoogleAuthProvider {}',
+  'export function signInWithPopup() { window.__fb.popup++; return new Promise(function () {}); }',
+  'export function signInWithRedirect() { window.__fb.redirect++; return new Promise(function () {}); }',
+  'export function getRedirectResult() { return Promise.resolve(null); }',
+].join('\n');
+
+let server = null;
+let browser = null;
+try {
+  server = spawn('node', [path.join(os.homedir(), 'workspace/tmp-build/gate60-server.mjs')], { stdio: 'pipe' });
+  const up = await waitFor(async () => {
+    try { const r = await fetch(BASE + '/__stats'); return r.ok; } catch { return false; }
+  }, 8000);
+  if (!up) throw new Error('gate60 server did not come up');
+  browser = await chromium.launch({ executablePath: findChrome(), args: ['--no-sandbox'] });
+
+  async function newGatePage(standalone) {
+    const ctx = await browser.newContext();
+    if (standalone) {
+      await ctx.addInitScript(() => {
+        try { Object.defineProperty(window.navigator, 'standalone', { get: () => true }); } catch (e) { /* ignore */ }
+      });
+    }
+    await ctx.route('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js', (r) =>
+      r.fulfill({ contentType: 'text/javascript', body: APP_STUB }));
+    await ctx.route('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js', (r) =>
+      r.fulfill({ contentType: 'text/javascript', body: AUTH_STUB }));
+    const page = await ctx.newPage();
+    const errs = [];
+    page.on('pageerror', (e) => errs.push(String(e)));
+    await page.goto(BASE + '/', { waitUntil: 'load' });
+    await page.waitForSelector('#btn-google', { timeout: 8000 });
+    await sleep(400);
+    return { ctx, page, errs };
+  }
+
+  // ---- S: standalone ticket flow --------------------------------
+  await reset();
+  {
+    const { ctx, page, errs } = await newGatePage(true);
+    const opened = [];
+    ctx.on('page', (p) => opened.push(p.url()));
+    await page.click('#btn-google');
+    const sheetOk = await waitFor(() => opened.some((u) => u.includes('/auth/google?ticket=0123456789abcdef0123456789abcdef')), 5000);
+    check('S1 Google flow opened with the ticket', sheetOk, opened.join(' , '));
+    const reloaded = await waitFor(async () => (await stats()).rootHits >= 2, 14000);
+    check('S2 ticket poll completed and the gate reloaded itself', reloaded, JSON.stringify(await stats()));
+    const cookies = await ctx.cookies(BASE);
+    const sess = cookies.find((c) => c.name === 'tore_session');
+    check('S3 session cookie landed in THIS context', !!sess && sess.value === 'proof-cookie', JSON.stringify(cookies.map((c) => c.name)));
+    const f = await page.evaluate(() => window.__fb || { popup: -1, redirect: -1 }).catch(() => ({ popup: -2, redirect: -2 }));
+    check('S4 Firebase sign-in never used in standalone', f.popup === 0 && f.redirect === 0, JSON.stringify(f));
+    check('S5 no page errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  }
+
+  // ---- T: browser-tab regression --------------------------------
+  await reset();
+  {
+    const { ctx, page, errs } = await newGatePage(false);
+    await page.click('#btn-google');
+    await sleep(1500);
+    const f1 = await page.evaluate(() => window.__fb);
+    check('T1 tab still tries the popup first', f1.popup === 1 && f1.redirect === 0, JSON.stringify(f1));
+    const fell = await waitFor(async () => (await page.evaluate(() => window.__fb)).redirect === 1, 16000);
+    check('T2 hung popup still falls back to redirect', fell);
+    check('T3 no page errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  }
+} catch (e) {
+  console.log('ERROR', e && e.message ? e.message : e);
+  failures++;
+} finally {
+  if (browser) await browser.close().catch(() => {});
+  if (server) server.kill('SIGKILL');
+}
+console.log(failures === 0 ? 'ALL PASS' : failures + ' FAILURES');
+process.exit(failures === 0 ? 0 : 1);
