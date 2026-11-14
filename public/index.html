@@ -11868,8 +11868,12 @@ $('#btn-continue').onclick = () => {
 // touches sockets, auth, TURN or any POST — registration here is
 // equally guarded (secure contexts only, every failure swallowed:
 // the game must run exactly as before on any browser that declines).
+// U72 (his order): the PWA is Android-only — on iOS the service
+// worker is never registered at all.
+const pwaUAIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent || '') ||
+  (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1);
 try {
-  if ('serviceWorker' in navigator &&
+  if ('serviceWorker' in navigator && !pwaUAIos &&
       (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
@@ -11880,10 +11884,10 @@ try {
 // made warm re-entry cross the 300 ms loader gate (cardsfix C flash).
 try { ensureDeck(); } catch (e) { /* the entry gates still load it */ }
 // The home install entry: visible ONLY when installation is really
-// possible — a captured beforeinstallprompt (Android/Chrome), or
-// iOS Safari, which has no such event and gets the Share-sheet
-// instructions popup instead. Already-standalone (installed) hides
-// it for good.
+// possible — a captured beforeinstallprompt (Android/Chrome).
+// U72 (his order): iOS gets NO install entry and no instructions
+// popup — the PWA feature is Android-only. Already-standalone
+// (installed) hides it for good.
 let deferredInstallPrompt = null;
 function pwaStandalone() {
   try {
@@ -11899,7 +11903,7 @@ function pwaIsIOS() {
 function paintInstallEntry() {
   const btn = $('#btn-install');
   if (!btn) return;
-  const showIt = !pwaStandalone() && (!!deferredInstallPrompt || pwaIsIOS());
+  const showIt = !pwaStandalone() && !!deferredInstallPrompt;
   btn.classList.toggle('hidden', !showIt);
 }
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -11922,8 +11926,9 @@ $('#btn-install').onclick = async () => {
     } catch (e) { /* dismissed — the entry may return with a fresh event */ }
     return;
   }
-  // iOS Safari (and any browser without the prompt): the Ludo-card
-  // instructions — Share, then «Add to Home Screen».
+  // A browser without the prompt: the Ludo-card instructions —
+  // Share, then «Add to Home Screen». U72: never on iOS.
+  if (pwaIsIOS()) return;
   $('#ov-install').classList.add('show');
 };
 $('#btn-install-close').onclick = () => $('#ov-install').classList.remove('show');
