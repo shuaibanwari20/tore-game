@@ -957,7 +957,7 @@ export default {
       // page bridges the token to the gate's ticket (below).
       if (request.method !== 'GET') return new Response('method not allowed', { status: 405 });
       const t = new URL(request.url).searchParams.get('ticket') || '';
-      return new Response(fbPage(t), {
+      return new Response(fbPage(t, env.GOOGLE_CLIENT_ID || ''), {
         headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
       });
     }
