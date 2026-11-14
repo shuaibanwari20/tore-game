@@ -11446,8 +11446,9 @@ $("#btn-continue").onclick = () => {
   gateFaces();
   connect(() => send({ type: "reconnect", code: s.code, token: s.token, ...profileMsg() }));
 };
+const pwaUAIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent || "") || window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1;
 try {
-  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+  if ("serviceWorker" in navigator && !pwaUAIos && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
     navigator.serviceWorker.register("/sw.js").catch(() => {
     });
   }
@@ -11472,7 +11473,7 @@ function pwaIsIOS() {
 function paintInstallEntry() {
   const btn = $("#btn-install");
   if (!btn) return;
-  const showIt = !pwaStandalone() && (!!deferredInstallPrompt || pwaIsIOS());
+  const showIt = !pwaStandalone() && !!deferredInstallPrompt;
   btn.classList.toggle("hidden", !showIt);
 }
 window.addEventListener("beforeinstallprompt", (e) => {
@@ -11496,6 +11497,7 @@ $("#btn-install").onclick = async () => {
     }
     return;
   }
+  if (pwaIsIOS()) return;
   $("#ov-install").classList.add("show");
 };
 $("#btn-install-close").onclick = () => $("#ov-install").classList.remove("show");
