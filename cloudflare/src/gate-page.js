@@ -374,10 +374,14 @@ const GATE_HTML = `<!DOCTYPE html>
   }
   function startTicketPoll() {
     if (ticketTimer) return;
-    var t = storedTicket();
-    if (!t) return;
+    if (!storedTicket()) return;
     ticketTimer = setInterval(function () {
       if (!pendingFresh()) { stopTicketPoll(); return; }
+      // U78: read the CURRENT stored ticket on every tick — a
+      // poll resumed for an older ticket must follow the ticket
+      // the player just minted, never the stale one.
+      var t = storedTicket();
+      if (!t) { stopTicketPoll(); return; }
       fetch('/auth/ticket-status?ticket=' + encodeURIComponent(t), { credentials: 'same-origin' })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (j) {
