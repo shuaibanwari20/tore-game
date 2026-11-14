@@ -96,7 +96,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261114-instant';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261114-feat3';
 // The PREVIOUS client version's URL — last-resort fallback for
 // serveClient (see the header comment): that build was live long
 // enough that its edge copies are warm in the POPs, so when a fresh
@@ -803,7 +803,7 @@ export default {
     if (path.startsWith('/carpets/') && request.method === 'GET') {
       // The eleven felt photos and their picker thumbnails.
       const rest = path.slice('/carpets/'.length);
-      if (/^(thumbs\/)?felt([1-9]|1[01])\.jpg$/.test(rest)) {
+      if (/^(thumbs\/)?felt([1-9]|1[01]|ev1)\.jpg$/.test(rest)) { // feat3: + the event carpet
         return serveRepoAsset(env, env.CARPETS_URL || CARPETS_URL_BASE_DEFAULT, rest, 'image/jpeg');
       }
       return new Response('not found', { status: 404 });
