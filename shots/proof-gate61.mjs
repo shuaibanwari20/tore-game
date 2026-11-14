@@ -1,14 +1,12 @@
 /** Gate proof — drives the REAL gate page (served by the local
  *  gate61 server) in Chromium:
- *    S  standalone (installed app): email form only, Google
- *       hidden, send → Firebase link sent with the ticket in its
- *       continue URL → ticket poll reloads the gate (up67).
+ *    S  standalone (installed app) after up69: no email form,
+ *       Google hidden, the browser-guidance note shows.
  *    T  browser tab regression: the Google popup flow still runs
  *       and signs the tab in.
  *    F  the /auth/fb bridge page still completes a direct-visit
  *       persisted user into a ticket (dormant but kept).
- *    E  browser tab: Google AND email form; the email-LINK flow
- *       signs this tab in through the ticket poll (up67).
+ *    E  browser tab after up69: Google only, no email form.
  *  Firebase's modular SDK is stubbed by route interception; the
  *  compat SDK on the fb page is stubbed the same way. */
 import { createRequire } from 'node:module';
@@ -97,26 +95,21 @@ try {
     return { ctx, page, errs };
   }
 
-  // ---- S: standalone email-LINK sign-in (up67) ------------------
+  // ---- S: standalone after the email removal (up69) ------------
   await reset();
   {
     const { ctx, page, errs } = await newGatePage(true);
     const vis = await page.evaluate(() => {
-      const ge = document.getElementById('gate-email');
       const gb = document.getElementById('btn-google');
-      return { email: !!ge && ge.style.display !== 'none', google: !!gb && gb.style.display !== 'none' };
+      const note = document.getElementById('gate-sa-note');
+      return {
+        emailGone: !document.getElementById('gate-email'),
+        google: !!gb && gb.style.display !== 'none',
+        note: !!note && note.style.display !== 'none'
+      };
     });
-    check('S1 standalone shows the email form and hides Google', vis.email && !vis.google, JSON.stringify(vis));
-    await page.fill('#email-input', 'unit@example.com');
-    await page.click('#btn-email-send');
-    const sent = await waitFor(async () => (await page.evaluate(() => (window.__fb || {}).link || 0)) >= 1, 8000);
-    check('S2 sign-in link sent via Firebase', sent, JSON.stringify(await page.evaluate(() => window.__fb || {})));
-    const linkUrl = await page.evaluate(() => (window.__fb || {}).linkUrl || '');
-    check('S3 link continue URL carries the ticket + finish path', linkUrl.includes('/auth/email-finish?ticket=' + TICKET), linkUrl);
-    check('S4 ticket minted server-side', (await stats()).ticketHits >= 1, JSON.stringify(await stats()));
-    const reloaded = await waitFor(async () => (await stats()).rootHits >= 2, 12000);
-    check('S5 ticket poll brought the session in (gate reloaded)', reloaded, JSON.stringify(await stats()));
-    check('S6 no page errors', errs.length === 0, errs.join(' | '));
+    check('S1 standalone: no email form, Google hidden, browser note shown', vis.emailGone && !vis.google && vis.note, JSON.stringify(vis));
+    check('S2 no page errors', errs.length === 0, errs.join(' | '));
     await ctx.close();
   }
 
@@ -146,23 +139,16 @@ try {
     await ctx.close();
   }
 
-  // ---- E: the email-LINK flow from a browser tab (up67) ---------
+  // ---- E: the tab gate after the email removal (up69) ----------
   await reset();
   {
     const { ctx, page, errs } = await newGatePage(false);
     const vis = await page.evaluate(() => {
-      const ge = document.getElementById('gate-email');
       const gb = document.getElementById('btn-google');
-      return { email: !!ge && ge.style.display !== 'none', google: !!gb && gb.style.display !== 'none' };
+      return { emailGone: !document.getElementById('gate-email'), google: !!gb && gb.style.display !== 'none' };
     });
-    check('E1 tab shows Google AND the email form', vis.email && vis.google, JSON.stringify(vis));
-    await page.fill('#email-input', 'unit@example.com');
-    await page.click('#btn-email-send');
-    const sent = await waitFor(async () => (await page.evaluate(() => (window.__fb || {}).link || 0)) >= 1, 8000);
-    check('E2 sign-in link sent via Firebase', sent, JSON.stringify(await page.evaluate(() => window.__fb || {})));
-    const reloaded = await waitFor(async () => (await stats()).rootHits >= 2, 12000);
-    check('E3 ticket poll signed this tab in (gate reloaded)', reloaded, JSON.stringify(await stats()));
-    check('E4 no page errors', errs.length === 0, errs.join(' | '));
+    check('E1 tab gate is Google-only (no email form)', vis.emailGone && vis.google, JSON.stringify(vis));
+    check('E2 no page errors', errs.length === 0, errs.join(' | '));
     await ctx.close();
   }
 } catch (e) {

@@ -19,12 +19,8 @@ const finishSrc = fs.readFileSync(SRC + 'email-finish-page.js', 'utf8');
 
 check('W1 worker routes /auth/email-finish to the finish page', workerSrc.includes("path === '/auth/email-finish'")
   && workerSrc.includes('emailFinishPage'));
-check('G1 gate sends the link with the ticket in the continue URL', gateSrc.includes('sendSignInLinkToEmail')
-  && gateSrc.includes("'/auth/email-finish?ticket='") && gateSrc.includes('handleCodeInApp: false'));
-check('G2 gate mints + polls the ticket for the email flow', gateSrc.includes("fetch('/auth/ticket'")
-  && gateSrc.includes('startTicketPoll()'));
-check('G3 gate no longer uses the OTP endpoints', !gateSrc.includes("'/auth/email-start'")
-  && !gateSrc.includes("'/auth/email-verify'") && !gateSrc.includes('gate-email-code-row'));
+check('G1-G3 gate email flow retired by U69 (finish page + worker route stay dormant)',
+  !gateSrc.includes('sendSignInLinkToEmail') && !gateSrc.includes('gate-email'));
 
 const T = '0123456789abcdef0123456789abcdef';
 const page = emailFinishPage(T, 'unit@example.com');

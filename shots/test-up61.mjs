@@ -90,7 +90,7 @@ const workerSrc = fs.readFileSync('/home/hatch/workspace/projects/tore-game/clou
 check('S3 worker routes /auth/fb + /auth/fb-complete', workerSrc.includes("path === '/auth/fb'")
   && workerSrc.includes("path === '/auth/fb-complete'") && workerSrc.includes('fbPage'));
 const gateSrc = fs.readFileSync('/home/hatch/workspace/projects/tore-game/cloudflare/src/gate-page.js', 'utf8');
-check('S4 gate mints a ticket and shows the code, never opens a bridge page (U64)', gateSrc.includes("fetch('/auth/ticket'") && gateSrc.includes('gate-email') && !gateSrc.includes("window.open('/auth/fb") && !gateSrc.includes("'/auth/google?ticket='"));
+check('S4 gate is Google-only, never opens a bridge page (U69 retired the email/ticket UI)', !gateSrc.includes('gate-email') && !gateSrc.includes("window.open('/auth/fb") && !gateSrc.includes("'/auth/google?ticket='"));
 
 // ---------- fb-complete behaviour ----------
 let r = await auth.handleFirebaseTicketComplete(post('/auth/fb-complete', { ticket: 'nope', idToken: makeToken() }), env);
