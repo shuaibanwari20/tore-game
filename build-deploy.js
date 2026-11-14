@@ -118,7 +118,7 @@ const nCards = copyDir(path.join(PUB, 'cards'), path.join(DEPLOY, 'cards'), (f) 
 const nCarpets = copyDir(path.join(PUB, 'carpets'), path.join(DEPLOY, 'carpets'), (f) => imgFiles.test(f));
 fs.copyFileSync(path.join(PUB, 'carpet.jpg'), path.join(DEPLOY, 'carpet.jpg'));
 if (nCards !== 53) throw new Error('expected 53 card files (52 faces + back.png), copied ' + nCards);
-if (nCarpets !== 22) throw new Error('expected 22 carpet files (11 full + 11 thumbs), copied ' + nCarpets);
+if (nCarpets !== 24) throw new Error('expected 24 carpet files (11 full + 11 thumbs + the feat3 event carpet pair), copied ' + nCarpets);
 // up41: the music player's files (1 song + 1 real cover — the owner
 // cut the list to his single pick on 2026-11-13).
 const nMusic = copyDir(path.join(PUB, 'music'), path.join(DEPLOY, 'music'), (f) => /\.(mp3|jpe?g)$/i.test(f));

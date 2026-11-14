@@ -632,6 +632,10 @@ function stateFor(room, seatIdx) {
     seats: room.seats.map((s, i) => ({
       name: s.name, kind: s.kind, connected: s.connected,
       avatar: s.avatar, country: s.country, photo: s.photo, sid: s.sid || null,
+      // feat3 (#19): frame + chat style ride the seat state from
+      // the social directory (ownership-validated there).
+      frame: s.sid ? (social.core.person(s.sid) || {}).frame || '' : '',
+      chatStyle: s.sid ? (social.core.person(s.sid) || {}).chatStyle || '' : '',
       uid: s.sid ? social.core.uidOf(s.sid) : null,
       voice: { mic: !!s.voiceMic, speaker: s.voiceSpeaker !== false },
       cards: round ? round.hands[i].length : 0,
@@ -1253,7 +1257,7 @@ function handleMessage(ws, msg) {
             const core = social.core;
             if (core && typeof core.walletView === 'function' && core.walletView(csid) &&
                 typeof core.ownsCosmetic === 'function') {
-              if (!core.ownsCosmetic(csid, 'felt' + room.felt)) room.felt = 11;
+              if (!core.ownsCosmetic(csid, room.felt === 'ev1' ? 'felt-ev1' : 'felt' + room.felt)) room.felt = 11;
               if (!core.ownsCosmetic(csid, 'back' + room.back)) room.back = 1;
             }
           } catch (e) { /* social never breaks the game */ }
@@ -1628,6 +1632,7 @@ function cleanName(name) {
 // felt is fixed at creation; stateFor stamps it on every push so
 // the whole room plays on the creator's field.
 function cleanFelt(v) {
+  if (v === 'ev1') return 'ev1'; // feat3: the seasonal-event carpet
   return (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 11) ? v : 11;
 }
 
