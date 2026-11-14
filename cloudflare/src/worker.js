@@ -154,6 +154,11 @@ function authDonePage() {
   // U60: where the Safari-side Google flow lands after completing a
   // login ticket for the installed app. Static + trilingual; the
   // tiny script swaps in the failure text on ?fail=1.
+  // U75 (2026-11-14, owner order): the success view must not park
+  // the player — it tries to close this browser tab at once (the
+  // app underneath is already signed in via the gate's poll) and
+  // otherwise bounces straight into the game; a big return
+  // button covers the manual case.
   return `<!doctype html>
 <html lang="ps" dir="rtl"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -162,9 +167,10 @@ function authDonePage() {
 <div id="done-ok">
 <div style="font-size:64px;line-height:1">✅</div>
 <h1 style="color:#ffd75e;font-size:1.5rem;margin:.8rem 0 .4rem">ننوتل بشپړ شول</h1>
-<p>اوس بېرته د تورې اپ پرانیزئ — لوبه به دې هلته روانه وي.<br>دا پاڼه تړلای شئ.</p>
-<p lang="fa">ورود کامل شد — حالا به برنامهٔ توره برگردید؛ بازی آنجا برایتان باز است. این صفحه را می‌توانید ببندید.</p>
-<p dir="ltr" lang="en" style="opacity:.8;font-size:.9em">You are signed in. Go back to the Tore app — the game is open there. You can close this page.</p>
+<p>اپ ته ستنېږې…</p>
+<p lang="fa">در حال برگشت به برنامه…</p>
+<p dir="ltr" lang="en" style="opacity:.8;font-size:.9em">You are signed in — returning to the app…</p>
+<a href="/" style="display:inline-block;margin-top:1.1rem;padding:.85rem 2.2rem;border-radius:999px;background:linear-gradient(180deg,#ffd968,#f5a623);color:#4a0727;font-weight:900;font-size:1.1rem;text-decoration:none">🎮 لوبې ته وګرځه</a>
 </div>
 <div id="done-fail" style="display:none">
 <div style="font-size:64px;line-height:1">⚠️</div>
@@ -172,8 +178,20 @@ function authDonePage() {
 <p>بېرته اپ ته راشئ او بیا هڅه وکړئ.</p>
 <p lang="fa">ورود ناموفق بود — به برنامه برگردید و دوباره تلاش کنید.</p>
 <p dir="ltr" lang="en" style="opacity:.8;font-size:.9em">Sign-in did not complete. Go back to the app and try again.</p>
+<a href="/" style="display:inline-block;margin-top:1.1rem;padding:.85rem 2.2rem;border-radius:999px;background:linear-gradient(180deg,#ffd968,#f5a623);color:#4a0727;font-weight:900;font-size:1.1rem;text-decoration:none">🎮 لوبې ته وګرځه</a>
 </div>
-<script>if (new URLSearchParams(location.search).get('fail')) { document.getElementById('done-ok').style.display = 'none'; document.getElementById('done-fail').style.display = ''; }</script>
+<script>
+if (new URLSearchParams(location.search).get('fail')) {
+  document.getElementById('done-ok').style.display = 'none';
+  document.getElementById('done-fail').style.display = '';
+} else {
+  // U75: never park the player on this page — close this browser
+  // tab if the browser allows it (the app underneath is already
+  // signed in), otherwise bounce straight into the game.
+  setTimeout(function () { try { window.close(); } catch (e) {} }, 350);
+  setTimeout(function () { location.replace('/'); }, 1500);
+}
+</script>
 </body></html>`;
 }
 
