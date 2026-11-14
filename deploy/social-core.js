@@ -445,8 +445,52 @@ const SHOP_ITEMS = new Map([
   ['back2', 300], ['back3', 500], ['back4', 800], ['back5', 1200], ['back6', 2000],
   ['felt1', 400], ['felt2', 400], ['felt3', 600], ['felt4', 600], ['felt5', 800],
   ['felt6', 800], ['felt7', 1000], ['felt8', 1000], ['felt9', 1500], ['felt10', 1500],
+  // feat3 (owner picks 2026-11-14): avatar frames + chat styles
+  ['fr1', 500], ['fr2', 900], ['fr3', 1400], ['fr4', 2200],
+  ['chat1', 400], ['chat2', 800], ['chat3', 1300],
 ]);
 const FREE_COSMETICS = new Set(['back1', 'felt11']);
+
+// ================= feat3 (owner picks 2026-11-14: features 2/6/12/13/15/19/20) =================
+// XP + LEVELS (#6): a finished match pays XP_WIN for a win and
+// XP_PLAY for a loss (doubled while a seasonal event runs). The
+// level curve is cumulative: level n starts at 40*n*(n-1) XP
+// (L2=80, L3=240, L4=480, L5=800 ...), capped at level 50.
+const XP_WIN = 40;
+const XP_PLAY = 10;
+function levelStartXp(level) { return 40 * level * (level - 1); }
+function levelOf(xp) {
+  const x = Math.max(0, Math.floor(xp || 0));
+  const n = Math.floor((1 + Math.sqrt(1 + x / 10)) / 2);
+  return Math.min(50, Math.max(1, n));
+}
+// REFERRAL (#2): attribution at first hello (the refUid field),
+// the reward lands at the invited player's first finished match
+// (recordMatchEnd) — both sides get it, exactly once.
+const REFERRAL_REWARD = 200;
+// GIFTING (#15): friend-to-friend coin gifts, capped per send
+// and per Kabul day so a drained account cannot be laundered.
+const GIFT_MIN = 10;
+const GIFT_MAX_ONCE = 1000;
+const GIFT_DAILY_CAP = 1000;
+// SEASONAL EVENTS (#20): while a window is open the shop is 20%
+// off, match XP doubles, and the event carpet is claimable free
+// once per player. Eid dates are the expected 2027 dates
+// (moon-dependent, ±1 day); Nawruz is fixed by the solar calendar.
+const EVENT_DISCOUNT = 0.2;
+const EVENT_CARPET = 'felt-ev1';
+const EVENTS = [
+  { id: 'eidfitr27', from: Date.UTC(2027, 2, 9), to: Date.UTC(2027, 2, 13, 23, 59, 59) },
+  { id: 'nawruz27', from: Date.UTC(2027, 2, 19), to: Date.UTC(2027, 2, 27, 23, 59, 59) },
+  { id: 'eidadha27', from: Date.UTC(2027, 4, 25), to: Date.UTC(2027, 4, 29, 23, 59, 59) },
+];
+function activeEvent(now) {
+  for (const ev of EVENTS) if (now >= ev.from && now <= ev.to) return { id: ev.id, from: ev.from, to: ev.to, carpet: EVENT_CARPET };
+  return null;
+}
+// Club message reactions (#13): a fixed emoji set — the client
+// renders exactly these; anything else is dropped here.
+const CLUB_REACTIONS = ['❤️', '😂', '😮', '👍', '🔥', '👏'];
 
 // Kabul calendar day ('YYYY-MM-DD') for a timestamp: shift by
 // +4:30 and read the UTC fields — the same trick kabulWeekKey
@@ -536,6 +580,14 @@ class SocialCore {
     // (serialize/load) — see the WALLET banner above the class.
     this.wallets = new Map();
     this.escrows = new Map();
+    // feat3: referrals id -> {by, paid, ts} (persisted with the
+    // social state). Club voice-message BLOBS and the per-club
+    // message-id counters are RUNTIME ONLY: the blobs die with
+    // the process (their chat entries stay and render as gone).
+    this.referrals = new Map();
+    this.clubVMsg = new Map();
+    this.clubVMsgSeq = 0;
+    this.clubMsgSeq = new Map();
   }
 
   // ---------- persistence (DO host; Node ignores) ----------
@@ -550,6 +602,7 @@ class SocialCore {
       stats: Object.fromEntries(this.stats),
       wallets: Object.fromEntries(this.wallets),
       escrows: Object.fromEntries(this.escrows),
+      referrals: Object.fromEntries(this.referrals),
     };
   }
   load(data) {
@@ -575,6 +628,8 @@ class SocialCore {
       if (!Array.isArray(w.ledger)) w.ledger = [];
       if (typeof w.lastBonusDay !== 'string') w.lastBonusDay = '';
       if (typeof w.chestAt !== 'number' || !(w.chestAt >= 0)) w.chestAt = 0;
+      if (typeof w.giftDay !== 'string') w.giftDay = '';
+      if (typeof w.giftSent !== 'number' || !(w.giftSent >= 0)) w.giftSent = 0;
     }
     this.escrows = new Map(Object.entries(data.escrows || {}));
     for (const e of this.escrows.values()) {
@@ -582,6 +637,12 @@ class SocialCore {
       if (!Array.isArray(e.stakes)) e.stakes = [];
       if (!Array.isArray(e.forfeits)) e.forfeits = [];
       e.closed = !!e.closed;
+    }
+    // feat3 referrals (older snapshots carry none at all)
+    this.referrals = new Map(Object.entries(data.referrals || {}));
+    for (const r of this.referrals.values()) {
+      if (!r || typeof r !== 'object' || typeof r.by !== 'string') continue;
+      r.paid = !!r.paid;
     }
   }
   _persist() { if (this.hooks.persist) { try { this.hooks.persist(this.serialize()); } catch (e) { /* host logs */ } } }
@@ -636,6 +697,20 @@ class SocialCore {
     // auto-join leaves nothing pending to restore.
     this.clubInvites = new Map((Array.isArray(data.invites) ? data.invites : []).map((r) => [reqKey(r.club, r.to), r]));
     this.clubChat = new Map(Object.entries(data.chat || {}));
+    // feat3: chat entries carry stable mids + a reactions object;
+    // older snapshots have neither — assign mids in thread order
+    // and rebuild the per-club counters.
+    this.clubMsgSeq = new Map();
+    for (const [cid, thread] of this.clubChat) {
+      if (!Array.isArray(thread)) continue;
+      let n = 0;
+      for (const m of thread) {
+        if (!m || typeof m !== 'object') continue;
+        if (!Number.isInteger(m.mid) || m.mid <= 0) m.mid = ++n; else n = Math.max(n, m.mid);
+        if (!m.reactions || typeof m.reactions !== 'object') m.reactions = {};
+      }
+      this.clubMsgSeq.set(cid, n);
+    }
     this.clubOf = new Map();
     for (const c of this.clubs.values()) for (const m of (c.members || [])) this.clubOf.set(m.id, c.cid);
   }
@@ -749,8 +824,8 @@ class SocialCore {
   }
   person(id) {
     const r = this.directory.get(id);
-    if (!r) return { id, name: '', avatar: 'av1', photo: '', country: '', uid: null, online: this.isOnline(id), ingame: this.isInGame(id), inlobby: this.isInLobby(id), dnd: false };
-    return { id: r.id, name: r.name, avatar: r.avatar, photo: r.photo, country: r.country, uid: r.uid ? String(r.uid) : null, online: this.isOnline(id), ingame: this.isInGame(id), inlobby: this.isInLobby(id), dnd: !!r.dnd };
+    if (!r) return { id, name: '', avatar: 'av1', photo: '', country: '', uid: null, online: this.isOnline(id), ingame: this.isInGame(id), inlobby: this.isInLobby(id), dnd: false, frame: '', chatStyle: '', level: 1 };
+    return { id: r.id, name: r.name, avatar: r.avatar, photo: r.photo, country: r.country, uid: r.uid ? String(r.uid) : null, online: this.isOnline(id), ingame: this.isInGame(id), inlobby: this.isInLobby(id), dnd: !!r.dnd, frame: r.frame || '', chatStyle: r.chatStyle || '', level: levelOf((this.stats.get(id) || {}).xp || 0) };
   }
   // F46: person() as seen BY a specific viewer. When the subject
   // runs invisible mode and the viewer is someone else, the
@@ -789,8 +864,10 @@ class SocialCore {
   // through recordMatchEnd; the pull path is s-stats.
   statsOf(id) {
     const r = this.stats.get(id);
-    if (!r) return { p: 0, w: 0, l: 0 };
-    return { p: r.p || 0, w: r.w || 0, l: r.l || 0 };
+    if (!r) return { p: 0, w: 0, l: 0, xp: 0, level: 1, levelXp: 0, levelNeed: levelStartXp(2) };
+    const xp = r.xp || 0;
+    const level = levelOf(xp);
+    return { p: r.p || 0, w: r.w || 0, l: r.l || 0, xp, level, levelXp: xp - levelStartXp(level), levelNeed: levelStartXp(level + 1) - levelStartXp(level) };
   }
   weeklyLeaders(limit) {
     const key = kabulWeekKey(Date.now());
@@ -817,6 +894,8 @@ class SocialCore {
     if (!Array.isArray(entries) || !entries.length) return;
     const key = kabulWeekKey(Date.now());
     const involved = [];
+    const levelUps = new Map();
+    const evNow = activeEvent(Date.now());
     for (const e of entries) {
       if (!e || typeof e.id !== 'string' || !e.id) continue;
       let r = this.stats.get(e.id);
@@ -829,6 +908,10 @@ class SocialCore {
       // zero-padded ISO ids sort chronologically as strings).
       const keys = Object.keys(r.weeks).sort();
       while (keys.length > 8) delete r.weeks[keys.shift()];
+      // feat3 XP (#6): win 40 / loss 10, doubled during an event.
+      const lvBefore = levelOf(r.xp || 0);
+      r.xp = (r.xp || 0) + (e.won ? XP_WIN : XP_PLAY) * (evNow ? 2 : 1);
+      if (levelOf(r.xp) > lvBefore) levelUps.set(e.id, levelOf(r.xp));
       involved.push(e.id);
     }
     if (!involved.length) return;
@@ -836,6 +919,22 @@ class SocialCore {
     const leaders = this.weeklyLeaders(10);
     for (const pid of involved) {
       if (this.isOnline(pid)) this._send(pid, { type: 's-stats', stats: this.statsOf(pid), leaders });
+      if (levelUps.has(pid) && this.isOnline(pid)) this._send(pid, { type: 's-levelup', level: levelUps.get(pid) });
+      // feat3 REFERRAL payout (#2): the invited player's FIRST
+      // finished match pays both sides, exactly once.
+      const ref = this.referrals.get(pid);
+      if (ref && !ref.paid && typeof ref.by === 'string' && ref.by) {
+        ref.paid = true;
+        const rw = this._wallet(pid, true);
+        rw.coins += REFERRAL_REWARD; this._ledger(rw, 'referral', REFERRAL_REWARD, '');
+        const bw = this._wallet(ref.by, true);
+        bw.coins += REFERRAL_REWARD; this._ledger(bw, 'referral', REFERRAL_REWARD, '');
+        this._persist();
+        this.walletSend(pid);
+        this.walletSend(ref.by);
+        if (this.isOnline(pid)) this._send(pid, { type: 's-referral-paid', amount: REFERRAL_REWARD, role: 'invited', refs: this.referralStats(pid) });
+        if (this.isOnline(ref.by)) this._send(ref.by, { type: 's-referral-paid', amount: REFERRAL_REWARD, role: 'inviter', name: this.person(pid).name, refs: this.referralStats(ref.by) });
+      }
     }
   }
   statsReply(id) {
@@ -853,7 +952,7 @@ class SocialCore {
     if (!create) return null;
     w = {
       coins: WALLET_START_GRANT, gems: 0, owned: [], ledger: [],
-      lastBonusDay: '', chestAt: 0, created: Date.now(),
+      lastBonusDay: '', chestAt: 0, giftDay: '', giftSent: 0, created: Date.now(),
     };
     w.ledger.push({ ts: Date.now(), kind: 'grant', amount: WALLET_START_GRANT, balance: w.coins, ref: '' });
     this.wallets.set(id, w);
@@ -899,7 +998,7 @@ class SocialCore {
   }
   ownsCosmetic(id, sku) {
     if (FREE_COSMETICS.has(sku)) return true;
-    if (!SHOP_ITEMS.has(sku)) return false;
+    if (!SHOP_ITEMS.has(sku) && sku !== EVENT_CARPET) return false;
     const w = this._wallet(id, false);
     return !!w && w.owned.includes(sku);
   }
@@ -935,7 +1034,8 @@ class SocialCore {
     if (typeof sku !== 'string' || !SHOP_ITEMS.has(sku)) { this._error(id, 'walletBadSku'); return false; }
     const w = this._wallet(id, true);
     if (w.owned.includes(sku)) { this._error(id, 'walletOwned'); this.walletSend(id); return false; }
-    const price = SHOP_ITEMS.get(sku);
+    let price = SHOP_ITEMS.get(sku);
+    if (activeEvent(Date.now())) price = Math.round(price * (1 - EVENT_DISCOUNT)); // feat3 event sale
     if (w.coins < price) { this._error(id, 'walletPoor'); this.walletSend(id); return false; }
     w.coins -= price;
     w.owned.push(sku);
@@ -1126,6 +1226,11 @@ class SocialCore {
       avatar: avatar || (prev && prev.avatar) || 'av1',
       photo,
       country: cleanCountry(profile.country) || (prev && prev.country) || '',
+      // feat3 (#19): the worn avatar frame + chat style ride the
+      // directory like the name does — validated against actual
+      // ownership, so a forged hello can never wear a paid frame.
+      frame: (typeof profile.frame === 'string' && /^fr[1-4]$/.test(profile.frame) && this.ownsCosmetic(id, profile.frame)) ? profile.frame : ((prev && prev.frame) || ''),
+      chatStyle: (typeof profile.chatStyle === 'string' && /^chat[1-3]$/.test(profile.chatStyle) && this.ownsCosmetic(id, profile.chatStyle)) ? profile.chatStyle : ((prev && prev.chatStyle) || ''),
       uid,
       // Do-not-disturb + the uploaded-photo version survive every
       // re-hello: neither rides the hello payload (s-dnd sets the
@@ -1137,12 +1242,22 @@ class SocialCore {
       photoV: (prev && typeof prev.photoV === 'number' && prev.photoV > 0) ? prev.photoV : 0,
       lastSeen: Date.now(),
     });
+    // feat3 REFERRAL (#2): a brand-new identity that arrived
+    // through a friend's link is attributed ONCE, here. The
+    // reward itself pays at the invited player's first finished
+    // match (recordMatchEnd), so a bare sign-up farms nothing.
+    if (!prev && profile && typeof profile.refUid === 'string' && profile.refUid) {
+      const byId = this._idByUid(profile.refUid);
+      if (byId && byId !== id && !this.referrals.has(id)) {
+        this.referrals.set(id, { by: byId, paid: false, ts: Date.now() });
+      }
+    }
     this._persist();
     // up47: the wallet is minted at first hello (start grant
     // included) and its state rides s-init, so the home balance
     // pills paint with the very first social frame.
     this._wallet(id, true);
-    this._send(id, { type: 's-init', me: id, uid: uid || null, dnd: !!(prev && prev.dnd), invisible: !!(prev && prev.invisible), ...this.listsFor(id), stats: this.statsOf(id), leaders: this.weeklyLeaders(10), wallet: this.walletState(id) });
+    this._send(id, { type: 's-init', me: id, uid: uid || null, dnd: !!(prev && prev.dnd), invisible: !!(prev && prev.invisible), ...this.listsFor(id), stats: this.statsOf(id), leaders: this.weeklyLeaders(10), wallet: this.walletState(id), event: this.eventState(), refs: this.referralStats(id) });
     this.refreshClub(id, true); // the clubs state rides right behind the init
   }
 
@@ -1223,6 +1338,8 @@ class SocialCore {
       case 's-wallet-bonus': return this.walletClaimBonus(id);
       case 's-wallet-chest': return this.walletClaimChest(id);
       case 's-wallet-buy': return this.walletBuy(id, msg.sku);
+      case 's-gift': return this.giftSend(id, msg.to, msg.amount);
+      case 's-event-claim': return this.eventClaim(id);
       case 's-watch': return this.watch(id, msg.to);
       case 's-club-create': return this.clubCreate(id, msg);
       case 's-club-search': return this.clubSearch(id, msg.q);
@@ -1237,6 +1354,9 @@ class SocialCore {
       case 's-club-edit': return this.clubEdit(id, msg);
       case 's-club-dissolve': return this.clubDissolve(id);
       case 's-club-chat': return this.clubChatSend(id, msg.text);
+      case 's-club-vmsg': return this.clubVMsgSend(id, msg.data, msg.mime, msg.dur);
+      case 's-club-vmsg-get': return this.clubVMsgGet(id, msg.vid);
+      case 's-club-react': return this.clubReact(id, msg.mid, msg.emoji);
       case 's-club-discover': return this.clubDiscover(id, msg.tab, msg.country);
       case 's-club-view': return this.clubViewPublic(id, msg.club);
       case 's-club-like': return this.clubLike(id, msg.club);
@@ -1696,7 +1816,7 @@ class SocialCore {
     if (withChat) {
       view.chat = (this.clubChat.get(club.cid) || []).map((m) => {
         const p = this.person(m.from);
-        return { from: m.from, name: p.name, avatar: p.avatar, photo: p.photo, text: m.text, ts: m.ts };
+        return { from: m.from, name: p.name, avatar: p.avatar, photo: p.photo, text: m.text, voice: m.voice || '', dur: m.dur || 0, ts: m.ts, mid: m.mid || 0, reactions: m.reactions || {}, frame: p.frame || '', chatStyle: p.chatStyle || '' };
       });
     }
     return view;
@@ -2110,6 +2230,128 @@ class SocialCore {
     this._clubsChanged(); // the club is gone: open discovery pages drop it live
   }
 
+  // ---------- feat3: referral / events / gifting ----------
+  _idByUid(uid) {
+    if (typeof uid !== 'string' || !uid) return null;
+    for (const r of this.directory.values()) if (r && String(r.uid) === uid) return r.id;
+    return null;
+  }
+  referralStats(id) {
+    let invited = 0, earned = 0;
+    for (const r of this.referrals.values()) {
+      if (r && r.by === id) { invited++; if (r.paid) earned += REFERRAL_REWARD; }
+    }
+    return { invited, earned, reward: REFERRAL_REWARD };
+  }
+  eventState() {
+    const ev = activeEvent(Date.now());
+    return ev ? { id: ev.id, endsAt: ev.to, discount: 20, carpet: ev.carpet } : null;
+  }
+  // The event carpet: free, once, only while the window is open.
+  eventClaim(id) {
+    const ev = activeEvent(Date.now());
+    if (!ev) return this._error(id, 'eventNone');
+    const w = this._wallet(id, true);
+    if (w.owned.includes(ev.carpet)) { this._error(id, 'walletOwned'); this.walletSend(id); return false; }
+    w.owned.push(ev.carpet);
+    this._ledger(w, 'event', 0, ev.id);
+    this._persist();
+    this.walletSend(id);
+    return true;
+  }
+  // Friend-to-friend coin gift. Both ledgers move or neither
+  // does; the daily counter lives on the SENDER's wallet.
+  giftSend(id, toId, amount) {
+    amount = Math.floor(Number(amount));
+    if (!Number.isFinite(amount) || amount < GIFT_MIN || amount > GIFT_MAX_ONCE) return this._error(id, 'giftBadAmount');
+    if (typeof toId !== 'string' || !toId || toId === id) return this._error(id, 'giftBadTarget');
+    const fr = this.friends.get(id);
+    if (!fr || !fr.has(toId)) return this._error(id, 'giftNotFriend');
+    const bl = this.blocked.get(id); if (bl && bl.has(toId)) return this._error(id, 'giftNotFriend');
+    const bl2 = this.blocked.get(toId); if (bl2 && bl2.has(id)) return this._error(id, 'giftNotFriend');
+    const w = this._wallet(id, true);
+    const day = kabulDayKey(Date.now());
+    if (w.giftDay !== day) { w.giftDay = day; w.giftSent = 0; }
+    if ((w.giftSent || 0) + amount > GIFT_DAILY_CAP) return this._error(id, 'giftCap');
+    if (w.coins < amount) return this._error(id, 'giftPoor');
+    const tw = this._wallet(toId, true);
+    w.coins -= amount; w.giftSent = (w.giftSent || 0) + amount;
+    this._ledger(w, 'gift-out', -amount, this.person(toId).name || '');
+    tw.coins += amount;
+    this._ledger(tw, 'gift-in', amount, this.person(id).name || '');
+    this._persist();
+    this.walletSend(id);
+    this.walletSend(toId);
+    if (this.isOnline(toId)) this._send(toId, { type: 's-gift-got', from: id, name: this.person(id).name, amount });
+    this._send(id, { type: 's-gift-sent', to: toId, amount });
+    return true;
+  }
+
+  // ---------- feat3: club voice messages + reactions ----------
+  _nextClubMid(cid) {
+    const n = (this.clubMsgSeq.get(cid) || 0) + 1;
+    this.clubMsgSeq.set(cid, n);
+    return n;
+  }
+  _clubChatRate(id, cid) {
+    const logKey = cid + '\n' + id;
+    const now = Date.now();
+    const log = (this.clubChatLog.get(logKey) || []).filter((t) => now - t < DM_RATE_WINDOW);
+    if (log.length >= DM_RATE_MAX) { this.clubChatLog.set(logKey, log); return false; }
+    log.push(now); this.clubChatLog.set(logKey, log);
+    return true;
+  }
+  // A voice note: the BYTES live in a runtime-only map (never in
+  // the persisted snapshot); the chat entry keeps vid + duration.
+  clubVMsgSend(id, data, mime, dur) {
+    const club = this._clubOf(id);
+    if (!club) return this._error(id, 'clubNoPerm');
+    if (typeof data !== 'string' || !data || data.length > 180000) return this._error(id, 'vmsgTooBig');
+    mime = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg'].includes(mime) ? mime : 'audio/webm';
+    dur = Math.max(1, Math.min(35, Math.round(Number(dur) || 0)));
+    if (!this._clubChatRate(id, club.cid)) return this._error(id, 'socialRate');
+    const vid = 'v' + (++this.clubVMsgSeq).toString(36) + Date.now().toString(36);
+    this.clubVMsg.set(vid, { cid: club.cid, data, mime });
+    if (this.clubVMsg.size > 60) this.clubVMsg.delete(this.clubVMsg.keys().next().value);
+    const now = Date.now();
+    const entry = { from: id, voice: vid, dur, ts: now, mid: this._nextClubMid(club.cid), reactions: {} };
+    const thread = this.clubChat.get(club.cid) || [];
+    thread.push(entry);
+    while (thread.length > CLUB_CHAT_KEEP) thread.shift();
+    this.clubChat.set(club.cid, thread);
+    this._persistClubs();
+    const p = this.person(id);
+    const out = { type: 's-club-chat', club: club.cid, from: id, name: p.name, avatar: p.avatar, photo: p.photo, voice: vid, dur, ts: now, mid: entry.mid, reactions: {}, frame: p.frame || '', chatStyle: p.chatStyle || '' };
+    for (const m of club.members) if (this.isOnline(m.id)) this._send(m.id, out);
+    return true;
+  }
+  clubVMsgGet(id, vid) {
+    const club = this._clubOf(id);
+    const rec = (typeof vid === 'string') ? this.clubVMsg.get(vid) : null;
+    if (!club || !rec || rec.cid !== club.cid) return this._error(id, 'vmsgGone');
+    this._send(id, { type: 's-club-vmsg-data', vid, data: rec.data, mime: rec.mime });
+    return true;
+  }
+  // Toggle one reaction on one club message; the full reactions
+  // object is rebroadcast so every member converges at once.
+  clubReact(id, mid, emoji) {
+    const club = this._clubOf(id);
+    if (!club) return this._error(id, 'clubNoPerm');
+    if (!CLUB_REACTIONS.includes(emoji)) return;
+    const thread = this.clubChat.get(club.cid) || [];
+    const entry = thread.find((m) => m && m.mid === mid);
+    if (!entry) return;
+    entry.reactions = (entry.reactions && typeof entry.reactions === 'object') ? entry.reactions : {};
+    const arr = entry.reactions[emoji] || (entry.reactions[emoji] = []);
+    const ix = arr.indexOf(id);
+    if (ix >= 0) arr.splice(ix, 1); else arr.push(id);
+    if (!arr.length) delete entry.reactions[emoji];
+    this._persistClubs();
+    const out = { type: 's-club-react', club: club.cid, mid, reactions: entry.reactions };
+    for (const m of club.members) if (this.isOnline(m.id)) this._send(m.id, out);
+    return true;
+  }
+
   clubChatSend(id, text) {
     // Chat is a MEMBERSHIP right: only a member of the club posts.
     const club = this._clubOf(id);
@@ -2121,14 +2363,14 @@ class SocialCore {
     const log = (this.clubChatLog.get(logKey) || []).filter((t) => now - t < DM_RATE_WINDOW);
     if (log.length >= DM_RATE_MAX) { this.clubChatLog.set(logKey, log); return this._error(id, 'socialRate'); }
     log.push(now); this.clubChatLog.set(logKey, log);
-    const entry = { from: id, text, ts: now };
+    const entry = { from: id, text, ts: now, mid: this._nextClubMid(club.cid), reactions: {} };
     const thread = this.clubChat.get(club.cid) || [];
     thread.push(entry);
     while (thread.length > CLUB_CHAT_KEEP) thread.shift();
     this.clubChat.set(club.cid, thread);
     this._persistClubs();
     const p = this.person(id);
-    const out = { type: 's-club-chat', club: club.cid, from: id, name: p.name, avatar: p.avatar, photo: p.photo, text, ts: now };
+    const out = { type: 's-club-chat', club: club.cid, from: id, name: p.name, avatar: p.avatar, photo: p.photo, text, ts: now, mid: entry.mid, reactions: {}, frame: p.frame || '', chatStyle: p.chatStyle || '' };
     for (const m of club.members) if (this.isOnline(m.id)) this._send(m.id, out);
   }
 

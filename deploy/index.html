@@ -2430,6 +2430,50 @@
   #scr-profile .st-logout { width: 100%; margin-top: 10px; padding: 10px; border-radius: 14px;
     font-size: 15px; font-weight: 800; font-family: inherit; cursor: pointer; }
   #scr-profile .st-logout:active { transform: scale(.98); }
+  /* ---------- feat3 (#19 frames, #6 level, #2 referral, #15 gift, #12/#13 club, #20 event) ---------- */
+  .pavatar { position: relative; }
+  .fr-ring { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-sizing: border-box; z-index: 3; }
+  .fr-ring.fr1 { border: 3px solid #ffd75e; box-shadow: inset 0 0 0 1.5px #8a6414, inset 0 0 9px rgba(255,215,94,.5); }
+  .fr-ring.fr2 { border: 3px solid #c77dff; box-shadow: inset 0 0 0 1.5px #5b2a86, inset 0 0 9px rgba(199,125,255,.55); }
+  .fr-ring.fr3 { border: 3px solid #ff7847; box-shadow: inset 0 0 0 1.5px #7d2231, inset 0 0 10px rgba(255,120,71,.6); }
+  .fr-ring.fr4 { border: 3px solid #3ddc97; box-shadow: inset 0 0 0 1.5px #0d5c3f, inset 0 0 9px rgba(61,220,151,.55); }
+  .cs-chat1 { background: linear-gradient(135deg, #7d2231, #b83a5e) !important; color: #ffe9c9 !important; }
+  .cs-chat2 { background: linear-gradient(135deg, #14532d, #1f9d63) !important; color: #eafff3 !important; }
+  .cs-chat3 { background: linear-gradient(135deg, #8a6414, #d9a83c) !important; color: #2a1e05 !important; }
+  .pf-xpbar { height: 8px; border-radius: 6px; background: rgba(0,0,0,.35); margin: 4px 0 9px; overflow: hidden; }
+  .pf-xpfill { height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, #ffd75e, #d9a83c); transition: width .5s; }
+  .pf-refcard { margin-top: 12px; background: rgba(43,6,54,.55); border: 1.5px solid rgba(255,215,94,.35); border-radius: 16px; padding: 12px 13px; }
+  .pf-ref-t { font-size: 15.5px; font-weight: 900; color: #ffd75e; text-align: center; }
+  .pf-ref-sub { font-size: 12.5px; color: #ffd7f2; text-align: center; margin-top: 4px; line-height: 1.7; }
+  .pf-ref-row { display: flex; gap: 8px; margin-top: 9px; }
+  .pf-ref-row input { flex: 1; min-width: 0; padding: 9px 10px; font-size: 12.5px; border-radius: 10px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.18); color: #fff; font-family: inherit; }
+  .pf-ref-row button { padding: 9px 16px; border-radius: 10px; border: 0; background: linear-gradient(180deg, #ffd75e, #d9a83c); color: #33270a; font-weight: 900; font-family: inherit; cursor: pointer; }
+  .pf-ref-stats { margin-top: 8px; font-size: 12.5px; color: #fff; text-align: center; }
+  .gift-panel { max-width: 340px; }
+  .gift-to { text-align: center; font-weight: 800; color: #ffd7f2; margin-top: 2px; }
+  .gift-bal { text-align: center; font-size: 13px; color: #ffd75e; margin-top: 4px; }
+  .gift-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 13px 0 4px; }
+  .gift-chip { padding: 9px 14px; border-radius: 20px; border: 1.5px solid rgba(255,215,94,.4); background: rgba(255,255,255,.06); color: #fff; font-family: inherit; font-weight: 800; cursor: pointer; }
+  .gift-chip.sel { background: linear-gradient(180deg, #ffd75e, #d9a83c); color: #33270a; border-color: #ffd75e; }
+  .cl-vmsg { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 16px; border: 0; background: rgba(255,255,255,.13); color: #fff; font-family: inherit; cursor: pointer; }
+  .cl-vmsg .vm-ic { color: #ffd75e; }
+  .cl-vmsg .vm-dur { font-size: 12px; opacity: .85; }
+  .cl-vmsg .vm-lbl { font-size: 12.5px; font-weight: 700; }
+  .cl-reacts { display: flex; gap: 5px; margin-top: 4px; flex-wrap: wrap; }
+  .cl-rchip { padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,.22); background: rgba(0,0,0,.25); color: #fff; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .cl-rchip.on { border-color: #ffd75e; background: rgba(255,215,94,.22); }
+  #ov-react { position: fixed; z-index: 120; display: none; gap: 2px; padding: 6px 8px; border-radius: 24px; background: rgba(20,4,32,.97); border: 1.5px solid rgba(255,215,94,.5); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+  #ov-react.show { display: flex; }
+  .react-em { font-size: 21px; background: none; border: 0; cursor: pointer; padding: 2px 3px; }
+  #btn-cl-vmsg.rec { background: #b3232f; color: #fff; }
+  .vm-rec-dot { color: #fff; font-size: 13px; animation: vmblink 1s infinite; }
+  @keyframes vmblink { 50% { opacity: .25; } }
+  #home-event { margin: 8px 12px 0; padding: 9px 12px; border-radius: 14px; text-align: center; font-size: 13.5px; font-weight: 800; color: #fff; background: linear-gradient(90deg, #7d2231, #b83a5e, #7d2231); border: 1.5px solid rgba(255,215,94,.55); }
+  .si-old { margin-inline-start: 6px; opacity: .65; font-size: 11px; }
+  .si-art.frame-art { display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.05); }
+  .si-art.chat-art { display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.05); padding: 4px; }
+  .si-art.chat-art .cl-feed-bub { font-size: 11px; padding: 4px 9px; border-radius: 12px; }
+  .si-art.si-none { display: flex; align-items: center; justify-content: center; font-size: 19px; color: rgba(255,255,255,.55); background: rgba(255,255,255,.05); }
   #ld-list { margin: 10px 14px; padding: 8px 14px; border-radius: 22px;
     background: linear-gradient(180deg, #d81b74, #67124e);
     border: 2px solid rgba(255,183,224,.4);
@@ -3325,6 +3369,7 @@
   <section id="scr-home">
     <div id="home-main">
       <div class="hm-wm" aria-hidden="true"><svg viewBox="0 0 48 30"><path d="M6 24 3 9l10 6L24 4l11 11 10-6-3 15z" fill="rgba(255,255,255,.06)"/><rect x="6" y="24" width="36" height="3.4" rx="1.7" fill="rgba(255,255,255,.06)"/></svg><div class="wm-t">توره</div></div>
+      <div id="home-event" class="hidden"></div>
       <div class="hm-topbar">
         <button class="hm-profilebtn" id="btn-profile" aria-label="زما پروفایل">
           <span id="home-avatar-slot"></span>
@@ -3860,8 +3905,19 @@
           <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-played-lbl">لوبې</span><span class="pf-stat-val" id="pf-stat-played">0</span></div>
           <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-won-lbl">ګټلي</span><span class="pf-stat-val" id="pf-stat-won">0</span></div>
           <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-lost-lbl">بایللي</span><span class="pf-stat-val" id="pf-stat-lost">0</span></div>
+          <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-level-lbl">کچه</span><span class="pf-stat-val" id="pf-stat-level">1</span></div>
+          <div class="pf-xpbar"><div class="pf-xpfill" id="pf-xp-fill"></div></div>
         </div>
         <button type="button" class="pf-leadersbtn" id="btn-leaders">د اونۍ غوره لوبغاړي</button>
+        <div class="pf-refcard">
+          <div class="pf-ref-t" id="pf-ref-title">ملګري دعوت کړه</div>
+          <div class="pf-ref-sub" id="pf-ref-sub"></div>
+          <div class="pf-ref-row">
+            <input id="pf-ref-link" readonly dir="ltr">
+            <button type="button" id="btn-ref-copy">کاپي</button>
+          </div>
+          <div class="pf-ref-stats" id="pf-ref-stats"></div>
+        </div>
         <button type="button" id="btn-logout" class="st-logout" aria-label="له حسابه وتل">
           <svg viewBox="0 0 24 24">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -4176,6 +4232,7 @@
       <button type="button" class="cl-roundbtn on" id="btn-cl-speaker" aria-label="speaker"><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path class="wv" d="M15 9.5a3.6 3.6 0 0 1 0 5M17.5 7a7 7 0 0 1 0 10"/></svg></button>
       <button type="button" class="cl-roundbtn" id="btn-cl-mic" aria-label="mic"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.2M9 20.5h6"/></svg></button>
       <input id="cl-inp" type="text" maxlength="500">
+      <button type="button" class="cl-roundbtn" id="btn-cl-vmsg" aria-label="voice message"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.2M9 20.5h6"/></svg></button>
       <button type="button" id="btn-cl-send" aria-label="send">➤</button>
     </div>
     <div id="cl-audios" class="hidden"></div>
@@ -4535,7 +4592,25 @@
   <div class="pmpop-head"><span id="fm-av"></span><span class="inv-name" id="fm-name"></span></div>
   <button class="pmpop-row" id="btn-fm-unfriend"><span class="pmpop-ic">💔</span><span class="pmpop-lbl" id="fm-unfriend-lbl">دوستي لرې کول</span><span class="pmpop-ch">›</span></button>
   <button class="pmpop-row" id="btn-fm-block"><span class="pmpop-ic">🚫</span><span class="pmpop-lbl" id="fm-block-lbl">بلاک</span><span class="pmpop-ch">›</span></button>
+  <button class="pmpop-row" id="btn-fm-gift"><span class="pmpop-ic">🎁</span><span class="pmpop-lbl" id="fm-gift-lbl">سکه ډالۍ کړه</span><span class="pmpop-ch">›</span></button>
 </div>
+
+<!-- ======== GIFT COINS (feat3 #15) ======== -->
+<div class="overlay" id="ov-gift">
+  <div class="panel gift-panel">
+    <h2 id="gift-title">🎁 سکه ډالۍ کړه</h2>
+    <div class="gift-to" id="gift-to"></div>
+    <div class="gift-bal" id="gift-bal"></div>
+    <div class="gift-chips" id="gift-chips"></div>
+    <div class="pf-btns">
+      <button id="btn-gift-send">لېږل</button>
+      <button id="btn-gift-close" class="ghost">بندول</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== CLUB MESSAGE REACTIONS (feat3 #13) ======== -->
+<div id="ov-react"></div>
 
 <!-- ======== CLUB MEMBER MENU — anchored popover in the player
      menu's card: header + profile/friend/invite rows + manage ======== -->
@@ -4964,6 +5039,45 @@ const STR = {
     backSection: 'د کارت شا',
     feltSection: 'قالینونه',
     shopUsing: 'کارېږي ✓',
+    statLevel: 'کچه',
+    refTitle: 'ملګري دعوت کړه',
+    refSub: (n) => 'هر ملګری چې ستا په لینک راشي او لومړۍ لوبه وکړي، تاسو دواړو ته ' + n + ' سکه ډالۍ کېږي!',
+    refCopy: 'کاپي',
+    refCopied: 'لینک کاپي شو ✓',
+    refStats: (a, b) => 'دعوت شوي: ' + a + ' · ګټلې سکه: ' + b,
+    levelUp: (n) => '🎉 کچه دې لوړه شوه: ' + n,
+    refPaidInviter: (name, amt) => '🎁 ' + name + ' ستا په دعوت راغی — ' + amt + ' سکه دې وګټلې!',
+    refPaidInvited: (amt) => '🎁 د دعوت ډالۍ: ' + amt + ' سکه!',
+    giftTitle: 'سکه ډالۍ کړه',
+    giftTo: (name) => name + ' ته ډالۍ',
+    giftBal: (n) => 'ستا سکه: ' + n,
+    giftSend: 'لېږل',
+    giftGot: (name, amt) => '🎁 ' + name + ' تاته ' + amt + ' سکه ډالۍ کړې!',
+    giftSentToast: (amt) => 'ډالۍ ولېږل شوه: ' + amt + ' سکه ✓',
+    errGiftBadAmount: 'دا اندازه سمه نه ده',
+    errGiftBadTarget: 'لېږل کېدای نه شي',
+    errGiftNotFriend: 'ډالۍ یوازې ملګرو ته لېږل کېږي',
+    errGiftCap: 'د نن ورځې د ډالۍ حد پوره شو (۱۰۰۰)',
+    errGiftPoor: 'سکه دې کافي نه دي',
+    errVmsgTooBig: 'غږیز پیغام ډېر اوږد دی',
+    errVmsgGone: 'دا غږیز پیغام نور نشته',
+    errEventNone: 'اوس کوم موسمي جشن نشته',
+    vmsgLabel: 'غږیز پیغام',
+    vmsgUnsupported: 'دا براوزر غږ نه ثبتوي',
+    frameSection: 'د آواتار چوکاټ',
+    chatSection: 'د چټ سټایل',
+    frameNone: 'پرته له چوکاټه',
+    chatDefault: 'اصلي سټایل',
+    fr1: 'طلایي چوکاټ', fr2: 'بنفش چوکاټ', fr3: 'د اور چوکاټ', fr4: 'زرغون چوکاټ',
+    chat1: 'سور سټایل', chat2: 'زرغون سټایل', chat3: 'طلایي سټایل',
+    chatSample: 'سلام!',
+    feltEv1: 'د جشن قالین',
+    eventClaim: 'وړیا یې واخله 🎉',
+    eventPerks: 'پلورنځی ٪۲۰ ارزانه + XP دوه برابره!',
+    event_eidfitr27: 'د کوچني اختر جشن',
+    event_nawruz27: 'د نوروز جشن',
+    event_eidadha27: 'د لوی اختر جشن',
+    shopEquip: 'وې کاروه',
     watchBtn: 'تماشا',
     errSocialNotInGame: 'هغه اوس په لوبه کې نه دی',
     errClubPollActive: 'یوه رایه‌اچونه لا روانه ده',
@@ -5411,6 +5525,45 @@ const STR = {
     backSection: 'پشت کارت',
     feltSection: 'فرش‌ها',
     shopUsing: 'در حال استفاده ✓',
+    statLevel: 'سطح',
+    refTitle: 'دوستانت را دعوت کن',
+    refSub: (n) => 'هر دوستی که با لینک تو بیاید و اولین بازی‌اش را انجام دهد، به هر دوی شما ' + n + ' سکه جایزه می‌رسد!',
+    refCopy: 'کپی',
+    refCopied: 'لینک کپی شد ✓',
+    refStats: (a, b) => 'دعوت‌شده: ' + a + ' · سکه گرفته: ' + b,
+    levelUp: (n) => '🎉 سطحت بالا رفت: ' + n,
+    refPaidInviter: (name, amt) => '🎁 ' + name + ' با دعوت تو آمد — ' + amt + ' سکه گرفتی!',
+    refPaidInvited: (amt) => '🎁 جایزه دعوت: ' + amt + ' سکه!',
+    giftTitle: 'هدیه سکه',
+    giftTo: (name) => 'هدیه به ' + name,
+    giftBal: (n) => 'سکه تو: ' + n,
+    giftSend: 'بفرست',
+    giftGot: (name, amt) => '🎁 ' + name + ' به تو ' + amt + ' سکه هدیه داد!',
+    giftSentToast: (amt) => 'هدیه فرستاده شد: ' + amt + ' سکه ✓',
+    errGiftBadAmount: 'این مقدار درست نیست',
+    errGiftBadTarget: 'فرستادن ممکن نیست',
+    errGiftNotFriend: 'هدیه فقط به دوستان فرستاده می‌شود',
+    errGiftCap: 'حد هدیه امروز پر شد (۱۰۰۰)',
+    errGiftPoor: 'سکه‌ات کافی نیست',
+    errVmsgTooBig: 'پیام صوتی خیلی طولانی است',
+    errVmsgGone: 'این پیام صوتی دیگر نیست',
+    errEventNone: 'حالا جشن فصلی نیست',
+    vmsgLabel: 'پیام صوتی',
+    vmsgUnsupported: 'این مرورگر صدا ضبط نمی‌کند',
+    frameSection: 'قاب آواتار',
+    chatSection: 'استایل چت',
+    frameNone: 'بدون قاب',
+    chatDefault: 'استایل اصلی',
+    fr1: 'قاب طلایی', fr2: 'قاب بنفش', fr3: 'قاب آتش', fr4: 'قاب سبز',
+    chat1: 'استایل سرخ', chat2: 'استایل سبز', chat3: 'استایل طلایی',
+    chatSample: 'سلام!',
+    feltEv1: 'قالین جشن',
+    eventClaim: 'رایگان بگیر 🎉',
+    eventPerks: 'فروشگاه ۲۰٪ ارزان‌تر + XP دوبرابر!',
+    event_eidfitr27: 'جشن عید فطر',
+    event_nawruz27: 'جشن نوروز',
+    event_eidadha27: 'جشن عید قربان',
+    shopEquip: 'استفاده کن',
     watchBtn: 'تماشا',
     errSocialNotInGame: 'الان در بازی نیست',
     errClubPollActive: 'یک رأی‌گیری هنوز در جریان است',
@@ -5858,6 +6011,45 @@ const STR = {
     backSection: 'Card back',
     feltSection: 'Carpets',
     shopUsing: 'In use ✓',
+    statLevel: 'Level',
+    refTitle: 'Invite friends',
+    refSub: (n) => 'Every friend who joins via your link and plays a first match earns you BOTH ' + n + ' coins!',
+    refCopy: 'Copy',
+    refCopied: 'Link copied ✓',
+    refStats: (a, b) => 'Invited: ' + a + ' · Coins earned: ' + b,
+    levelUp: (n) => '🎉 Level up: ' + n,
+    refPaidInviter: (name, amt) => '🎁 ' + name + ' joined via your invite — you earned ' + amt + ' coins!',
+    refPaidInvited: (amt) => '🎁 Invite reward: ' + amt + ' coins!',
+    giftTitle: 'Gift coins',
+    giftTo: (name) => 'Gift to ' + name,
+    giftBal: (n) => 'Your coins: ' + n,
+    giftSend: 'Send',
+    giftGot: (name, amt) => '🎁 ' + name + ' gifted you ' + amt + ' coins!',
+    giftSentToast: (amt) => 'Gift sent: ' + amt + ' coins ✓',
+    errGiftBadAmount: 'That amount is not valid',
+    errGiftBadTarget: 'Cannot send',
+    errGiftNotFriend: 'Gifts go to friends only',
+    errGiftCap: "Today's gift limit is full (1000)",
+    errGiftPoor: 'Not enough coins',
+    errVmsgTooBig: 'Voice message too long',
+    errVmsgGone: 'This voice message is gone',
+    errEventNone: 'No seasonal event right now',
+    vmsgLabel: 'Voice message',
+    vmsgUnsupported: 'This browser cannot record audio',
+    frameSection: 'Avatar frames',
+    chatSection: 'Chat styles',
+    frameNone: 'No frame',
+    chatDefault: 'Default style',
+    fr1: 'Gold frame', fr2: 'Violet frame', fr3: 'Fire frame', fr4: 'Emerald frame',
+    chat1: 'Red style', chat2: 'Green style', chat3: 'Gold style',
+    chatSample: 'Hello!',
+    feltEv1: 'Festival carpet',
+    eventClaim: 'Claim free 🎉',
+    eventPerks: 'Shop 20% off + double XP!',
+    event_eidfitr27: 'Eid al-Fitr festival',
+    event_nawruz27: 'Nawruz festival',
+    event_eidadha27: 'Eid al-Adha festival',
+    shopEquip: 'Use',
     watchBtn: 'Watch',
     errSocialNotInGame: 'Not in a game right now',
     errClubPollActive: 'A poll is already running',
@@ -6390,6 +6582,7 @@ function applyI18n() {
   aria('#btn-pf-edit-av', 'pfEditAvatar');
   set('#fm-unfriend-lbl', 'frUnfriend');
   set('#fm-block-lbl', 'frBlock');
+  set('#fm-gift-lbl', 'giftTitle');
   set('#btn-inv-accept', 'frAccept');
   set('#btn-inv-reject', 'frReject');
   set('#btn-cf-no', 'cancelBtn');
@@ -6475,6 +6668,12 @@ function applyI18n() {
   set('#pf-stat-played-lbl', 'statPlayed');
   set('#pf-stat-won-lbl', 'statWon');
   set('#pf-stat-lost-lbl', 'statLost');
+  set('#pf-stat-level-lbl', 'statLevel');
+  set('#pf-ref-title', 'refTitle');
+  set('#btn-ref-copy', 'refCopy');
+  set('#gift-title', 'giftTitle');
+  set('#btn-gift-send', 'giftSend');
+  set('#btn-gift-close', 'closeBtn');
   set('#btn-leaders', 'leadersTitle');
   set('#pv2-stats-title', 'pfStatsTitle');
   set('#pv2-stat-id-lbl', 'pfStatId');
@@ -6902,6 +7101,7 @@ function validAvatar(av) {
 // back so the WHOLE room plays on the creator's field. The same
 // validation runs on all three hosts.
 function validFelt(n) {
+  if (n === 'ev1' && walletOwns('felt-ev1')) return 'ev1'; // feat3: the seasonal-event carpet
   n = Number(n);
   return Number.isInteger(n) && n >= 1 && n <= 11 ? n : 11;
 }
@@ -6925,6 +7125,8 @@ function loadProfile() {
     photo: (typeof p.photo === 'string' && (p.photo.startsWith('https://') || p.photo.startsWith('/p-photo/'))) ? p.photo.slice(0, 300) : '',
     felt: validFelt(p.felt),
     back: validBack(p.back),
+    frame: (typeof p.frame === 'string' && /^fr[1-4]$/.test(p.frame)) ? p.frame : '',
+    chatStyle: (typeof p.chatStyle === 'string' && /^chat[1-3]$/.test(p.chatStyle)) ? p.chatStyle : '',
     nameManual: p.nameManual === true,
   };
 }
@@ -6942,9 +7144,57 @@ function myName() {
 // pid is the persistent player id — the servers stamp it on the seat
 // as its social identity (p:<pid>), so the lobby player menu can
 // address a friend request to the right person.
+// ============ feat3 state: seasonal event + referral totals ============
+let socialEvent = null;   // {id, endsAt, discount, carpet} while a window is open
+let refsCache = null;     // {invited, earned, reward}
+function setSocialEvent(ev) {
+  socialEvent = ev || null;
+  paintEventBanner();
+  if (!$('#scr-shop').classList.contains('hidden')) renderShop();
+}
+function setRefs(r) { if (r && typeof r.invited === 'number') { refsCache = r; paintReferral(); } }
+function paintEventBanner() {
+  const b = $('#home-event');
+  if (!b) return;
+  if (!socialEvent) { b.classList.add('hidden'); b.innerHTML = ''; return; }
+  b.classList.remove('hidden');
+  b.innerHTML = '';
+  const t = document.createElement('span');
+  t.textContent = '🎉 ' + T('event_' + socialEvent.id) + ' — ' + T('eventPerks');
+  b.appendChild(t);
+}
+function myRefLink() { return location.origin + '/?ref=' + (socialUid || ''); }
+function paintReferral() {
+  const inp = $('#pf-ref-link');
+  if (inp && socialUid) inp.value = myRefLink();
+  const sub = $('#pf-ref-sub');
+  if (sub) sub.textContent = T('refSub', (refsCache && refsCache.reward) || 200);
+  const st = $('#pf-ref-stats');
+  if (st) st.textContent = refsCache ? T('refStats', refsCache.invited, refsCache.earned) : '';
+}
+$('#btn-ref-copy').onclick = async () => {
+  const inp = $('#pf-ref-link');
+  if (!inp || !inp.value) return;
+  try { await navigator.clipboard.writeText(inp.value); toast(T('refCopied')); }
+  catch (e) { inp.select(); try { document.execCommand('copy'); toast(T('refCopied')); } catch (e2) { /* manual copy */ } }
+};
+
+// feat3 REFERRAL: a ?ref=<uid> landing (or the copy stashed by an
+// earlier visit) is carried on every hello until the server has
+// attributed this account — attribution happens exactly once,
+// server-side, at the first hello of a brand-new identity.
+let refUidCaptured = '';
+try {
+  const q = new URLSearchParams(location.search).get('ref');
+  if (q) { refUidCaptured = q; localStorage.setItem('tore.ref', q); }
+  else refUidCaptured = localStorage.getItem('tore.ref') || '';
+} catch (e) { /* storage unavailable */ }
 function profileMsg() {
   const m = { avatar: profile.avatar, country: profile.country, pid: myPid() };
   if (profile.avatar === 'google' && profile.photo) m.photo = profile.photo;
+  if (profile.frame) m.frame = profile.frame;
+  if (profile.chatStyle) m.chatStyle = profile.chatStyle;
+  if (refUidCaptured) m.refUid = refUidCaptured;
   return m;
 }
 function profilePayload() {
@@ -6957,9 +7207,12 @@ function profilePayload() {
 // photo instead. `name` is kept in the signature for the existing call
 // sites; portraits do not depend on it. Any missing/invalid avatar (or
 // a 'google' avatar whose photo is gone) falls back to av1 (default).
-function avatarEl(name, av, px, photo) {
+function avatarEl(name, av, px, photo, frame) {
   const d = document.createElement('span');
   d.className = 'pavatar';
+  // feat3 (#19): the worn avatar frame rides as an overlay ring;
+  // appended LAST (below) once the tile content exists.
+  d.dataset.frame = (typeof frame === 'string' && /^fr[1-4]$/.test(frame)) ? frame : '';
   if (px) { d.style.width = px + 'px'; d.style.height = px + 'px'; }
   if (av && typeof av === 'object' && av.t === 'bot') {
     d.innerHTML = AVATAR_BOT_SVG;
@@ -6972,6 +7225,7 @@ function avatarEl(name, av, px, photo) {
   } else {
     d.innerHTML = AVATAR_ART[(typeof av === 'string' && AVATAR_ART[av]) ? av : 'av1'].svg;
   }
+  if (d.dataset.frame) { const r = document.createElement('span'); r.className = 'fr-ring ' + d.dataset.frame; d.appendChild(r); }
   return d;
 }
 function renderProfileButton() {
@@ -7539,6 +7793,7 @@ function paintBubbleInto(host, pos) {
   const b = chatBubbles[pos];
   if (!b || Date.now() >= b.until) return;
   const d = document.createElement('div');
+  const seatCs = (state && state.seats && state.seats[seatOfPos(pos)] || {}).chatStyle || (seatOfPos(pos) === mySeat ? profile.chatStyle : '');
   if (b.kind === 'sticker') {
     d.className = 'chatbubble sticker';
     const img = document.createElement('img');
@@ -7546,7 +7801,7 @@ function paintBubbleInto(host, pos) {
     img.alt = '';
     d.appendChild(img);
   } else {
-    d.className = 'chatbubble' + (b.kind === 'emoji' ? ' emoji' : '');
+    d.className = 'chatbubble' + (b.kind === 'emoji' ? ' emoji' : '') + (seatCs ? ' cs-' + seatCs : '');
     d.textContent = b.value;
   }
   host.appendChild(d);
@@ -11653,9 +11908,9 @@ function paintFelts() {
     // paints instantly; the full photo is only for the table/viewer.
     preview.style.backgroundImage = 'url("' + THUMB('carpets/felt' + mine + '.jpg') + '")';
     preview.dataset.felt = String(mine);
-    preview.setAttribute('aria-label', T('felt' + mine));
+    preview.setAttribute('aria-label', T(mine === 'ev1' ? 'feltEv1' : 'felt' + mine));
     const pnm = $('#felt-preview-nm');
-    if (pnm) pnm.textContent = T('felt' + mine);
+    if (pnm) pnm.textContent = T(mine === 'ev1' ? 'feltEv1' : 'felt' + mine);
   }
   grid.innerHTML = '';
   for (let n = 1; n <= 11; n++) {
@@ -11691,6 +11946,26 @@ function paintFelts() {
       }
       profile.felt = n; saveProfile(); paintFelts(); closeFeltPick();
     };
+    grid.appendChild(b);
+  }
+  // feat3 (#20): the event carpet joins the picker once owned
+  if (walletOwns('felt-ev1')) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'felt-sw' + (mine === 'ev1' ? ' sel' : '');
+    b.dataset.felt = 'ev1';
+    b.style.backgroundImage = 'url("' + THUMB('carpets/feltev1.jpg') + '")';
+    b.setAttribute('aria-label', T('feltEv1'));
+    b.setAttribute('aria-pressed', String(mine === 'ev1'));
+    const chk = document.createElement('span');
+    chk.className = 'felt-check';
+    chk.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg>';
+    b.appendChild(chk);
+    const nm = document.createElement('span');
+    nm.className = 'felt-nm';
+    nm.textContent = T('feltEv1');
+    b.appendChild(nm);
+    b.onclick = () => { profile.felt = 'ev1'; saveProfile(); paintFelts(); closeFeltPick(); };
     grid.appendChild(b);
   }
 }
@@ -12046,6 +12321,11 @@ function paintMatchStats() {
   setN('#pf-stat-played', st.p);
   setN('#pf-stat-won', st.w);
   setN('#pf-stat-lost', st.l);
+  // feat3 (#6): level + the XP progress bar toward the next one
+  setN('#pf-stat-level', st.level || 1);
+  const fill = $('#pf-xp-fill');
+  if (fill) fill.style.width = Math.max(0, Math.min(100, ((st.levelXp || 0) / Math.max(1, st.levelNeed || 1)) * 100)) + '%';
+  paintReferral();
 }
 // ---------- weekly leaders (د اونۍ غوره لوبغاړي) ----------
 function openLeaders() {
@@ -12205,6 +12485,8 @@ function pfPersist() {
     photo: profile.photo || '',
     felt: validFelt(profile.felt),
     back: validBack(profile.back),
+    frame: profile.frame || '',
+    chatStyle: profile.chatStyle || '',
     nameManual: !!$('#pf-name').value.trim() || profile.nameManual === true,
   };
   saveProfile();
@@ -12619,6 +12901,8 @@ function onSocialMsg(m) {
     if (typeof m.invisible === 'boolean') setToreSetting('invisible', m.invisible);
     renderMyId();
     if (m.wallet) setWallet(m.wallet); // up47: the wallet rides s-init
+    if (m.event !== undefined) setSocialEvent(m.event); // feat3: seasonal event state
+    if (m.refs) setRefs(m.refs); // feat3: referral totals
     applySocialLists(m);
   } else if (m.type === 's-wallet') {
     setWallet(m.wallet); // up47: balance/ownership push (claim, buy, escrow, settle…)
@@ -12774,11 +13058,26 @@ function onSocialMsg(m) {
   } else if (m.type === 's-club-chat') {
     const rc = roomClub();
     if (rc && m.club === rc.cid) {
-      clubMsgs.push({ from: m.from, name: m.name, avatar: m.avatar, photo: m.photo, text: m.text, ts: m.ts });
+      clubMsgs.push({ from: m.from, name: m.name, avatar: m.avatar, photo: m.photo, text: m.text, voice: m.voice || '', dur: m.dur || 0, ts: m.ts, mid: m.mid || 0, reactions: m.reactions || {}, frame: m.frame || '', chatStyle: m.chatStyle || '' });
       while (clubMsgs.length > 50) clubMsgs.shift();
       if (!$('#scr-clubs').classList.contains('hidden')) { clubUnread = 0; renderClubChat(); }
       else { clubUnread++; updateClubsBadge(); }
     }
+  } else if (m.type === 's-levelup') {
+    toast(T('levelUp', m.level));
+  } else if (m.type === 's-referral-paid') {
+    if (m.refs) setRefs(m.refs);
+    toast(m.role === 'inviter' ? T('refPaidInviter', m.name || '', m.amount) : T('refPaidInvited', m.amount));
+  } else if (m.type === 's-gift-got') {
+    toast(T('giftGot', m.name || '', m.amount));
+  } else if (m.type === 's-gift-sent') {
+    closeGift();
+    toast(T('giftSentToast', m.amount));
+  } else if (m.type === 's-club-vmsg-data') {
+    playClubVoiceData(m);
+  } else if (m.type === 's-club-react') {
+    const e = clubMsgs.find((x) => x.mid === m.mid);
+    if (e) { e.reactions = m.reactions || {}; if (!$('#scr-clubs').classList.contains('hidden')) renderClubChat(); }
   } else if (m.type === 's-search-result') {
     frSearchResults = m.results || [];
     frSearchResults.forEach(cachePerson);
@@ -12861,11 +13160,15 @@ function onSocialMsg(m) {
 // server catalogue in social-core.js — the server never trusts
 // a client number, so a stale copy here can only mislabel, never
 // mischarge.
-const SHOP_PRICES = { back2: 300, back3: 500, back4: 800, back5: 1200, back6: 2000, felt1: 400, felt2: 400, felt3: 600, felt4: 600, felt5: 800, felt6: 800, felt7: 1000, felt8: 1000, felt9: 1500, felt10: 1500 };
+const SHOP_PRICES = { back2: 300, back3: 500, back4: 800, back5: 1200, back6: 2000, felt1: 400, felt2: 400, felt3: 600, felt4: 600, felt5: 800, felt6: 800, felt7: 1000, felt8: 1000, felt9: 1500, felt10: 1500, fr1: 500, fr2: 900, fr3: 1400, fr4: 2200, chat1: 400, chat2: 800, chat3: 1300 };
 let myWallet = null;   // last wallet state from the server; null = not loaded yet
 let shopTab = 'coins';
 let chestTimer = null;
 
+function shopPrice(sku) {
+  const p = SHOP_PRICES[sku] || 0;
+  return socialEvent ? Math.round(p * 0.8) : p; // feat3: the event sale is 20% off
+}
 function walletOwns(sku) {
   if (sku === 'back1' || sku === 'felt11') return true; // the free defaults
   if (!myWallet) return true; // unknown (offline / not loaded): never lock on a guess
@@ -13016,6 +13319,11 @@ function renderShopChests(body) {
     body.appendChild(shopEl('div', 'shop-note', '…'));
   }
 }
+// feat3 (#19): equipping a frame / chat style re-hellos so the
+// directory (and every friend/club surface) follows at once.
+function equipFrame(sku) { profile.frame = sku || ''; saveProfile(); socialHello(); renderShop(); }
+function equipChatStyle(sku) { profile.chatStyle = sku || ''; saveProfile(); socialHello(); renderShop(); }
+function equipFelt(v) { profile.felt = v; saveProfile(); renderShop(); }
 function renderShopLook(body) {
   const sect = (key) => {
     const hd = shopEl('div', 'shop-sect');
@@ -13026,16 +13334,41 @@ function renderShopLook(body) {
     body.appendChild(g);
     return g;
   };
-  const addItem = (grid, sku, artEl, name, equipped) => {
+  const addItem = (grid, sku, artEl, name, equipped, onEquip) => {
     const cell = shopEl('div', 'shop-item' + (equipped ? ' eq' : ''));
     if (equipped) artEl.appendChild(shopEl('span', 'si-badge', T('shopUsing')));
     cell.appendChild(artEl);
     cell.appendChild(shopEl('div', 'si-name', name));
     const owned = walletOwns(sku);
-    const btn = shopEl('button', 'si-btn' + (owned ? ' owned' : ''), owned ? T('shopOwned') : T('shopBuy') + ' · 🪙 ' + SHOP_PRICES[sku]);
+    const btn = shopEl('button', 'si-btn' + (owned ? ' owned' : ''), '');
     btn.type = 'button';
-    if (owned) btn.disabled = true;
-    else btn.onclick = () => { connectSocial(); socialSend({ type: 's-wallet-buy', sku }); };
+    if (owned && onEquip) {
+      btn.textContent = equipped ? T('shopUsing') : T('shopEquip');
+      btn.disabled = !!equipped;
+      if (!equipped) btn.onclick = () => onEquip();
+    } else if (owned) {
+      btn.textContent = T('shopOwned');
+      btn.disabled = true;
+    } else {
+      btn.textContent = T('shopBuy') + ' · 🪙 ' + shopPrice(sku);
+      if (socialEvent && SHOP_PRICES[sku] && shopPrice(sku) < SHOP_PRICES[sku]) {
+        btn.appendChild(shopEl('s', 'si-old', String(SHOP_PRICES[sku])));
+      }
+      btn.onclick = () => { connectSocial(); socialSend({ type: 's-wallet-buy', sku }); };
+    }
+    cell.appendChild(btn);
+    grid.appendChild(cell);
+  };
+  const addNone = (grid, label, equipped, onEquip) => {
+    const cell = shopEl('div', 'shop-item' + (equipped ? ' eq' : ''));
+    const art = shopEl('div', 'si-art si-none', '✕');
+    if (equipped) art.appendChild(shopEl('span', 'si-badge', T('shopUsing')));
+    cell.appendChild(art);
+    cell.appendChild(shopEl('div', 'si-name', label));
+    const btn = shopEl('button', 'si-btn owned', equipped ? T('shopUsing') : T('shopEquip'));
+    btn.type = 'button';
+    btn.disabled = !!equipped;
+    if (!equipped) btn.onclick = onEquip;
     cell.appendChild(btn);
     grid.appendChild(cell);
   };
@@ -13049,6 +13382,42 @@ function renderShopLook(body) {
     const art = shopEl('div', 'si-art');
     art.style.backgroundImage = 'url("' + THUMB('carpets/felt' + n + '.jpg') + '")';
     addItem(felts, 'felt' + n, art, T('felt' + n), validFelt(profile.felt) === n);
+  }
+  // feat3 (#20): the seasonal carpet — free to claim while the
+  // event runs; once owned it equips like any other carpet.
+  if (socialEvent || walletOwns('felt-ev1')) {
+    const art = shopEl('div', 'si-art');
+    art.style.backgroundImage = 'url("' + THUMB('carpets/feltev1.jpg') + '")';
+    const eqEv = validFelt(profile.felt) === 'ev1';
+    const cell = shopEl('div', 'shop-item' + (eqEv ? ' eq' : ''));
+    if (eqEv) art.appendChild(shopEl('span', 'si-badge', T('shopUsing')));
+    cell.appendChild(art);
+    cell.appendChild(shopEl('div', 'si-name', T('feltEv1')));
+    const ownedEv = walletOwns('felt-ev1');
+    const btn = shopEl('button', 'si-btn owned', '');
+    btn.type = 'button';
+    if (!ownedEv) { btn.textContent = T('eventClaim'); btn.onclick = () => { connectSocial(); socialSend({ type: 's-event-claim' }); }; }
+    else if (eqEv) { btn.textContent = T('shopUsing'); btn.disabled = true; }
+    else { btn.textContent = T('shopEquip'); btn.onclick = () => equipFelt('ev1'); }
+    cell.appendChild(btn);
+    felts.appendChild(cell);
+  }
+  // feat3 (#19): avatar frames — the art is a live avatar wearing it
+  const frames = sect('frameSection');
+  addNone(frames, T('frameNone'), !profile.frame, () => equipFrame(''));
+  for (let n = 1; n <= 4; n++) {
+    const art = shopEl('div', 'si-art frame-art');
+    art.appendChild(avatarEl('', 'av1', 40, '', 'fr' + n));
+    addItem(frames, 'fr' + n, art, T('fr' + n), profile.frame === 'fr' + n, () => equipFrame('fr' + n));
+  }
+  // feat3 (#19): chat-bubble styles — the art is a sample bubble
+  const styles = sect('chatSection');
+  addNone(styles, T('chatDefault'), !profile.chatStyle, () => equipChatStyle(''));
+  for (let n = 1; n <= 3; n++) {
+    const art = shopEl('div', 'si-art chat-art');
+    const bub = shopEl('span', 'cl-feed-bub cs-chat' + n, T('chatSample'));
+    art.appendChild(bub);
+    addItem(styles, 'chat' + n, art, T('chat' + n), profile.chatStyle === 'chat' + n, () => equipChatStyle('chat' + n));
   }
 }
 $('#btn-shop-back').onclick = () => closeShop();
@@ -13155,7 +13524,7 @@ function chatRow(p) {
   row.className = 'fr-row ch-row';
   const who = document.createElement('div');
   who.className = 'fr-who';
-  who.appendChild(avatarEl(p.name, p.avatar, 38, p.photo));
+  who.appendChild(avatarEl(p.name, p.avatar, 38, p.photo, p.frame));
   const meta = document.createElement('div');
   meta.className = 'fr-meta';
   const nm = document.createElement('div');
@@ -13589,7 +13958,7 @@ function personRow(p, actions, opts) {
     who.title = T('navProfile');
     who.addEventListener('click', () => openPlayerProfile(p));
   }
-  who.appendChild(avatarEl(p.name, p.avatar, 38, p.photo));
+  who.appendChild(avatarEl(p.name, p.avatar, 38, p.photo, p.frame));
   const meta = document.createElement('div');
   meta.className = 'fr-meta';
   const nm = document.createElement('div');
@@ -13906,7 +14275,8 @@ function renderDmThread() {
   }
   th.forEach((m) => {
     const b = document.createElement('div');
-    b.className = 'dm-bub ' + (m.from === socialMe ? 'mine' : 'theirs');
+    const cs = (m.from === socialMe) ? (profile.chatStyle || '') : ((dmPeer && dmPeer.chatStyle) || '');
+    b.className = 'dm-bub ' + (m.from === socialMe ? 'mine' : 'theirs') + (cs ? ' cs-' + cs : '');
     b.textContent = m.text;
     const ts = document.createElement('span');
     ts.className = 'dm-ts';
@@ -14456,17 +14826,47 @@ function renderClubChat() {
     }
     const item = document.createElement('div');
     item.className = 'cl-feed-item' + (m.from === socialMe ? ' mine' : '');
-    item.appendChild(avatarEl(name, avatar, 28, photo)); /* clubseats2: compact feed avatar 34 -> 28px */
+    item.appendChild(avatarEl(name, avatar, 28, photo, m.frame)); /* clubseats2: compact feed avatar 34 -> 28px */
     const main = document.createElement('div');
     main.className = 'cl-feed-main';
     const nm = document.createElement('span');
     nm.className = 'cl-feed-name';
     nm.textContent = name || '';
     main.appendChild(nm);
-    const bub = document.createElement('span');
-    bub.className = 'cl-feed-bub';
-    bub.textContent = m.text;
-    main.appendChild(bub);
+    if (m.voice) {
+      // feat3 (#12): a voice note — the bytes fetch on first tap
+      const vb = document.createElement('button');
+      vb.type = 'button';
+      vb.className = 'cl-vmsg' + (m.chatStyle ? ' cs-' + m.chatStyle : '');
+      vb.innerHTML = '<span class="vm-ic">▶</span><span class="vm-dur">' + (m.dur || 0) + '″</span><span class="vm-lbl"></span>';
+      vb.querySelector('.vm-lbl').textContent = T('vmsgLabel');
+      vb.onclick = () => playClubVoice(m.voice, vb);
+      main.appendChild(vb);
+    } else {
+      const bub = document.createElement('span');
+      bub.className = 'cl-feed-bub' + (m.chatStyle ? ' cs-' + m.chatStyle : '');
+      bub.textContent = m.text;
+      main.appendChild(bub);
+    }
+    // feat3 (#13): reaction chips + long-press picker
+    const rrow = document.createElement('div');
+    rrow.className = 'cl-reacts';
+    for (const em of CLUB_REACT_EMOJIS) {
+      const ids = (m.reactions || {})[em] || [];
+      if (!ids.length) continue;
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'cl-rchip' + (ids.includes(socialMe) ? ' on' : '');
+      chip.textContent = em + ' ' + ids.length;
+      chip.onclick = () => { connectSocial(); socialSend({ type: 's-club-react', mid: m.mid, emoji: em }); };
+      rrow.appendChild(chip);
+    }
+    if (rrow.childNodes.length) main.appendChild(rrow);
+    if (m.mid) {
+      let lpT = null;
+      item.addEventListener('pointerdown', () => { lpT = setTimeout(() => openReactPicker(m.mid, item), 480); });
+      ['pointerup', 'pointerleave', 'pointermove'].forEach((ev) => item.addEventListener(ev, () => { if (lpT) clearTimeout(lpT); }));
+    }
     /* clubseats4: NO time line under club messages (owner order
        2026-11-10: «در پیام ها وقت را حذف کن») — m.ts stays in the
        data (order/history), it is simply never rendered here. */
@@ -15562,6 +15962,141 @@ function sendClubChat() {
 }
 $('#btn-cl-send').onclick = sendClubChat;
 $('#cl-inp').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendClubChat(); });
+// ---------- feat3: club voice notes (#12) + reactions (#13) ----------
+const CLUB_REACT_EMOJIS = ['❤️', '😂', '😮', '👍', '🔥', '👏'];
+// Recording: tap 🎙 to start, tap again to send (30 s cap). The
+// note ships as base64 over the social socket; the server keeps
+// the bytes runtime-only and members fetch them on first play.
+let vmsgRec = null;
+const vmsgCache = new Map();   // vid -> object URL
+const vmsgWaiters = new Map(); // vid -> button awaiting its bytes
+async function toggleVmsg() {
+  if (vmsgRec) { stopVmsg(true); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder) { toast(T('vmsgUnsupported')); return; }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch (e) { toast(T('vmsgUnsupported')); return; }
+  const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'].find((t) => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } }) || '';
+  const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+  const chunks = [];
+  mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+  mr.onstop = () => {
+    stream.getTracks().forEach((t) => t.stop());
+    const rec = vmsgRec; vmsgRec = null;
+    paintVmsgBtn();
+    if (!rec || !rec.send) return;
+    const blob = new Blob(chunks, { type: (mime || 'audio/webm').split(';')[0] });
+    const dur = Math.max(1, Math.round((Date.now() - rec.t0) / 1000));
+    if (blob.size < 800) return; // an accidental tap sends nothing
+    const rd = new FileReader();
+    rd.onload = () => {
+      const b64 = String(rd.result || '').split(',')[1] || '';
+      if (!b64) return;
+      connectSocial();
+      socialSend({ type: 's-club-vmsg', data: b64, mime: blob.type, dur });
+    };
+    rd.readAsDataURL(blob);
+  };
+  vmsgRec = { mr, t0: Date.now(), send: false };
+  mr.start(250);
+  paintVmsgBtn();
+  setTimeout(() => { if (vmsgRec) stopVmsg(true); }, 30000);
+}
+function stopVmsg(send) {
+  if (!vmsgRec) return;
+  vmsgRec.send = !!send;
+  try { vmsgRec.mr.stop(); } catch (e) { vmsgRec = null; paintVmsgBtn(); }
+}
+function paintVmsgBtn() {
+  const b = $('#btn-cl-vmsg');
+  if (!b) return;
+  b.classList.toggle('rec', !!vmsgRec);
+  b.innerHTML = vmsgRec ? '<span class="vm-rec-dot">●</span>' : '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.2M9 20.5h6"/></svg>';
+}
+$('#btn-cl-vmsg').onclick = toggleVmsg;
+function playClubVoice(vid, btn) {
+  const url = vmsgCache.get(vid);
+  if (url) { new Audio(url).play().catch(() => {}); return; }
+  if (btn) vmsgWaiters.set(vid, btn);
+  connectSocial();
+  socialSend({ type: 's-club-vmsg-get', vid });
+}
+function playClubVoiceData(m) {
+  try {
+    const bin = atob(m.data || '');
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([bytes], { type: m.mime || 'audio/webm' }));
+    vmsgCache.set(m.vid, url);
+    new Audio(url).play().catch(() => {});
+  } catch (e) { /* a dead note stays silent */ }
+  vmsgWaiters.delete(m.vid);
+}
+// Reaction picker: a small popover over the long-pressed message.
+let reactMid = 0;
+function openReactPicker(mid, anchor) {
+  reactMid = mid;
+  const pop = $('#ov-react');
+  pop.innerHTML = '';
+  for (const em of CLUB_REACT_EMOJIS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'react-em';
+    b.textContent = em;
+    b.onclick = () => {
+      connectSocial();
+      socialSend({ type: 's-club-react', mid: reactMid, emoji: em });
+      closeReactPicker();
+    };
+    pop.appendChild(b);
+  }
+  pop.classList.add('show');
+  const r = anchor.getBoundingClientRect();
+  pop.style.top = Math.max(8, r.top - 52) + 'px';
+  pop.style.left = Math.max(8, Math.min(window.innerWidth - 250, r.left)) + 'px';
+}
+function closeReactPicker() { $('#ov-react').classList.remove('show'); }
+document.addEventListener('pointerdown', (e) => {
+  const pop = $('#ov-react');
+  if (pop.classList.contains('show') && !pop.contains(e.target)) closeReactPicker();
+}, true);
+
+// ---------- feat3: coin gifts (#15) ----------
+let giftTo = null;
+let giftAmount = 100;
+function openGift(p) {
+  giftTo = p;
+  giftAmount = 100;
+  $('#gift-to').textContent = T('giftTo', p.name || '');
+  paintGift();
+  $('#ov-gift').classList.add('show');
+}
+function paintGift() {
+  $('#gift-bal').textContent = T('giftBal', myWallet ? myWallet.coins : 0);
+  const box = $('#gift-chips');
+  box.innerHTML = '';
+  [50, 100, 300, 500, 1000].forEach((a) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'gift-chip' + (a === giftAmount ? ' sel' : '');
+    b.textContent = '🪙 ' + a;
+    b.onclick = () => { giftAmount = a; paintGift(); };
+    box.appendChild(b);
+  });
+}
+function closeGift() { $('#ov-gift').classList.remove('show'); giftTo = null; }
+$('#btn-gift-close').onclick = closeGift;
+$('#btn-gift-send').onclick = () => {
+  if (!giftTo) return;
+  connectSocial();
+  socialSend({ type: 's-gift', to: giftTo.id, amount: giftAmount });
+};
+$('#btn-fm-gift').onclick = () => {
+  const p = fmFriend;
+  closeFriendMenu();
+  if (p) openGift(p);
+};
+
 
 // ---------- club voice room ----------
 // A compact WebRTC mesh on the social socket, mirroring the
@@ -16809,9 +17344,10 @@ function barAvatar(pos, s, seatIdx) {
     av = (typeof av === 'string' && AVATAR_ART[av]) ? av : BOT_BADGE_PORTRAITS[seatIdx % BOT_BADGE_PORTRAITS.length];
     photo = undefined;
   }
-  const key = s.kind + '|' + (av || '') + '|' + (photo || '');
+  const frame = s.frame || (seatIdx === mySeat ? profile.frame : '');
+  const key = s.kind + '|' + (av || '') + '|' + (photo || '') + '|' + (frame || '');
   if (!barAvatars[pos] || barAvatars[pos].key !== key) {
-    barAvatars[pos] = { key, el: avatarEl(s.name, av, 52, photo) };
+    barAvatars[pos] = { key, el: avatarEl(s.name, av, 52, photo, frame) };
   }
   return barAvatars[pos].el;
 }
