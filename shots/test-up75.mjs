@@ -13,6 +13,6 @@ check('D3 a manual return button exists (both views)', (w.match(/🎮 لوبې �
 check('D4 the old park-here text is gone', !w.includes('You can close this page.'));
 check('D5 the fail view is preserved', w.includes("document.getElementById('done-fail').style.display = '';") && w.includes('Sign-in did not complete.'));
 check('D6 auto-return runs only on success', w.includes('} else {\n  // U75: never park the player on this page'));
-check('D7 the client token is untouched', w.includes('dist-client.html?v=20261114-noiospwa'));
+check('D7 the client token is untouched', w.includes('dist-client.html?v=20261114-gmailname'));
 console.log(failures ? '\n' + failures + ' FAILURES' : '\nALL PASS');
 process.exit(failures ? 1 : 0);

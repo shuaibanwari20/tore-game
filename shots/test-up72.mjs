@@ -17,7 +17,7 @@ check('S4 source: the guide never opens on iOS', src.includes('if (pwaIsIOS()) r
 check('S5 Android path intact: prompt listener + handler', src.includes("addEventListener('beforeinstallprompt'") && src.includes('await ev.prompt()'));
 check('D1 dist carries the iOS guard + new show rule', dist.includes('pwaUAIos') && dist.includes('showIt = !pwaStandalone() && !!deferredInstallPrompt'));
 check('D2 dist under the 1 MB cap', dist.length < 1000000, dist.length + ' B');
-check('W1 worker serves the new client token', worker.includes('dist-client.html?v=20261114-noiospwa'));
+check('W1 worker serves the new client token', worker.includes('dist-client.html?v=20261114-gmailname'));
 check('W2 fallback is the previous client', worker.includes('dist-client.html?v=20261113-viewportfit'));
 console.log(failures ? '\n' + failures + ' FAILURES' : '\nALL PASS');
 process.exit(failures ? 1 : 0);
