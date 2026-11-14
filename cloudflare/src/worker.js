@@ -1041,7 +1041,7 @@ export default {
       if (authEnabled) {
         const user = await auth.readSession(request, env);
         if (!user) {
-          return new Response(gatePage({ email: !!env.BREVO_API_KEY }), {
+          return new Response(gatePage({ email: !!env.BREVO_API_KEY, gid: env.GOOGLE_CLIENT_ID || '' }), {
             status: 401,
             headers: {
               'Content-Type': 'text/html; charset=utf-8',
