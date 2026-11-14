@@ -89,6 +89,7 @@
 import * as auth from './auth.js';
 import { GameServer } from './game-server.js';
 import { gatePage } from './gate-page.js';
+import { emailFinishPage } from './email-finish-page.js';
 import { fbPage } from './fb-page.js';
 
 export { GameServer };
@@ -945,6 +946,14 @@ export default {
     if (path === '/auth/fb-complete') {
       if (request.method !== 'POST') return new Response('method not allowed', { status: 405 });
       return auth.handleFirebaseTicketComplete(request, env);
+    }
+    if (path === '/auth/email-finish') {
+      // U67: the Firebase email-link landing page (completes the
+      // gate's ticket with the link's token via /auth/fb-complete).
+      const u = new URL(request.url);
+      return new Response(emailFinishPage(u.searchParams.get('ticket') || '', u.searchParams.get('e') || ''), {
+        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+      });
     }
     if (path === '/auth/email-start') {
       // U65: email + 6-digit code sign-in (the code is emailed).
