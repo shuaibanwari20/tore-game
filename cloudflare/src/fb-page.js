@@ -49,6 +49,15 @@
  * releases the hold (he picked the same account; the session
  * is valid) — while any different account bridges at once,
  * and a result user always bridges immediately.
+ *
+ * U78 (2026-11-14, owner report): the 11:24 retest completed
+ * as pubg AGAIN. Prime suspect: on his slow network the auth
+ * state restores seconds after the page opens, so the 400 ms
+ * auto-start left before any snapshot existed. The auto-start
+ * now waits for the first auth-state callback (2.5 s backstop
+ * timer), goGoogle is latched against double starts, and a
+ * tiny #dbg trail logs what each step saw (account labels
+ * included) so a failure screenshot names the faulty step.
  */
 
 import { isTicketId } from './tickets.js';
@@ -91,6 +100,7 @@ export function fbPage(ticket) {
     font-size: 15px; font-weight: 900; color: #4285f4; }
   #msg { min-height: 22px; margin-top: 16px; font-size: 14px; color: #ffe9a8; line-height: 1.7; }
   .tiny { margin-top: 10px; font-size: 11.5px; color: #c99; color: #d8a7bd; line-height: 1.8; }
+  #dbg { margin-top: 8px; font-size: 10px; line-height: 1.6; color: rgba(255,233,168,.55); word-break: break-all; }
 </style>
 </head>
 <body>
@@ -99,6 +109,7 @@ export function fbPage(ticket) {
   <div class="sub">د ننوتلو لپاره لاندې تڼۍ ووهه<br>برای ورود دکمهٔ زیر را بزن</div>
   <button id="btn" type="button"><span class="g">G</span><span>په ګوګل ننوتل</span></button>
   <div id="msg"></div>
+  <div id="dbg"></div>
   <div class="tiny">Sign in with Google to continue</div>
 </div>
 <script src="${SDK}firebase-app-compat.js"></script>
@@ -120,10 +131,20 @@ function clearSent() { try { sessionStorage.removeItem(SENT_KEY); } catch (e) { 
 var btn = document.getElementById('btn');
 var msgEl = document.getElementById('msg');
 function msg(t) { msgEl.textContent = t; }
+var dbgEl = document.getElementById('dbg');
+var trailParts = [];
+function label(u) { return (u && (u.email || u.uid)) || '?'; }
+function trail(s) {
+  try {
+    trailParts.push(s);
+    if (dbgEl) dbgEl.textContent = trailParts.join(' · ');
+  } catch (e) { /* ignore */ }
+}
 var bridged = false;
 function bridge(user) {
   if (bridged || !user) return;
   bridged = true;
+  trail('bridge:' + label(user));
   clearSent();
   btn.disabled = true;
   msg(MSG_BACK);
@@ -148,20 +169,24 @@ try {
   if (returned) msg(MSG_BACK);
   var decided = false;
   function showBtn() { btn.style.display = ''; }
+  var goStarted = false;
+  function fail() { goStarted = false; btn.disabled = false; showBtn(); msg(MSG_FAIL); }
   function goGoogle() {
+    if (goStarted) return;
+    goStarted = true;
+    trail('go');
     btn.disabled = true;
     btn.style.display = 'none';
     msg(MSG_WAIT);
     markSent();
     var provider = new firebase.auth.GoogleAuthProvider();
     try { provider.setCustomParameters({ prompt: 'select_account' }); } catch (e) { /* plain redirect still works */ }
-    function fail() { btn.disabled = false; showBtn(); msg(MSG_FAIL); }
     // U77: remember which account is signed in HERE before
     // leaving, so the return leg can tell a stale session apart
     // from the account the player is about to pick.
     try {
       var cu = auth.currentUser;
-      if (cu && cu.uid) sessionStorage.setItem(STALE_KEY, cu.uid);
+      if (cu && cu.uid) { sessionStorage.setItem(STALE_KEY, cu.uid); trail('snap:' + label(cu)); }
     } catch (e) { /* ignore */ }
     try {
       auth.signInWithRedirect(provider).catch(fail);
@@ -171,28 +196,34 @@ try {
   function releaseHold() {
     if (heldUser && !bridged) {
       var u = heldUser; heldUser = null;
+      trail('rel');
       decided = true; bridge(u);
     }
   }
   auth.getRedirectResult().then(function (res) {
+    trail('res:' + (res && res.user ? label(res.user) : 'null'));
     if (res && res.user) { decided = true; bridge(res.user); }
     else releaseHold();
-  }).catch(function () { if (!bridged) { showBtn(); msg(MSG_FAIL); } });
+  }).catch(function () { trail('res:err'); if (!bridged) { fail(); } });
   auth.onAuthStateChanged(function (user) {
-    if (!user) return;
     if (!returned) {
-      // U74+U77: first load never bridges — it only snapshots
-      // the account that a later return must not mistake for
-      // the player's fresh pick.
-      snapStale(user);
+      // U74+U77: first load never bridges — it snapshots the
+      // account that a later return must not mistake for the
+      // player's fresh pick. U78: the first callback (even a
+      // null one) is also what releases the auto-start, so the
+      // snapshot exists before the page leaves for Google.
+      if (user) { snapStale(user); trail('snap:' + label(user)); }
+      if (TICKET && !bridged) goGoogle();
       return;
     }
+    if (!user) return;
+    trail('auth:' + label(user));
     // U77: a user identical to the pre-redirect session may be
     // that stale session reporting early — hold it until
     // Google's result settles. Any other account is the fresh
     // pick and bridges at once.
     var st = staleUid();
-    if (st && user.uid === st) { heldUser = user; return; }
+    if (st && user.uid === st) { heldUser = user; trail('held:' + label(user)); return; }
     decided = true; bridge(user);
   });
   setTimeout(function () {
@@ -203,11 +234,14 @@ try {
     if (returned && auth.currentUser) { bridge(auth.currentUser); return; }
     goGoogle();
   };
+  trail(returned ? 'ret' : 'new');
   if (TICKET && !returned) {
     // U74: straight to Google — no tap on this page at all.
+    // U78: the auth-state callback above fires goGoogle as
+    // soon as the SDK settles; this timer is only a backstop.
     btn.style.display = 'none';
     msg(MSG_WAIT);
-    setTimeout(function () { if (!bridged) goGoogle(); }, 400);
+    setTimeout(function () { if (!bridged) goGoogle(); }, 2500);
   }
 } catch (e) {
   btn.disabled = true;
