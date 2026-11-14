@@ -12793,8 +12793,15 @@ function socialHello() {
 // reconciles presence from its live socket set on every hello, so
 // a drifted offline state heals within seconds instead of sticking.
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && sws && sws.readyState === 1) socialHello();
+  if (document.hidden) return;
+  // up92: a backgrounded page can lose its social socket silently
+  // (webview freeze — the close event never reaches the page), so
+  // on return the channel is re-dialled first, then re-helloed.
+  connectSocial();
+  if (sws && sws.readyState === 1) socialHello();
 });
+window.addEventListener('focus', () => { connectSocial(); });
+window.addEventListener('online', () => { connectSocial(); });
 function connectSocial() {
   if (sws && (sws.readyState === 0 || sws.readyState === 1)) return;
   const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
