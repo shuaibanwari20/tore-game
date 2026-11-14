@@ -28,6 +28,14 @@
  * to Google's own account chooser (prompt=select_account); the
  * button remains only as the fallback for a lost/blocked
  * redirect.
+ *
+ * U76 (2026-11-14, owner report): he picked the 708 account at
+ * the chooser yet the game opened as pubg — the browser held
+ * pubg's stale Firebase session and the return leg bridged that
+ * saved user before the fresh redirect result landed. Now
+ * goGoogle() signs the stale user out first, and on the return
+ * leg a persisted user bridges only after getRedirectResult
+ * has settled without a user — the picked account always wins.
  */
 
 import { isTicketId } from './tickets.js';
@@ -131,20 +139,40 @@ try {
     markSent();
     var provider = new firebase.auth.GoogleAuthProvider();
     try { provider.setCustomParameters({ prompt: 'select_account' }); } catch (e) { /* plain redirect still works */ }
+    function fail() { btn.disabled = false; showBtn(); msg(MSG_FAIL); }
+    function kick() {
+      try {
+        auth.signInWithRedirect(provider).catch(fail);
+      } catch (e) { fail(); }
+    }
+    // U76: clear any stale Firebase session in this browser
+    // first, so the return leg can only ever meet the account
+    // the player is about to pick at Google.
     try {
-      auth.signInWithRedirect(provider)
-        .catch(function () { btn.disabled = false; showBtn(); msg(MSG_FAIL); });
-    } catch (e) { btn.disabled = false; showBtn(); msg(MSG_FAIL); }
+      var so = auth.signOut();
+      if (so && so.catch) { so.catch(function () {}).then(kick); } else { kick(); }
+    } catch (e) { kick(); }
   }
+  var resultSettled = false;
   auth.getRedirectResult().then(function (res) {
+    resultSettled = true;
     if (res && res.user) { decided = true; bridge(res.user); }
-  }).catch(function () { if (!bridged) { showBtn(); msg(MSG_FAIL); } });
+  }).catch(function () { resultSettled = true; if (!bridged) { showBtn(); msg(MSG_FAIL); } });
   auth.onAuthStateChanged(function (user) {
     if (!user) return;
     // U74: a persisted user bridges only on the RETURN leg —
     // on the first load goGoogle() runs instead, so the player
     // always picks the account at Google himself.
-    if (returned) { decided = true; bridge(user); }
+    if (!returned) return;
+    // U76: the fresh redirect result outranks a stale persisted
+    // session — the persisted user is only the lost-result
+    // fallback, bridged once the result has settled empty.
+    var tryPersisted = function () {
+      if (bridged || decided) return;
+      if (!resultSettled) { setTimeout(tryPersisted, 250); return; }
+      decided = true; bridge(user);
+    };
+    setTimeout(tryPersisted, 600);
   });
   setTimeout(function () {
     if (!bridged && returned && !decided) { showBtn(); msg(MSG_AGAIN); }
