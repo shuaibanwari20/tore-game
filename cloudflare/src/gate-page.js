@@ -52,6 +52,9 @@ const GATE_HTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>توره — ننوتل</title>
 <script>
+    // feat3 REFERRAL: stash an invite's ?ref=<uid> so it survives
+    // the sign-in reload — the game reads it at boot (same origin).
+    try { var __rq = new URLSearchParams(location.search).get('ref'); if (__rq) localStorage.setItem('tore.ref', __rq); } catch (e) { /* ignore */ }
   // Resolve the language FIRST — this tiny script sits before the
   // style block. The card below stays hidden until the main
   // script applies these strings, so a player who stored Dari/English

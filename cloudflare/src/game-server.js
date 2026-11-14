@@ -108,6 +108,7 @@ function cleanName(name) {
 // stamped on every state push so the whole room (spectators too)
 // plays on the creator's field.
 function cleanFelt(v) {
+  if (v === 'ev1') return 'ev1'; // feat3: the seasonal-event carpet
   return (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 11) ? v : 11;
 }
 // Card backs: the create frame carries the creator's card-back
@@ -1505,6 +1506,9 @@ export class GameServer {
       seats: room.seats.map((s, i) => ({
         name: s.name, kind: s.kind, connected: s.connected,
         avatar: s.avatar, country: s.country, photo: s.photo, sid: s.sid || null,
+        // feat3 (#19): frame + chat style from the social directory
+        frame: s.sid && this.social ? (this.social.person(s.sid) || {}).frame || '' : '',
+        chatStyle: s.sid && this.social ? (this.social.person(s.sid) || {}).chatStyle || '' : '',
         // The seat's permanent player ID, resolved from the social
         // directory (never client-supplied); null until the player
         // has a directory record (their /social hello creates one).
@@ -1853,7 +1857,7 @@ export class GameServer {
             try {
               if (core && typeof core.walletView === 'function' && core.walletView(csid) &&
                   typeof core.ownsCosmetic === 'function') {
-                if (!core.ownsCosmetic(csid, 'felt' + room.felt)) room.felt = 11;
+                if (!core.ownsCosmetic(csid, room.felt === 'ev1' ? 'felt-ev1' : 'felt' + room.felt)) room.felt = 11;
                 if (!core.ownsCosmetic(csid, 'back' + room.back)) room.back = 1;
               }
             } catch { /* social never breaks the game */ }
