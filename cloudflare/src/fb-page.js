@@ -127,7 +127,7 @@ export function fbPage(ticket, gid) {
     <div class="sub" style="margin-bottom:12px">د ګوګل په رسمي تڼۍ خپل جمیل وټاکه</div>
     <div id="gisbtn"></div>
   </div>
-  <button id="btn" type="button"><span class="g">G</span><span>په ګوګل ننوتل</span></button>
+  <button id="btn" type="button"${g ? ' style="display:none"' : ''}><span class="g">G</span><span>په ګوګل ننوتل</span></button>
   <div id="msg"></div>
   <div class="tiny">Sign in with Google to continue</div>
 </div>
@@ -273,13 +273,17 @@ try {
       msg(MSG_GIS);
       trail('gis:ready');
       return true;
-    } catch (e) { trail('gis:err'); return true; }
+    } catch (e) { trail('gis:err'); btn.style.display = ''; return true; }
   }
   if (GID && TICKET && !returned) {
     var gisTries = 0;
     var gisTimer = setInterval(function () {
       gisTries++;
-      if (initGis() || gisTries > 40) clearInterval(gisTimer);
+      var ok = initGis();
+      if (ok || gisTries > 40) {
+        clearInterval(gisTimer);
+        if (!ok) btn.style.display = '';
+      }
     }, 300);
   }
 
