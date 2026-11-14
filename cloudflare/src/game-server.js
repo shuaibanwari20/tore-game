@@ -632,6 +632,13 @@ export class GameServer {
     }
     this.state.acceptWebSocket(server);
     server.serializeAttachment({ code: null, seat: -1, token: null, user });
+    // up92: presence follows the PLAYER, not one socket kind — a
+    // signed-in game connection alone marks him online for his
+    // friends, even if his social socket never made it.
+    if (user && user.sub) {
+      const sid = 'g:' + String(user.sub);
+      this._ensureSocial().then((core) => core.reconcileOnline(sid, this._liveCountAll(sid, null))).catch(() => {});
+    }
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -704,9 +711,13 @@ export class GameServer {
     // Presence is rebuilt from the live (possibly hibernated)
     // sockets — their attachments kept the resolved identities.
     const ids = [];
-    for (const ws of this.state.getWebSockets('social')) {
+    for (const ws of this.state.getWebSockets()) {
       const att = this._attachment(ws);
-      if (att && att.sid) ids.push(att.sid);
+      if (!att) continue;
+      if (att.social) { if (att.sid) ids.push(att.sid); }
+      // up92: a game socket also proves its owner is here — its
+      // attachment carries the verified account from the upgrade.
+      else if (att.user && att.user.sub) ids.push('g:' + String(att.user.sub));
     }
     core.rebuildOnline(ids);
     this.social = core;
@@ -1052,7 +1063,7 @@ export class GameServer {
       // up89: presence follows the LIVE socket set, not blind
       // increments — every hello reconciles this identity's count
       // with the sockets the runtime actually holds for it.
-      core.reconcileOnline(sid, this._socialLiveCount(sid, null));
+      core.reconcileOnline(sid, this._liveCountAll(sid, null));
       core.hello(sid, helloProfile);
       return;
     }
@@ -1068,14 +1079,21 @@ export class GameServer {
     }
   }
 
-  // up89: how many social sockets are ACTUALLY live for this
-  // identity right now (the closing one excluded by reference).
-  _socialLiveCount(sid, exceptWs) {
+  // up89: how many sockets are ACTUALLY live for this identity
+  // right now (the closing one excluded by reference). up92: BOTH
+  // socket kinds count — social sockets by their resolved sid,
+  // game sockets by the verified account in their attachment. A
+  // player whose social socket died but who is sitting in a game
+  // is online, full stop (owner report 2026-11-14: a friend shown
+  // offline while seated in the reporter's own lobby).
+  _liveCountAll(sid, exceptWs) {
     let n = 0;
-    for (const ws of this.state.getWebSockets('social')) {
+    for (const ws of this.state.getWebSockets()) {
       if (ws === exceptWs) continue;
       const a = this._attachment(ws);
-      if (a && a.sid === sid) n++;
+      if (!a) continue;
+      if (a.social) { if (a.sid === sid) n++; }
+      else if (a.user && a.user.sub && ('g:' + String(a.user.sub)) === sid) n++;
     }
     return n;
   }
@@ -1087,7 +1105,7 @@ export class GameServer {
     // built yet in this DO instance (a close can be the wake event).
     const core = this.social || await this._ensureSocial().catch(() => null);
     if (!core) return;
-    core.socketClosed(att.sid, this._socialLiveCount(att.sid, ws));
+    core.socketClosed(att.sid, this._liveCountAll(att.sid, ws));
   }
 
   // ------------------------------------------------------------ club games (v8)
@@ -1317,6 +1335,13 @@ export class GameServer {
     const att = this._attachment(ws);
     if (att && att.social) { await this._socialDisconnect(ws); return; }
     this._onDisconnect(ws);
+    // up92: if that was his last socket of either kind, he is
+    // offline now — tell his friends (see _liveCountAll).
+    if (att && att.user && att.user.sub) {
+      const sid = 'g:' + String(att.user.sub);
+      const core = this.social || await this._ensureSocial().catch(() => null);
+      if (core) core.socketClosed(sid, this._liveCountAll(sid, ws));
+    }
     await this._persist();
   }
 
@@ -1324,6 +1349,13 @@ export class GameServer {
     const att = this._attachment(ws);
     if (att && att.social) { await this._socialDisconnect(ws); return; }
     this._onDisconnect(ws);
+    // up92: if that was his last socket of either kind, he is
+    // offline now — tell his friends (see _liveCountAll).
+    if (att && att.user && att.user.sub) {
+      const sid = 'g:' + String(att.user.sub);
+      const core = this.social || await this._ensureSocial().catch(() => null);
+      if (core) core.socketClosed(sid, this._liveCountAll(sid, ws));
+    }
     await this._persist();
   }
 
