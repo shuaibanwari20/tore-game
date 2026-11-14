@@ -33,8 +33,7 @@
  * client-side only while /auth/config reports fbLive — while Facebook
  * login is parked it simply never appears.
  */
-export function gatePage(opts) {
-  if (opts && opts.email) return GATE_HTML.replace('var EMAIL_ON = false;', 'var EMAIL_ON = true;');
+export function gatePage() {
   return GATE_HTML;
 }
 
@@ -178,7 +177,8 @@ const GATE_HTML = `<!DOCTYPE html>
   </div>
 <script>
 (function () {
-  var EMAIL_ON = false; // the worker flips this when a mailer key is set
+  var EMAIL_ON = true; // U66 (his order): the email form ALWAYS shows;
+  // without a mailer key the send button answers the emailOff note
   // Firebase web config — PUBLIC values (the same ones shipped in the
   // game bundle's gate); security comes from the server-side token
   // check on /auth/firebase, never from hiding these.
