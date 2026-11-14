@@ -1,7 +1,10 @@
-/** up76 unit proof — his report: he picked the 708 account at
- *  Google's chooser, yet the game opened as pubg (a stale
- *  Firebase session in the browser won the return-leg race).
- *  The picked account must always win. */
+/** up76/up77 unit proof — his reports: (1) he picked the 708
+ *  account at Google's chooser, yet the game opened as pubg;
+ *  (2) the U76 return-leg gate then stranded him (result
+ *  promise settles late/never on his phone). U77 supersedes
+ *  the U76 mechanism: no signOut, no blind waiting — a stale
+ *  uid snapshot + a hold that only the identical user waits
+ *  out. These checks pin the CURRENT rule. */
 import fs from 'node:fs';
 let failures = 0;
 const check = (name, ok, extra = '') => {
@@ -9,13 +12,13 @@ const check = (name, ok, extra = '') => {
   if (!ok) failures++;
 };
 const fb = fs.readFileSync('/home/hatch/workspace/projects/tore-game/cloudflare/src/fb-page.js', 'utf8');
-check('R1 goGoogle signs the stale session out first', fb.includes('var so = auth.signOut();') && fb.includes('so.catch(function () {}).then(kick);'));
-check('R2 the redirect starts only after sign-out settles', fb.includes('function kick() {') && fb.includes('auth.signInWithRedirect(provider).catch(fail);'));
-check('R3 the result settlement is tracked', fb.includes('var resultSettled = false;') && fb.includes('resultSettled = true;'));
-check('R4 a fresh result bridges immediately', fb.includes('if (res && res.user) { decided = true; bridge(res.user); }'));
-check('R5 the persisted user waits for the result to settle', fb.includes('if (!resultSettled) { setTimeout(tryPersisted, 250); return; }'));
-check('R6 the persisted fallback still exists (lost-result rescue)', fb.includes('setTimeout(tryPersisted, 600);'));
-check('R7 first load still never bridges a persisted user', fb.includes('if (!returned) return;'));
+check('R1 no signOut anywhere (suspect variable removed)', !fb.includes('auth.signOut()'));
+check('R2 the stale uid is snapshotted before leaving', fb.includes("var STALE_KEY = 'tore.fb.stale';") && fb.includes('function snapStale(user)') && fb.includes('sessionStorage.setItem(STALE_KEY, cu.uid);'));
+check('R3 first load snapshots and never bridges', fb.includes('snapStale(user);'));
+check('R4 a result user always bridges immediately', fb.includes('if (res && res.user) { decided = true; bridge(res.user); }'));
+check('R5 an empty result releases the hold', fb.includes('else releaseHold();') && fb.includes('function releaseHold()'));
+check('R6 only the uid-identical user is held', fb.includes('if (st && user.uid === st) { heldUser = user; return; }'));
+check('R7 a different account bridges at once on return', fb.includes('decided = true; bridge(user);'));
 check('R8 the chooser is still forced', fb.includes("setCustomParameters({ prompt: 'select_account' })"));
 console.log(failures ? '\n' + failures + ' FAILURES' : '\nALL PASS');
 process.exit(failures ? 1 : 0);
