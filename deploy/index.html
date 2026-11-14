@@ -2442,13 +2442,6 @@
   .cs-chat3 { background: linear-gradient(135deg, #8a6414, #d9a83c) !important; color: #2a1e05 !important; }
   .pf-xpbar { height: 8px; border-radius: 6px; background: rgba(0,0,0,.35); margin: 4px 0 9px; overflow: hidden; }
   .pf-xpfill { height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, #ffd75e, #d9a83c); transition: width .5s; }
-  .pf-refcard { margin-top: 12px; background: rgba(43,6,54,.55); border: 1.5px solid rgba(255,215,94,.35); border-radius: 16px; padding: 12px 13px; }
-  .pf-ref-t { font-size: 15.5px; font-weight: 900; color: #ffd75e; text-align: center; }
-  .pf-ref-sub { font-size: 12.5px; color: #ffd7f2; text-align: center; margin-top: 4px; line-height: 1.7; }
-  .pf-ref-row { display: flex; gap: 8px; margin-top: 9px; }
-  .pf-ref-row input { flex: 1; min-width: 0; padding: 9px 10px; font-size: 12.5px; border-radius: 10px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.18); color: #fff; font-family: inherit; }
-  .pf-ref-row button { padding: 9px 16px; border-radius: 10px; border: 0; background: linear-gradient(180deg, #ffd75e, #d9a83c); color: #33270a; font-weight: 900; font-family: inherit; cursor: pointer; }
-  .pf-ref-stats { margin-top: 8px; font-size: 12.5px; color: #fff; text-align: center; }
   .gift-panel { max-width: 340px; }
   .gift-to { text-align: center; font-weight: 800; color: #ffd7f2; margin-top: 2px; }
   .gift-bal { text-align: center; font-size: 13px; color: #ffd75e; margin-top: 4px; }
@@ -3910,15 +3903,6 @@
           <div class="pf-xpbar"><div class="pf-xpfill" id="pf-xp-fill"></div></div>
         </div>
         <button type="button" class="pf-leadersbtn" id="btn-leaders">د اونۍ غوره لوبغاړي</button>
-        <div class="pf-refcard">
-          <div class="pf-ref-t" id="pf-ref-title">ملګري دعوت کړه</div>
-          <div class="pf-ref-sub" id="pf-ref-sub"></div>
-          <div class="pf-ref-row">
-            <input id="pf-ref-link" readonly dir="ltr">
-            <button type="button" id="btn-ref-copy">کاپي</button>
-          </div>
-          <div class="pf-ref-stats" id="pf-ref-stats"></div>
-        </div>
         <button type="button" id="btn-logout" class="st-logout" aria-label="له حسابه وتل">
           <svg viewBox="0 0 24 24">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -6657,8 +6641,6 @@ function applyI18n() {
   set('#pf-stat-won-lbl', 'statWon');
   set('#pf-stat-lost-lbl', 'statLost');
   set('#pf-stat-level-lbl', 'statLevel');
-  set('#pf-ref-title', 'refTitle');
-  set('#btn-ref-copy', 'refCopy');
   set('#gift-title', 'giftTitle');
   set('#btn-gift-send', 'giftSend');
   set('#btn-gift-close', 'closeBtn');
@@ -7140,7 +7122,7 @@ function setSocialEvent(ev) {
   paintEventBanner();
   if (!$('#scr-shop').classList.contains('hidden')) renderShop();
 }
-function setRefs(r) { if (r && typeof r.invited === 'number') { refsCache = r; paintReferral(); } }
+function setRefs(r) { if (r && typeof r.invited === 'number') { refsCache = r; } }
 function paintEventBanner() {
   const b = $('#home-event');
   if (!b) return;
@@ -7151,21 +7133,10 @@ function paintEventBanner() {
   t.textContent = '🎉 ' + T('event_' + socialEvent.id) + ' — ' + T('eventPerks');
   b.appendChild(t);
 }
-function myRefLink() { return location.origin + '/?ref=' + (socialUid || ''); }
-function paintReferral() {
-  const inp = $('#pf-ref-link');
-  if (inp && socialUid) inp.value = myRefLink();
-  const sub = $('#pf-ref-sub');
-  if (sub) sub.textContent = T('refSub', (refsCache && refsCache.reward) || 200);
-  const st = $('#pf-ref-stats');
-  if (st) st.textContent = refsCache ? T('refStats', refsCache.invited, refsCache.earned) : '';
-}
-$('#btn-ref-copy').onclick = async () => {
-  const inp = $('#pf-ref-link');
-  if (!inp || !inp.value) return;
-  try { await navigator.clipboard.writeText(inp.value); toast(T('refCopied')); }
-  catch (e) { inp.select(); try { document.execCommand('copy'); toast(T('refCopied')); } catch (e2) { /* manual copy */ } }
-};
+/* up91: the referral CARD was removed from the profile page at the
+   owner's order (2026-11-14 «ملګري دعوت کړه حذف کن»). The server-side
+   referral attribution/payout stays dormant — with no card there is
+   no link to share, so nothing can trigger it. */
 
 // feat3 REFERRAL: a ?ref=<uid> landing (or the copy stashed by an
 // earlier visit) is carried on every hello until the server has
@@ -12313,7 +12284,6 @@ function paintMatchStats() {
   setN('#pf-stat-level', st.level || 1);
   const fill = $('#pf-xp-fill');
   if (fill) fill.style.width = Math.max(0, Math.min(100, ((st.levelXp || 0) / Math.max(1, st.levelNeed || 1)) * 100)) + '%';
-  paintReferral();
 }
 // ---------- weekly leaders (د اونۍ غوره لوبغاړي) ----------
 function openLeaders() {
