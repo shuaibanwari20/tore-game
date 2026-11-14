@@ -180,11 +180,10 @@ check('M1 first writer wins', (await idmap.setIfAbsent('x@y.co', 'uid-1')) === '
 // ---------- statics ----------
 const workerSrc = fs.readFileSync('/home/hatch/workspace/projects/tore-game/cloudflare/src/worker.js', 'utf8');
 const gateSrc = fs.readFileSync('/home/hatch/workspace/projects/tore-game/cloudflare/src/gate-page.js', 'utf8');
-check('S1 worker routes the email endpoints + gate flag', workerSrc.includes("path === '/auth/email-start'")
-  && workerSrc.includes("path === '/auth/email-verify'") && workerSrc.includes('gatePage({ email:'));
-check('S2 gate carries the email form + EMAIL_ON, code UI gone', gateSrc.includes('gate-email')
-  && gateSrc.includes('EMAIL_ON') && gateSrc.includes("'/auth/email-verify'")
-  && !gateSrc.includes('gate-codebox') && !gateSrc.includes('btn-codehave'));
+check('S1 worker still routes the (dormant) OTP endpoints', workerSrc.includes("path === '/auth/email-start'")
+  && workerSrc.includes("path === '/auth/email-verify'"));
+check('S2 gate email UI retired to the link flow (U67 owns it now)', gateSrc.includes('gate-email')
+  && !gateSrc.includes("'/auth/email-verify'") && !gateSrc.includes('gate-codebox') && !gateSrc.includes('btn-codehave'));
 
 console.log(failures ? '\n' + failures + ' FAILURES' : '\nALL PASS');
 process.exit(failures ? 1 : 0);
