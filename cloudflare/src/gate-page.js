@@ -64,9 +64,21 @@ const GATE_HTML = `<!DOCTYPE html>
   } catch (e) { /* private mode — Pashto default stands */ }
   document.documentElement.lang = window.__glang;
   document.documentElement.dir = window.__glang === 'en' ? 'ltr' : 'rtl';
+  // U82: one button only. With GIS configured (tabs), hide the
+  // old Firebase button from the FIRST paint — the owner
+  // tapped it during the GIS load window, went through the
+  // dead flow, and had to sign in a second time.
+  try {
+    var __gidEarly = __GID__;
+    var __saEarly = (window.navigator && window.navigator.standalone === true) ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    if (__gidEarly && !__saEarly) document.documentElement.classList.add('gis-mode');
+  } catch (e) { /* detection failed — buttons as before */ }
 </script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html.gis-mode #btn-google { display: none !important; }
+  html.gis-mode #giswrap { display: block !important; }
   html, body { min-height: 100%; }
   body {
     font-family: Tahoma, "Segoe UI", system-ui, sans-serif;
@@ -514,13 +526,22 @@ const GATE_HTML = `<!DOCTYPE html>
       document.getElementById('giswrap').style.display = '';
       gBtn.style.display = 'none';
       return true;
-    } catch (e) { return true; }
+    } catch (e) { return false; }
   }
   if (GID && !isStandalone) {
     var gisTries = 0;
     var gisTimer = setInterval(function () {
       gisTries++;
-      if (initGateGis() || gisTries > 40) clearInterval(gisTimer);
+      var ok = initGateGis();
+      if (ok || gisTries > 40) {
+        clearInterval(gisTimer);
+        if (!ok) {
+          // GIS never arrived — fall back to the old button.
+          document.documentElement.classList.remove('gis-mode');
+          document.getElementById('giswrap').style.display = 'none';
+          gBtn.style.display = '';
+        }
+      }
     }, 300);
   }
   // Returning from the redirect flow: pick up the result once.
