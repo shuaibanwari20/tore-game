@@ -6907,6 +6907,7 @@ function loadProfile() {
     photo: (typeof p.photo === 'string' && (p.photo.startsWith('https://') || p.photo.startsWith('/p-photo/'))) ? p.photo.slice(0, 300) : '',
     felt: validFelt(p.felt),
     back: validBack(p.back),
+    nameManual: p.nameManual === true,
   };
 }
 let profile = loadProfile();
@@ -12164,6 +12165,7 @@ function pfPersist() {
     photo: profile.photo || '',
     felt: validFelt(profile.felt),
     back: validBack(profile.back),
+    nameManual: !!$('#pf-name').value.trim() || profile.nameManual === true,
   };
   saveProfile();
   socialHello(); // the friends directory record follows the profile
@@ -12186,8 +12188,11 @@ $('#btn-pf-country-close').onclick = () => {
   $('#pf-editbox').classList.add('hidden');
 };
 // Google identity → game profile: on hosts with sign-in (the Cloudflare
-// Worker), /auth/me returns the signed-in account. Adopt the account
-// name when the profile has none yet, and keep the account picture as
+// Worker), /auth/me returns the signed-in account. The account name IS
+// the player name (U83, his order: «اسم بازیکن را از جمیلش باید
+// بگیره») — adopted whenever it differs, unless the player typed a
+// name himself in the profile editor (nameManual). Keep the account
+// picture as
 // the profile photo: it becomes the avatar (the 'google' kind) unless
 // the player has deliberately picked one of the twelve portraits — a
 // hand-picked portrait is never overridden. On the plain Node hosts
@@ -12201,7 +12206,7 @@ async function initSessionUser() {
   if (!user) return;
   let changed = false;
   const acctName = (typeof user.name === 'string' ? user.name : '').trim().slice(0, 20);
-  if (acctName && !profile.name) { profile.name = acctName; changed = true; }
+  if (acctName && !profile.nameManual && profile.name !== acctName) { profile.name = acctName; changed = true; }
   const pic = (typeof user.picture === 'string' && user.picture.startsWith('https://'))
     ? user.picture.slice(0, 300) : '';
   if (pic && pic !== profile.photo) { profile.photo = pic; changed = true; }
