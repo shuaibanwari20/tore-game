@@ -20,6 +20,14 @@
  * signed-in user on THIS origin, and a persisted user bridges
  * exactly the same way, (3) a "we came back but nothing arrived"
  * message with a tap-to-retry button instead of a silent page.
+ *
+ * U74 (2026-11-14, owner order — sign in "the official way" and
+ * pick the Gmail at Google, not through another page's button):
+ * the page no longer waits for a tap and no longer bridges a
+ * persisted user silently. On the FIRST load it goes straight
+ * to Google's own account chooser (prompt=select_account); the
+ * button remains only as the fallback for a lost/blocked
+ * redirect.
  */
 
 import { isTicketId } from './tickets.js';
@@ -115,24 +123,43 @@ try {
   var returned = sentBefore();
   if (returned) msg(MSG_BACK);
   var decided = false;
+  function showBtn() { btn.style.display = ''; }
+  function goGoogle() {
+    btn.disabled = true;
+    btn.style.display = 'none';
+    msg(MSG_WAIT);
+    markSent();
+    var provider = new firebase.auth.GoogleAuthProvider();
+    try { provider.setCustomParameters({ prompt: 'select_account' }); } catch (e) { /* plain redirect still works */ }
+    try {
+      auth.signInWithRedirect(provider)
+        .catch(function () { btn.disabled = false; showBtn(); msg(MSG_FAIL); });
+    } catch (e) { btn.disabled = false; showBtn(); msg(MSG_FAIL); }
+  }
   auth.getRedirectResult().then(function (res) {
     if (res && res.user) { decided = true; bridge(res.user); }
-  }).catch(function () { if (!bridged) msg(MSG_FAIL); });
+  }).catch(function () { if (!bridged) { showBtn(); msg(MSG_FAIL); } });
   auth.onAuthStateChanged(function (user) {
-    if (user) { decided = true; bridge(user); }
+    if (!user) return;
+    // U74: a persisted user bridges only on the RETURN leg —
+    // on the first load goGoogle() runs instead, so the player
+    // always picks the account at Google himself.
+    if (returned) { decided = true; bridge(user); }
   });
   setTimeout(function () {
-    if (!bridged && returned && !decided) msg(MSG_AGAIN);
+    if (!bridged && returned && !decided) { showBtn(); msg(MSG_AGAIN); }
   }, 3500);
   btn.onclick = function () {
     if (!TICKET) { msg(MSG_BAD); return; }
-    if (auth.currentUser) { bridge(auth.currentUser); return; }
-    btn.disabled = true;
-    msg(MSG_WAIT);
-    markSent();
-    auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider())
-      .catch(function () { btn.disabled = false; msg(MSG_FAIL); });
+    if (returned && auth.currentUser) { bridge(auth.currentUser); return; }
+    goGoogle();
   };
+  if (TICKET && !returned) {
+    // U74: straight to Google — no tap on this page at all.
+    btn.style.display = 'none';
+    msg(MSG_WAIT);
+    setTimeout(function () { if (!bridged) goGoogle(); }, 400);
+  }
 } catch (e) {
   btn.disabled = true;
   msg(MSG_FAIL);
