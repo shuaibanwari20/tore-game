@@ -161,10 +161,6 @@ const GATE_HTML = `<!DOCTYPE html>
       <div class="gordiv" id="gate-or"></div>
       <input id="email-input" type="email" autocomplete="email">
       <button type="button" class="gbtn emailgo" id="btn-email-send"></button>
-      <div class="gcodeentry" id="gate-email-code-row" style="display:none">
-        <input id="email-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
-        <button type="button" class="gcodego" id="btn-email-verify"></button>
-      </div>
       <div class="gemail-msg" id="gate-email-msg"></div>
     </div>
     <div class="gnote" id="gate-note">ننوتل یعنې د لوبې قوانین منل</div>
@@ -194,9 +190,9 @@ const GATE_HTML = `<!DOCTYPE html>
   // into the game. Only the texts change — the sign-in flow below is
   // untouched.
   var GATE_STR = {
-    ps: { title: 'توره — ننوتل', sub: 'د لوبې لپاره ننوځه', google: 'په ګوګل ننوځه', busy: 'ننوتل کېږي…', fb: 'په فېسبوک ننوځه', note: 'ننوتل یعنې د لوبې قوانین منل', errFail: 'ننوتل ونه شول — بیا هڅه وکړه', errConn: 'په ننوتلو کې ستونزه — انټرنېټ دې وګوره', saNote: 'په اپ کې د ننوتلو لپاره خپل ایمیل ولیکه — ۶ عددی کوډ به درته ایمیل شي', orEmail: 'یا په ایمیل ننوځه', emailPh: 'ایمیل دې', sendCode: 'کوډ واستوه', codePh6: '۶ عددی کوډ', verifyGo: 'ننوځه', errEmail: 'ایمیل سم ولیکه', errOtp: 'کوډ سم نه دی', codeSent: 'کوډ ستا ایمیل ته واستول شو', emailOff: 'د ایمیل ننوتل لا چالان نه دي', waitMsg: 'لږ وروسته بیا هڅه وکړه' },
-    fa: { title: 'توره — ورود', sub: 'برای بازی وارد شوید', google: 'ورود با گوگل', busy: 'در حال ورود…', fb: 'ورود با فیسبوک', note: 'ورود یعنی پذیرش قانون‌های بازی', errFail: 'ورود ناموفق بود — دوباره تلاش کنید', errConn: 'خطا در ورود — اتصال اینترنت را بررسی کنید', saNote: 'برای ورود در اپ ایمیلت را بنویس — کد ۶ رقمی برایت ایمیل می‌شود', orEmail: 'یا با ایمیل وارد شوید', emailPh: 'ایمیلت', sendCode: 'کد را بفرست', codePh6: 'کد ۶ رقمی', verifyGo: 'وارد شو', errEmail: 'ایمیل را درست بنویسید', errOtp: 'کد درست نیست', codeSent: 'کد به ایمیلت فرستاده شد', emailOff: 'ورود با ایمیل هنوز فعال نیست', waitMsg: 'کمی بعد دوباره تلاش کنید' },
-    en: { title: 'Tore — Sign in', sub: 'Sign in to play', google: 'Sign in with Google', busy: 'Signing in…', fb: 'Sign in with Facebook', note: 'Signing in means accepting the game rules', errFail: 'Sign-in failed — please try again', errConn: 'Sign-in error — check your internet connection', saNote: 'To sign in inside the app, enter your email — a 6-digit code will be emailed to you', orEmail: 'or sign in with email', emailPh: 'Your email', sendCode: 'Send code', codePh6: '6-digit code', verifyGo: 'Sign in', errEmail: 'Enter a valid email', errOtp: 'Wrong code', codeSent: 'Code sent to your email', emailOff: 'Email sign-in is not active yet', waitMsg: 'Try again shortly' }
+    ps: { title: 'توره — ننوتل', sub: 'د لوبې لپاره ننوځه', google: 'په ګوګل ننوځه', busy: 'ننوتل کېږي…', fb: 'په فېسبوک ننوځه', note: 'ننوتل یعنې د لوبې قوانین منل', errFail: 'ننوتل ونه شول — بیا هڅه وکړه', errConn: 'په ننوتلو کې ستونزه — انټرنېټ دې وګوره', saNote: 'په اپ کې د ننوتلو لپاره خپل ایمیل ولیکه — د ننوتلو لینک به درته ایمیل شي؛ پرې ووهه او بېرته دې اپ ته راشه', orEmail: 'یا په ایمیل ننوځه', emailPh: 'ایمیل دې', sendLink: 'لینک واستوه', linkSent: 'لینک ستا ایمیل ته واستول شو — خپل ایمیل وګوره او پر لینک ووهه؛ لینک ۱۰ دقیقې کار کوي', errEmail: 'ایمیل سم ولیکه' },
+    fa: { title: 'توره — ورود', sub: 'برای بازی وارد شوید', google: 'ورود با گوگل', busy: 'در حال ورود…', fb: 'ورود با فیسبوک', note: 'ورود یعنی پذیرش قانون‌های بازی', errFail: 'ورود ناموفق بود — دوباره تلاش کنید', errConn: 'خطا در ورود — اتصال اینترنت را بررسی کنید', saNote: 'برای ورود در اپ ایمیلت را بنویس — لینک ورود برایت ایمیل می‌شود؛ رویش بزن و به این اپ برگرد', orEmail: 'یا با ایمیل وارد شوید', emailPh: 'ایمیلت', sendLink: 'لینک را بفرست', linkSent: 'لینک به ایمیلت فرستاده شد — ایمیلت را باز کن و روی لینک بزن؛ لینک ۱۰ دقیقه کار می‌کند', errEmail: 'ایمیل را درست بنویسید' },
+    en: { title: 'Tore — Sign in', sub: 'Sign in to play', google: 'Sign in with Google', busy: 'Signing in…', fb: 'Sign in with Facebook', note: 'Signing in means accepting the game rules', errFail: 'Sign-in failed — please try again', errConn: 'Sign-in error — check your internet connection', saNote: 'To sign in inside the app, enter your email — a sign-in link will be emailed to you; tap it, then come back to this app', orEmail: 'or sign in with email', emailPh: 'Your email', sendLink: 'Send sign-in link', linkSent: 'Link sent — open your email and tap the link; it works for 10 minutes', errEmail: 'Enter a valid email' }
   };
   var glang = (window.__glang && GATE_STR[window.__glang]) ? window.__glang : 'ps';
   try {
@@ -222,11 +218,7 @@ const GATE_HTML = `<!DOCTYPE html>
     var eInp = document.getElementById('email-input');
     if (eInp) eInp.placeholder = d.emailPh;
     var esB = document.getElementById('btn-email-send');
-    if (esB) esB.textContent = d.sendCode;
-    var ecInp = document.getElementById('email-code');
-    if (ecInp) ecInp.placeholder = d.codePh6;
-    var evB = document.getElementById('btn-email-verify');
-    if (evB) evB.textContent = d.verifyGo;
+    if (esB) esB.textContent = d.sendLink;
     var bs = document.querySelectorAll('.glang');
     for (var i = 0; i < bs.length; i++) {
       bs[i].classList.toggle('sel', bs[i].getAttribute('data-lang') === glang);
@@ -469,11 +461,13 @@ const GATE_HTML = `<!DOCTYPE html>
     startAuthPoll();
     if (storedTicket()) startTicketPoll();
   }
-  // U65: email + 6-digit code sign-in. The form shows whenever
-  // the worker reports a configured mailer (EMAIL_ON); in an
-  // installed app it is THE sign-in (the Google button is hidden
-  // there — its sheet flow is gone since U64).
-  var emailSentTo = '';
+  // U67: email-LINK sign-in (his pick — no mailer key at all).
+  // Send = mint the one-time ticket, then ask Firebase to email
+  // a sign-in link whose continue URL is /auth/email-finish with
+  // the ticket (and the email) riding along. The finish page
+  // completes the ticket with the link's Firebase token, and
+  // THIS gate's ticket poll brings the session in by itself —
+  // the very flow the ticket machinery was built for.
   function emailMsg(t) {
     var m = document.getElementById('gate-email-msg');
     if (m) m.textContent = t || '';
@@ -483,52 +477,30 @@ const GATE_HTML = `<!DOCTYPE html>
     var inp = document.getElementById('email-input');
     var v = ((inp && inp.value) || '').trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) { emailMsg(GL().errEmail); return; }
-    emailSentTo = v;
     esBtn.disabled = true;
-    fetch('/auth/email-start', {
-      method: 'POST', credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: v })
-    }).then(function (r) {
-      esBtn.disabled = false;
-      if (r && r.ok) {
-        var row = document.getElementById('gate-email-code-row');
-        if (row) row.style.display = '';
-        emailMsg(GL().codeSent);
-        var ci = document.getElementById('email-code');
-        if (ci) ci.focus();
-        return;
-      }
-      if (r && r.status === 429) {
-        var row2 = document.getElementById('gate-email-code-row');
-        if (row2) row2.style.display = '';
-        emailMsg(GL().waitMsg);
-        return;
-      }
-      if (r && r.status === 503) { emailMsg(GL().emailOff); return; }
-      emailMsg(GL().errEmail);
-    }).catch(function () { esBtn.disabled = false; emailMsg(GL().errConn); });
+    fetch('/auth/ticket', { method: 'POST', credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || !j.ticket) throw new Error('no ticket');
+        markPending();
+        storeTicket(j.ticket);
+        startTicketPoll();
+        armWatchdog();
+        return loadAuth().then(function () {
+          return authMod.sendSignInLinkToEmail(authObj, v, {
+            url: location.origin + '/auth/email-finish?ticket=' + encodeURIComponent(j.ticket) + '&e=' + encodeURIComponent(v),
+            handleCodeInApp: false
+          });
+        });
+      })
+      .then(function () {
+        esBtn.disabled = false;
+        emailMsg(GL().linkSent);
+      })
+      .catch(function () { esBtn.disabled = false; emailMsg(GL().errConn); });
   };
-  var evBtn = document.getElementById('btn-email-verify');
-  if (evBtn) evBtn.onclick = function () {
-    var ci = document.getElementById('email-code');
-    var c = ((ci && ci.value) || '').replace(/[^0-9]/g, '');
-    if (!emailSentTo || !/^[0-9]{6}$/.test(c)) { emailMsg(GL().errOtp); return; }
-    evBtn.disabled = true;
-    fetch('/auth/email-verify', {
-      method: 'POST', credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: emailSentTo, code: c })
-    }).then(function (r) {
-      if (r && r.ok) { location.reload(); return; }
-      evBtn.disabled = false;
-      emailMsg(GL().errOtp);
-    }).catch(function () { evBtn.disabled = false; emailMsg(GL().errConn); });
-  };
-  if (EMAIL_ON) {
-    var ge = document.getElementById('gate-email');
-    if (ge) ge.style.display = '';
-  }
+  var ge = document.getElementById('gate-email');
+  if (ge) ge.style.display = '';
   if (isStandalone) { gBtn.style.display = 'none'; }
   resumePolls();
   document.addEventListener('visibilitychange', function () {
