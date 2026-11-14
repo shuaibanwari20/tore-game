@@ -1048,8 +1048,11 @@ export class GameServer {
       if (att.sid !== sid) {
         att.sid = sid;
         this._saveAttachment(ws, att);
-        core.socketOpened(sid);
       }
+      // up89: presence follows the LIVE socket set, not blind
+      // increments — every hello reconciles this identity's count
+      // with the sockets the runtime actually holds for it.
+      core.reconcileOnline(sid, this._socialLiveCount(sid, null));
       core.hello(sid, helloProfile);
       return;
     }
@@ -1065,9 +1068,26 @@ export class GameServer {
     }
   }
 
-  _socialDisconnect(ws) {
+  // up89: how many social sockets are ACTUALLY live for this
+  // identity right now (the closing one excluded by reference).
+  _socialLiveCount(sid, exceptWs) {
+    let n = 0;
+    for (const ws of this.state.getWebSockets('social')) {
+      if (ws === exceptWs) continue;
+      const a = this._attachment(ws);
+      if (a && a.sid === sid) n++;
+    }
+    return n;
+  }
+
+  async _socialDisconnect(ws) {
     const att = this._attachment(ws);
-    if (att && att.sid && this.social) this.social.socketClosed(att.sid);
+    if (!att || !att.sid) return;
+    // up89: never drop a close just because the core has not been
+    // built yet in this DO instance (a close can be the wake event).
+    const core = this.social || await this._ensureSocial().catch(() => null);
+    if (!core) return;
+    core.socketClosed(att.sid, this._socialLiveCount(att.sid, ws));
   }
 
   // ------------------------------------------------------------ club games (v8)
@@ -1295,14 +1315,14 @@ export class GameServer {
 
   async webSocketClose(ws) {
     const att = this._attachment(ws);
-    if (att && att.social) { this._socialDisconnect(ws); return; }
+    if (att && att.social) { await this._socialDisconnect(ws); return; }
     this._onDisconnect(ws);
     await this._persist();
   }
 
   async webSocketError(ws) {
     const att = this._attachment(ws);
-    if (att && att.social) { this._socialDisconnect(ws); return; }
+    if (att && att.social) { await this._socialDisconnect(ws); return; }
     this._onDisconnect(ws);
     await this._persist();
   }
