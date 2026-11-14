@@ -36,6 +36,19 @@
  * goGoogle() signs the stale user out first, and on the return
  * leg a persisted user bridges only after getRedirectResult
  * has settled without a user — the picked account always wins.
+ *
+ * U77 (2026-11-14, owner report — supersedes the U76 mechanism):
+ * the 11:15 retest stranded on the return leg (stuck on
+ * MSG_BACK, then MSG_AGAIN): on his phone the redirect-result
+ * promise settles late or never, so gating on it parks the
+ * player, and the pre-redirect signOut is a second suspect.
+ * New rule: NO signOut. Before leaving for Google the page
+ * snapshots the signed-in account's uid (STALE_KEY). On the
+ * return leg a user with that same uid is HELD (it may be the
+ * stale session) until the result settles — an empty result
+ * releases the hold (he picked the same account; the session
+ * is valid) — while any different account bridges at once,
+ * and a result user always bridges immediately.
  */
 
 import { isTicketId } from './tickets.js';
@@ -98,6 +111,9 @@ var MSG_FAIL = 'ننوتل ونشول — بیا هڅه وکړه';
 var MSG_BAD = 'دا پاڼه سمه نه ده خلاصه شوې — له لوبې یې بیا پیل کړه';
 var MSG_AGAIN = 'ننوتل وشول خو نتیجه دلته ونه رسېده — تڼۍ یو ځل بیا ووهه';
 var SENT_KEY = 'tore.fb.sent';
+var STALE_KEY = 'tore.fb.stale';
+function staleUid() { try { return sessionStorage.getItem(STALE_KEY) || ''; } catch (e) { return ''; } }
+function snapStale(user) { try { if (user && user.uid) sessionStorage.setItem(STALE_KEY, user.uid); } catch (e) { /* ignore */ } }
 function sentBefore() { try { return sessionStorage.getItem(SENT_KEY) === '1'; } catch (e) { return false; } }
 function markSent() { try { sessionStorage.setItem(SENT_KEY, '1'); } catch (e) { /* ignore */ } }
 function clearSent() { try { sessionStorage.removeItem(SENT_KEY); } catch (e) { /* ignore */ } }
@@ -140,39 +156,44 @@ try {
     var provider = new firebase.auth.GoogleAuthProvider();
     try { provider.setCustomParameters({ prompt: 'select_account' }); } catch (e) { /* plain redirect still works */ }
     function fail() { btn.disabled = false; showBtn(); msg(MSG_FAIL); }
-    function kick() {
-      try {
-        auth.signInWithRedirect(provider).catch(fail);
-      } catch (e) { fail(); }
-    }
-    // U76: clear any stale Firebase session in this browser
-    // first, so the return leg can only ever meet the account
-    // the player is about to pick at Google.
+    // U77: remember which account is signed in HERE before
+    // leaving, so the return leg can tell a stale session apart
+    // from the account the player is about to pick.
     try {
-      var so = auth.signOut();
-      if (so && so.catch) { so.catch(function () {}).then(kick); } else { kick(); }
-    } catch (e) { kick(); }
+      var cu = auth.currentUser;
+      if (cu && cu.uid) sessionStorage.setItem(STALE_KEY, cu.uid);
+    } catch (e) { /* ignore */ }
+    try {
+      auth.signInWithRedirect(provider).catch(fail);
+    } catch (e) { fail(); }
   }
-  var resultSettled = false;
+  var heldUser = null;
+  function releaseHold() {
+    if (heldUser && !bridged) {
+      var u = heldUser; heldUser = null;
+      decided = true; bridge(u);
+    }
+  }
   auth.getRedirectResult().then(function (res) {
-    resultSettled = true;
     if (res && res.user) { decided = true; bridge(res.user); }
-  }).catch(function () { resultSettled = true; if (!bridged) { showBtn(); msg(MSG_FAIL); } });
+    else releaseHold();
+  }).catch(function () { if (!bridged) { showBtn(); msg(MSG_FAIL); } });
   auth.onAuthStateChanged(function (user) {
     if (!user) return;
-    // U74: a persisted user bridges only on the RETURN leg —
-    // on the first load goGoogle() runs instead, so the player
-    // always picks the account at Google himself.
-    if (!returned) return;
-    // U76: the fresh redirect result outranks a stale persisted
-    // session — the persisted user is only the lost-result
-    // fallback, bridged once the result has settled empty.
-    var tryPersisted = function () {
-      if (bridged || decided) return;
-      if (!resultSettled) { setTimeout(tryPersisted, 250); return; }
-      decided = true; bridge(user);
-    };
-    setTimeout(tryPersisted, 600);
+    if (!returned) {
+      // U74+U77: first load never bridges — it only snapshots
+      // the account that a later return must not mistake for
+      // the player's fresh pick.
+      snapStale(user);
+      return;
+    }
+    // U77: a user identical to the pre-redirect session may be
+    // that stale session reporting early — hold it until
+    // Google's result settles. Any other account is the fresh
+    // pick and bridges at once.
+    var st = staleUid();
+    if (st && user.uid === st) { heldUser = user; return; }
+    decided = true; bridge(user);
   });
   setTimeout(function () {
     if (!bridged && returned && !decided) { showBtn(); msg(MSG_AGAIN); }
