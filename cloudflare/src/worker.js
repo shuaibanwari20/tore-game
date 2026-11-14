@@ -96,7 +96,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261114-noiospwa';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261114-gmailname';
 // The PREVIOUS client version's URL — last-resort fallback for
 // serveClient (see the header comment): that build was live long
 // enough that its edge copies are warm in the POPs, so when a fresh
