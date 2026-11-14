@@ -529,9 +529,39 @@ export async function handleEmailVerify(request, env) {
   return ticketLoginResponse(env, payload);
 }
 
+/**
+ * U79: verify a Google ID token (from Google Identity
+ * Services) via Google's tokeninfo endpoint — Google checks
+ * the signature and expiry; the audience, issuer, and a
+ * verified email are required here. Returns claims shaped
+ * like the Firebase verifier's, so the completion path below
+ * treats both doors identically (same canonical identity).
+ */
+async function verifyGoogleIdToken(idToken, clientId) {
+  if (typeof idToken !== 'string' || !idToken || idToken.length > 8192) return null;
+  try {
+    const res = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken));
+    if (!res.ok) return null;
+    const j = await res.json();
+    if (!j || j.aud !== clientId) return null;
+    if (j.iss !== 'https://accounts.google.com' && j.iss !== 'accounts.google.com') return null;
+    if (j.email_verified !== 'true' && j.email_verified !== true) return null;
+    if (!j.sub || !j.email) return null;
+    return {
+      sub: j.sub,
+      email: j.email,
+      name: typeof j.name === 'string' ? j.name : '',
+      picture: typeof j.picture === 'string' ? j.picture : '',
+    };
+  } catch { return null; }
+}
+
 async function completeTicketWithFirebase(env, ticket, idToken) {
   const projectId = env.FIREBASE_PROJECT_ID || 'tore-game';
-  const claims = await verifyFirebaseIdToken(idToken, projectId);
+  let claims = await verifyFirebaseIdToken(idToken, projectId);
+  if (!claims && env.GOOGLE_CLIENT_ID) {
+    claims = await verifyGoogleIdToken(idToken, env.GOOGLE_CLIENT_ID);
+  }
   if (!claims) return 401;
   const email = normalizeEmail(typeof claims.email === 'string' ? claims.email : '');
   const payload = {
