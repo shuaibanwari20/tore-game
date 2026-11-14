@@ -12353,6 +12353,9 @@ function socialSend(obj) {
 function socialHello() {
   socialSend({ type: "s-hello", pid: myPid(), profile: profilePayload() });
 }
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && sws && sws.readyState === 1) socialHello();
+});
 function connectSocial() {
   if (sws && (sws.readyState === 0 || sws.readyState === 1)) return;
   const proto = location.protocol === "https:" ? "wss://" : "ws://";
