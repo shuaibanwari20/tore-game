@@ -7065,7 +7065,8 @@ function loadProfile() {
     country: typeof p.country === "string" && p.country.trim() ? p.country.trim() : "\u0627\u0641\u063A\u0627\u0646\u0633\u062A\u0627\u0646",
     photo: typeof p.photo === "string" && (p.photo.startsWith("https://") || p.photo.startsWith("/p-photo/")) ? p.photo.slice(0, 300) : "",
     felt: validFelt(p.felt),
-    back: validBack(p.back)
+    back: validBack(p.back),
+    nameManual: p.nameManual === true
   };
 }
 let profile = loadProfile();
@@ -11722,7 +11723,8 @@ function pfPersist() {
     country: $("#pf-country").value || "\u0627\u0641\u063A\u0627\u0646\u0633\u062A\u0627\u0646",
     photo: profile.photo || "",
     felt: validFelt(profile.felt),
-    back: validBack(profile.back)
+    back: validBack(profile.back),
+    nameManual: !!$("#pf-name").value.trim() || profile.nameManual === true
   };
   saveProfile();
   socialHello();
@@ -11752,7 +11754,7 @@ async function initSessionUser() {
   if (!user) return;
   let changed = false;
   const acctName = (typeof user.name === "string" ? user.name : "").trim().slice(0, 20);
-  if (acctName && !profile.name) {
+  if (acctName && !profile.nameManual && profile.name !== acctName) {
     profile.name = acctName;
     changed = true;
   }
