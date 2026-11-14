@@ -58,6 +58,20 @@
  * timer), goGoogle is latched against double starts, and a
  * tiny #dbg trail logs what each step saw (account labels
  * included) so a failure screenshot names the faulty step.
+ *
+ * U79 (2026-11-14, owner report): the 11:35 retest STILL
+ * landed pubg. Four bridge builds in a row failed identically,
+ * which indicts the channel, not the logic: in his browser the
+ * Firebase redirect result never reaches this page at all
+ * (app-tab storage partitioning), so the saved account is the
+ * only user the page can ever see. GIS replaces the channel:
+ * Google's official button renders on this page, the player
+ * picks his account in Google's own chooser, and the signed
+ * ID token returns via an in-page callback — nothing crosses
+ * origins through storage. The server verifies it against
+ * Google (auth.js) and canonicalizes by email into the same
+ * identity. The redirect flow remains as the automatic
+ * fallback when the GIS script cannot load.
  */
 
 import { isTicketId } from './tickets.js';
@@ -72,8 +86,9 @@ const FIREBASE_CONFIG = {
 };
 const SDK = 'https://www.gstatic.com/firebasejs/10.12.5/';
 
-export function fbPage(ticket) {
+export function fbPage(ticket, gid) {
   const t = isTicketId(ticket) ? ticket : '';
+  const g = typeof gid === 'string' ? gid : '';
   return `<!DOCTYPE html>
 <html lang="ps" dir="rtl">
 <head>
@@ -101,22 +116,31 @@ export function fbPage(ticket) {
   #msg { min-height: 22px; margin-top: 16px; font-size: 14px; color: #ffe9a8; line-height: 1.7; }
   .tiny { margin-top: 10px; font-size: 11.5px; color: #c99; color: #d8a7bd; line-height: 1.8; }
   #dbg { margin-top: 8px; font-size: 10px; line-height: 1.6; color: rgba(255,233,168,.55); word-break: break-all; }
+  #giswrap { margin-bottom: 16px; }
+  #gisbtn { display: flex; justify-content: center; min-height: 44px; }
 </style>
 </head>
 <body>
 <div class="card">
   <h1>توره</h1>
   <div class="sub">د ننوتلو لپاره لاندې تڼۍ ووهه<br>برای ورود دکمهٔ زیر را بزن</div>
+  <div id="giswrap" style="display:none">
+    <div class="sub" style="margin-bottom:12px">د ګوګل په رسمي تڼۍ خپل جمیل وټاکه</div>
+    <div id="gisbtn"></div>
+  </div>
   <button id="btn" type="button"><span class="g">G</span><span>په ګوګل ننوتل</span></button>
   <div id="msg"></div>
   <div id="dbg"></div>
   <div class="tiny">Sign in with Google to continue</div>
 </div>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="${SDK}firebase-app-compat.js"></script>
 <script src="${SDK}firebase-auth-compat.js"></script>
 <script>
 var TICKET = ${JSON.stringify(t)};
+var GID = ${JSON.stringify(g)};
 var MSG_WAIT = 'یوه شېبه… گوګل ته ځي';
+var MSG_GIS = 'خپل جمیل وټاکه';
 var MSG_BACK = 'بیرته راغلې… ننوتل بشپړېږي';
 var MSG_FAIL = 'ننوتل ونشول — بیا هڅه وکړه';
 var MSG_BAD = 'دا پاڼه سمه نه ده خلاصه شوې — له لوبې یې بیا پیل کړه';
@@ -141,6 +165,29 @@ function trail(s) {
   } catch (e) { /* ignore */ }
 }
 var bridged = false;
+var gisReady = false;
+function completeWithToken(token) {
+  if (bridged || !token || !TICKET) return;
+  bridged = true;
+  trail('bridge:gis');
+  msg(MSG_BACK);
+  fetch('/auth/fb-complete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ ticket: TICKET, idToken: token })
+  }).then(function (res) {
+    if (res.ok) { location.replace('/auth/done'); return; }
+    bridged = false;
+    msg(MSG_FAIL);
+    showBtnSafe();
+  }).catch(function () {
+    bridged = false;
+    msg(MSG_FAIL);
+    showBtnSafe();
+  });
+}
+function showBtnSafe() { try { btn.style.display = ''; } catch (e) { /* ignore */ } }
 function bridge(user) {
   if (bridged || !user) return;
   bridged = true;
@@ -172,7 +219,7 @@ try {
   var goStarted = false;
   function fail() { goStarted = false; btn.disabled = false; showBtn(); msg(MSG_FAIL); }
   function goGoogle() {
-    if (goStarted) return;
+    if (goStarted || gisReady) return;
     goStarted = true;
     trail('go');
     btn.disabled = true;
@@ -192,6 +239,56 @@ try {
       auth.signInWithRedirect(provider).catch(fail);
     } catch (e) { fail(); }
   }
+  // U79: GIS first. The official button needs no redirect
+  // result; if it initializes, the auto-redirect is cancelled
+  // and the player signs in through Google's own button. If
+  // the GIS script never arrives, scheduleGo() falls back to
+  // the redirect flow.
+  var goTimer = null;
+  function scheduleGo() {
+    if (goTimer || bridged || gisReady) return;
+    goTimer = setTimeout(function () {
+      goTimer = null;
+      if (!bridged && !gisReady) goGoogle();
+    }, 2800);
+  }
+  function onGisCredential(resp) {
+    var cred = resp && resp.credential;
+    if (!cred) { trail('gis:none'); return; }
+    var em = '';
+    try {
+      var part = cred.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      var pj = JSON.parse(decodeURIComponent(escape(atob(part))));
+      em = pj.email || '';
+    } catch (e) { /* label only */ }
+    trail('gis:' + (em || 'ok'));
+    document.getElementById('giswrap').style.display = 'none';
+    completeWithToken(cred);
+  }
+  function initGis() {
+    if (!GID) return true;
+    if (!(window.google && google.accounts && google.accounts.id)) return false;
+    try {
+      google.accounts.id.initialize({ client_id: GID, callback: onGisCredential });
+      google.accounts.id.renderButton(document.getElementById('gisbtn'),
+        { theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill' });
+      gisReady = true;
+      if (goTimer) { clearTimeout(goTimer); goTimer = null; }
+      document.getElementById('giswrap').style.display = '';
+      btn.style.display = 'none';
+      msg(MSG_GIS);
+      trail('gis:ready');
+      return true;
+    } catch (e) { trail('gis:err'); return true; }
+  }
+  if (GID && TICKET && !returned) {
+    var gisTries = 0;
+    var gisTimer = setInterval(function () {
+      gisTries++;
+      if (initGis() || gisTries > 40) clearInterval(gisTimer);
+    }, 300);
+  }
+
   var heldUser = null;
   function releaseHold() {
     if (heldUser && !bridged) {
@@ -213,7 +310,7 @@ try {
       // null one) is also what releases the auto-start, so the
       // snapshot exists before the page leaves for Google.
       if (user) { snapStale(user); trail('snap:' + label(user)); }
-      if (TICKET && !bridged) goGoogle();
+      if (TICKET && !bridged) scheduleGo();
       return;
     }
     if (!user) return;
