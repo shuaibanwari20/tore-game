@@ -475,29 +475,45 @@ const GATE_HTML = `<!DOCTYPE html>
   var esBtn = document.getElementById('btn-email-send');
   if (esBtn) esBtn.onclick = function () {
     var inp = document.getElementById('email-input');
-    var v = ((inp && inp.value) || '').trim().toLowerCase();
+    // U68: strip spaces + invisible bidi/zero-width marks — an RTL
+    // keyboard (or autofill) can leave them inside the address,
+    // which made a perfectly good email fail validation on his
+    // phone («ایمیل سم ولیکه» with a visibly correct address).
+    var v = ((inp && inp.value) || '').replace(/[\s\u200B-\u200F\u202A-\u202E\uFEFF]/g, '').toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) { emailMsg(GL().errEmail); return; }
     esBtn.disabled = true;
+    // U68: staged errors — the message names the failing step so
+    // a screenshot of the gate carries the real cause.
+    var stage = 'ticket';
+    var tid = '';
     fetch('/auth/ticket', { method: 'POST', credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
         if (!j || !j.ticket) throw new Error('no ticket');
+        tid = j.ticket;
         markPending();
         storeTicket(j.ticket);
         startTicketPoll();
         armWatchdog();
-        return loadAuth().then(function () {
-          return authMod.sendSignInLinkToEmail(authObj, v, {
-            url: location.origin + '/auth/email-finish?ticket=' + encodeURIComponent(j.ticket) + '&e=' + encodeURIComponent(v),
-            handleCodeInApp: false
-          });
+        stage = 'sdk';
+        return loadAuth();
+      })
+      .then(function () {
+        stage = 'send';
+        return authMod.sendSignInLinkToEmail(authObj, v, {
+          url: location.origin + '/auth/email-finish?ticket=' + encodeURIComponent(tid) + '&e=' + encodeURIComponent(v),
+          handleCodeInApp: false
         });
       })
       .then(function () {
         esBtn.disabled = false;
         emailMsg(GL().linkSent);
       })
-      .catch(function () { esBtn.disabled = false; emailMsg(GL().errConn); });
+      .catch(function (e) {
+        esBtn.disabled = false;
+        var code = (e && e.code) || stage;
+        emailMsg(GL().errConn + ' [' + code + ']');
+      });
   };
   var ge = document.getElementById('gate-email');
   if (ge) ge.style.display = '';
