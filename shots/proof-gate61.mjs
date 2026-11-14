@@ -1,12 +1,13 @@
 /** Gate proof — drives the REAL gate page (served by the local
  *  gate61 server) in Chromium:
- *    S  standalone (installed app) after up69: no email form,
- *       Google hidden, the browser-guidance note shows.
+ *    S  standalone (installed app): email form, Google hidden;
+ *       send → code row → verify → signed in (up70).
  *    T  browser tab regression: the Google popup flow still runs
  *       and signs the tab in.
  *    F  the /auth/fb bridge page still completes a direct-visit
  *       persisted user into a ticket (dormant but kept).
- *    E  browser tab after up69: Google only, no email form.
+ *    E  browser tab: Google AND the email form; the code flow
+ *       signs this tab in (up70).
  *  Firebase's modular SDK is stubbed by route interception; the
  *  compat SDK on the fb page is stubbed the same way. */
 import { createRequire } from 'node:module';
@@ -95,21 +96,31 @@ try {
     return { ctx, page, errs };
   }
 
-  // ---- S: standalone after the email removal (up69) ------------
+  // ---- S: standalone email-code sign-in (up70) -----------------
   await reset();
   {
     const { ctx, page, errs } = await newGatePage(true);
     const vis = await page.evaluate(() => {
+      const ge = document.getElementById('gate-email');
       const gb = document.getElementById('btn-google');
-      const note = document.getElementById('gate-sa-note');
-      return {
-        emailGone: !document.getElementById('gate-email'),
-        google: !!gb && gb.style.display !== 'none',
-        note: !!note && note.style.display !== 'none'
-      };
+      return { email: !!ge, google: !!gb && gb.style.display !== 'none' };
     });
-    check('S1 standalone: no email form, Google hidden, browser note shown', vis.emailGone && !vis.google && vis.note, JSON.stringify(vis));
-    check('S2 no page errors', errs.length === 0, errs.join(' | '));
+    check('S1 standalone shows the email form and hides Google', vis.email && !vis.google, JSON.stringify(vis));
+    await page.fill('#email-input', 'unit@example.com');
+    await page.click('#btn-email-send');
+    const started = await waitFor(async () => (await stats()).startHits >= 1, 8000);
+    check('S2 email-start reached the server', started, JSON.stringify(await stats()));
+    await page.waitForSelector('#gate-email-code-row:not([style*="none"])', { timeout: 5000 }).catch(() => {});
+    const rowShown = await page.evaluate(() => {
+      const r = document.getElementById('gate-email-code-row');
+      return !!r && r.style.display !== 'none';
+    });
+    check('S3 the code row appears after send', rowShown);
+    await page.fill('#email-code', '654321');
+    await page.click('#btn-email-verify');
+    const reloaded = await waitFor(async () => (await stats()).rootHits >= 2, 10000);
+    check('S4 verify signed in (gate reloaded)', reloaded, JSON.stringify(await stats()));
+    check('S5 no page errors', errs.length === 0, errs.join(' | '));
     await ctx.close();
   }
 
@@ -139,16 +150,26 @@ try {
     await ctx.close();
   }
 
-  // ---- E: the tab gate after the email removal (up69) ----------
+  // ---- E: the email-code flow from a browser tab (up70) --------
   await reset();
   {
     const { ctx, page, errs } = await newGatePage(false);
     const vis = await page.evaluate(() => {
+      const ge = document.getElementById('gate-email');
       const gb = document.getElementById('btn-google');
-      return { emailGone: !document.getElementById('gate-email'), google: !!gb && gb.style.display !== 'none' };
+      return { email: !!ge, google: !!gb && gb.style.display !== 'none' };
     });
-    check('E1 tab gate is Google-only (no email form)', vis.emailGone && vis.google, JSON.stringify(vis));
-    check('E2 no page errors', errs.length === 0, errs.join(' | '));
+    check('E1 tab shows Google AND the email form', vis.email && vis.google, JSON.stringify(vis));
+    await page.fill('#email-input', 'unit@example.com');
+    await page.click('#btn-email-send');
+    const started = await waitFor(async () => (await stats()).startHits >= 1, 8000);
+    check('E2 email-start reached the server', started, JSON.stringify(await stats()));
+    await page.waitForSelector('#gate-email-code-row:not([style*="none"])', { timeout: 5000 }).catch(() => {});
+    await page.fill('#email-code', '654321');
+    await page.click('#btn-email-verify');
+    const reloaded = await waitFor(async () => (await stats()).rootHits >= 2, 10000);
+    check('E3 verify signed the tab in (gate reloaded)', reloaded, JSON.stringify(await stats()));
+    check('E4 no page errors', errs.length === 0, errs.join(' | '));
     await ctx.close();
   }
 } catch (e) {

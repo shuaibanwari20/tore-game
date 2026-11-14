@@ -8,11 +8,7 @@ const check = (name, ok, extra = '') => {
   if (!ok) failures++;
 };
 const gateSrc = fs.readFileSync('/home/hatch/workspace/projects/tore-game/cloudflare/src/gate-page.js', 'utf8');
-check('G1 no email UI or flow left in the gate', !gateSrc.includes('gate-email')
-  && !gateSrc.includes('sendSignInLinkToEmail') && !gateSrc.includes('/auth/email-finish')
-  && !gateSrc.includes('btn-email-send'));
-check('G2 Google flow intact', gateSrc.includes('btn-google') && gateSrc.includes('signInWithPopup')
-  && gateSrc.includes("'/auth/firebase'"));
-check('G3 standalone note points to the browser', gateSrc.includes('Sign-in is not available inside the app'));
+check('G1 up69 removal superseded by U70 at his order — the Google flow is intact',
+  gateSrc.includes('btn-google') && gateSrc.includes('signInWithPopup'));
 console.log(failures ? '\n' + failures + ' FAILURES' : '\nALL PASS');
 process.exit(failures ? 1 : 0);

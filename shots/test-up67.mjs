@@ -19,8 +19,8 @@ const finishSrc = fs.readFileSync(SRC + 'email-finish-page.js', 'utf8');
 
 check('W1 worker routes /auth/email-finish to the finish page', workerSrc.includes("path === '/auth/email-finish'")
   && workerSrc.includes('emailFinishPage'));
-check('G1-G3 gate email flow retired by U69 (finish page + worker route stay dormant)',
-  !gateSrc.includes('sendSignInLinkToEmail') && !gateSrc.includes('gate-email'));
+check('G1-G3 link flow stays retired; the gate carries the OTP flow again (U70)',
+  !gateSrc.includes('sendSignInLinkToEmail') && gateSrc.includes("'/auth/email-verify'"));
 
 const T = '0123456789abcdef0123456789abcdef';
 const page = emailFinishPage(T, 'unit@example.com');

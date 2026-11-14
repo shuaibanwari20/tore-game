@@ -182,8 +182,8 @@ const workerSrc = fs.readFileSync('/home/hatch/workspace/projects/tore-game/clou
 const gateSrc = fs.readFileSync('/home/hatch/workspace/projects/tore-game/cloudflare/src/gate-page.js', 'utf8');
 check('S1 worker still routes the (dormant) OTP endpoints', workerSrc.includes("path === '/auth/email-start'")
   && workerSrc.includes("path === '/auth/email-verify'"));
-check('S2 gate email UI fully removed (U69, his order)', !gateSrc.includes('gate-email')
-  && !gateSrc.includes("'/auth/email-verify'") && !gateSrc.includes('gate-codebox') && !gateSrc.includes('btn-codehave'));
+check('S2 gate carries the email form again (U70 restored it)', gateSrc.includes('gate-email')
+  && gateSrc.includes("'/auth/email-verify'") && !gateSrc.includes('gate-codebox') && !gateSrc.includes('btn-codehave'));
 
 console.log(failures ? '\n' + failures + ' FAILURES' : '\nALL PASS');
 process.exit(failures ? 1 : 0);
