@@ -583,12 +583,9 @@ class SocialCore {
     this.wallets = new Map();
     this.escrows = new Map();
     // feat3: referrals id -> {by, paid, ts} (persisted with the
-    // social state). Club voice-message BLOBS and the per-club
-    // message-id counters are RUNTIME ONLY: the blobs die with
-    // the process (their chat entries stay and render as gone).
+    // social state). The per-club message-id counters are
+    // RUNTIME ONLY.
     this.referrals = new Map();
-    this.clubVMsg = new Map();
-    this.clubVMsgSeq = 0;
     this.clubMsgSeq = new Map();
   }
 
@@ -1356,8 +1353,6 @@ class SocialCore {
       case 's-club-edit': return this.clubEdit(id, msg);
       case 's-club-dissolve': return this.clubDissolve(id);
       case 's-club-chat': return this.clubChatSend(id, msg.text);
-      case 's-club-vmsg': return this.clubVMsgSend(id, msg.data, msg.mime, msg.dur);
-      case 's-club-vmsg-get': return this.clubVMsgGet(id, msg.vid);
       case 's-club-react': return this.clubReact(id, msg.mid, msg.emoji);
       case 's-club-discover': return this.clubDiscover(id, msg.tab, msg.country);
       case 's-club-view': return this.clubViewPublic(id, msg.club);
@@ -1816,9 +1811,9 @@ class SocialCore {
       seatReqs: club.owner === forId ? this.clubSeatReqsView(club.cid) : [],
     };
     if (withChat) {
-      view.chat = (this.clubChat.get(club.cid) || []).map((m) => {
+      view.chat = (this.clubChat.get(club.cid) || []).filter((m) => !m.voice).map((m) => {
         const p = this.person(m.from);
-        return { from: m.from, name: p.name, avatar: p.avatar, photo: p.photo, text: m.text, voice: m.voice || '', dur: m.dur || 0, ts: m.ts, mid: m.mid || 0, reactions: m.reactions || {}, frame: p.frame || '', chatStyle: p.chatStyle || '' };
+        return { from: m.from, name: p.name, avatar: p.avatar, photo: p.photo, text: m.text, ts: m.ts, mid: m.mid || 0, reactions: m.reactions || {}, frame: p.frame || '', chatStyle: p.chatStyle || '' };
       });
     }
     return view;
@@ -2301,37 +2296,6 @@ class SocialCore {
     const log = (this.clubChatLog.get(logKey) || []).filter((t) => now - t < DM_RATE_WINDOW);
     if (log.length >= DM_RATE_MAX) { this.clubChatLog.set(logKey, log); return false; }
     log.push(now); this.clubChatLog.set(logKey, log);
-    return true;
-  }
-  // A voice note: the BYTES live in a runtime-only map (never in
-  // the persisted snapshot); the chat entry keeps vid + duration.
-  clubVMsgSend(id, data, mime, dur) {
-    const club = this._clubOf(id);
-    if (!club) return this._error(id, 'clubNoPerm');
-    if (typeof data !== 'string' || !data || data.length > 180000) return this._error(id, 'vmsgTooBig');
-    mime = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg'].includes(mime) ? mime : 'audio/webm';
-    dur = Math.max(1, Math.min(35, Math.round(Number(dur) || 0)));
-    if (!this._clubChatRate(id, club.cid)) return this._error(id, 'socialRate');
-    const vid = 'v' + (++this.clubVMsgSeq).toString(36) + Date.now().toString(36);
-    this.clubVMsg.set(vid, { cid: club.cid, data, mime });
-    if (this.clubVMsg.size > 60) this.clubVMsg.delete(this.clubVMsg.keys().next().value);
-    const now = Date.now();
-    const entry = { from: id, voice: vid, dur, ts: now, mid: this._nextClubMid(club.cid), reactions: {} };
-    const thread = this.clubChat.get(club.cid) || [];
-    thread.push(entry);
-    while (thread.length > CLUB_CHAT_KEEP) thread.shift();
-    this.clubChat.set(club.cid, thread);
-    this._persistClubs();
-    const p = this.person(id);
-    const out = { type: 's-club-chat', club: club.cid, from: id, name: p.name, avatar: p.avatar, photo: p.photo, voice: vid, dur, ts: now, mid: entry.mid, reactions: {}, frame: p.frame || '', chatStyle: p.chatStyle || '' };
-    for (const m of club.members) if (this.isOnline(m.id)) this._send(m.id, out);
-    return true;
-  }
-  clubVMsgGet(id, vid) {
-    const club = this._clubOf(id);
-    const rec = (typeof vid === 'string') ? this.clubVMsg.get(vid) : null;
-    if (!club || !rec || rec.cid !== club.cid) return this._error(id, 'vmsgGone');
-    this._send(id, { type: 's-club-vmsg-data', vid, data: rec.data, mime: rec.mime });
     return true;
   }
   // Toggle one reaction on one club message; the full reactions
