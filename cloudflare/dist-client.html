@@ -7136,6 +7136,7 @@ const HB_CONNECT_MS = 2e4;
 let lastRxAt = 0;
 let lastPingAt = 0;
 let wsBornAt = 0;
+let wsOpenWaiters = [];
 let reconnectTimer = null;
 let reconnectDelay = 1e3;
 function connWanted() {
@@ -7159,6 +7160,7 @@ function scheduleReconnect(now) {
 }
 function onSocketGone() {
   endJoinFlight();
+  wsOpenWaiters = [];
   if (botFallbackArm) {
     disarmBotFallback();
     startLocalBotGame(true);
@@ -7166,7 +7168,7 @@ function onSocketGone() {
   }
   if (intentionalClose) return;
   if (typeof peers !== "undefined") Object.keys(peers).forEach((s) => closePeer(+s, "teardown"));
-  $("#connbar").textContent = T("disconnected");
+  if (session && session.code && !session.local) $("#connbar").textContent = T("disconnected");
   scheduleReconnect();
 }
 function forceDropSocket() {
@@ -7250,6 +7252,14 @@ document.addEventListener("visibilitychange", () => {
 window.addEventListener("online", kickConnection);
 window.addEventListener("focus", kickConnection);
 function connect(onOpen) {
+  if (ws && ws.readyState === 1) {
+    if (onOpen) onOpen();
+    return;
+  }
+  if (ws && ws.readyState === 0) {
+    if (onOpen) wsOpenWaiters.push(onOpen);
+    return;
+  }
   const proto = location.protocol === "https:" ? "wss://" : "ws://";
   const s = new WebSocket(proto + location.host + "/ws");
   ws = s;
@@ -7258,7 +7268,15 @@ function connect(onOpen) {
   intentionalClose = false;
   s.onopen = () => {
     lastRxAt = Date.now();
+    const w = wsOpenWaiters;
+    wsOpenWaiters = [];
     if (onOpen) onOpen();
+    w.forEach((f) => {
+      try {
+        f();
+      } catch (e) {
+      }
+    });
   };
   s.onmessage = (ev) => {
     lastRxAt = Date.now();
@@ -7271,6 +7289,11 @@ function connect(onOpen) {
     if (ws === s) ws = null;
     onSocketGone();
   };
+}
+function warmGameSocket() {
+  if (ws || localGameLive || spectating) return;
+  if (typeof netOffline === "function" && netOffline()) return;
+  connect();
 }
 function send(obj) {
   if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj));
@@ -10300,6 +10323,7 @@ function pkGo(i, smooth) {
 }
 function openPicker(mode, clubCid) {
   ensureDeck();
+  warmGameSocket();
   pkMode = mode || "online";
   pkClubCid = clubCid || null;
   pkFromClub = !!clubCid;
