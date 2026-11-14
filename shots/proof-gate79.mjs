@@ -76,8 +76,8 @@ try {
   await page.click('#gis-stub-btn');
   await page.evaluate((jwt) => { window.__gisCfg.callback({ credential: jwt }); }, FAKE_JWT);
   await page.waitForTimeout(250);
-  const dbg = await page.evaluate(() => document.getElementById('dbg') ? document.getElementById('dbg').textContent : '');
-  check('H4 the trail names the picked account', dbg.includes('gis:shuaibanwari708@gmail.com'), dbg.slice(0, 120));
+  const dbgEl = await page.evaluate(() => document.getElementById('dbg'));
+  check('H4 the page carries no debug line (U80)', dbgEl === null);
   await page.waitForTimeout(1200);
   check('H5 exactly one completion, with the Google credential', bodies.length === 1 && bodies[0].idToken === FAKE_JWT && bodies[0].ticket === TICKET,
     'calls=' + bodies.length);
