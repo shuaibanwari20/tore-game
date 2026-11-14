@@ -12314,7 +12314,15 @@ function socialHello() {
   socialSend({ type: "s-hello", pid: myPid(), profile: profilePayload() });
 }
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && sws && sws.readyState === 1) socialHello();
+  if (document.hidden) return;
+  connectSocial();
+  if (sws && sws.readyState === 1) socialHello();
+});
+window.addEventListener("focus", () => {
+  connectSocial();
+});
+window.addEventListener("online", () => {
+  connectSocial();
 });
 function connectSocial() {
   if (sws && (sws.readyState === 0 || sws.readyState === 1)) return;
