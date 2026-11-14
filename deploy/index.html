@@ -2458,6 +2458,12 @@
   .cl-reacts { display: flex; gap: 5px; margin-top: 4px; flex-wrap: wrap; }
   .cl-rchip { padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,.22); background: rgba(0,0,0,.25); color: #fff; font-size: 12px; cursor: pointer; font-family: inherit; }
   .cl-rchip.on { border-color: #ffd75e; background: rgba(255,215,94,.22); }
+  /* up90: reaction chips hug the bubble — they overlap its bottom edge
+     (WhatsApp-style) instead of floating below it with a visible gap
+     (owner 2026-11-14: «باید به پیام چسپیده باشه، فاصله زیاد دارد») */
+  #cl-room .cl-reacts { margin-top: -9px; margin-inline-start: 10px; position: relative; z-index: 2; }
+  #cl-room .cl-rchip { background: #341a63; border-color: rgba(255,255,255,.35); box-shadow: 0 2px 7px rgba(0,0,0,.45); padding: 1px 8px; margin: 0; }
+  #cl-room .cl-rchip.on { background: #5a4410; border-color: #ffd75e; }
   #ov-react { position: fixed; z-index: 120; display: none; gap: 2px; padding: 6px 8px; border-radius: 24px; background: rgba(20,4,32,.97); border: 1.5px solid rgba(255,215,94,.5); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
   #ov-react.show { display: flex; }
   .react-em { font-size: 21px; background: none; border: 0; cursor: pointer; padding: 2px 3px; }
