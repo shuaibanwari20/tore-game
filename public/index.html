@@ -2455,17 +2455,12 @@
   .gift-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 13px 0 4px; }
   .gift-chip { padding: 9px 14px; border-radius: 20px; border: 1.5px solid rgba(255,215,94,.4); background: rgba(255,255,255,.06); color: #fff; font-family: inherit; font-weight: 800; cursor: pointer; }
   .gift-chip.sel { background: linear-gradient(180deg, #ffd75e, #d9a83c); color: #33270a; border-color: #ffd75e; }
-  .cl-vmsg { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 16px; border: 0; background: rgba(255,255,255,.13); color: #fff; font-family: inherit; cursor: pointer; }
-  .cl-vmsg .vm-ic { color: #ffd75e; }
-  .cl-vmsg .vm-dur { font-size: 12px; opacity: .85; }
-  .cl-vmsg .vm-lbl { font-size: 12.5px; font-weight: 700; }
   .cl-reacts { display: flex; gap: 5px; margin-top: 4px; flex-wrap: wrap; }
   .cl-rchip { padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,.22); background: rgba(0,0,0,.25); color: #fff; font-size: 12px; cursor: pointer; font-family: inherit; }
   .cl-rchip.on { border-color: #ffd75e; background: rgba(255,215,94,.22); }
   #ov-react { position: fixed; z-index: 120; display: none; gap: 2px; padding: 6px 8px; border-radius: 24px; background: rgba(20,4,32,.97); border: 1.5px solid rgba(255,215,94,.5); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
   #ov-react.show { display: flex; }
   .react-em { font-size: 21px; background: none; border: 0; cursor: pointer; padding: 2px 3px; }
-  #btn-cl-vmsg.rec { background: #b3232f; color: #fff; }
   .vm-rec-dot { color: #fff; font-size: 13px; animation: vmblink 1s infinite; }
   @keyframes vmblink { 50% { opacity: .25; } }
   #home-event { margin: 8px 12px 0; padding: 9px 12px; border-radius: 14px; text-align: center; font-size: 13.5px; font-weight: 800; color: #fff; background: linear-gradient(90deg, #7d2231, #b83a5e, #7d2231); border: 1.5px solid rgba(255,215,94,.55); }
@@ -4232,7 +4227,6 @@
       <button type="button" class="cl-roundbtn on" id="btn-cl-speaker" aria-label="speaker"><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path class="wv" d="M15 9.5a3.6 3.6 0 0 1 0 5M17.5 7a7 7 0 0 1 0 10"/></svg></button>
       <button type="button" class="cl-roundbtn" id="btn-cl-mic" aria-label="mic"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.2M9 20.5h6"/></svg></button>
       <input id="cl-inp" type="text" maxlength="500">
-      <button type="button" class="cl-roundbtn" id="btn-cl-vmsg" aria-label="voice message"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.2M9 20.5h6"/></svg></button>
       <button type="button" id="btn-cl-send" aria-label="send">➤</button>
     </div>
     <div id="cl-audios" class="hidden"></div>
@@ -5059,11 +5053,7 @@ const STR = {
     errGiftNotFriend: 'ډالۍ یوازې ملګرو ته لېږل کېږي',
     errGiftCap: 'د نن ورځې د ډالۍ حد پوره شو (۱۰۰۰)',
     errGiftPoor: 'سکه دې کافي نه دي',
-    errVmsgTooBig: 'غږیز پیغام ډېر اوږد دی',
-    errVmsgGone: 'دا غږیز پیغام نور نشته',
     errEventNone: 'اوس کوم موسمي جشن نشته',
-    vmsgLabel: 'غږیز پیغام',
-    vmsgUnsupported: 'دا براوزر غږ نه ثبتوي',
     frameSection: 'د آواتار چوکاټ',
     chatSection: 'د چټ سټایل',
     frameNone: 'پرته له چوکاټه',
@@ -5545,11 +5535,7 @@ const STR = {
     errGiftNotFriend: 'هدیه فقط به دوستان فرستاده می‌شود',
     errGiftCap: 'حد هدیه امروز پر شد (۱۰۰۰)',
     errGiftPoor: 'سکه‌ات کافی نیست',
-    errVmsgTooBig: 'پیام صوتی خیلی طولانی است',
-    errVmsgGone: 'این پیام صوتی دیگر نیست',
     errEventNone: 'حالا جشن فصلی نیست',
-    vmsgLabel: 'پیام صوتی',
-    vmsgUnsupported: 'این مرورگر صدا ضبط نمی‌کند',
     frameSection: 'قاب آواتار',
     chatSection: 'استایل چت',
     frameNone: 'بدون قاب',
@@ -6031,11 +6017,7 @@ const STR = {
     errGiftNotFriend: 'Gifts go to friends only',
     errGiftCap: "Today's gift limit is full (1000)",
     errGiftPoor: 'Not enough coins',
-    errVmsgTooBig: 'Voice message too long',
-    errVmsgGone: 'This voice message is gone',
     errEventNone: 'No seasonal event right now',
-    vmsgLabel: 'Voice message',
-    vmsgUnsupported: 'This browser cannot record audio',
     frameSection: 'Avatar frames',
     chatSection: 'Chat styles',
     frameNone: 'No frame',
@@ -13058,7 +13040,7 @@ function onSocialMsg(m) {
   } else if (m.type === 's-club-chat') {
     const rc = roomClub();
     if (rc && m.club === rc.cid) {
-      clubMsgs.push({ from: m.from, name: m.name, avatar: m.avatar, photo: m.photo, text: m.text, voice: m.voice || '', dur: m.dur || 0, ts: m.ts, mid: m.mid || 0, reactions: m.reactions || {}, frame: m.frame || '', chatStyle: m.chatStyle || '' });
+      clubMsgs.push({ from: m.from, name: m.name, avatar: m.avatar, photo: m.photo, text: m.text, ts: m.ts, mid: m.mid || 0, reactions: m.reactions || {}, frame: m.frame || '', chatStyle: m.chatStyle || '' });
       while (clubMsgs.length > 50) clubMsgs.shift();
       if (!$('#scr-clubs').classList.contains('hidden')) { clubUnread = 0; renderClubChat(); }
       else { clubUnread++; updateClubsBadge(); }
@@ -13073,8 +13055,6 @@ function onSocialMsg(m) {
   } else if (m.type === 's-gift-sent') {
     closeGift();
     toast(T('giftSentToast', m.amount));
-  } else if (m.type === 's-club-vmsg-data') {
-    playClubVoiceData(m);
   } else if (m.type === 's-club-react') {
     const e = clubMsgs.find((x) => x.mid === m.mid);
     if (e) { e.reactions = m.reactions || {}; if (!$('#scr-clubs').classList.contains('hidden')) renderClubChat(); }
@@ -14833,21 +14813,10 @@ function renderClubChat() {
     nm.className = 'cl-feed-name';
     nm.textContent = name || '';
     main.appendChild(nm);
-    if (m.voice) {
-      // feat3 (#12): a voice note — the bytes fetch on first tap
-      const vb = document.createElement('button');
-      vb.type = 'button';
-      vb.className = 'cl-vmsg' + (m.chatStyle ? ' cs-' + m.chatStyle : '');
-      vb.innerHTML = '<span class="vm-ic">▶</span><span class="vm-dur">' + (m.dur || 0) + '″</span><span class="vm-lbl"></span>';
-      vb.querySelector('.vm-lbl').textContent = T('vmsgLabel');
-      vb.onclick = () => playClubVoice(m.voice, vb);
-      main.appendChild(vb);
-    } else {
-      const bub = document.createElement('span');
-      bub.className = 'cl-feed-bub' + (m.chatStyle ? ' cs-' + m.chatStyle : '');
-      bub.textContent = m.text;
-      main.appendChild(bub);
-    }
+    const bub = document.createElement('span');
+    bub.className = 'cl-feed-bub' + (m.chatStyle ? ' cs-' + m.chatStyle : '');
+    bub.textContent = m.text;
+    main.appendChild(bub);
     // feat3 (#13): reaction chips + long-press picker
     const rrow = document.createElement('div');
     rrow.className = 'cl-reacts';
@@ -15967,71 +15936,6 @@ const CLUB_REACT_EMOJIS = ['❤️', '😂', '😮', '👍', '🔥', '👏'];
 // Recording: tap 🎙 to start, tap again to send (30 s cap). The
 // note ships as base64 over the social socket; the server keeps
 // the bytes runtime-only and members fetch them on first play.
-let vmsgRec = null;
-const vmsgCache = new Map();   // vid -> object URL
-const vmsgWaiters = new Map(); // vid -> button awaiting its bytes
-async function toggleVmsg() {
-  if (vmsgRec) { stopVmsg(true); return; }
-  if (!navigator.mediaDevices || !window.MediaRecorder) { toast(T('vmsgUnsupported')); return; }
-  let stream;
-  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-  catch (e) { toast(T('vmsgUnsupported')); return; }
-  const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'].find((t) => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } }) || '';
-  const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-  const chunks = [];
-  mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-  mr.onstop = () => {
-    stream.getTracks().forEach((t) => t.stop());
-    const rec = vmsgRec; vmsgRec = null;
-    paintVmsgBtn();
-    if (!rec || !rec.send) return;
-    const blob = new Blob(chunks, { type: (mime || 'audio/webm').split(';')[0] });
-    const dur = Math.max(1, Math.round((Date.now() - rec.t0) / 1000));
-    if (blob.size < 800) return; // an accidental tap sends nothing
-    const rd = new FileReader();
-    rd.onload = () => {
-      const b64 = String(rd.result || '').split(',')[1] || '';
-      if (!b64) return;
-      connectSocial();
-      socialSend({ type: 's-club-vmsg', data: b64, mime: blob.type, dur });
-    };
-    rd.readAsDataURL(blob);
-  };
-  vmsgRec = { mr, t0: Date.now(), send: false };
-  mr.start(250);
-  paintVmsgBtn();
-  setTimeout(() => { if (vmsgRec) stopVmsg(true); }, 30000);
-}
-function stopVmsg(send) {
-  if (!vmsgRec) return;
-  vmsgRec.send = !!send;
-  try { vmsgRec.mr.stop(); } catch (e) { vmsgRec = null; paintVmsgBtn(); }
-}
-function paintVmsgBtn() {
-  const b = $('#btn-cl-vmsg');
-  if (!b) return;
-  b.classList.toggle('rec', !!vmsgRec);
-  b.innerHTML = vmsgRec ? '<span class="vm-rec-dot">●</span>' : '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.2M9 20.5h6"/></svg>';
-}
-$('#btn-cl-vmsg').onclick = toggleVmsg;
-function playClubVoice(vid, btn) {
-  const url = vmsgCache.get(vid);
-  if (url) { new Audio(url).play().catch(() => {}); return; }
-  if (btn) vmsgWaiters.set(vid, btn);
-  connectSocial();
-  socialSend({ type: 's-club-vmsg-get', vid });
-}
-function playClubVoiceData(m) {
-  try {
-    const bin = atob(m.data || '');
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const url = URL.createObjectURL(new Blob([bytes], { type: m.mime || 'audio/webm' }));
-    vmsgCache.set(m.vid, url);
-    new Audio(url).play().catch(() => {});
-  } catch (e) { /* a dead note stays silent */ }
-  vmsgWaiters.delete(m.vid);
-}
 // Reaction picker: a small popover over the long-pressed message.
 let reactMid = 0;
 function openReactPicker(mid, anchor) {
