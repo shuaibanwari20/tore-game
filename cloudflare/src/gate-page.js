@@ -40,8 +40,9 @@
  * client-side only while /auth/config reports fbLive — while Facebook
  * login is parked it simply never appears.
  */
-export function gatePage() {
-  return GATE_HTML;
+export function gatePage(opts) {
+  const gid = (opts && typeof opts.gid === 'string') ? opts.gid : '';
+  return GATE_HTML.split('__GID__').join(JSON.stringify(gid));
 }
 
 const GATE_HTML = `<!DOCTYPE html>
@@ -143,6 +144,7 @@ const GATE_HTML = `<!DOCTYPE html>
     box-shadow: 0 3px 10px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .7);
   }
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <div class="gate-city" aria-hidden="true"><svg viewBox="0 0 480 150" preserveAspectRatio="xMidYMax slice"><path fill="#8e4bd0" opacity=".38" d="M-6 150V62h54v88zM58 150V44h40v106zM112 150V70h58v80zM188 150V38h44v112zM248 150V60h62v90zM326 150V48h42v102zM384 150V66h56v84zM452 150V54h36v96z"/><path fill="#451c72" opacity=".92" d="M-10 150V88h48v62zM50 150V74h36v76zM100 150V96h52v54zM166 150V66h40v84zM222 150V90h58v60zM300 150V76h44v74zM360 150V94h52v56zM428 150V82h58v68z"/><path fill="#27094a" d="M-14 150v-42h56v42zM56 150v-50h44v50zM112 150v-36h60v36zM186 150v-46h38v46zM236 150v-40h54v40zM304 150v-48h16v48zM336 150v-38h48v38zM398 150v-44h66v44z"/><path fill="#27094a" d="M304 102a8 7 0 0 1 16 0z"/><path fill="#ffd98a" opacity=".85" d="M66 112h3v5h-3zM78 122h3v5h-3zM126 122h3v5h-3zM146 130h3v5h-3zM196 114h3v5h-3zM206 126h3v5h-3zM248 120h3v5h-3zM266 132h3v5h-3zM310 112h3v5h-3zM348 122h3v5h-3zM368 132h3v5h-3zM410 116h3v5h-3zM432 128h3v5h-3zM20 118h3v5h-3zM-2 130h3v5h-3z"/><path fill="#ffedbe" opacity=".9" d="M84 108h3v5h-3zM158 118h3v5h-3zM256 108h3v5h-3zM356 110h3v5h-3zM446 118h3v5h-3zM32 132h3v5h-3z"/><rect y="143" width="480" height="7" fill="#0d0122"/><path stroke="#0d0122" stroke-width="3" fill="none" stroke-linecap="round" d="M40 150c1-10 2-16 4-22M44 128c-6-4-11-3-15 1M44 128c-4-6-9-7-13-5M44 128c-1-7 2-11 6-12M44 128c4-5 9-6 13-3M44 128c6-2 11 0 14 4M448 150c-1-9-2-14-4-19M444 131c-6-4-11-3-14 1M444 131c-4-6-9-7-13-5M444 131c-1-6 2-10 6-11M444 131c4-5 9-5 12-3M444 131c6-2 10 0 13 4"/></svg></div>
@@ -150,6 +152,9 @@ const GATE_HTML = `<!DOCTYPE html>
     <h1>توره</h1>
     <div class="gsub" id="gate-sub">د لوبې لپاره ننوځه</div>
     <div class="gbtns" id="gate-btns">
+      <div id="giswrap" style="display:none;text-align:center;margin-bottom:12px">
+        <div id="gisbtn" style="display:flex;justify-content:center;min-height:44px"></div>
+      </div>
       <button type="button" class="gbtn google" id="btn-google">
         <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.3 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.3 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>
         <span id="btn-google-label">په ګوګل ننوځه</span>
@@ -263,6 +268,22 @@ const GATE_HTML = `<!DOCTYPE html>
       authMod = mods[1];
       authObj = authMod.getAuth(app);
       return authObj;
+    });
+  }
+  // U81: the GIS credential IS the token — same landing as
+  // finishWithUser, without the getIdToken step.
+  function finishWithToken(idToken) {
+    if (!idToken) return;
+    fetch('/auth/firebase', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken: idToken })
+    }).then(function (r) {
+      if (r && r.ok) { clearPending(); location.reload(); return; }
+      gateFail(GL().errFail);
+    }).catch(function () {
+      gateFail(GL().errConn);
     });
   }
   function finishWithUser(user) {
@@ -472,6 +493,36 @@ const GATE_HTML = `<!DOCTYPE html>
     if (!document.hidden) resumePolls();
   });
   window.addEventListener('pageshow', resumePolls);
+  // U81: Google Identity Services on the gate (browser tabs).
+  // Firebase's popup/redirect answers never reach this page in
+  // the owner's browser; the GIS button's in-page callback
+  // does. Standalone apps keep the ticket flow (their bridge
+  // page carries the same button since U79).
+  var GID = __GID__;
+  function onGateGis(resp) {
+    var cred = resp && resp.credential;
+    if (!cred) return;
+    busy();
+    finishWithToken(cred);
+  }
+  function initGateGis() {
+    if (!(window.google && google.accounts && google.accounts.id)) return false;
+    try {
+      google.accounts.id.initialize({ client_id: GID, callback: onGateGis });
+      google.accounts.id.renderButton(document.getElementById('gisbtn'),
+        { theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill' });
+      document.getElementById('giswrap').style.display = '';
+      gBtn.style.display = 'none';
+      return true;
+    } catch (e) { return true; }
+  }
+  if (GID && !isStandalone) {
+    var gisTries = 0;
+    var gisTimer = setInterval(function () {
+      gisTries++;
+      if (initGateGis() || gisTries > 40) clearInterval(gisTimer);
+    }, 300);
+  }
   // Returning from the redirect flow: pick up the result once.
   loadAuth().then(function (auth) {
     return authMod.getRedirectResult(auth);
