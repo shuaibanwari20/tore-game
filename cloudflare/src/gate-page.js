@@ -29,6 +29,13 @@
  * one-time login ticket, opens the server-side Google flow in
  * Safari, and polls /auth/ticket-status; the session cookie is
  * minted on the poll's own response, inside the app's context.
+ * U73 (2026-11-14, owner order): on ANDROID the installed app gets
+ * the one-tap flow — the Google button stays visible in
+ * standalone, and the ticket flow opens the U61 bridge page in
+ * the phone's browser (window.open), where Firebase completes
+ * normally; the gate's poll then mints the session in the app.
+ * iOS standalone keeps the U64 behaviour (button hidden, note
+ * shown): the bridge was proven dead inside the iOS sheet.
  * because the session cookie is set). The Facebook button is added
  * client-side only while /auth/config reports fbLive — while Facebook
  * login is parked it simply never appears.
@@ -288,7 +295,11 @@ const GATE_HTML = `<!DOCTYPE html>
     isStandalone = (window.navigator && window.navigator.standalone === true) ||
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
   } catch (e) { /* detection failed — browser-tab flow stands */ }
-  if (isStandalone) {
+  // U73: Android installed apps sign in with the ticket flow
+  // (below) — the dead-end note belongs to iOS standalone only.
+  var isAndroid = false;
+  try { isAndroid = /android/i.test(window.navigator.userAgent || ''); } catch (e) { /* ignore */ }
+  if (isStandalone && !isAndroid) {
     var saEl = document.getElementById('gate-sa-note');
     if (saEl) saEl.style.display = '';
   }
@@ -390,11 +401,19 @@ const GATE_HTML = `<!DOCTYPE html>
         storeTicket(j.ticket);
         startTicketPoll();
         armWatchdog();
-        // U64 (his order «این صفحه را حذف کن»): the bridge sheet
-        // page is NO LONGER opened — it kept stranding him. The
-        // gate just shows the sign-in code; he enters it on the
-        // game page in a normal browser and this gate's poll
-        // brings the session in by itself.
+        // U73 (his order): on Android, open the U61 bridge page in
+        // the phone's browser — Firebase completes there like in
+        // any tab, /auth/fb-complete marks the ticket, and this
+        // gate's poll mints the session in the app by itself.
+        // (U64 stopped opening it after the iOS sheet failures;
+        // iOS standalone never reaches this flow — its button
+        // stays hidden.)
+        if (isAndroid) {
+          var bridgeUrl = '/auth/fb?ticket=' + encodeURIComponent(j.ticket);
+          var bw = null;
+          try { bw = window.open(bridgeUrl, '_blank'); } catch (e) { /* ignore */ }
+          if (!bw) { try { location.href = bridgeUrl; } catch (e) { /* ignore */ } }
+        }
       })
       .catch(function () { gateFail(GL().errFail); });
   }
@@ -442,7 +461,8 @@ const GATE_HTML = `<!DOCTYPE html>
   // U71: email sign-in REMOVED (his order) — the gate is
   // Google-only again, as in U69. The server OTP endpoints
   // stay in the worker, dormant.
-  if (isStandalone) { gBtn.style.display = 'none'; }
+  // U73: Android standalone keeps its button (ticket flow).
+  if (isStandalone && !isAndroid) { gBtn.style.display = 'none'; }
   resumePolls();
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) resumePolls();
