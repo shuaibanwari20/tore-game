@@ -83,11 +83,19 @@ const browser = await chromium.launch({ executablePath: findChrome(), args: ['--
 try {
   const ctx = await browser.newContext({ viewport: { width: 420, height: 900 } });
   const page = await ctx.newPage();
-  await page.route('**/gsi/client', (r) => r.fulfill({ contentType: 'text/javascript', body: GIS_STUB }));
+  await page.route('**/gsi/client', async (r) => {
+    await new Promise((res) => setTimeout(res, 2500)); // slow GIS: the load window U82 closes
+    await r.fulfill({ contentType: 'text/javascript', body: GIS_STUB });
+  });
   await page.route('**/firebase-app.js', (r) => r.fulfill({ contentType: 'text/javascript', headers: CORS, body: APP_STUB }));
   await page.route('**/firebase-auth.js', (r) => r.fulfill({ contentType: 'text/javascript', headers: CORS, body: AUTH_STUB }));
   await page.goto(BASE + '/', { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('#gis-stub-btn', { timeout: 8000 });
+  const early = await page.evaluate(() => ({
+    g: getComputedStyle(document.getElementById('btn-google')).display,
+    w: getComputedStyle(document.getElementById('giswrap')).display,
+  }));
+  check('K0 during the GIS load window the old button is already hidden (U82)', early.g === 'none' && early.w !== 'none', JSON.stringify(early));
+  await page.waitForSelector('#gis-stub-btn', { timeout: 9000 });
   check('K1 the GIS button renders on the gate', true);
   const gateBtnDisplay = await page.evaluate(() => document.getElementById('btn-google').style.display);
   check('K2 the Firebase button is hidden once GIS is ready', gateBtnDisplay === 'none', gateBtnDisplay);

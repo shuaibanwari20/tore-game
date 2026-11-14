@@ -56,7 +56,10 @@ const browser = await chromium.launch({ executablePath: findChrome(), args: ['--
 try {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await ctx.newPage();
-  await page.route('**/gsi/client', (r) => r.fulfill({ contentType: 'text/javascript', body: GIS_STUB }));
+  await page.route('**/gsi/client', async (r) => {
+    await new Promise((res) => setTimeout(res, 1500)); // the load window U82 closes
+    await r.fulfill({ contentType: 'text/javascript', body: GIS_STUB });
+  });
   await page.route('**/firebase-app-compat.js', (r) => r.fulfill({ contentType: 'text/javascript', body: AUTH_STUB }));
   await page.route('**/firebase-auth-compat.js', (r) => r.fulfill({ contentType: 'text/javascript', body: AUTH_STUB }));
   const bodies = [];
@@ -66,6 +69,8 @@ try {
     await r.fulfill({ contentType: 'application/json', body: '{"ok":true}' });
   });
   await page.goto(BASE + '/auth/fb?ticket=' + TICKET, { waitUntil: 'domcontentloaded' });
+  const earlyBtn = await page.evaluate(() => getComputedStyle(document.getElementById('btn')).display);
+  check('H0 the fallback button is hidden from first paint (U82)', earlyBtn === 'none', earlyBtn);
   await page.waitForSelector('#gis-stub-btn', { timeout: 6000 });
   check('H1 the GIS button renders on the bridge', true);
   const wrapVisible = await page.evaluate(() => document.getElementById('giswrap').style.display !== 'none');
