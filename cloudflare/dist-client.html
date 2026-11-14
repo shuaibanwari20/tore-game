@@ -2445,17 +2445,12 @@
   .gift-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 13px 0 4px; }
   .gift-chip { padding: 9px 14px; border-radius: 20px; border: 1.5px solid rgba(255,215,94,.4); background: rgba(255,255,255,.06); color: #fff; font-family: inherit; font-weight: 800; cursor: pointer; }
   .gift-chip.sel { background: linear-gradient(180deg, #ffd75e, #d9a83c); color: #33270a; border-color: #ffd75e; }
-  .cl-vmsg { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 16px; border: 0; background: rgba(255,255,255,.13); color: #fff; font-family: inherit; cursor: pointer; }
-  .cl-vmsg .vm-ic { color: #ffd75e; }
-  .cl-vmsg .vm-dur { font-size: 12px; opacity: .85; }
-  .cl-vmsg .vm-lbl { font-size: 12.5px; font-weight: 700; }
   .cl-reacts { display: flex; gap: 5px; margin-top: 4px; flex-wrap: wrap; }
   .cl-rchip { padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,.22); background: rgba(0,0,0,.25); color: #fff; font-size: 12px; cursor: pointer; font-family: inherit; }
   .cl-rchip.on { border-color: #ffd75e; background: rgba(255,215,94,.22); }
   #ov-react { position: fixed; z-index: 120; display: none; gap: 2px; padding: 6px 8px; border-radius: 24px; background: rgba(20,4,32,.97); border: 1.5px solid rgba(255,215,94,.5); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
   #ov-react.show { display: flex; }
   .react-em { font-size: 21px; background: none; border: 0; cursor: pointer; padding: 2px 3px; }
-  #btn-cl-vmsg.rec { background: #b3232f; color: #fff; }
   .vm-rec-dot { color: #fff; font-size: 13px; animation: vmblink 1s infinite; }
   @keyframes vmblink { 50% { opacity: .25; } }
   #home-event { margin: 8px 12px 0; padding: 9px 12px; border-radius: 14px; text-align: center; font-size: 13.5px; font-weight: 800; color: #fff; background: linear-gradient(90deg, #7d2231, #b83a5e, #7d2231); border: 1.5px solid rgba(255,215,94,.55); }
@@ -4222,7 +4217,6 @@
       <button type="button" class="cl-roundbtn on" id="btn-cl-speaker" aria-label="speaker"><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path class="wv" d="M15 9.5a3.6 3.6 0 0 1 0 5M17.5 7a7 7 0 0 1 0 10"/></svg></button>
       <button type="button" class="cl-roundbtn" id="btn-cl-mic" aria-label="mic"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.2M9 20.5h6"/></svg></button>
       <input id="cl-inp" type="text" maxlength="500">
-      <button type="button" class="cl-roundbtn" id="btn-cl-vmsg" aria-label="voice message"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.2M9 20.5h6"/></svg></button>
       <button type="button" id="btn-cl-send" aria-label="send">➤</button>
     </div>
     <div id="cl-audios" class="hidden"></div>
@@ -5040,11 +5034,7 @@ const STR = {
     errGiftNotFriend: "\u0689\u0627\u0644\u06CD \u06CC\u0648\u0627\u0632\u06D0 \u0645\u0644\u06AB\u0631\u0648 \u062A\u0647 \u0644\u06D0\u0696\u0644 \u06A9\u06D0\u0696\u064A",
     errGiftCap: "\u062F \u0646\u0646 \u0648\u0631\u0681\u06D0 \u062F \u0689\u0627\u0644\u06CD \u062D\u062F \u067E\u0648\u0631\u0647 \u0634\u0648 (\u06F1\u06F0\u06F0\u06F0)",
     errGiftPoor: "\u0633\u06A9\u0647 \u062F\u06D0 \u06A9\u0627\u0641\u064A \u0646\u0647 \u062F\u064A",
-    errVmsgTooBig: "\u063A\u0696\u06CC\u0632 \u067E\u06CC\u063A\u0627\u0645 \u0689\u06D0\u0631 \u0627\u0648\u0696\u062F \u062F\u06CC",
-    errVmsgGone: "\u062F\u0627 \u063A\u0696\u06CC\u0632 \u067E\u06CC\u063A\u0627\u0645 \u0646\u0648\u0631 \u0646\u0634\u062A\u0647",
     errEventNone: "\u0627\u0648\u0633 \u06A9\u0648\u0645 \u0645\u0648\u0633\u0645\u064A \u062C\u0634\u0646 \u0646\u0634\u062A\u0647",
-    vmsgLabel: "\u063A\u0696\u06CC\u0632 \u067E\u06CC\u063A\u0627\u0645",
-    vmsgUnsupported: "\u062F\u0627 \u0628\u0631\u0627\u0648\u0632\u0631 \u063A\u0696 \u0646\u0647 \u062B\u0628\u062A\u0648\u064A",
     frameSection: "\u062F \u0622\u0648\u0627\u062A\u0627\u0631 \u0686\u0648\u06A9\u0627\u067C",
     chatSection: "\u062F \u0686\u067C \u0633\u067C\u0627\u06CC\u0644",
     frameNone: "\u067E\u0631\u062A\u0647 \u0644\u0647 \u0686\u0648\u06A9\u0627\u067C\u0647",
@@ -5549,11 +5539,7 @@ const STR = {
     errGiftNotFriend: "\u0647\u062F\u06CC\u0647 \u0641\u0642\u0637 \u0628\u0647 \u062F\u0648\u0633\u062A\u0627\u0646 \u0641\u0631\u0633\u062A\u0627\u062F\u0647 \u0645\u06CC\u200C\u0634\u0648\u062F",
     errGiftCap: "\u062D\u062F \u0647\u062F\u06CC\u0647 \u0627\u0645\u0631\u0648\u0632 \u067E\u0631 \u0634\u062F (\u06F1\u06F0\u06F0\u06F0)",
     errGiftPoor: "\u0633\u06A9\u0647\u200C\u0627\u062A \u06A9\u0627\u0641\u06CC \u0646\u06CC\u0633\u062A",
-    errVmsgTooBig: "\u067E\u06CC\u0627\u0645 \u0635\u0648\u062A\u06CC \u062E\u06CC\u0644\u06CC \u0637\u0648\u0644\u0627\u0646\u06CC \u0627\u0633\u062A",
-    errVmsgGone: "\u0627\u06CC\u0646 \u067E\u06CC\u0627\u0645 \u0635\u0648\u062A\u06CC \u062F\u06CC\u06AF\u0631 \u0646\u06CC\u0633\u062A",
     errEventNone: "\u062D\u0627\u0644\u0627 \u062C\u0634\u0646 \u0641\u0635\u0644\u06CC \u0646\u06CC\u0633\u062A",
-    vmsgLabel: "\u067E\u06CC\u0627\u0645 \u0635\u0648\u062A\u06CC",
-    vmsgUnsupported: "\u0627\u06CC\u0646 \u0645\u0631\u0648\u0631\u06AF\u0631 \u0635\u062F\u0627 \u0636\u0628\u0637 \u0646\u0645\u06CC\u200C\u06A9\u0646\u062F",
     frameSection: "\u0642\u0627\u0628 \u0622\u0648\u0627\u062A\u0627\u0631",
     chatSection: "\u0627\u0633\u062A\u0627\u06CC\u0644 \u0686\u062A",
     frameNone: "\u0628\u062F\u0648\u0646 \u0642\u0627\u0628",
@@ -6058,11 +6044,7 @@ const STR = {
     errGiftNotFriend: "Gifts go to friends only",
     errGiftCap: "Today's gift limit is full (1000)",
     errGiftPoor: "Not enough coins",
-    errVmsgTooBig: "Voice message too long",
-    errVmsgGone: "This voice message is gone",
     errEventNone: "No seasonal event right now",
-    vmsgLabel: "Voice message",
-    vmsgUnsupported: "This browser cannot record audio",
     frameSection: "Avatar frames",
     chatSection: "Chat styles",
     frameNone: "No frame",
@@ -12604,7 +12586,7 @@ function onSocialMsg(m) {
   } else if (m.type === "s-club-chat") {
     const rc = roomClub();
     if (rc && m.club === rc.cid) {
-      clubMsgs.push({ from: m.from, name: m.name, avatar: m.avatar, photo: m.photo, text: m.text, voice: m.voice || "", dur: m.dur || 0, ts: m.ts, mid: m.mid || 0, reactions: m.reactions || {}, frame: m.frame || "", chatStyle: m.chatStyle || "" });
+      clubMsgs.push({ from: m.from, name: m.name, avatar: m.avatar, photo: m.photo, text: m.text, ts: m.ts, mid: m.mid || 0, reactions: m.reactions || {}, frame: m.frame || "", chatStyle: m.chatStyle || "" });
       while (clubMsgs.length > 50) clubMsgs.shift();
       if (!$("#scr-clubs").classList.contains("hidden")) {
         clubUnread = 0;
@@ -12624,8 +12606,6 @@ function onSocialMsg(m) {
   } else if (m.type === "s-gift-sent") {
     closeGift();
     toast(T("giftSentToast", m.amount));
-  } else if (m.type === "s-club-vmsg-data") {
-    playClubVoiceData(m);
   } else if (m.type === "s-club-react") {
     const e = clubMsgs.find((x) => x.mid === m.mid);
     if (e) {
@@ -14353,20 +14333,10 @@ function renderClubChat() {
     nm.className = "cl-feed-name";
     nm.textContent = name || "";
     main.appendChild(nm);
-    if (m.voice) {
-      const vb = document.createElement("button");
-      vb.type = "button";
-      vb.className = "cl-vmsg" + (m.chatStyle ? " cs-" + m.chatStyle : "");
-      vb.innerHTML = '<span class="vm-ic">\u25B6</span><span class="vm-dur">' + (m.dur || 0) + '\u2033</span><span class="vm-lbl"></span>';
-      vb.querySelector(".vm-lbl").textContent = T("vmsgLabel");
-      vb.onclick = () => playClubVoice(m.voice, vb);
-      main.appendChild(vb);
-    } else {
-      const bub = document.createElement("span");
-      bub.className = "cl-feed-bub" + (m.chatStyle ? " cs-" + m.chatStyle : "");
-      bub.textContent = m.text;
-      main.appendChild(bub);
-    }
+    const bub = document.createElement("span");
+    bub.className = "cl-feed-bub" + (m.chatStyle ? " cs-" + m.chatStyle : "");
+    bub.textContent = m.text;
+    main.appendChild(bub);
     const rrow = document.createElement("div");
     rrow.className = "cl-reacts";
     for (const em of CLUB_REACT_EMOJIS) {
@@ -15441,103 +15411,6 @@ $("#cl-inp").addEventListener("keydown", (e) => {
   if (e.key === "Enter") sendClubChat();
 });
 const CLUB_REACT_EMOJIS = ["\u2764\uFE0F", "\u{1F602}", "\u{1F62E}", "\u{1F44D}", "\u{1F525}", "\u{1F44F}"];
-let vmsgRec = null;
-const vmsgCache = /* @__PURE__ */ new Map();
-const vmsgWaiters = /* @__PURE__ */ new Map();
-async function toggleVmsg() {
-  if (vmsgRec) {
-    stopVmsg(true);
-    return;
-  }
-  if (!navigator.mediaDevices || !window.MediaRecorder) {
-    toast(T("vmsgUnsupported"));
-    return;
-  }
-  let stream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  } catch (e) {
-    toast(T("vmsgUnsupported"));
-    return;
-  }
-  const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find((t) => {
-    try {
-      return MediaRecorder.isTypeSupported(t);
-    } catch (e) {
-      return false;
-    }
-  }) || "";
-  const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : void 0);
-  const chunks = [];
-  mr.ondataavailable = (e) => {
-    if (e.data && e.data.size) chunks.push(e.data);
-  };
-  mr.onstop = () => {
-    stream.getTracks().forEach((t) => t.stop());
-    const rec = vmsgRec;
-    vmsgRec = null;
-    paintVmsgBtn();
-    if (!rec || !rec.send) return;
-    const blob = new Blob(chunks, { type: (mime || "audio/webm").split(";")[0] });
-    const dur = Math.max(1, Math.round((Date.now() - rec.t0) / 1e3));
-    if (blob.size < 800) return;
-    const rd = new FileReader();
-    rd.onload = () => {
-      const b64 = String(rd.result || "").split(",")[1] || "";
-      if (!b64) return;
-      connectSocial();
-      socialSend({ type: "s-club-vmsg", data: b64, mime: blob.type, dur });
-    };
-    rd.readAsDataURL(blob);
-  };
-  vmsgRec = { mr, t0: Date.now(), send: false };
-  mr.start(250);
-  paintVmsgBtn();
-  setTimeout(() => {
-    if (vmsgRec) stopVmsg(true);
-  }, 3e4);
-}
-function stopVmsg(send2) {
-  if (!vmsgRec) return;
-  vmsgRec.send = !!send2;
-  try {
-    vmsgRec.mr.stop();
-  } catch (e) {
-    vmsgRec = null;
-    paintVmsgBtn();
-  }
-}
-function paintVmsgBtn() {
-  const b = $("#btn-cl-vmsg");
-  if (!b) return;
-  b.classList.toggle("rec", !!vmsgRec);
-  b.innerHTML = vmsgRec ? '<span class="vm-rec-dot">\u25CF</span>' : '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.2M9 20.5h6"/></svg>';
-}
-$("#btn-cl-vmsg").onclick = toggleVmsg;
-function playClubVoice(vid, btn) {
-  const url = vmsgCache.get(vid);
-  if (url) {
-    new Audio(url).play().catch(() => {
-    });
-    return;
-  }
-  if (btn) vmsgWaiters.set(vid, btn);
-  connectSocial();
-  socialSend({ type: "s-club-vmsg-get", vid });
-}
-function playClubVoiceData(m) {
-  try {
-    const bin = atob(m.data || "");
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const url = URL.createObjectURL(new Blob([bytes], { type: m.mime || "audio/webm" }));
-    vmsgCache.set(m.vid, url);
-    new Audio(url).play().catch(() => {
-    });
-  } catch (e) {
-  }
-  vmsgWaiters.delete(m.vid);
-}
 let reactMid = 0;
 function openReactPicker(mid, anchor) {
   reactMid = mid;
