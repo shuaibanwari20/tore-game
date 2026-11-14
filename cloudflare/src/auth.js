@@ -361,7 +361,11 @@ export async function handleFirebaseToken(request, env) {
   let body = null;
   try { body = await request.json(); } catch { return unauthorized(); }
   const projectId = env.FIREBASE_PROJECT_ID || 'tore-game';
-  const claims = await verifyFirebaseIdToken(body && body.idToken, projectId);
+  let claims = await verifyFirebaseIdToken(body && body.idToken, projectId);
+  if (!claims && env.GOOGLE_CLIENT_ID) {
+    // U81: a Google ID token from the gate's GIS button.
+    claims = await verifyGoogleIdToken(body && body.idToken, env.GOOGLE_CLIENT_ID);
+  }
   if (!claims) return unauthorized();
   const email = normalizeEmail(typeof claims.email === 'string' ? claims.email : '');
   const payload = {
