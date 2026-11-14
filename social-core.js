@@ -738,7 +738,29 @@ class SocialCore {
     this.online.set(id, (this.online.get(id) || 0) + 1);
     if (!was) this._fanPresence(id, true);
   }
-  socketClosed(id) {
+  socketClosed(id, liveCount) {
+    // up89: the DO host passes the AUTHORITATIVE number of sockets
+    // still live for this identity (counted from the runtime's own
+    // socket set, closing socket excluded). A stale socket's late
+    // close — e.g. delivered after a hibernation wake rebuilt the
+    // counts without it — must not erase a fresh connection: the
+    // old blind decrement did exactly that and left players shown
+    // offline while they were in the game (owner report 2026-11-14).
+    if (typeof liveCount === 'number') {
+      const was = this.isOnline(id);
+      if (liveCount > 0) {
+        this.online.set(id, liveCount);
+        if (!was) this._fanPresence(id, true);
+        return;
+      }
+      if (!this.online.has(id)) return;
+      this.online.delete(id);
+      const rec = this.directory.get(id);
+      if (rec) { rec.lastSeen = Date.now(); this._persist(); }
+      this._fanPresence(id, false);
+      this._clubVoiceGone(id);
+      return;
+    }
     const n = (this.online.get(id) || 0) - 1;
     if (n > 0) { this.online.set(id, n); return; }
     this.online.delete(id);
@@ -748,6 +770,18 @@ class SocialCore {
     // Club voice: the seat dies with the page — a fully-offline
     // player leaves the voice room and frees his mic seat.
     this._clubVoiceGone(id);
+  }
+  // up89: a (re-)hello reconciles the stored count with the host's
+  // live socket count, so any drift heals on the player's next
+  // hello instead of sticking until a brand-new socket connects.
+  reconcileOnline(id, liveCount) {
+    const was = this.isOnline(id);
+    if (liveCount > 0) {
+      this.online.set(id, liveCount);
+      if (!was) this._fanPresence(id, true);
+    } else if (was) {
+      this.socketClosed(id, 0);
+    }
   }
   _fanPresence(id, online) {
     const rec = this.directory.get(id);
