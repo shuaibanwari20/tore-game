@@ -11,9 +11,9 @@ const check = (name, ok, extra = '') => {
 };
 const fb = fs.readFileSync('/home/hatch/workspace/projects/tore-game/cloudflare/src/fb-page.js', 'utf8');
 const gate = fs.readFileSync('/home/hatch/workspace/projects/tore-game/cloudflare/src/gate-page.js', 'utf8');
-check('B1 first callback releases the auto-start', fb.includes('if (TICKET && !bridged) goGoogle();'));
+check('B1 first callback releases the auto-start (U79: scheduled, GIS first)', fb.includes('if (TICKET && !bridged) scheduleGo();'));
 check('B2 the 400 ms fixed start is gone (2.5 s backstop only)', !fb.includes('}, 400);') && fb.includes('}, 2500);'));
-check('B3 goGoogle is latched against double starts', fb.includes('var goStarted = false;') && fb.includes('if (goStarted) return;'));
+check('B3 goGoogle is latched (and yields to GIS)', fb.includes('var goStarted = false;') && fb.includes('if (goStarted || gisReady) return;'));
 check('B4 failure re-arms the latch', fb.includes('function fail() { goStarted = false;'));
 check('B5 the diagnostic trail exists and logs the bridge', fb.includes('id="dbg"') && fb.includes("trail('bridge:' + label(user));"));
 check('B6 the trail logs snap/res/auth/held', fb.includes("trail('snap:' + label(user));") && fb.includes("trail('res:' + (res && res.user ? label(res.user) : 'null'))") && fb.includes("trail('auth:' + label(user));") && fb.includes("trail('held:' + label(user));"));

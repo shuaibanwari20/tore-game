@@ -17,7 +17,7 @@ check('R2 the stale uid is snapshotted before leaving', fb.includes("var STALE_K
 check('R3 first load snapshots and never bridges', fb.includes('snapStale(user);'));
 check('R4 a result user always bridges immediately', fb.includes('if (res && res.user) { decided = true; bridge(res.user); }'));
 check('R5 an empty result releases the hold', fb.includes('else releaseHold();') && fb.includes('function releaseHold()'));
-check('R6 only the uid-identical user is held', fb.includes('if (st && user.uid === st) { heldUser = user; return; }'));
+check('R6 only the uid-identical user is held', fb.includes("if (st && user.uid === st) { heldUser = user; trail('held:' + label(user)); return; }"));
 check('R7 a different account bridges at once on return', fb.includes('decided = true; bridge(user);'));
 check('R8 the chooser is still forced', fb.includes("setCustomParameters({ prompt: 'select_account' })"));
 console.log(failures ? '\n' + failures + ' FAILURES' : '\nALL PASS');

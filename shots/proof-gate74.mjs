@@ -61,6 +61,7 @@ try {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const page = await ctx.newPage();
     const stub = stubFor(mode);
+    await page.route('**/gsi/client', (r) => r.fulfill({ contentType: 'text/javascript', body: '/* GIS disabled in this harness — redirect fallback under test */' }));
     await page.route('**/firebase-app-compat.js', (r) => r.fulfill({ contentType: 'text/javascript', body: stub }));
     await page.route('**/firebase-auth-compat.js', (r) => r.fulfill({ contentType: 'text/javascript', body: stub }));
     if (sent) {
@@ -74,7 +75,7 @@ try {
       await page.waitForTimeout(700);
       check('F3 lands on /auth/done', page.url().includes('/auth/done'), page.url());
     } else {
-      await page.waitForTimeout(1800);
+      await page.waitForTimeout(3800); // U79: the fallback redirect is scheduled (2.8 s) to give GIS first chance
       const s = await page.evaluate(() => ({
         calls: window.__fbp ? window.__fbp.redirectCalls : -1,
         params: window.__fbp ? window.__fbp.providerParams : null,

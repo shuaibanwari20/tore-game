@@ -59,6 +59,7 @@ const browser = await chromium.launch({ executablePath: findChrome(), args: ['--
 async function scenario(name, load2, expectToken, notBeforeMs) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await ctx.newPage();
+  await page.route('**/gsi/client', (r) => r.fulfill({ contentType: 'text/javascript', body: '/* GIS disabled in this harness — redirect fallback under test */' }));
   await page.route('**/firebase-app-compat.js', (r) => r.fulfill({ contentType: 'text/javascript', body: stub() }));
   await page.route('**/firebase-auth-compat.js', (r) => r.fulfill({ contentType: 'text/javascript', body: stub() }));
   const bodies = [];
@@ -69,7 +70,7 @@ async function scenario(name, load2, expectToken, notBeforeMs) {
   // load 1 — first load: stale session present, auto-redirect
   mode = { current: 'stale', events: [[10, 'stale']], result: 'null', resultDelay: 0 };
   await page.goto(BASE + '/auth/fb?ticket=' + TICKET, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(3800); // U79: the fallback redirect is scheduled (2.8 s) to give GIS first chance
   const snap = await page.evaluate(() => ({
     redirects: window.__fbp ? window.__fbp.redirectCalls : -1,
     stale: (() => { try { return sessionStorage.getItem('tore.fb.stale'); } catch (e) { return null; } })(),
