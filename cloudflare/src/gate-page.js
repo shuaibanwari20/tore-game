@@ -157,6 +157,16 @@ const GATE_HTML = `<!DOCTYPE html>
       </button>
     </div>
     <div class="gerr" id="gate-err"></div>
+    <div class="gemail" id="gate-email">
+      <div class="gordiv" id="gate-or"></div>
+      <input id="email-input" type="email" autocomplete="email">
+      <button type="button" class="gbtn emailgo" id="btn-email-send"></button>
+      <div class="gcodeentry" id="gate-email-code-row" style="display:none">
+        <input id="email-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
+        <button type="button" class="gcodego" id="btn-email-verify"></button>
+      </div>
+      <div class="gemail-msg" id="gate-email-msg"></div>
+    </div>
     <div class="gnote" id="gate-note">ننوتل یعنې د لوبې قوانین منل</div>
     <div class="gnote" id="gate-sa-note" style="display:none"></div>
     <div class="glangs" id="gate-langs">
@@ -184,9 +194,9 @@ const GATE_HTML = `<!DOCTYPE html>
   // into the game. Only the texts change — the sign-in flow below is
   // untouched.
   var GATE_STR = {
-    ps: { title: 'توره — ننوتل', sub: 'د لوبې لپاره ننوځه', google: 'په ګوګل ننوځه', busy: 'ننوتل کېږي…', fb: 'په فېسبوک ننوځه', note: 'ننوتل یعنې د لوبې قوانین منل', errFail: 'ننوتل ونه شول — بیا هڅه وکړه', errConn: 'په ننوتلو کې ستونزه — انټرنېټ دې وګوره', saNote: 'په اپ کې ننوتل نشته — لوبه په خپل براوزر کې پرانېزه او هلته په ګوګل ننوځه' },
-    fa: { title: 'توره — ورود', sub: 'برای بازی وارد شوید', google: 'ورود با گوگل', busy: 'در حال ورود…', fb: 'ورود با فیسبوک', note: 'ورود یعنی پذیرش قانون‌های بازی', errFail: 'ورود ناموفق بود — دوباره تلاش کنید', errConn: 'خطا در ورود — اتصال اینترنت را بررسی کنید', saNote: 'در اپ ورود ممکن نیست — بازی را در مرورگرت باز کن و آنجا با گوگل وارد شو' },
-    en: { title: 'Tore — Sign in', sub: 'Sign in to play', google: 'Sign in with Google', busy: 'Signing in…', fb: 'Sign in with Facebook', note: 'Signing in means accepting the game rules', errFail: 'Sign-in failed — please try again', errConn: 'Sign-in error — check your internet connection', saNote: 'Sign-in is not available inside the app — open the game in your browser and sign in with Google there' }
+    ps: { title: 'توره — ننوتل', sub: 'د لوبې لپاره ننوځه', google: 'په ګوګل ننوځه', busy: 'ننوتل کېږي…', fb: 'په فېسبوک ننوځه', note: 'ننوتل یعنې د لوبې قوانین منل', errFail: 'ننوتل ونه شول — بیا هڅه وکړه', errConn: 'په ننوتلو کې ستونزه — انټرنېټ دې وګوره', saNote: 'په اپ کې د ننوتلو لپاره خپل ایمیل ولیکه — ۶ عددی کوډ به درته ایمیل شي', orEmail: 'یا په ایمیل ننوځه', emailPh: 'ایمیل دې', sendCode: 'کوډ واستوه', codePh6: '۶ عددی کوډ', verifyGo: 'ننوځه', errEmail: 'ایمیل سم ولیکه', errOtp: 'کوډ سم نه دی — بیا هڅه وکړه', codeSent: 'کوډ واستول شو — خپل ایمیل وګوره او کوډ دلته ولیکه', emailOff: 'د ایمیل ننوتل لا چالان نه دي', waitMsg: 'لږ صبر وکړه او بیا کوډ وغواړه' },
+    fa: { title: 'توره — ورود', sub: 'برای بازی وارد شوید', google: 'ورود با گوگل', busy: 'در حال ورود…', fb: 'ورود با فیسبوک', note: 'ورود یعنی پذیرش قانون‌های بازی', errFail: 'ورود ناموفق بود — دوباره تلاش کنید', errConn: 'خطا در ورود — اتصال اینترنت را بررسی کنید', saNote: 'برای ورود در اپ ایمیلت را بنویس — کد ۶ رقمی برایت ایمیل می‌شود', orEmail: 'یا با ایمیل وارد شوید', emailPh: 'ایمیلت', sendCode: 'کد را بفرست', codePh6: 'کد ۶ رقمی', verifyGo: 'وارد شوید', errEmail: 'ایمیل را درست بنویسید', errOtp: 'کد درست نیست — دوباره تلاش کنید', codeSent: 'کد فرستاده شد — ایمیلت را ببین و کد را اینجا بنویس', emailOff: 'ورود با ایمیل هنوز فعال نیست', waitMsg: 'کمی صبر کن و دوباره کد بخواه' },
+    en: { title: 'Tore — Sign in', sub: 'Sign in to play', google: 'Sign in with Google', busy: 'Signing in…', fb: 'Sign in with Facebook', note: 'Signing in means accepting the game rules', errFail: 'Sign-in failed — please try again', errConn: 'Sign-in error — check your internet connection', saNote: 'To sign in inside the app, enter your email — a 6-digit code will be emailed to you', orEmail: 'or sign in with email', emailPh: 'Your email', sendCode: 'Send code', codePh6: '6-digit code', verifyGo: 'Sign in', errEmail: 'Enter a valid email', errOtp: 'That code is not right — try again', codeSent: 'Code sent — check your email and enter the code here', emailOff: 'Email sign-in is not active yet', waitMsg: 'Wait a moment before asking for a new code' }
   };
   var glang = (window.__glang && GATE_STR[window.__glang]) ? window.__glang : 'ps';
   try {
@@ -207,6 +217,16 @@ const GATE_HTML = `<!DOCTYPE html>
     if (saN) saN.textContent = d.saNote || '';
     var fbLbl = document.getElementById('gate-fb-label');
     if (fbLbl) fbLbl.textContent = d.fb;
+    var orEl = document.getElementById('gate-or');
+    if (orEl) orEl.textContent = d.orEmail;
+    var eInp = document.getElementById('email-input');
+    if (eInp) eInp.placeholder = d.emailPh;
+    var esB = document.getElementById('btn-email-send');
+    if (esB) esB.textContent = d.sendCode;
+    var ecInp = document.getElementById('email-code');
+    if (ecInp) ecInp.placeholder = d.codePh6;
+    var evB = document.getElementById('btn-email-verify');
+    if (evB) evB.textContent = d.verifyGo;
     var bs = document.querySelectorAll('.glang');
     for (var i = 0; i < bs.length; i++) {
       bs[i].classList.toggle('sel', bs[i].getAttribute('data-lang') === glang);
@@ -449,6 +469,61 @@ const GATE_HTML = `<!DOCTYPE html>
     startAuthPoll();
     if (storedTicket()) startTicketPoll();
   }
+  // U70: email + 6-digit code sign-in is BACK (his explicit
+  // order, restating the original design: enter the email, a
+  // 6-digit code is emailed, type the code here, signed in).
+  // The server side (otp.js + /auth/email-start + email-verify)
+  // never left. This build adds the U68 hardening: the address
+  // is stripped of spaces + invisible marks before validation,
+  // and a failed send names its real status.
+  function emailMsg(t) {
+    var m = document.getElementById('gate-email-msg');
+    if (m) m.textContent = t || '';
+  }
+  var emailSentTo = '';
+  var esBtn = document.getElementById('btn-email-send');
+  if (esBtn) esBtn.onclick = function () {
+    var inp = document.getElementById('email-input');
+    var v = ((inp && inp.value) || '').replace(/[\s\u200B-\u200F\u202A-\u202E\uFEFF]/g, '').toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) { emailMsg(GL().errEmail); return; }
+    emailSentTo = v;
+    esBtn.disabled = true;
+    fetch('/auth/email-start', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: v })
+    }).then(function (r) {
+      esBtn.disabled = false;
+      if (r.ok) {
+        var row = document.getElementById('gate-email-code-row');
+        if (row) row.style.display = '';
+        emailMsg(GL().codeSent);
+        var ci = document.getElementById('email-code');
+        if (ci) ci.focus();
+        return;
+      }
+      if (r.status === 503) { emailMsg(GL().emailOff); return; }
+      if (r.status === 429) { emailMsg(GL().waitMsg); return; }
+      if (r.status === 400) { emailMsg(GL().errEmail); return; }
+      emailMsg(GL().errConn + ' [' + r.status + ']');
+    }).catch(function () { esBtn.disabled = false; emailMsg(GL().errConn); });
+  };
+  var evBtn = document.getElementById('btn-email-verify');
+  if (evBtn) evBtn.onclick = function () {
+    var inp = document.getElementById('email-code');
+    var c = ((inp && inp.value) || '').replace(/[^0-9]/g, '');
+    if (!emailSentTo || !/^[0-9]{6}$/.test(c)) { emailMsg(GL().errOtp); return; }
+    evBtn.disabled = true;
+    fetch('/auth/email-verify', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: emailSentTo, code: c })
+    }).then(function (r) {
+      evBtn.disabled = false;
+      if (r && r.ok) { location.reload(); return; }
+      emailMsg(GL().errOtp);
+    }).catch(function () { evBtn.disabled = false; emailMsg(GL().errConn); });
+  };
   if (isStandalone) { gBtn.style.display = 'none'; }
   resumePolls();
   document.addEventListener('visibilitychange', function () {
