@@ -12812,6 +12812,13 @@ function socialSend(obj) {
 function socialHello() {
   socialSend({ type: 's-hello', pid: myPid(), profile: profilePayload() });
 }
+// up89: when the player comes back to the game (app switch, screen
+// unlock), re-hello on the live social socket — the server
+// reconciles presence from its live socket set on every hello, so
+// a drifted offline state heals within seconds instead of sticking.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && sws && sws.readyState === 1) socialHello();
+});
 function connectSocial() {
   if (sws && (sws.readyState === 0 || sws.readyState === 1)) return;
   const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
