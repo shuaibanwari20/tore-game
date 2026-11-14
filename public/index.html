@@ -7013,6 +7013,7 @@ const HB_CONNECT_MS = 20000;    // a socket CONNECTING longer than this is aband
 let lastRxAt = 0;               // last inbound frame on the current game socket
 let lastPingAt = 0;             // last heartbeat sent on it
 let wsBornAt = 0;               // when the current socket was created
+let wsOpenWaiters = [];         // up86: callbacks queued on an in-flight dial
 let reconnectTimer = null;
 let reconnectDelay = 1000;      // first redial ~1 s after a detected drop
 function connWanted() {
@@ -7040,6 +7041,7 @@ function scheduleReconnect(now) {
 // for sockets whose close event never comes.
 function onSocketGone() {
   endJoinFlight(); // an unanswered join dies with its socket
+  wsOpenWaiters = []; // up86: a dead dial never fires its waiters
   // Offline bot fallback (2026-11-11): a bot-game create whose
   // socket dies BEFORE the room reply means the server is
   // unreachable — hand the game to the in-page local host
@@ -7049,7 +7051,7 @@ function onSocketGone() {
   // Peer connections were negotiated over this socket's session:
   // drop them; they re-form after the reconnect re-announces voice.
   if (typeof peers !== 'undefined') Object.keys(peers).forEach((s) => closePeer(+s, 'teardown'));
-  $('#connbar').textContent = T('disconnected');
+  if (session && session.code && !session.local) $('#connbar').textContent = T('disconnected'); // up86: a warm idle socket's death stays silent
   scheduleReconnect();
 }
 function forceDropSocket() {
@@ -7121,15 +7123,34 @@ window.addEventListener('online', kickConnection);
 window.addEventListener('focus', kickConnection);
 
 function connect(onOpen) {
+  // up86 INSTANT LOBBY: a socket that is already OPEN answers at
+  // once, and one still CONNECTING takes the callback as a waiter
+  // on the SAME dial — a second WebSocket is never stacked, so a
+  // warm socket (dialled when the picker opened) lets Play send
+  // its create immediately instead of paying a fresh handshake.
+  if (ws && ws.readyState === 1) { if (onOpen) onOpen(); return; }
+  if (ws && ws.readyState === 0) { if (onOpen) wsOpenWaiters.push(onOpen); return; }
   const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
   const s = new WebSocket(proto + location.host);
   ws = s;
   wsBornAt = Date.now();
   lastPingAt = 0;
   intentionalClose = false; // a fresh flow (boot / join / create / redial) re-arms the healer
-  s.onopen = () => { lastRxAt = Date.now(); if (onOpen) onOpen(); };
+  s.onopen = () => {
+    lastRxAt = Date.now();
+    const w = wsOpenWaiters; wsOpenWaiters = [];
+    if (onOpen) onOpen();
+    w.forEach((f) => { try { f(); } catch (e) {} });
+  };
   s.onmessage = (ev) => { lastRxAt = Date.now(); try { onMsg(JSON.parse(ev.data)); } catch (e) {} };
   s.onclose = () => { if (ws === s) ws = null; onSocketGone(); };
+}
+// up86: dial the game socket early (the picker opening is the
+// intent signal) so the Play tap lands on an open socket.
+function warmGameSocket() {
+  if (ws || localGameLive || spectating) return;
+  if (typeof netOffline === 'function' && netOffline()) return;
+  connect();
 }
 function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
 
@@ -10834,6 +10855,7 @@ function openPicker(mode, clubCid) {
   // healer's boot work made warm re-entry cross the 300 ms loader-gate
   // threshold (cardsfix C flash); loading from the picker click keeps
   // every table entry instant. Deduped by deckPromise.
+  warmGameSocket(); // up86: dial now — Play will send on an open socket
   pkMode = mode || 'online';
   pkClubCid = clubCid || null;
   pkFromClub = !!clubCid;
