@@ -115,7 +115,6 @@ export function fbPage(ticket, gid) {
     font-size: 15px; font-weight: 900; color: #4285f4; }
   #msg { min-height: 22px; margin-top: 16px; font-size: 14px; color: #ffe9a8; line-height: 1.7; }
   .tiny { margin-top: 10px; font-size: 11.5px; color: #c99; color: #d8a7bd; line-height: 1.8; }
-  #dbg { margin-top: 8px; font-size: 10px; line-height: 1.6; color: rgba(255,233,168,.55); word-break: break-all; }
   #giswrap { margin-bottom: 16px; }
   #gisbtn { display: flex; justify-content: center; min-height: 44px; }
 </style>
@@ -130,7 +129,6 @@ export function fbPage(ticket, gid) {
   </div>
   <button id="btn" type="button"><span class="g">G</span><span>په ګوګل ننوتل</span></button>
   <div id="msg"></div>
-  <div id="dbg"></div>
   <div class="tiny">Sign in with Google to continue</div>
 </div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -155,15 +153,11 @@ function clearSent() { try { sessionStorage.removeItem(SENT_KEY); } catch (e) { 
 var btn = document.getElementById('btn');
 var msgEl = document.getElementById('msg');
 function msg(t) { msgEl.textContent = t; }
-var dbgEl = document.getElementById('dbg');
-var trailParts = [];
 function label(u) { return (u && (u.email || u.uid)) || '?'; }
-function trail(s) {
-  try {
-    trailParts.push(s);
-    if (dbgEl) dbgEl.textContent = trailParts.join(' · ');
-  } catch (e) { /* ignore */ }
-}
+// U80: the #dbg debug line did its job (the 12:54 photo proved
+// gis:ready on the owner's phone) and he ordered it removed —
+// trail() stays as a no-op so the call sites need no surgery.
+function trail(s) {}
 var bridged = false;
 var gisReady = false;
 function completeWithToken(token) {
