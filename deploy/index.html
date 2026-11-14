@@ -2426,6 +2426,10 @@
     font-weight: 900; cursor: pointer; font-family: inherit;
     color: #33270a; background: linear-gradient(180deg, #ffd75e, #d9a83c); border: 2px solid #ffd75e; }
   .pf-leadersbtn:active { transform: scale(.98); }
+  /* up85: the logout button moved from Settings to the profile card */
+  #scr-profile .st-logout { width: 100%; margin-top: 10px; padding: 10px; border-radius: 14px;
+    font-size: 15px; font-weight: 800; font-family: inherit; cursor: pointer; }
+  #scr-profile .st-logout:active { transform: scale(.98); }
   #ld-list { margin: 10px 14px; padding: 8px 14px; border-radius: 22px;
     background: linear-gradient(180deg, #d81b74, #67124e);
     border: 2px solid rgba(255,183,224,.4);
@@ -3858,6 +3862,14 @@
           <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-lost-lbl">بایللي</span><span class="pf-stat-val" id="pf-stat-lost">0</span></div>
         </div>
         <button type="button" class="pf-leadersbtn" id="btn-leaders">د اونۍ غوره لوبغاړي</button>
+        <button type="button" id="btn-logout" class="st-logout" aria-label="له حسابه وتل">
+          <svg viewBox="0 0 24 24">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <path d="M16 17l5-5-5-5"/>
+            <path d="M21 12H9"/>
+          </svg>
+          <span id="st-logout-lbl">له حسابه وتل</span>
+        </button>
       </div>
     </div>
   </div>
@@ -4648,14 +4660,6 @@
         <span class="st-tog-lbl" id="st-music-lbl">د شاليد موسيقي</span>
         <span class="st-check" id="st-music-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
       </div>
-      <button id="btn-logout" class="st-logout" aria-label="له حسابه وتل">
-        <svg viewBox="0 0 24 24">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-          <path d="M16 17l5-5-5-5"/>
-          <path d="M21 12H9"/>
-        </svg>
-        <span id="st-logout-lbl">له حسابه وتل</span>
-      </button>
     </div>
     <div class="st-felts">
       <div class="st-duo">
