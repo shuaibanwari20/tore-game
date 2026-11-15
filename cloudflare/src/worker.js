@@ -96,7 +96,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261115-name52h';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261115-name52i';
 // The PREVIOUS client version's URL — last-resort fallback for
 // serveClient (see the header comment): that build was live long
 // enough that its edge copies are warm in the POPs, so when a fresh
@@ -805,7 +805,7 @@ export default {
       // Chat GIF stickers: only the known set exists (st1…st16). They
       // are public images — no session needed to load one.
       const name = path.slice('/stickers/'.length);
-      if (/^st([1-9]|1[0-6])\.gif$/.test(name)) return serveSticker(env, name);
+      if (/^st([1-9]|1[0-9]|2[0-4])\.gif$/.test(name)) return serveSticker(env, name);
       return new Response('not found', { status: 404 });
     }
 
