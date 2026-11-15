@@ -92,7 +92,7 @@ const httpServer = http.createServer((req, res) => {
   // path under this server exists.
   if (url.startsWith('/stickers/')) {
     const name = url.slice('/stickers/'.length);
-    if (/^st([1-9]|1[0-6])\.gif$/.test(name)) {
+    if (/^st([1-9]|1[0-9]|2[0-4])\.gif$/.test(name)) {
       const full = path.join(STICKERS_DIR, name);
       if (fs.existsSync(full)) {
         res.writeHead(200, { 'Content-Type': 'image/gif', 'Cache-Control': 'public, max-age=86400' });
@@ -1122,6 +1122,7 @@ function reattachSeat(ws, room, seatIdx, msg) {
 
 function attachPlayer(ws, room, seatIdx, name, prof) {
   const seat = room.seats[seatIdx];
+  const prevSid = seat.sid; // feat4: fresh-entrance detection (see game-server)
   seat.kind = 'human';
   seat.name = name;
   seat.avatar = cleanAvatar(prof && prof.avatar);
@@ -1139,6 +1140,7 @@ function attachPlayer(ws, room, seatIdx, name, prof) {
     type: 'room', code: room.code, seat: seatIdx, token: seat.token,
     isHost: seatIdx === hostSeat(room),
   });
+  if (seat.sid && prevSid !== seat.sid) broadcastEvent(room, { type: 'entered', seat: seatIdx, name: seat.name, avatar: seat.avatar, photo: seat.photo, country: seat.country }); // feat4
   broadcastState(room);
   maybeUnfreeze(room); // F35: a live seat wakes the match
 }
@@ -1277,14 +1279,16 @@ const CHAT_PHRASES = ['سلام', 'ښه چال', 'ښه لوبه', 'هاهاها'
 const CHAT_EMOJIS = ['😎', '😂', '😍', '😭', '😡', '👊', '😮', '👍', '❤️', '🔥',
   '🤣', '😜', '🥳', '🙏', '👏', '💪', '🎉', '🤔', '😴', '🥺'];
 const CHAT_STICKERS = ['st1', 'st2', 'st3', 'st4', 'st5', 'st6', 'st7', 'st8', 'st9', 'st10', 'st11', 'st12', 'st13', 'st14', 'st15', 'st16'];
+const CHAT_EMOJIS2 = ['👑', '💎', '🦁', '🔱', '🎭', '🪩', '🦚', '🛡️']; // feat4: pack-emoji (shop)
+const CHAT_STICKERS2 = ['st17', 'st18', 'st19', 'st20', 'st21', 'st22', 'st23', 'st24']; // feat4: pack-sticker (shop)
 const CHAT_MIN_INTERVAL_MS = 800;
 const RTC_MAX_BYTES = 16384;
 
 function cleanChat(kind, value) {
   if (typeof value !== 'string') return null;
   if (kind === 'phrase' && CHAT_PHRASES.includes(value)) return { kind, value };
-  if (kind === 'emoji' && CHAT_EMOJIS.includes(value)) return { kind, value };
-  if (kind === 'sticker' && CHAT_STICKERS.includes(value)) return { kind, value };
+  if (kind === 'emoji' && (CHAT_EMOJIS.includes(value) || CHAT_EMOJIS2.includes(value))) return { kind, value };
+  if (kind === 'sticker' && (CHAT_STICKERS.includes(value) || CHAT_STICKERS2.includes(value))) return { kind, value };
   return null;
 }
 
@@ -1727,7 +1731,7 @@ function cleanFelt(v) {
 // stamps it on every push so the whole room plays with the
 // creator's backs.
 function cleanBack(v) {
-  return (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 6) ? v : 1;
+  return (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 7) ? v : 1;
 }
 
 // Stake tiers (up47): the create frame carries the creator's

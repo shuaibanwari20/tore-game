@@ -2382,6 +2382,9 @@
     repeating-linear-gradient(90deg, rgba(94,234,212,.2) 0 2px, transparent 2px 12px),
     repeating-linear-gradient(0deg, rgba(94,234,212,.2) 0 2px, transparent 2px 12px),
     linear-gradient(160deg, #0f3050, #0a2438 60%, #123a4d); }
+  /* feat4: animated gold-sheen back */
+  .cback-7 { background: linear-gradient(135deg, #6d1238, #a12458 38%, #ffd75e 50%, #a12458 62%, #6d1238); background-size: 260% 260%; animation: cbackSheen 3.4s ease-in-out infinite; }
+  @keyframes cbackSheen { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }
   .pileback { width: 28px; height: 39px; border-radius: 3px; flex: 0 0 auto; }
   .pilerow[data-pos="bottom"] .pileback, .pilerow[data-pos="top"] .pileback { margin-left: -15px; }
   .pilerow[data-pos="bottom"] .pileback:first-child, .pilerow[data-pos="top"] .pileback:first-child { margin-left: 0; }
@@ -2437,6 +2440,28 @@
   .fr-ring.fr2 { border: 3px solid #c77dff; box-shadow: inset 0 0 0 1.5px #5b2a86, inset 0 0 9px rgba(199,125,255,.55); }
   .fr-ring.fr3 { border: 3px solid #ff7847; box-shadow: inset 0 0 0 1.5px #7d2231, inset 0 0 10px rgba(255,120,71,.6); }
   .fr-ring.fr4 { border: 3px solid #3ddc97; box-shadow: inset 0 0 0 1.5px #0d5c3f, inset 0 0 9px rgba(61,220,151,.55); }
+  /* feat4: animated premium frames — a spinning conic ring, masked to a band */
+  .fr-ring.fr5, .fr-ring.fr6 { border: none; overflow: hidden; box-shadow: 0 0 10px rgba(255,160,60,.5); }
+  .fr-ring.fr5::before, .fr-ring.fr6::before { content: ''; position: absolute; inset: 0; border-radius: inherit; animation: frspin 3s linear infinite; -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px)); }
+  .fr-ring.fr5::before { background: conic-gradient(#fff3b0, #ffb347, #ff7847, #ffd75e, #b8860b, #fff3b0); }
+  .fr-ring.fr6::before { background: conic-gradient(#ff5e7a, #ffb347, #ffe95e, #3ddc97, #4fc3ff, #c77dff, #ff5e7a); animation-duration: 4.6s; }
+  @keyframes frspin { to { transform: rotate(360deg); } }
+  /* feat4: chat pack locks + shop pack art */
+  .qsticker.qlock img, .qemoji.qlock { filter: grayscale(1); opacity: .45; }
+  .qsticker, .qemoji { position: relative; }
+  .qlock-badge { position: absolute; right: 2px; bottom: 2px; font-size: 11px; z-index: 2; }
+  .si-art.pack-art { font-size: 22px; display: flex; align-items: center; justify-content: center; }
+  .si-art.pack-art img { width: 40px; height: 40px; }
+  /* feat4: dramatic table entrance */
+  #ov-entered { position: fixed; inset: 0; z-index: 240; display: none; align-items: center; justify-content: center; pointer-events: none; overflow: hidden; }
+  #ov-entered.show { display: flex; }
+  #ov-entered .en-rays { position: absolute; width: 150vmax; height: 150vmax; left: 50%; top: 50%; transform: translate(-50%, -50%); background: repeating-conic-gradient(rgba(255, 205, 80, .13) 0 9deg, transparent 9deg 18deg); border-radius: 50%; animation: enspin 14s linear infinite; }
+  @keyframes enspin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+  #ov-entered .en-card { position: relative; text-align: center; animation: enpop 2.4s ease forwards; }
+  @keyframes enpop { 0% { transform: scale(.4); opacity: 0; } 14% { transform: scale(1.08); opacity: 1; } 22% { transform: scale(1); } 82% { opacity: 1; } 100% { transform: scale(1.02); opacity: 0; } }
+  #ov-entered .en-av { width: 96px; height: 96px; margin: 0 auto; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 4px #ffd75e, 0 0 42px rgba(255, 190, 60, .85); }
+  #ov-entered .en-name { margin-top: 12px; font-size: 24px; font-weight: 800; color: #ffe9a8; text-shadow: 0 2px 10px rgba(0, 0, 0, .6); }
+  #ov-entered .en-lbl { margin-top: 3px; font-size: 14px; color: #fff; opacity: .9; }
   .cs-chat1 { background: linear-gradient(135deg, #7d2231, #b83a5e) !important; color: #ffe9c9 !important; }
   .cs-chat2 { background: linear-gradient(135deg, #14532d, #1f9d63) !important; color: #eafff3 !important; }
   .cs-chat3 { background: linear-gradient(135deg, #8a6414, #d9a83c) !important; color: #2a1e05 !important; }
@@ -4859,6 +4884,7 @@
      (bottom of the main script); the single <audio> lives there
      so music survives every screen change. -->
 <div id="mp-bcchip" class="hidden"></div>
+<div id="ov-entered"><div class="en-rays"></div><div class="en-card"><div class="en-av"></div><div class="en-name"></div><div class="en-lbl"></div></div></div>
 <div id="mplayer" class="hidden">
   <img id="mp-cover" alt="">
   <div id="mp-meta">
@@ -5053,7 +5079,7 @@ const STR = {
     chatSection: 'د چټ سټایل',
     frameNone: 'پرته له چوکاټه',
     chatDefault: 'اصلي سټایل',
-    fr1: 'طلایي چوکاټ', fr2: 'بنفش چوکاټ', fr3: 'د اور چوکاټ', fr4: 'زرغون چوکاټ',
+    fr1: 'طلایي چوکاټ', fr2: 'بنفش چوکاټ', fr3: 'د اور چوکاټ', fr4: 'زرغون چوکاټ', fr5: 'څرخنده اور چوکاټ', fr6: 'رنګينه څرخنده چوکاټ', back7: 'متحرک طلایي', packSection: 'ځانګړي بستې', packEmoji: 'ځانګړي ایموجي', packSticker: 'ځانګړي سټیکرونه', enteredLbl: 'میز ته ننوتل', packLocked: 'دا بسته له پلورنځي واخله',
     chat1: 'سور سټایل', chat2: 'زرغون سټایل', chat3: 'طلایي سټایل',
     chatSample: 'سلام!',
     feltEv1: 'د جشن قالین',
@@ -5535,7 +5561,7 @@ const STR = {
     chatSection: 'استایل چت',
     frameNone: 'بدون قاب',
     chatDefault: 'استایل اصلی',
-    fr1: 'قاب طلایی', fr2: 'قاب بنفش', fr3: 'قاب آتش', fr4: 'قاب سبز',
+    fr1: 'قاب طلایی', fr2: 'قاب بنفش', fr3: 'قاب آتش', fr4: 'قاب سبز', fr5: 'قاب آتش چرخان', fr6: 'قاب رنگین‌کمان', back7: 'طلایی متحرک', packSection: 'بسته‌های ویژه', packEmoji: 'ایموجی‌های ویژه', packSticker: 'استیکرهای ویژه', enteredLbl: 'وارد میز شد', packLocked: 'این بسته را از فروشگاه بخر',
     chat1: 'استایل سرخ', chat2: 'استایل سبز', chat3: 'استایل طلایی',
     chatSample: 'سلام!',
     feltEv1: 'قالین جشن',
@@ -6017,7 +6043,7 @@ const STR = {
     chatSection: 'Chat styles',
     frameNone: 'No frame',
     chatDefault: 'Default style',
-    fr1: 'Gold frame', fr2: 'Violet frame', fr3: 'Fire frame', fr4: 'Emerald frame',
+    fr1: 'Gold frame', fr2: 'Violet frame', fr3: 'Fire frame', fr4: 'Emerald frame', fr5: 'Spinning fire frame', fr6: 'Rainbow spin frame', back7: 'Animated gold', packSection: 'Special packs', packEmoji: 'Special emojis', packSticker: 'Special stickers', enteredLbl: 'joined the table', packLocked: 'Buy this pack in the shop',
     chat1: 'Red style', chat2: 'Green style', chat3: 'Gold style',
     chatSample: 'Hello!',
     feltEv1: 'Festival carpet',
@@ -7086,7 +7112,7 @@ function validFelt(n) {
 // room (state.back) and every back in the room renders with it.
 function validBack(n) {
   n = Number(n);
-  return Number.isInteger(n) && n >= 1 && n <= 6 ? n : 1;
+  return Number.isInteger(n) && n >= 1 && n <= 7 ? n : 1;
 }
 function loadProfile() {
   let p = null;
@@ -7581,6 +7607,8 @@ const CHAT_PHRASES = ['سلام', 'ښه چال', 'ښه لوبه', 'هاهاها'
 const CHAT_EMOJIS = ['😎', '😂', '😍', '😭', '😡', '👊', '😮', '👍', '❤️', '🔥',
   '🤣', '😜', '🥳', '🙏', '👏', '💪', '🎉', '🤔', '😴', '🥺'];
 const CHAT_STICKERS = ['st1', 'st2', 'st3', 'st4', 'st5', 'st6', 'st7', 'st8', 'st9', 'st10', 'st11', 'st12', 'st13', 'st14', 'st15', 'st16'];
+const CHAT_EMOJIS2 = ['👑', '💎', '🦁', '🔱', '🎭', '🪩', '🦚', '🛡️']; // feat4: pack-emoji
+const CHAT_STICKERS2 = ['st17', 'st18', 'st19', 'st20', 'st21', 'st22', 'st23', 'st24']; // feat4: pack-sticker
 let chatOpen = false;
 const chatBubbles = {}; // table position -> { kind, value, until }
 
@@ -7646,7 +7674,7 @@ function fillPager(pagerSel, trackSel, dotsSel, items, perPage, pageClass, makeB
     b.onclick = () => { sendChat('phrase', p); closeChatPanel(); };
     return b;
   });
-  fillPager('#sticker-pager', '#chat-stickers', '#sticker-dots', CHAT_STICKERS, 8, 'chat-stickers', (id) => {
+  fillPager('#sticker-pager', '#chat-stickers', '#sticker-dots', CHAT_STICKERS.concat(CHAT_STICKERS2), 8, 'chat-stickers', (id) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'qsticker';
@@ -7655,17 +7683,26 @@ function fillPager(pagerSel, trackSel, dotsSel, items, perPage, pageClass, makeB
     img.alt = '';
     img.loading = 'lazy';
     b.appendChild(img);
-    b.onclick = () => { sendChat('sticker', id); closeChatPanel(); };
+    if (CHAT_STICKERS2.includes(id)) {
+      b.dataset.pack = 'pack-sticker';
+      const lk = document.createElement('span'); lk.className = 'qlock-badge'; lk.textContent = '🔒'; b.appendChild(lk);
+    }
+    b.onclick = () => { if (b.dataset.pack && !walletOwns(b.dataset.pack)) { toast(T('packLocked')); openShop('look'); return; } sendChat('sticker', id); closeChatPanel(); };
     return b;
   });
-  fillPager('#emoji-pager', '#chat-emojis', '#emoji-dots', CHAT_EMOJIS, 10, 'chat-emojis', (em) => {
+  fillPager('#emoji-pager', '#chat-emojis', '#emoji-dots', CHAT_EMOJIS.concat(CHAT_EMOJIS2), 10, 'chat-emojis', (em) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'qemoji';
     b.textContent = em;
-    b.onclick = () => { sendChat('emoji', em); closeChatPanel(); };
+    if (CHAT_EMOJIS2.includes(em)) {
+      b.dataset.pack = 'pack-emoji';
+      const lk = document.createElement('span'); lk.className = 'qlock-badge'; lk.textContent = '🔒'; b.appendChild(lk);
+    }
+    b.onclick = () => { if (b.dataset.pack && !walletOwns(b.dataset.pack)) { toast(T('packLocked')); openShop('look'); return; } sendChat('emoji', em); closeChatPanel(); };
     return b;
   });
+  paintChatLocks(); // feat4: locked until the wallet says otherwise
 })();
 
 // Axis-split help for the two pagers nested inside .chat-scroll:
@@ -7709,6 +7746,28 @@ function fillPager(pagerSel, trackSel, dotsSel, items, perPage, pageClass, makeB
 // the sender's seat badge: a phrase as text and an emoji BIG for 3 s,
 // a sticker as the GIF itself for 4 s. Bubbles are re-painted by
 // render() while alive, because every state push rebuilds the badge DOM.
+// feat4: pack lock visuals follow the wallet
+function paintChatLocks() {
+  document.querySelectorAll('[data-pack]').forEach((b) => {
+    let owned = false;
+    try { owned = walletOwns(b.dataset.pack); } catch (e) { /* wallet not initialized yet */ }
+    b.classList.toggle('qlock', !owned);
+    const lk = b.querySelector('.qlock-badge');
+    if (lk) lk.style.display = owned ? 'none' : '';
+  });
+}
+// feat4: dramatic entrance when a new player takes a seat
+function onEntered(m) {
+  if (!m || m.seat === mySeat) return;
+  const g = $('#scr-game'), l = $('#scr-lobby');
+  if ((!g || g.classList.contains('hidden')) && (!l || l.classList.contains('hidden'))) return;
+  const ov = $('#ov-entered'); if (!ov) return;
+  const av = ov.querySelector('.en-av'); av.innerHTML = ''; av.appendChild(avatarEl(m.name || '', m.avatar || 'av1', 96, m.photo || '', ''));
+  ov.querySelector('.en-name').textContent = m.name || '';
+  ov.querySelector('.en-lbl').textContent = T('enteredLbl');
+  ov.classList.remove('show'); void ov.offsetWidth; ov.classList.add('show');
+  clearTimeout(ov._t); ov._t = setTimeout(() => ov.classList.remove('show'), 2500);
+}
 function onChatMsg(m) {
   showChatBubble(m.seat, m.kind, m.value);
 }
@@ -10891,9 +10950,9 @@ class LocalHost {
         // per-seat pace.
         const clean = (typeof msg.value === 'string' && msg.kind === 'phrase' && CHAT_PHRASES.includes(msg.value))
           ? { kind: 'phrase', value: msg.value }
-          : (typeof msg.value === 'string' && msg.kind === 'emoji' && CHAT_EMOJIS.includes(msg.value))
+          : (typeof msg.value === 'string' && msg.kind === 'emoji' && (CHAT_EMOJIS.includes(msg.value) || CHAT_EMOJIS2.includes(msg.value)))
             ? { kind: 'emoji', value: msg.value }
-            : (typeof msg.value === 'string' && msg.kind === 'sticker' && CHAT_STICKERS.includes(msg.value))
+            : (typeof msg.value === 'string' && msg.kind === 'sticker' && (CHAT_STICKERS.includes(msg.value) || CHAT_STICKERS2.includes(msg.value)))
               ? { kind: 'sticker', value: msg.value } : null;
         if (!clean) return;
         const seat = room.seats[0];
@@ -12731,6 +12790,8 @@ function onMsg(msg) {
     render(msg);
   } else if (msg.type === 'chat') {
     onChatMsg(msg);
+  } else if (msg.type === 'entered') {
+    onEntered(msg);
   } else if (msg.type === 'voice') {
     // Flag update for one seat: mic/speaker ride together; a legacy
     // broadcast carries only `on` (= mic) and leaves speaker as-is.
@@ -12957,6 +13018,7 @@ function onSocialMsg(m) {
     applySocialLists(m);
   } else if (m.type === 's-wallet') {
     setWallet(m.wallet); // up47: balance/ownership push (claim, buy, escrow, settle…)
+    paintChatLocks(); // feat4
   } else if (m.type === 's-friends') {
     applySocialLists(m);
   } else if (m.type === 's-profile-result') {
@@ -13209,7 +13271,7 @@ function onSocialMsg(m) {
 // server catalogue in social-core.js — the server never trusts
 // a client number, so a stale copy here can only mislabel, never
 // mischarge.
-const SHOP_PRICES = { back2: 300, back3: 500, back4: 800, back5: 1200, back6: 2000, felt1: 400, felt2: 400, felt3: 600, felt4: 600, felt5: 800, felt6: 800, felt7: 1000, felt8: 1000, felt9: 1500, felt10: 1500, fr1: 500, fr2: 900, fr3: 1400, fr4: 2200, chat1: 400, chat2: 800, chat3: 1300 };
+const SHOP_PRICES = { back2: 300, back3: 500, back4: 800, back5: 1200, back6: 2000, felt1: 400, felt2: 400, felt3: 600, felt4: 600, felt5: 800, felt6: 800, felt7: 1000, felt8: 1000, felt9: 1500, felt10: 1500, fr1: 500, fr2: 900, fr3: 1400, fr4: 2200, chat1: 400, chat2: 800, chat3: 1300, back7: 1800, fr5: 2500, fr6: 3000, 'pack-emoji': 600, 'pack-sticker': 900 };
 let myWallet = null;   // last wallet state from the server; null = not loaded yet
 let shopTab = 'coins';
 let chestTimer = null;
@@ -13227,6 +13289,7 @@ function setWallet(w) {
   if (!w || typeof w.coins !== 'number') return;
   myWallet = w;
   paintWallet();
+  paintChatLocks(); // feat4: pack locks follow ownership
   if (!$('#scr-shop').classList.contains('hidden')) renderShop();
   if ($('#ov-settings').classList.contains('show')) { paintFelts(); paintBacks(); }
 }
@@ -13422,7 +13485,7 @@ function renderShopLook(body) {
     grid.appendChild(cell);
   };
   const backs = sect('backSection');
-  for (let n = 2; n <= 6; n++) {
+  for (let n = 2; n <= 7; n++) {
     const art = shopEl('div', 'si-art cback cback-' + n);
     addItem(backs, 'back' + n, art, T('back' + n), validBack(profile.back) === n);
   }
@@ -13454,7 +13517,7 @@ function renderShopLook(body) {
   // feat3 (#19): avatar frames — the art is a live avatar wearing it
   const frames = sect('frameSection');
   addNone(frames, T('frameNone'), !profile.frame, () => equipFrame(''));
-  for (let n = 1; n <= 4; n++) {
+  for (let n = 1; n <= 6; n++) {
     const art = shopEl('div', 'si-art frame-art');
     art.appendChild(avatarEl('', 'av1', 40, '', 'fr' + n));
     addItem(frames, 'fr' + n, art, T('fr' + n), profile.frame === 'fr' + n, () => equipFrame('fr' + n));
@@ -13468,6 +13531,12 @@ function renderShopLook(body) {
     art.appendChild(bub);
     addItem(styles, 'chat' + n, art, T('chat' + n), profile.chatStyle === 'chat' + n, () => equipChatStyle('chat' + n));
   }
+  // feat4: special packs — buy once, use forever at the table
+  const packs = sect('packSection');
+  addItem(packs, 'pack-emoji', shopEl('div', 'si-art pack-art', '👑💎'), T('packEmoji'), false);
+  const sArt = shopEl('div', 'si-art pack-art');
+  const sImg = document.createElement('img'); sImg.src = stickerURL('st17'); sImg.alt = ''; sArt.appendChild(sImg);
+  addItem(packs, 'pack-sticker', sArt, T('packSticker'), false);
 }
 $('#btn-shop-back').onclick = () => closeShop();
 $('#btn-wallet-coins').onclick = () => openShop('coins');
