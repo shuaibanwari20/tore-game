@@ -96,7 +96,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261114-presence2';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261115-name52';
 // The PREVIOUS client version's URL — last-resort fallback for
 // serveClient (see the header comment): that build was live long
 // enough that its edge copies are warm in the POPs, so when a fresh
@@ -142,9 +142,9 @@ const CLIENT_CACHE_TTL = 86400; // seconds the EDGE keeps the client copy —
 function updatingPage(note) {
   return `<!doctype html>
 <html lang="fa" dir="rtl"><meta charset="utf-8">
-<title>توره — در حال به‌روزرسانی</title>
+<title>52 Online — در حال به‌روزرسانی</title>
 <body style="font-family:Tahoma;background:#241a10;color:#f2c14e;text-align:center;padding:3rem 1rem">
-<h1>توره</h1>
+<h1 dir="ltr">52 Online</h1>
 <p>بازی در حال به‌روزرسانی است؛ یک دقیقهٔ دیگر دوباره تلاش کن.</p>
 <p style="opacity:.6;font-size:.85em">${note}</p>
 </body></html>`;
@@ -162,7 +162,7 @@ function authDonePage() {
   return `<!doctype html>
 <html lang="ps" dir="rtl"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>توره — ننوتل</title>
+<title>52 Online — ننوتل</title>
 <body style="font-family:Tahoma,Arial,sans-serif;background:#4a0727;color:#fdf3e3;text-align:center;padding:3rem 1.2rem;margin:0">
 <div id="done-ok">
 <div style="font-size:64px;line-height:1">✅</div>
@@ -199,10 +199,10 @@ function privacyPage() {
   return `<!doctype html>
 <html lang="fa" dir="rtl"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>حریم خصوصی — بازی توره | Privacy Policy — Tore</title>
+<title>حریم خصوصی — بازی 52 Online | Privacy Policy — 52 Online</title>
 <body style="font-family:Tahoma,Arial,sans-serif;background:#1c1410;color:#f5ead6;line-height:1.9;padding:2rem 1.1rem;max-width:640px;margin:0 auto">
-<h1 style="color:#f2c14e;font-size:1.35rem">حریم خصوصی — بازی توره</h1>
-<p>بازی توره برای ورود از گوگل یا فیسبوک استفاده می‌کند و فقط نام، ایمیل و عکس پروفایل حساب شما را می‌گیرد.</p>
+<h1 style="color:#f2c14e;font-size:1.35rem">حریم خصوصی — بازی 52 Online</h1>
+<p>بازی 52 Online برای ورود از گوگل یا فیسبوک استفاده می‌کند و فقط نام، ایمیل و عکس پروفایل حساب شما را می‌گیرد.</p>
 <p>این اطلاعات فقط برای ساخت حساب بازی و نمایش نام و آواتار شما در بازی استفاده می‌شود؛ به هیچ‌کس فروخته یا برای تبلیغات استفاده نمی‌شود.</p>
 <p>اطلاعات بازی (اتاق‌ها و امتیازها) روی سرور بازی نگهداری می‌شود. با خروج از حساب (Logout)، نشست شما بسته می‌شود.</p>
 <p>برای حذف اطلاعات‌تان ایمیل بزنید: <a href="mailto:shuaibanwari20@gmail.com" style="color:#f2c14e">shuaibanwari20@gmail.com</a></p>
@@ -223,10 +223,10 @@ function dataDeletionPage() {
   return `<!doctype html>
 <html lang="fa" dir="rtl"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>حذف اطلاعات — بازی توره | Data Deletion — Tore</title>
+<title>حذف اطلاعات — بازی 52 Online | Data Deletion — 52 Online</title>
 <body style="font-family:Tahoma,Arial,sans-serif;background:#1c1410;color:#f5ead6;line-height:1.9;padding:2rem 1.1rem;max-width:640px;margin:0 auto">
-<h1 style="color:#f2c14e;font-size:1.35rem">حذف اطلاعات — بازی توره</h1>
-<p>اگر می‌خواهید اطلاعاتی که بازی توره از حساب گوگل یا فیسبوک شما گرفته (نام، ایمیل و عکس پروفایل) حذف شود، به این ایمیل پیام بفرستید: <a href="mailto:shuaibanwari20@gmail.com" style="color:#f2c14e">shuaibanwari20@gmail.com</a> — در عنوان بنویسید «حذف اطلاعات توره». اطلاعات شما حداکثر تا ۷ روز پس از درخواست، کامل حذف می‌شود. برای حذف فوری، در بازی دکمهٔ خروج (Logout) نشست شما را همان لحظه می‌بندد.</p>
+<h1 style="color:#f2c14e;font-size:1.35rem">حذف اطلاعات — بازی 52 Online</h1>
+<p>اگر می‌خواهید اطلاعاتی که بازی 52 Online از حساب گوگل یا فیسبوک شما گرفته (نام، ایمیل و عکس پروفایل) حذف شود، به این ایمیل پیام بفرستید: <a href="mailto:shuaibanwari20@gmail.com" style="color:#f2c14e">shuaibanwari20@gmail.com</a> — در عنوان بنویسید «حذف اطلاعات 52 Online». اطلاعات شما حداکثر تا ۷ روز پس از درخواست، کامل حذف می‌شود. برای حذف فوری، در بازی دکمهٔ خروج (Logout) نشست شما را همان لحظه می‌بندد.</p>
 <p style="opacity:.65;font-size:.85em">آخرین به‌روزرسانی: 2026-11-06</p>
 <hr style="border:none;border-top:1px solid #4a3826;margin:2rem 0">
 <div dir="ltr" lang="en" style="text-align:left">
