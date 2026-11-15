@@ -116,7 +116,7 @@ function cleanFelt(v) {
 // anything else falls back to 1. Fixed at creation, persisted
 // with the room snapshot, stamped on every state push.
 function cleanBack(v) {
-  return (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 6) ? v : 1;
+  return (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 7) ? v : 1;
 }
 // Stake tiers (up47): the create frame carries the creator's
 // tier — one of the fixed ladder (0 = free), validated exactly
@@ -139,13 +139,15 @@ const CHAT_PHRASES = ['سلام', 'ښه چال', 'ښه لوبه', 'هاهاها'
 const CHAT_EMOJIS = ['😎', '😂', '😍', '😭', '😡', '👊', '😮', '👍', '❤️', '🔥',
   '🤣', '😜', '🥳', '🙏', '👏', '💪', '🎉', '🤔', '😴', '🥺'];
 const CHAT_STICKERS = ['st1', 'st2', 'st3', 'st4', 'st5', 'st6', 'st7', 'st8', 'st9', 'st10', 'st11', 'st12', 'st13', 'st14', 'st15', 'st16'];
+const CHAT_EMOJIS2 = ['👑', '💎', '🦁', '🔱', '🎭', '🪩', '🦚', '🛡️']; // feat4: pack-emoji (shop)
+const CHAT_STICKERS2 = ['st17', 'st18', 'st19', 'st20', 'st21', 'st22', 'st23', 'st24']; // feat4: pack-sticker (shop)
 const CHAT_MIN_INTERVAL_MS = 800;
 const RTC_MAX_BYTES = 16384;
 function cleanChat(kind, value) {
   if (typeof value !== 'string') return null;
   if (kind === 'phrase' && CHAT_PHRASES.includes(value)) return { kind, value };
-  if (kind === 'emoji' && CHAT_EMOJIS.includes(value)) return { kind, value };
-  if (kind === 'sticker' && CHAT_STICKERS.includes(value)) return { kind, value };
+  if (kind === 'emoji' && (CHAT_EMOJIS.includes(value) || CHAT_EMOJIS2.includes(value))) return { kind, value };
+  if (kind === 'sticker' && (CHAT_STICKERS.includes(value) || CHAT_STICKERS2.includes(value))) return { kind, value };
   return null;
 }
 /** Seat display name: the player's own profile name wins; when it is
@@ -1783,6 +1785,7 @@ export class GameServer {
   // ------------------------------------------------------- seat lifecycle
   _attachPlayer(ws, att, room, seatIdx, name, prof) {
     const seat = room.seats[seatIdx];
+    const prevSid = seat.sid; // feat4: a NEW identity here = a fresh entrance (a reconnect keeps its sid)
     seat.kind = 'human';
     seat.name = name;
     seat.avatar = cleanAvatar(prof && prof.avatar);
@@ -1804,6 +1807,7 @@ export class GameServer {
     att.seat = seatIdx;
     att.token = seat.token;
     this._saveAttachment(ws, att);
+    if (seat.sid && prevSid !== seat.sid) this._broadcastEvent(room, { type: 'entered', seat: seatIdx, name: seat.name, avatar: seat.avatar, photo: seat.photo, country: seat.country }); // feat4: dramatic entrance
     this._maybeUnfreeze(room); // F35: a live seat wakes the match
     // The caller sends the room reply AFTER persisting the room
     // (_sendRoomReply) — a code is never announced before it is
@@ -2259,7 +2263,12 @@ export class GameServer {
         const now = Date.now();
         if (seat.lastChatAt && now - seat.lastChatAt < CHAT_MIN_INTERVAL_MS) return; // too fast — drop silently
         seat.lastChatAt = now;
-        this._broadcastEvent(room, { type: 'chat', seat: att.seat, name: seat.name, kind: c.kind, value: c.value, ts: now });
+        // feat4: premium pack content relays only for its owner
+        const packSku = c.kind === 'emoji' && CHAT_EMOJIS2.includes(c.value) ? 'pack-emoji'
+          : c.kind === 'sticker' && CHAT_STICKERS2.includes(c.value) ? 'pack-sticker' : null;
+        const ev = { type: 'chat', seat: att.seat, name: seat.name, kind: c.kind, value: c.value, ts: now };
+        if (!packSku) this._broadcastEvent(room, ev);
+        else this._walletCall((core) => { if (seat.sid && typeof core.ownsCosmetic === 'function' && core.ownsCosmetic(seat.sid, packSku)) this._broadcastEvent(room, ev); });
         break;
       }
       case 'voice': {

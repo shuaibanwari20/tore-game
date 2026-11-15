@@ -450,6 +450,9 @@ const SHOP_ITEMS = new Map([
   // feat3 (owner picks 2026-11-14): avatar frames + chat styles
   ['fr1', 500], ['fr2', 900], ['fr3', 1400], ['fr4', 2200],
   ['chat1', 400], ['chat2', 800], ['chat3', 1300],
+  // feat4 (owner picks 2026-11-15): special packs + animated cosmetics
+  ['back7', 1800], ['fr5', 2500], ['fr6', 3000],
+  ['pack-emoji', 600], ['pack-sticker', 900],
 ]);
 const FREE_COSMETICS = new Set(['back1', 'felt11']);
 
@@ -1262,7 +1265,7 @@ class SocialCore {
       // feat3 (#19): the worn avatar frame + chat style ride the
       // directory like the name does — validated against actual
       // ownership, so a forged hello can never wear a paid frame.
-      frame: (typeof profile.frame === 'string' && /^fr[1-4]$/.test(profile.frame) && this.ownsCosmetic(id, profile.frame)) ? profile.frame : ((prev && prev.frame) || ''),
+      frame: (typeof profile.frame === 'string' && /^fr[1-6]$/.test(profile.frame) && this.ownsCosmetic(id, profile.frame)) ? profile.frame : ((prev && prev.frame) || ''),
       chatStyle: (typeof profile.chatStyle === 'string' && /^chat[1-3]$/.test(profile.chatStyle) && this.ownsCosmetic(id, profile.chatStyle)) ? profile.chatStyle : ((prev && prev.chatStyle) || ''),
       uid,
       // Do-not-disturb + the uploaded-photo version survive every
