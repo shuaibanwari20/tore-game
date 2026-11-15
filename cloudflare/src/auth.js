@@ -461,10 +461,10 @@ async function sendOtpEmail(env, email, code) {
         Accept: 'application/json',
       },
       body: JSON.stringify({
-        sender: { name: 'توره', email: env.BREVO_SENDER || 'shuaibanwari20@gmail.com' },
+        sender: { name: '52 Online', email: env.BREVO_SENDER || 'shuaibanwari20@gmail.com' },
         to: [{ email }],
-        subject: 'توره — د ننوتلو کوډ / کد ورود',
-        textContent: 'ستا د تورې د ننوتلو کوډ: ' + code + '\nکد ورود تو به توره: ' + code + '\nYour Tore sign-in code: ' + code + '\n\nدا کوډ ۱۰ دقیقې کار کوي. / This code works for 10 minutes.',
+        subject: '52 Online — د ننوتلو کوډ / کد ورود',
+        textContent: 'ستا د 52 Online د ننوتلو کوډ: ' + code + '\nکد ورود تو به 52 Online: ' + code + '\nYour 52 Online sign-in code: ' + code + '\n\nدا کوډ ۱۰ دقیقې کار کوي. / This code works for 10 minutes.',
       }),
     });
     return res.ok;
