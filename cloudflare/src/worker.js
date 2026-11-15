@@ -288,6 +288,13 @@ async function fetchClientCopy(url, timeoutMs) {
   }
 }
 
+// up93 FAST OPEN: gzip a client buffer once; the result is cached
+// beside the raw copy and served to every gzip-capable browser.
+async function gzipBuffer(buf) {
+  const stream = new Blob([buf]).stream().pipeThrough(new CompressionStream('gzip'));
+  return await new Response(stream).arrayBuffer();
+}
+
 async function serveClient(request, env) {
   const src = env.CLIENT_URL || CLIENT_URL_DEFAULT;
   const etag = clientETag(src);
@@ -295,10 +302,24 @@ async function serveClient(request, env) {
   const fallbackEtag = clientETag(fallbackSrc);
   const notModified = (tag) => new Response(null, {
     status: 304,
-    headers: { 'ETag': tag, 'Cache-Control': 'no-cache' },
+    headers: { 'ETag': tag, 'Cache-Control': BROWSER_CC },
   });
   const cacheKey = new Request(src, { method: 'GET' });
   const lastGoodKey = new Request(LAST_GOOD_CACHE_URL, { method: 'GET' });
+  // up93 FAST OPEN (owner report 2026-11-15, "the game opens very
+  // late"): the client is ~1 MB of HTML and worker responses are
+  // NOT compressed by the edge here, so a phone used to pull the
+  // whole megabyte before first paint. The worker now keeps a gzip
+  // copy (≈222 KB on the wire) beside the raw one and serves it to
+  // gzip-capable browsers; and the browser-facing lifetime becomes
+  // a short max-age instead of no-cache, so repeat opens within
+  // two minutes need no network at all — a new build still lands
+  // within two minutes, and after that the ETag revalidation is a
+  // single tiny 304.
+  const BROWSER_CC = 'private, max-age=120';
+  const wantsGzip = /\bgzip\b/.test(request.headers.get('Accept-Encoding') || '');
+  const gzTag = (tag) => tag.replace(/"$/, '-gz"');
+  const gzKeyOf = (url) => new Request(url + '#gz', { method: 'GET' });
   const fallbackKey = new Request(fallbackSrc, { method: 'GET' });
   let cache = null;
   try { cache = caches.default; } catch { cache = null; }
@@ -310,11 +331,12 @@ async function serveClient(request, env) {
   // browser holding a fallback copy is NOT 304'd once the current
   // build is reachable again (its If-None-Match names the fallback's
   // tag, which no longer matches `etag` on the happy path).
-  const serveCached = (hit, tag) => {
-    // The browser revalidates on every load (no-cache below), but
-    // with the ETag that revalidation is free when nothing changed:
-    // a matching If-None-Match gets a bodyless 304.
-    if (ifNoneMatchHits(request, tag)) return notModified(tag);
+  const serveCached = (hit, tag, isGz) => {
+    // The browser may reuse its copy for BROWSER_CC's lifetime;
+    // after that the ETag revalidation is free when nothing
+    // changed: a matching If-None-Match gets a bodyless 304.
+    const effTag = isGz ? gzTag(tag) : tag;
+    if (ifNoneMatchHits(request, effTag)) return notModified(effTag);
     // Re-head the edge copy for the browser: same body/status and
     // Content-Type, but `Cache-Control: no-cache` — the browser must
     // revalidate `/` on every load, so a freshly deployed build is
@@ -323,8 +345,9 @@ async function serveClient(request, env) {
     // busted THIS edge copy, never the browser's.)
     const headers = new Headers(hit.headers);
     headers.delete('X-Tore-Client-ETag');
-    headers.set('Cache-Control', 'no-cache');
-    headers.set('ETag', tag);
+    headers.set('Cache-Control', BROWSER_CC);
+    headers.set('ETag', effTag);
+    if (isGz) { headers.set('Content-Encoding', 'gzip'); headers.set('Vary', 'Accept-Encoding'); }
     return new Response(hit.body, {
       status: hit.status,
       statusText: hit.statusText,
@@ -335,25 +358,38 @@ async function serveClient(request, env) {
   // cheap upstream fetches) and remembers — in X-Tore-Client-ETag —
   // which version it holds, so a version-independent reader (the
   // last-good fallback) can still ETag it correctly.
-  const edgeCopy = (buf, tag) => new Response(buf, {
+  const edgeCopy = (buf, tag, isGz) => new Response(buf, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'public, max-age=' + CLIENT_CACHE_TTL,
       'X-Tore-Client-ETag': tag,
+      ...(isGz ? { 'Content-Encoding': 'gzip' } : {}),
     },
   });
   // Hand a freshly fetched buffer to THIS browser: the response
   // revalidates always — and if this very request already carries
   // the copy's ETag, it needs no body at all.
-  const serveFresh = (buf, tag) => {
-    if (ifNoneMatchHits(request, tag)) return notModified(tag);
+  const serveFresh = (buf, tag, isGz) => {
+    const effTag = isGz ? gzTag(tag) : tag;
+    if (ifNoneMatchHits(request, effTag)) return notModified(effTag);
     return new Response(buf, {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'no-cache',
-        'ETag': tag,
+        'Cache-Control': BROWSER_CC,
+        'ETag': effTag,
+        ...(isGz ? { 'Content-Encoding': 'gzip', 'Vary': 'Accept-Encoding' } : {}),
       },
     });
+  };
+  // Serve a cached copy, preferring its gzip twin when the browser
+  // takes gzip (compressing + caching the twin on first need).
+  const serveHit = async (hit, tag, rawUrl) => {
+    if (!wantsGzip) return serveCached(hit, tag, false);
+    const gzHit = await cacheMatch(gzKeyOf(rawUrl));
+    if (gzHit) return serveCached(gzHit, tag, true);
+    const gz = await gzipBuffer(await hit.arrayBuffer());
+    await cachePut(gzKeyOf(rawUrl), edgeCopy(gz, tag, true));
+    return serveFresh(gz, tag, true);
   };
   const cacheMatch = async (key) => {
     if (!cache) return null;
@@ -366,7 +402,7 @@ async function serveClient(request, env) {
 
   // Happy path 1: the edge already holds the current client.
   const hit = await cacheMatch(cacheKey);
-  if (hit) return serveCached(hit, etag);
+  if (hit) return serveHit(hit, etag, src);
 
   // Happy path 2: pull it from upstream — BOUNDED, so a cold ?v=
   // URL whose GitHub fetch stalls can never hang the page again.
@@ -377,7 +413,13 @@ async function serveClient(request, env) {
     // upstream fetch), then serve it.
     await cachePut(cacheKey, edgeCopy(fresh.buf, etag));
     await cachePut(lastGoodKey, edgeCopy(fresh.buf, etag));
-    return serveFresh(fresh.buf, etag);
+    if (wantsGzip) {
+      const gz = await gzipBuffer(fresh.buf);
+      await cachePut(gzKeyOf(src), edgeCopy(gz, etag, true));
+      await cachePut(gzKeyOf(LAST_GOOD_CACHE_URL), edgeCopy(gz, etag, true));
+      return serveFresh(gz, etag, true);
+    }
+    return serveFresh(fresh.buf, etag, false);
   }
 
   // Upstream failed, timed out or sent a truncated file. Fall back
@@ -386,22 +428,22 @@ async function serveClient(request, env) {
   //     the first match may have raced a concurrent request's put
   //     (or transiently failed) while our fetch was in flight;
   const hitAgain = await cacheMatch(cacheKey);
-  if (hitAgain) return serveCached(hitAgain, etag);
+  if (hitAgain) return serveHit(hitAgain, etag, src);
   // (b) the last-good entry — its stored header says which version
   //     it holds, so it is ETagged as that version;
   const lastGood = await cacheMatch(lastGoodKey);
   if (lastGood) {
-    return serveCached(lastGood, lastGood.headers.get('X-Tore-Client-ETag') || etag);
+    return serveHit(lastGood, lastGood.headers.get('X-Tore-Client-ETag') || etag, LAST_GOOD_CACHE_URL);
   }
   // (c) the PREVIOUS version's URL: its edge copy if this POP has
   //     one, else one bounded fetch of it (it was live for a day —
   //     in production the fetch is a warm GitHub raw read).
   const fbHit = await cacheMatch(fallbackKey);
-  if (fbHit) return serveCached(fbHit, fallbackEtag);
+  if (fbHit) return serveCached(fbHit, fallbackEtag, false);
   const fbFresh = await fetchClientCopy(fallbackSrc, FALLBACK_FETCH_TIMEOUT_MS);
   if (fbFresh.buf) {
     await cachePut(fallbackKey, edgeCopy(fbFresh.buf, fallbackEtag));
-    return serveFresh(fbFresh.buf, fallbackEtag);
+    return serveFresh(fbFresh.buf, fallbackEtag, false);
   }
   // (d) Nothing good anywhere — the standing "game is updating"
   //     page, answered promptly with the current URL's failure note.
