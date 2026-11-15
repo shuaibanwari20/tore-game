@@ -317,7 +317,12 @@ async function serveClient(request, env) {
   // within two minutes, and after that the ETag revalidation is a
   // single tiny 304.
   const BROWSER_CC = 'private, max-age=120';
-  const wantsGzip = /\bgzip\b/.test(request.headers.get('Accept-Encoding') || '');
+  // HOTFIX up95 (2026-11-15): worker-side gzip DISABLED — on the
+  // owner's phone the gzipped body arrived WITHOUT decompression
+  // and rendered as raw binary garbage (his screenshot, 09:01).
+  // The raw path below is the proven one; the short browser
+  // max-age stays. Do not re-enable without a phone-verified test.
+  const wantsGzip = false;
   const gzTag = (tag) => tag.replace(/"$/, '-gz"');
   const gzKeyOf = (url) => new Request(url + '#gz', { method: 'GET' });
   const fallbackKey = new Request(fallbackSrc, { method: 'GET' });
