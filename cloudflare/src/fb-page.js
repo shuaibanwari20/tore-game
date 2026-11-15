@@ -94,7 +94,7 @@ export function fbPage(ticket, gid) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>توره — ننوتل</title>
+<title>52 Online — ننوتل</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { min-height: 100dvh; display: flex; align-items: center; justify-content: center;
@@ -121,7 +121,7 @@ export function fbPage(ticket, gid) {
 </head>
 <body>
 <div class="card">
-  <h1>توره</h1>
+  <h1 dir="ltr">52 Online</h1>
   <div class="sub">د ننوتلو لپاره لاندې تڼۍ ووهه<br>برای ورود دکمهٔ زیر را بزن</div>
   <div id="giswrap" style="display:none">
     <div class="sub" style="margin-bottom:12px">د ګوګل په رسمي تڼۍ خپل جمیل وټاکه</div>
