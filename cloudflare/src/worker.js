@@ -96,7 +96,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261115-name52c';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261115-name52d';
 // The PREVIOUS client version's URL — last-resort fallback for
 // serveClient (see the header comment): that build was live long
 // enough that its edge copies are warm in the POPs, so when a fresh
@@ -868,10 +868,10 @@ export default {
       // STREAM with Range relayed upstream (serveMusic) so a
       // phone can seek and the Worker never buffers a whole song.
       const name = path.slice('/music/'.length);
-      if (/^c([1-9]|[12][0-9]|30)\.jpg$/.test(name)) {
+      if (/^c([1-9]|[123][0-9]|40)\.jpg$/.test(name)) {
         return serveRepoAsset(env, env.MUSIC_URL || MUSIC_URL_BASE_DEFAULT, name, 'image/jpeg');
       }
-      if (/^m([1-9]|[12][0-9]|30)\.mp3$/.test(name)) return serveMusic(env, request, name);
+      if (/^m([1-9]|[123][0-9]|40)\.mp3$/.test(name)) return serveMusic(env, request, name);
       return new Response('not found', { status: 404 });
     }
 
