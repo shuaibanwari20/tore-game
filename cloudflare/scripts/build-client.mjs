@@ -70,6 +70,20 @@ try {
     return whole;
   });
   console.log('build-client: comment strip saved ' + savedTotal + ' bytes');
+  // 3b) CSS comment strip (feat4): the same treatment for the <style>
+  // blocks — the sources carry ~55 KB of CSS documentation comments;
+  // esbuild's CSS parser removes them without touching rules, strings
+  // or data URIs. Same fallback: a block that fails or grows is kept.
+  let savedCss = 0;
+  html = html.replace(/<style>([\s\S]*?)<\/style>/g, (whole, css) => {
+    if (!css.trim()) return whole;
+    try {
+      const out = esbuild.transformSync(css, { loader: 'css', legalComments: 'none' }).code;
+      if (out.length < css.length) { savedCss += css.length - out.length; return '<style>' + out + '</style>'; }
+    } catch (e) { /* keep the block verbatim */ }
+    return whole;
+  });
+  console.log('build-client: CSS comment strip saved ' + savedCss + ' bytes');
 } catch (e) {
   console.log('build-client: WARNING — esbuild unavailable, dist NOT comment-stripped (' + (e && e.message) + ')');
 }
