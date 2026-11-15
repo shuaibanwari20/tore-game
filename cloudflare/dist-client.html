@@ -3272,6 +3272,10 @@
   .pl-hgroup { display: flex; gap: 8px; flex: none; }
   #btn-pl-fav.on { background: rgba(255,91,127,.18); border-color: #ff5b7f; }
   #btn-pl-fav.on svg path { fill: #ff5b7f; stroke: #ff5b7f; }
+  .pl-tabs { display: flex; gap: 6px; padding: 2px 14px 8px; flex: none; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .pl-tabs::-webkit-scrollbar { display: none; }
+  .pl-tab { width: auto; flex: none; margin: 0; border: 1.5px solid rgba(247,197,74,.45); background: rgba(14,9,22,.45); color: #e9d8ff; border-radius: 999px; padding: 5px 13px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+  .pl-tab.on { background: linear-gradient(180deg, #ffe98a, #e0a408); border-color: #ffe98a; color: #4a2c00; }
   .mp-fav { width: 34px; height: 34px; border-radius: 50%; flex: none; cursor: pointer; padding: 0; margin: 0;
     background: transparent; border: none; display: flex; align-items: center; justify-content: center; }
   .mp-fav svg { width: 19px; height: 19px; display: block; }
@@ -4887,6 +4891,7 @@
       <button type="button" class="pl-hbtn gold" id="btn-pl-search" aria-label="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg></button>
     </span>
   </div>
+  <div class="pl-tabs" id="pl-tabs"><button type="button" class="pl-tab on" data-cat="all">All</button><button type="button" class="pl-tab" data-cat="af">Afghani</button><button type="button" class="pl-tab" data-cat="ir">Irani</button><button type="button" class="pl-tab" data-cat="hi">Hindi</button><button type="button" class="pl-tab" data-cat="en">English</button></div>
   <div class="pl-searchrow hidden" id="pl-searchrow"><input id="pl-search" type="text" autocomplete="off"></div>
   <div class="fr-scroll">
     <div id="mp-rows"></div>
@@ -10754,47 +10759,51 @@ const MP_TRACKS = [
   { t: { ps: "\u0646\u0627\u0632\u0648\u0644\u06CC \u062C\u06CC\u0646\u06CD", fa: "\u0646\u0627\u0632\u0648\u0644\u06CC \u062C\u06CC\u0646\u06CD", en: "Nazawaly Jeny" }, a: { ps: "\u0627\u0633\u062A\u0627\u062F \u0627\u0648\u0644 \u0645\u06CC\u0631", fa: "\u0627\u0633\u062A\u0627\u062F \u0627\u0648\u0644 \u0645\u06CC\u0631", en: "Ustad Awalmir" }, dur: "4:07" },
   { t: { ps: "\u0631\u0646\u06AB\u06CC\u0646 \u062C\u0647\u0627\u0646", fa: "\u0631\u0646\u06AB\u06CC\u0646 \u062C\u0647\u0627\u0646", en: "Rangeen Jahan" }, a: { ps: "\u0634\u0627\u0647 \u0648\u0644\u064A", fa: "\u0634\u0627\u0647 \u0648\u0644\u06CC", en: "Shah Wali" }, dur: "4:03" },
   { t: { ps: "\u0634\u0627\u0647 \u0644\u06CC\u0644\u06CC \u0631\u0627\u0634\u0647", fa: "\u0634\u0627\u0647 \u0644\u06CC\u0644\u06CC \u0631\u0627\u0634\u0647", en: "Shah Laila Rasha" }, a: { ps: "\u0634\u0627\u0647 \u0648\u0644\u064A", fa: "\u0634\u0627\u0647 \u0648\u0644\u06CC", en: "Shah Wali" }, dur: "5:13" },
-  { t: { ps: "Saiyaara", fa: "Saiyaara", en: "Saiyaara" }, a: { ps: "Faheem Abdullah", fa: "Faheem Abdullah", en: "Faheem Abdullah" }, dur: "6:11" },
-  { t: { ps: "Chaleya", fa: "Chaleya", en: "Chaleya" }, a: { ps: "Arijit Singh, Shilpa Rao", fa: "Arijit Singh, Shilpa Rao", en: "Arijit Singh, Shilpa Rao" }, dur: "3:40" },
-  { t: { ps: "Satranga", fa: "Satranga", en: "Satranga" }, a: { ps: "Arijit Singh", fa: "Arijit Singh", en: "Arijit Singh" }, dur: "4:51" },
-  { t: { ps: "Tere Vaaste", fa: "Tere Vaaste", en: "Tere Vaaste" }, a: { ps: "Varun Jain", fa: "Varun Jain", en: "Varun Jain" }, dur: "3:23" },
-  { t: { ps: "Jhoome Jo Pathaan", fa: "Jhoome Jo Pathaan", en: "Jhoome Jo Pathaan" }, a: { ps: "Arijit Singh", fa: "Arijit Singh", en: "Arijit Singh" }, dur: "3:23" },
-  { t: { ps: "Aaj Ki Raat", fa: "Aaj Ki Raat", en: "Aaj Ki Raat" }, a: { ps: "Madhubanti Bagchi", fa: "Madhubanti Bagchi", en: "Madhubanti Bagchi" }, dur: "4:47" },
-  { t: { ps: "Aayi Nai", fa: "Aayi Nai", en: "Aayi Nai" }, a: { ps: "Pawan Singh", fa: "Pawan Singh", en: "Pawan Singh" }, dur: "3:18" },
-  { t: { ps: "Raanjhan", fa: "Raanjhan", en: "Raanjhan" }, a: { ps: "Parampara Tandon", fa: "Parampara Tandon", en: "Parampara Tandon" }, dur: "4:13" },
-  { t: { ps: "Uyi Amma", fa: "Uyi Amma", en: "Uyi Amma" }, a: { ps: "Madhubanti Bagchi", fa: "Madhubanti Bagchi", en: "Madhubanti Bagchi" }, dur: "3:14" },
-  { t: { ps: "Barbaad", fa: "Barbaad", en: "Barbaad" }, a: { ps: "Jubin Nautiyal", fa: "Jubin Nautiyal", en: "Jubin Nautiyal" }, dur: "3:45" },
-  { t: { ps: "Tauba Tauba", fa: "Tauba Tauba", en: "Tauba Tauba" }, a: { ps: "Karan Aujla", fa: "Karan Aujla", en: "Karan Aujla" }, dur: "3:42" },
-  { t: { ps: "Besharam Rang", fa: "Besharam Rang", en: "Besharam Rang" }, a: { ps: "Shilpa Rao", fa: "Shilpa Rao", en: "Shilpa Rao" }, dur: "3:14" },
-  { t: { ps: "O Maahi", fa: "O Maahi", en: "O Maahi" }, a: { ps: "Arijit Singh", fa: "Arijit Singh", en: "Arijit Singh" }, dur: "4:06" },
-  { t: { ps: "Lutt Putt Gaya", fa: "Lutt Putt Gaya", en: "Lutt Putt Gaya" }, a: { ps: "Arijit Singh", fa: "Arijit Singh", en: "Arijit Singh" }, dur: "4:03" },
-  { t: { ps: "Pehle Bhi Main", fa: "Pehle Bhi Main", en: "Pehle Bhi Main" }, a: { ps: "Vishal Mishra", fa: "Vishal Mishra", en: "Vishal Mishra" }, dur: "4:08" },
-  { t: { ps: "Arjan Vailly", fa: "Arjan Vailly", en: "Arjan Vailly" }, a: { ps: "Manan Bhardwaj", fa: "Manan Bhardwaj", en: "Manan Bhardwaj" }, dur: "3:00" },
-  { t: { ps: "Mere Mehboob", fa: "Mere Mehboob", en: "Mere Mehboob" }, a: { ps: "Shilpa Rao, Sachet Tandon", fa: "Shilpa Rao, Sachet Tandon", en: "Shilpa Rao, Sachet Tandon" }, dur: "3:52" },
-  { t: { ps: "Sher Khul Gaye", fa: "Sher Khul Gaye", en: "Sher Khul Gaye" }, a: { ps: "Vishal-Shekhar", fa: "Vishal-Shekhar", en: "Vishal-Shekhar" }, dur: "3:13" },
-  { t: { ps: "Laal Peeli Akhiyaan", fa: "Laal Peeli Akhiyaan", en: "Laal Peeli Akhiyaan" }, a: { ps: "Romy", fa: "Romy", en: "Romy" }, dur: "3:15" },
-  { t: { ps: "Dhun", fa: "Dhun", en: "Dhun" }, a: { ps: "Arijit Singh", fa: "Arijit Singh", en: "Arijit Singh" }, dur: "3:32" },
-  { t: { ps: "Humdum", fa: "Humdum", en: "Humdum" }, a: { ps: "Vishal Mishra", fa: "Vishal Mishra", en: "Vishal Mishra" }, dur: "3:50" },
-  { t: { ps: "Nasha", fa: "Nasha", en: "Nasha" }, a: { ps: "Jasmine Sandlas", fa: "Jasmine Sandlas", en: "Jasmine Sandlas" }, dur: "3:11" },
-  { t: { ps: "Sahiba", fa: "Sahiba", en: "Sahiba" }, a: { ps: "Aditya Rikhari", fa: "Aditya Rikhari", en: "Aditya Rikhari" }, dur: "3:03" },
-  { t: { ps: "Jo Tum Mere Ho", fa: "Jo Tum Mere Ho", en: "Jo Tum Mere Ho" }, a: { ps: "Anuv Jain", fa: "Anuv Jain", en: "Anuv Jain" }, dur: "4:18" },
-  { t: { ps: "Husn", fa: "Husn", en: "Husn" }, a: { ps: "Anuv Jain", fa: "Anuv Jain", en: "Anuv Jain" }, dur: "3:59" },
-  { t: { ps: "Heeriye", fa: "Heeriye", en: "Heeriye" }, a: { ps: "Jasleen Royal, Arijit Singh", fa: "Jasleen Royal, Arijit Singh", en: "Jasleen Royal, Arijit Singh" }, dur: "3:19" },
-  { t: { ps: "Phir Aur Kya Chahiye", fa: "Phir Aur Kya Chahiye", en: "Phir Aur Kya Chahiye" }, a: { ps: "Arijit Singh", fa: "Arijit Singh", en: "Arijit Singh" }, dur: "4:38" },
-  { t: { ps: "Zihaal e Miskin", fa: "Zihaal e Miskin", en: "Zihaal e Miskin" }, a: { ps: "Vishal Mishra, Shreya Ghoshal", fa: "Vishal Mishra, Shreya Ghoshal", en: "Vishal Mishra, Shreya Ghoshal" }, dur: "4:23" },
-  { t: { ps: "Sajni", fa: "Sajni", en: "Sajni" }, a: { ps: "Arijit Singh", fa: "Arijit Singh", en: "Arijit Singh" }, dur: "2:26" },
-  { t: { ps: "Akhiyaan Gulaab", fa: "Akhiyaan Gulaab", en: "Akhiyaan Gulaab" }, a: { ps: "Mitraz", fa: "Mitraz", en: "Mitraz" }, dur: "2:35" },
-  { t: { ps: "Tainu Khabar Nahi", fa: "Tainu Khabar Nahi", en: "Tainu Khabar Nahi" }, a: { ps: "Arijit Singh", fa: "Arijit Singh", en: "Arijit Singh" }, dur: "3:18" },
-  { t: { ps: "Khoobsurat", fa: "Khoobsurat", en: "Khoobsurat" }, a: { ps: "Vishal Mishra", fa: "Vishal Mishra", en: "Vishal Mishra" }, dur: "4:00" },
-  { t: { ps: "Millionaire", fa: "Millionaire", en: "Millionaire" }, a: { ps: "Yo Yo Honey Singh", fa: "Yo Yo Honey Singh", en: "Yo Yo Honey Singh" }, dur: "3:29" },
-  { t: { ps: "Jaana Samjho Na", fa: "Jaana Samjho Na", en: "Jaana Samjho Na" }, a: { ps: "Aditya Rikhari", fa: "Aditya Rikhari", en: "Aditya Rikhari" }, dur: "3:30" },
-  { t: { ps: "Naina", fa: "Naina", en: "Naina" }, a: { ps: "Diljit Dosanjh, Badshah", fa: "Diljit Dosanjh, Badshah", en: "Diljit Dosanjh, Badshah" }, dur: "2:42" },
-  { t: { ps: "Hass Hass", fa: "Hass Hass", en: "Hass Hass" }, a: { ps: "Diljit Dosanjh, Sia", fa: "Diljit Dosanjh, Sia", en: "Diljit Dosanjh, Sia" }, dur: "2:33" },
-  { t: { ps: "Suniyan Suniyan", fa: "Suniyan Suniyan", en: "Suniyan Suniyan" }, a: { ps: "Juss", fa: "Juss", en: "Juss" }, dur: "3:30" },
-  { t: { ps: "Wavy", fa: "Wavy", en: "Wavy" }, a: { ps: "Karan Aujla", fa: "Karan Aujla", en: "Karan Aujla" }, dur: "2:41" },
-  { t: { ps: "Jhol", fa: "Jhol", en: "Jhol" }, a: { ps: "Maanu, Annural Khalid", fa: "Maanu, Annural Khalid", en: "Maanu, Annural Khalid" }, dur: "4:39" },
-  { t: { ps: "Pal Pal", fa: "Pal Pal", en: "Pal Pal" }, a: { ps: "Afusic", fa: "Afusic", en: "Afusic" }, dur: "3:28" }
+  { t: "Saiyaara", a: "Faheem Abdullah", dur: "6:11" },
+  { t: "Chaleya", a: "Arijit Singh, Shilpa Rao", dur: "3:40" },
+  { t: "Satranga", a: "Arijit Singh", dur: "4:51" },
+  { t: "Tere Vaaste", a: "Varun Jain", dur: "3:23" },
+  { t: "Jhoome Jo Pathaan", a: "Arijit Singh", dur: "3:23" },
+  { t: "Aaj Ki Raat", a: "Madhubanti Bagchi", dur: "4:47" },
+  { t: "Aayi Nai", a: "Pawan Singh", dur: "3:18" },
+  { t: "Raanjhan", a: "Parampara Tandon", dur: "4:13" },
+  { t: "Uyi Amma", a: "Madhubanti Bagchi", dur: "3:14" },
+  { t: "Barbaad", a: "Jubin Nautiyal", dur: "3:45" },
+  { t: "Tauba Tauba", a: "Karan Aujla", dur: "3:42" },
+  { t: "Besharam Rang", a: "Shilpa Rao", dur: "3:14" },
+  { t: "O Maahi", a: "Arijit Singh", dur: "4:06" },
+  { t: "Lutt Putt Gaya", a: "Arijit Singh", dur: "4:03" },
+  { t: "Pehle Bhi Main", a: "Vishal Mishra", dur: "4:08" },
+  { t: "Arjan Vailly", a: "Manan Bhardwaj", dur: "3:00" },
+  { t: "Mere Mehboob", a: "Shilpa Rao, Sachet Tandon", dur: "3:52" },
+  { t: "Sher Khul Gaye", a: "Vishal-Shekhar", dur: "3:13" },
+  { t: "Laal Peeli Akhiyaan", a: "Romy", dur: "3:15" },
+  { t: "Dhun", a: "Arijit Singh", dur: "3:32" },
+  { t: "Humdum", a: "Vishal Mishra", dur: "3:50" },
+  { t: "Nasha", a: "Jasmine Sandlas", dur: "3:11" },
+  { t: "Sahiba", a: "Aditya Rikhari", dur: "3:03" },
+  { t: "Jo Tum Mere Ho", a: "Anuv Jain", dur: "4:18" },
+  { t: "Husn", a: "Anuv Jain", dur: "3:59" },
+  { t: "Heeriye", a: "Jasleen Royal, Arijit Singh", dur: "3:19" },
+  { t: "Phir Aur Kya Chahiye", a: "Arijit Singh", dur: "4:38" },
+  { t: "Zihaal e Miskin", a: "Vishal Mishra, Shreya Ghoshal", dur: "4:23" },
+  { t: "Sajni", a: "Arijit Singh", dur: "2:26" },
+  { t: "Akhiyaan Gulaab", a: "Mitraz", dur: "2:35" },
+  { t: "Tainu Khabar Nahi", a: "Arijit Singh", dur: "3:18" },
+  { t: "Khoobsurat", a: "Vishal Mishra", dur: "4:00" },
+  { t: "Millionaire", a: "Yo Yo Honey Singh", dur: "3:29" },
+  { t: "Jaana Samjho Na", a: "Aditya Rikhari", dur: "3:30" },
+  { t: "Naina", a: "Diljit Dosanjh, Badshah", dur: "2:42" },
+  { t: "Hass Hass", a: "Diljit Dosanjh, Sia", dur: "2:33" },
+  { t: "Suniyan Suniyan", a: "Juss", dur: "3:30" },
+  { t: "Wavy", a: "Karan Aujla", dur: "2:41" },
+  { t: "Jhol", a: "Maanu, Annural Khalid", dur: "4:39" },
+  { t: "Pal Pal", a: "Afusic", dur: "3:28" }
 ];
+MP_TRACKS.forEach(function(x) {
+  if (typeof x.t === "string") x.t = { ps: x.t, fa: x.t, en: x.t };
+  if (typeof x.a === "string") x.a = { ps: x.a, fa: x.a, en: x.a };
+});
 const TorePlayer = (() => {
   const $p = (s) => document.querySelector(s);
   const pill = $p("#mplayer"), chip = $p("#mp-chip"), bcChip = $p("#mp-bcchip");
@@ -11310,6 +11319,15 @@ const TorePlayer = (() => {
     plFavBtn.classList.toggle("on", favOnly);
     applyPlFilter();
   };
+  let plCat = "all";
+  const mpCat = (i) => i < 30 ? "af" : "hi";
+  document.querySelectorAll("#pl-tabs .pl-tab").forEach((b) => {
+    b.onclick = () => {
+      plCat = b.dataset.cat;
+      document.querySelectorAll("#pl-tabs .pl-tab").forEach((x) => x.classList.toggle("on", x === b));
+      applyPlFilter();
+    };
+  });
   let plQuery = "";
   let favOnly = false;
   function applyPlFilter() {
@@ -11318,7 +11336,7 @@ const TorePlayer = (() => {
     document.querySelectorAll("#mp-rows .mp-row").forEach((r, i) => {
       const tr = MP_TRACKS[i];
       const hay = [tr.t.ps, tr.t.fa, tr.t.en, tr.a.ps, tr.a.fa, tr.a.en].join(" ").toLowerCase();
-      const showRow = (!q || hay.includes(q)) && (!favOnly || favs.has(i));
+      const showRow = (!q || hay.includes(q)) && (!favOnly || favs.has(i)) && (plCat === "all" || mpCat(i) === plCat);
       r.style.display = showRow ? "" : "none";
       if (showRow) visible++;
     });
