@@ -435,6 +435,8 @@ const WALLET_DAILY_BONUS = 100;       // سکه, once per Kabul day
 const WALLET_CHEST_COINS = 50;        // سکه per free chest
 const WALLET_CHEST_MS = 4 * 3600 * 1000; // chest cooldown: 4 hours
 const WALLET_LEDGER_CAP = 100;        // newest entries kept per wallet
+const ADMIN_GRANT_CAP = { coins: 1000000, gems: 100000 }; // up111: per-grant caps for the owner's admin panel
+const ADMIN_GRANTS_KEEP = 200;        // up111: admin audit-log entries kept
 const STAKE_TIERS = [0, 100, 500, 1000, 5000]; // validated by the hosts too
 // The shop catalogue (ظاهری tab) — COSMETICS ONLY. sku -> price in
 // سکه. The default card back (back1) and the default cream carpet
@@ -603,6 +605,10 @@ class SocialCore {
     // (serialize/load) — see the WALLET banner above the class.
     this.wallets = new Map();
     this.escrows = new Map();
+    // up111: the admin grant audit log (newest first) — written by
+    // adminGrant(), read by the Worker /admin/grants route. Rides
+    // serialize()/load() with the wallet state.
+    this.adminGrants = [];
     // feat3: referrals id -> {by, paid, ts} (persisted with the
     // social state). The per-club message-id counters are
     // RUNTIME ONLY.
@@ -629,6 +635,7 @@ class SocialCore {
       stats: Object.fromEntries(this.stats),
       wallets: Object.fromEntries(this.wallets),
       escrows: Object.fromEntries(this.escrows),
+      adminGrants: this.adminGrants,
       referrals: Object.fromEntries(this.referrals),
       notifs: Object.fromEntries(this.notifs),
       pushSubs: Object.fromEntries(this.pushSubs),
@@ -662,6 +669,10 @@ class SocialCore {
       if (typeof w.giftSent !== 'number' || !(w.giftSent >= 0)) w.giftSent = 0;
     }
     this.escrows = new Map(Object.entries(data.escrows || {}));
+    // up111 admin audit log (older snapshots carry none at all).
+    this.adminGrants = Array.isArray(data.adminGrants)
+      ? data.adminGrants.filter((g) => g && typeof g === 'object') : [];
+    if (this.adminGrants.length > ADMIN_GRANTS_KEEP) this.adminGrants.length = ADMIN_GRANTS_KEEP;
     for (const e of this.escrows.values()) {
       if (!e || typeof e !== 'object') continue;
       if (!Array.isArray(e.stakes)) e.stakes = [];
@@ -1225,6 +1236,70 @@ class SocialCore {
     this._persist();
     for (const s of e.stakes) this.walletSend(s.id);
     return true;
+  }
+
+  // ---------- admin grants (up111) ----------
+  // The owner's admin panel. WHO is admin is decided by the host
+  // (the Worker compares the VERIFIED session email — see
+  // worker.js /admin/*); these methods only ever run on that
+  // internal call and take the admin identity as data for the
+  // audit trail. Lookup is by the permanent 6-digit uid, like
+  // every other player search in the game.
+  adminPlayerInfo(uid) {
+    const id = this._idByUid(typeof uid === 'string' ? uid : String(uid || ''));
+    if (!id) return null;
+    const p = this.person(id);
+    const st = this.statsOf(id);
+    const w = this.walletView(id);
+    return {
+      uid: String(uid), name: p.name, level: st.level, xp: st.xp,
+      coins: w ? w.coins : null, gems: w ? w.gems : null,
+    };
+  }
+  // One grant — or, with a negative amount, a deduction (the
+  // mistake-fixer). The wallet hard rules hold exactly as for
+  // every other movement: integer amounts only, per-grant caps,
+  // balances floor at ZERO (an over-large deduction clamps and
+  // the APPLIED amount is what gets recorded and returned). The
+  // movement rides the target's wallet ledger like any credit —
+  // kind 'admin', ref 'admin:<email>', `cur` marking the currency
+  // so a gem entry badges 💎 in the shop list — AND the persisted
+  // admin audit log (adminGrantsList).
+  adminGrant(admin, uid, currency, amount) {
+    if (currency !== 'coins' && currency !== 'gems') return { ok: false, error: 'badcurrency' };
+    if (!Number.isInteger(amount) || amount === 0) return { ok: false, error: 'badamount' };
+    if (Math.abs(amount) > ADMIN_GRANT_CAP[currency]) return { ok: false, error: 'cap' };
+    const id = this._idByUid(typeof uid === 'string' ? uid : String(uid || ''));
+    if (!id) return { ok: false, error: 'notfound' };
+    const w = this._wallet(id, true);
+    let applied = amount;
+    if (currency === 'coins') {
+      if (applied < 0) applied = -Math.min(-applied, w.coins);
+      w.coins += applied;
+    } else {
+      if (applied < 0) applied = -Math.min(-applied, w.gems);
+      w.gems += applied;
+    }
+    w.ledger.push({
+      ts: Date.now(), kind: 'admin', amount: applied, balance: w.coins,
+      ref: 'admin:' + ((admin && admin.email) || ''), cur: currency,
+    });
+    if (w.ledger.length > WALLET_LEDGER_CAP) w.ledger.splice(0, w.ledger.length - WALLET_LEDGER_CAP);
+    const entry = {
+      ts: Date.now(),
+      by: (admin && admin.email) || '', bySub: (admin && admin.sub) || '',
+      target: id, uid: String(uid), name: this.person(id).name,
+      currency, amount: applied, coins: w.coins, gems: w.gems,
+    };
+    this.adminGrants.unshift(entry);
+    if (this.adminGrants.length > ADMIN_GRANTS_KEEP) this.adminGrants.length = ADMIN_GRANTS_KEEP;
+    this._persist();
+    this.walletSend(id);
+    return { ok: true, ...entry };
+  }
+  adminGrantsList(limit) {
+    const n = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 50) : 20;
+    return this.adminGrants.slice(0, n);
   }
 
   // ---------- spectate friends (feature 3) ----------
