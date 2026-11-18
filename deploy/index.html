@@ -4741,14 +4741,6 @@
         <span class="st-tog-lbl" id="st-chat-lbl">د لوبې چټ</span>
         <span class="st-check on" id="st-chat-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
       </div>
-      <div class="st-togrow" id="row-set-dnd" role="switch" aria-checked="false" tabindex="0">
-        <span class="st-tog-lbl" id="st-dnd-lbl">مزاحم نشو</span>
-        <span class="st-check" id="st-dnd-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
-      </div>
-      <div class="st-togrow" id="row-set-invisible" role="switch" aria-checked="false" tabindex="0">
-        <span class="st-tog-lbl" id="st-invisible-lbl">پټ حالت</span>
-        <span class="st-check" id="st-invisible-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
-      </div>
       <div class="st-togrow" id="row-set-music" role="switch" aria-checked="false" tabindex="0">
         <span class="st-tog-lbl" id="st-music-lbl">د شاليد موسيقي</span>
         <span class="st-check" id="st-music-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
@@ -6653,8 +6645,6 @@ function applyI18n() {
   set('#pf-stat-country-lbl', 'pfStatCountry');
   set('#st-vibrate-lbl', 'setVibrate');
   set('#st-chat-lbl', 'setChat');
-  set('#st-dnd-lbl', 'setDnd');
-  set('#st-invisible-lbl', 'setInvisible');
   set('#st-music-lbl', 'setMusic');
   set('#mp-list-title', 'musList');
   const plSearchEl = $('#pl-search'); if (plSearchEl) plSearchEl.placeholder = T('musSearchPh');
@@ -11230,6 +11220,12 @@ function toreSetting(key, dflt) {
 function setToreSetting(key, on) {
   try { localStorage.setItem('tore.set.' + key, on ? '1' : '0'); } catch (e) { /* private mode */ }
 }
+// up107: DND + invisible were removed from the Settings sheet
+// (owner order 2026-11-18) — force any stale local mirror OFF at
+// boot; the s-init handler also sends the OFF state to the server
+// so a directory record stuck ON (set by an older client) clears.
+setToreSetting('dnd', false);
+setToreSetting('invisible', false);
 function buzz(pattern) {
   if (!toreSetting('vibrate', false)) return;
   if (navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) { /* unsupported (iOS) */ } }
@@ -11974,16 +11970,14 @@ function paintSettings() {
   const cc = $('#st-chat-check'); if (cc) cc.classList.toggle('on', c);
   const vr = $('#row-set-vibrate'); if (vr) vr.setAttribute('aria-checked', String(v));
   const cr = $('#row-set-chat'); if (cr) cr.setAttribute('aria-checked', String(c));
-  // feat2 switches: DND + invisible (server-truth flags mirrored
-  // locally for the switch), music (up41: the music player's
-  // master, default ON). (The F19 sound switch was removed with
-  // the SFX system in up40.)
+  // music switch (up41: the music player's master, default ON).
+  // (The F19 sound switch was removed with the SFX system in
+  // up40; the feat2 DND + invisible switches were removed in
+  // up107 — those flags are forced off at boot / s-init now.)
   const paintTog = (check, row, on) => {
     const ck = $(check); if (ck) ck.classList.toggle('on', on);
     const rw = $(row); if (rw) rw.setAttribute('aria-checked', String(on));
   };
-  paintTog('#st-dnd-check', '#row-set-dnd', toreSetting('dnd', false));
-  paintTog('#st-invisible-check', '#row-set-invisible', toreSetting('invisible', false));
   paintTog('#st-music-check', '#row-set-music', toreSetting('music', true));
   paintFelts();
   paintBacks();
@@ -12242,14 +12236,6 @@ function bindToggleRow(id, key, dflt, after) {
 }
 bindToggleRow('#row-set-vibrate', 'vibrate', false, null);
 bindToggleRow('#row-set-chat', 'chat', true, applyChatSetting);
-// F5/F46: the flag's truth lives on the social directory record —
-// the toggle flips the local mirror AND tells the server.
-bindToggleRow('#row-set-dnd', 'dnd', false, () => {
-  if (typeof socialSend === 'function') socialSend({ type: 's-dnd', on: toreSetting('dnd', false) });
-});
-bindToggleRow('#row-set-invisible', 'invisible', false, () => {
-  if (typeof socialSend === 'function') socialSend({ type: 's-invisible', on: toreSetting('invisible', false) });
-});
 bindToggleRow('#row-set-music', 'music', true, () => { if (window.TorePlayer) window.TorePlayer.onMasterToggle(); });
 $('#btn-settings').onclick = openSettings;
 $('#btn-settings-close').onclick = closeSettings;
@@ -13015,11 +13001,15 @@ function onSocialMsg(m) {
   if (m.type === 's-init') {
     socialMe = m.me;
     if (m.uid) socialUid = String(m.uid);
-    // F5/F46: server-truth flags — the settings switches mirror
-    // whatever the directory record says (another device may have
-    // flipped them).
-    if (typeof m.dnd === 'boolean') setToreSetting('dnd', m.dnd);
-    if (typeof m.invisible === 'boolean') setToreSetting('invisible', m.invisible);
+    // up107: DND + invisible no longer exist in Settings — if the
+    // directory record still carries either flag ON (set by an
+    // older client), send the OFF state back so the record (and
+    // the presence masking / invite block it drives) clears, and
+    // keep the local mirror off.
+    if (m.dnd) socialSend({ type: 's-dnd', on: false });
+    if (m.invisible) socialSend({ type: 's-invisible', on: false });
+    setToreSetting('dnd', false);
+    setToreSetting('invisible', false);
     renderMyId();
     if (m.wallet) setWallet(m.wallet); // up47: the wallet rides s-init
     if (m.event !== undefined) setSocialEvent(m.event); // feat3: seasonal event state
