@@ -96,7 +96,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261118-seekup';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261118-feat5';
 // The PREVIOUS client version's URL — last-resort fallback for
 // serveClient (see the header comment): that build was live long
 // enough that its edge copies are warm in the POPs, so when a fresh
@@ -962,6 +962,23 @@ export default {
       if (user) headers.set('x-tore-user', JSON.stringify(user));
       else headers.delete('x-tore-user');
       return stub.fetch(new Request(request, { headers }));
+    }
+
+    if (path === '/push-key') {
+      // feat5: the Web Push VAPID PUBLIC key — the Android PWA
+      // client needs it as the PushManager applicationServerKey.
+      // It is a public identifier (the matching private key is a
+      // dashboard secret the Worker alone holds), so no session is
+      // required; while the var is unset the route 404s and the
+      // client simply never subscribes.
+      if (request.method !== 'GET') {
+        return new Response('method not allowed', { status: 405 });
+      }
+      const key = env.WEBPUSH_VAPID_PUBLIC || '';
+      if (!key) return new Response('not configured', { status: 404 });
+      return new Response(JSON.stringify({ key }), {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+      });
     }
 
     if (path === '/turn-credentials') {
