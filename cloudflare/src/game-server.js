@@ -40,6 +40,7 @@ import { chooseCard, plan13 } from './bots.js';
 import { SocialCore } from './social-core.js';
 import { TicketStore } from './tickets.js';
 import { OtpStore, IdMap } from './otp.js';
+import { sendPush } from './webpush.js';
 
 // ---- Tunables (same values as ../server.js) ----
 const TURN_TIMEOUT_MS = 30000;    // a stalled human seat is played by a bot
@@ -702,6 +703,10 @@ export class GameServer {
       // roundEnd / matchEnd), so the core can route a friend to
       // watch it — {code} or null.
       watchLookup: (id) => this._watchLookup(id),
+      // feat5: web push for OFFLINE players with a subscription —
+      // webpush.js no-ops ('unconfigured') while the VAPID private
+      // secret is unset, so this hook is safe to always supply.
+      pushSend: (id, subs, notif) => { this._webPushSend(id, subs, notif).catch(() => {}); },
       // Club-vs-club: reserve a room for two clubs' chosen pairs.
       vsStartMatch: (spec) => this._vsStartMatch(spec),
       coverBlobDelete: (cid) => { this._deleteCoverBlob(cid); },
@@ -731,6 +736,37 @@ export class GameServer {
     for (const ws of this.state.getWebSockets('social')) {
       const att = this._attachment(ws);
       if (att && att.sid === id) { try { ws.send(data); } catch { /* gone */ } }
+    }
+  }
+
+  // feat5: deliver one stored notification by Web Push. The body
+  // is worded here in Pashto (the game's default language) — the
+  // push arrives while the app is closed, so there is no client
+  // language context to render in; the in-app centre re-words the
+  // same entry in the reader's language from its stored params.
+  async _webPushSend(id, subs, notif) {
+    const env = this.env || {};
+    if (!env.WEBPUSH_VAPID_PRIVATE || !env.WEBPUSH_VAPID_PUBLIC) return; // his secret step — centre only until then
+    const name = notif.name || 'لوبغاړی';
+    let body = '52 Online';
+    if (notif.kind === 'freq') body = name + ' د ملګرتیا غوښتنه درولېږله';
+    else if (notif.kind === 'faccept') body = name + ' ستا د ملګرتیا غوښتنه ومنله';
+    else if (notif.kind === 'gift') body = name + ' ' + (notif.amount || 0) + ' سکې ډالۍ درکړې';
+    else if (notif.kind === 'invite') body = name + ' لوبې ته بلنه درکړه';
+    else if (notif.kind === 'clubann') body = (notif.club || '') + ': ' + (notif.text || '');
+    else if (notif.kind === 'clubinvite') body = name + ' کلب ته بلنه درکړه';
+    const payload = { title: '52 Online', body: body.slice(0, 160), ts: notif.ts || Date.now() };
+    const opts = {
+      publicKey: env.WEBPUSH_VAPID_PUBLIC,
+      privateKey: env.WEBPUSH_VAPID_PRIVATE,
+      subject: env.WEBPUSH_SUBJECT || 'mailto:shuaibanwari20@gmail.com',
+    };
+    for (const sub of subs) {
+      const r = await sendPush(sub, payload, opts).catch(() => null);
+      if (r && r.gone) {
+        const core = await this._ensureSocial().catch(() => null);
+        if (core) core.pushDropEndpoint(sub.endpoint);
+      }
     }
   }
 
@@ -1067,6 +1103,11 @@ export class GameServer {
       // with the sockets the runtime actually holds for it.
       core.reconcileOnline(sid, this._liveCountAll(sid, null));
       core.hello(sid, helloProfile);
+      // feat5: the hello frame also carries the profile/settings/
+      // favorites sync snapshot (the core applies it per section,
+      // last-writer-wins — the session-owned fields above are not
+      // part of it).
+      if (msg.sync) { try { core.profileSync(sid, msg.sync); } catch (e) { /* a bad snapshot never breaks the hello */ } }
       return;
     }
     if (!att.sid) return; // hello first
