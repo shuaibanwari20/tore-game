@@ -49,7 +49,10 @@
  *                                 /ws; credentials never ship in the
  *                                 client — see serveTurnCredentials)
  *   GET  /auth/config             { enabled, fbLive } — gate state
- *   GET  /auth/me                 session user JSON, or 401
+ *   GET  /auth/me                 session user JSON (+ isAdmin), or 401
+ *   GET  /admin/player?id=        admin only: a player's balances
+ *   POST /admin/grant             admin only: grant/deduct coins|gems
+ *   GET  /admin/grants            admin only: recent admin grants
  *   GET  /auth/google             start Google OAuth (PKCE)
  *   GET  /auth/google/callback    Google OAuth callback
  *   GET  /auth/facebook           start Facebook OAuth
@@ -96,7 +99,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261118-micguide';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261118-admin';
 // The PREVIOUS client version's URL — last-resort fallback for
 // serveClient (see the header comment): that build was live long
 // enough that its edge copies are warm in the POPs, so when a fresh
@@ -994,6 +997,42 @@ export default {
       return serveTurnCredentials(env);
     }
 
+    if (path.startsWith('/admin/')) {
+      // up111: the owner's admin panel API — grant/deduct coins
+      // and gems to any player by his 6-digit ID. THE GATE IS
+      // HERE and only here: a verified session (401 without one)
+      // whose VERIFIED email is the admin email (403 otherwise —
+      // see auth.isAdminUser for why the session email can be
+      // trusted). The wallet work runs in the DO's social core
+      // over the internal route, like the ticket/authkv calls.
+      const user = await auth.readSession(request, env);
+      if (!user) return Response.json({ ok: false, error: 'unauthorized' }, { status: 401 });
+      if (!auth.isAdminUser(user)) return Response.json({ ok: false, error: 'forbidden' }, { status: 403 });
+      const stub = env.GAME.get(env.GAME.idFromName('global'));
+      const call = (action, payload) => stub.fetch(new Request('https://do.internal/internal/admin/' + action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload || {}),
+      }));
+      if (path === '/admin/player' && request.method === 'GET') {
+        const id = url.searchParams.get('id') || '';
+        if (!/^\d{6}$/.test(id)) return Response.json({ ok: false, error: 'bad id' }, { status: 400 });
+        return call('player', { uid: id });
+      }
+      if (path === '/admin/grant' && request.method === 'POST') {
+        let body = null;
+        try { body = await request.json(); } catch { body = null; }
+        const playerId = body && typeof body.playerId === 'string' ? body.playerId : '';
+        if (!/^\d{6}$/.test(playerId)) return Response.json({ ok: false, error: 'bad id' }, { status: 400 });
+        return call('grant', {
+          uid: playerId, currency: body && body.currency, amount: body && body.amount,
+          adminEmail: user.email, adminSub: user.sub,
+        });
+      }
+      if (path === '/admin/grants' && request.method === 'GET') return call('grants', {});
+      return Response.json({ ok: false, error: 'not found' }, { status: 404 });
+    }
+
     if (path === '/auth/config') {
       // fbLive tells the client gate whether to offer the Facebook
       // button at all: the FB app stays in Development mode (only app
@@ -1006,7 +1045,10 @@ export default {
     if (path === '/auth/me') {
       const user = await auth.readSession(request, env);
       if (!user) return new Response('unauthorized', { status: 401 });
-      return Response.json(user);
+      // up111: isAdmin rides along so the client can show the
+      // admin panel — a display hint only; /admin/* re-checks the
+      // verified email itself on every call.
+      return Response.json({ ...user, isAdmin: auth.isAdminUser(user) });
     }
     if (path === '/auth/firebase') {
       // The gate POSTs a Firebase ID token here; auth.js verifies it
