@@ -780,6 +780,13 @@
   #ov-notifs #btn-notif-close { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.25);
     color: #fff; border-radius: 12px; box-shadow: none; }
 
+  /* up110: mic-permission guide — the steps read as a short
+     start-aligned list inside the centred panel. */
+  #ov-micguide .mg-intro { font-size: 15px; margin: 0 0 6px; }
+  #ov-micguide .mg-steps { text-align: start; font-size: 15px; line-height: 1.85; margin: 6px 4px; }
+  #ov-micguide .mg-alt { text-align: start; font-size: 13.5px; opacity: .85; line-height: 1.8;
+    border-top: 1px dashed rgba(255,255,255,.3); padding-top: 9px; margin-top: 4px; }
+
   /* Title zone: the suits, the big gold wordmark, the tagline —
      compacted in the ludomenu reskin so the cards own the screen,
      like the reference's airy middle. */
@@ -4821,6 +4828,24 @@
   </div>
 </div>
 
+<!-- ======== MIC PERMISSION GUIDE (up110) ======== -->
+<div class="overlay" id="ov-micguide">
+  <div class="panel">
+    <h2 id="micg-title">د مایکروفون اجازه</h2>
+    <p class="mg-intro" id="micg-intro">کروم ستاسو مایکروفون بند کړی دی — د خلاصولو لپاره دا ګامونه واخلئ:</p>
+    <div class="mg-steps">
+      <div id="micg-s1">۱ — د صفحې په سر کې د ⋮ (درې ټکي) تڼۍ ووهئ</div>
+      <div id="micg-s2">۲ — «تنظیمات» ← «د سایټ تنظیمات» ← «مایکروفون»</div>
+      <div id="micg-s3">۳ — د دې سایټ نوم ومومئ او «اجازه» وټاکئ</div>
+    </div>
+    <p class="mg-alt" id="micg-alt">یا: په ادرس پټۍ کې د قفل نښه ووهئ ← «اجازه‌نامې» ← «مایکروفون» ← «اجازه»</p>
+    <div class="pf-btns">
+      <button type="button" id="btn-micg-retry">بیا کوښښ وکړه</button>
+      <button type="button" id="btn-micg-close" class="ghost">بندول</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======== SETTINGS POPUP ======== -->
 <div class="overlay" id="ov-settings">
   <div class="st-wrap">
@@ -5526,6 +5551,13 @@ const STR = {
     noConn: 'اړیکه نشته',
     micUnavailable: 'مایکروفون نشته',
     micHint: 'مایکروفون ته اجازه نشته — د براوزر له تنظیماتو یې اجازه ورکړه',
+    micGuideTitle: 'د مایکروفون اجازه',
+    micGuideIntro: 'کروم ستاسو مایکروفون بند کړی دی — د خلاصولو لپاره دا ګامونه واخلئ:',
+    micGuideStep1: '۱ — د صفحې په سر کې د ⋮ (درې ټکي) تڼۍ ووهئ',
+    micGuideStep2: '۲ — «تنظیمات» ← «د سایټ تنظیمات» ← «مایکروفون»',
+    micGuideStep3: '۳ — د دې سایټ نوم ومومئ او «اجازه» وټاکئ',
+    micGuideAlt: 'یا: په ادرس پټۍ کې د قفل نښه ووهئ ← «اجازه‌نامې» ← «مایکروفون» ← «اجازه»',
+    micGuideRetry: 'بیا کوښښ وکړه',
     voiceDiag: 'د غږ حالت',
     voiceConnected: 'غږ وصل شو',
     voiceFailed: 'غږ وصل نشو — بیا هڅه وکړه',
@@ -6018,6 +6050,13 @@ const STR = {
     noConn: 'اتصال نیست',
     micUnavailable: 'مایک در دسترس نیست',
     micHint: 'میکروفون اجازه ندارد — از تنظیمات مرورگر اجازه‌اش بده',
+    micGuideTitle: 'اجازهٔ میکروفون',
+    micGuideIntro: 'کروم میکروفون‌تان را بسته است — برای باز کردنش این قدم‌ها را بردارید:',
+    micGuideStep1: '۱ — بالای صفحه، دکمهٔ ⋮ (سه نقطه) را بزنید',
+    micGuideStep2: '۲ — «تنظیمات» ← «تنظیمات سایت» ← «میکروفون»',
+    micGuideStep3: '۳ — نام این سایت را پیدا کنید و «اجازه» را انتخاب کنید',
+    micGuideAlt: 'یا: روی علامت قفل در نوار آدرس بزنید ← «مجوزها» ← «میکروفون» ← «اجازه»',
+    micGuideRetry: 'دوباره کوشش کن',
     voiceDiag: 'تشخیص صدا',
     voiceConnected: 'صدا وصل شد',
     voiceFailed: 'صدا وصل نشد — دوباره تلاش کن',
@@ -6510,6 +6549,13 @@ const STR = {
     noConn: 'Not connected',
     micUnavailable: 'Microphone unavailable',
     micHint: 'Microphone is not allowed — allow it in your browser settings',
+    micGuideTitle: 'Microphone permission',
+    micGuideIntro: 'Chrome has blocked your microphone — to unblock it, follow these steps:',
+    micGuideStep1: '1 — Tap the ⋮ (three dots) button at the top of the screen',
+    micGuideStep2: '2 — Settings → Site settings → Microphone',
+    micGuideStep3: '3 — Find this site in the list and choose "Allow"',
+    micGuideAlt: 'Or: tap the lock icon in the address bar → Permissions → Microphone → Allow',
+    micGuideRetry: 'Try again',
     voiceDiag: 'Voice diagnostics',
     voiceConnected: 'Voice connected',
     voiceFailed: 'Voice could not connect — try again',
@@ -6842,6 +6888,14 @@ function applyI18n() {
   set('#notif-title', 'notifTitle');
   set('#btn-notif-close', 'closeBtn');
   set('#btn-notif-push', 'notifPushBtn');
+  set('#micg-title', 'micGuideTitle');
+  set('#micg-intro', 'micGuideIntro');
+  set('#micg-s1', 'micGuideStep1');
+  set('#micg-s2', 'micGuideStep2');
+  set('#micg-s3', 'micGuideStep3');
+  set('#micg-alt', 'micGuideAlt');
+  set('#btn-micg-retry', 'micGuideRetry');
+  set('#btn-micg-close', 'closeBtn');
   aria('#btn-bell', 'notifTitle');
   set('#bp-title', 'backSection');
   aria('#btn-back-edit', 'backSection');
@@ -8185,6 +8239,44 @@ function micDeniedHint() {
   toast(T('micHint'), 'info');
 }
 function micNoDevice(e) { return !!e && (e.name === 'NotFoundError' || e.name === 'OverconstrainedError'); }
+// up110: a permission BLOCK is a different failure from a busy
+// or missing mic. Once Chrome holds this site's mic permission
+// at "blocked", getUserMedia rejects instantly and the browser
+// will never show the prompt again — no page code can undo
+// that. What the game CAN do is walk the player through the
+// settings route in their own language and let them retry in
+// place, without a reload.
+function micPermError(e) { return !!e && e.name === 'NotAllowedError'; }
+async function micPermDenied() {
+  try {
+    if (navigator.permissions && navigator.permissions.query) {
+      const st = await navigator.permissions.query({ name: 'microphone' });
+      return !!st && st.state === 'denied';
+    }
+  } catch (e) { /* Permissions API missing / name unsupported */ }
+  return false;
+}
+let micRetryFn = null; // what the guide's «try again» re-runs
+function showMicGuide(retry) {
+  if (typeof retry === 'function') micRetryFn = retry;
+  const ov = $('#ov-micguide');
+  if (ov) ov.classList.add('show');
+}
+function closeMicGuide() {
+  const ov = $('#ov-micguide');
+  if (ov) ov.classList.remove('show');
+}
+$('#btn-micg-close').onclick = () => closeMicGuide();
+{ const mgOv = $('#ov-micguide'); if (mgOv) mgOv.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeMicGuide(); }); }
+$('#btn-micg-retry').onclick = async () => {
+  const fn = micRetryFn;
+  closeMicGuide();
+  // The retry path skips the permissions pre-check: the player
+  // may have JUST flipped the setting, and getUserMedia itself
+  // is the ground truth — if it is still blocked, its rejection
+  // simply re-opens this guide.
+  if (fn) { try { await fn(); } catch (e) { /* the path reports itself */ } }
+};
 let MIC_UNMUTE_CAP_MS = 10000; // pending gives up (silent, honest off) after this
 let MIC_MUTE_REACQ_MS = 2500;  // local track muted this long mid-session → one re-acquisition
 let MIC_SELFCHECK_MS = 3000;   // post-mic-on outbound-growth check
@@ -8515,7 +8607,7 @@ function toggleSpeaker() {
   paintVoiceDots(state);
 }
 
-async function toggleVoice() {
+async function toggleVoice(skipPermCheck) {
   // A tap while a muted acquisition is PENDING cancels it: the
   // mic was never announced, so "off" is just dropping the wait.
   if (micPending) { cancelMicPending('tap'); return; }
@@ -8523,6 +8615,12 @@ async function toggleVoice() {
   if (!RTCPeerCtor || !MIC_API) {
     return; // up109: no capture API here — buttons are hidden; never an error toast
   }
+  // up110: Chrome already holding this site's mic permission at
+  // "blocked" will never re-prompt — skip the doomed capture and
+  // open the fix-it guide directly. (A retry FROM the guide
+  // passes skipPermCheck: the setting may have just been
+  // flipped, and getUserMedia itself then decides.)
+  if (!skipPermCheck && await micPermDenied()) { showMicGuide(() => toggleVoice(true)); return; }
   // Ordering (first-activation rule): the local stream is
   // acquired FIRST and only then is voice announced and pairs
   // formed, so every peer is constructed with the mic track
@@ -8541,9 +8639,13 @@ async function toggleVoice() {
   try {
     stream = await gumPromise;
   } catch (e) {
-    // up109: no mic device at all → completely silent; a denial
-    // or a mic busy in another app → ONE gentle hint per session.
-    if (!micNoDevice(e)) micDeniedHint();
+    // up109: no mic device at all → completely silent.
+    // up110: a permission block → the fix-it guide (Chrome will
+    // never re-prompt on its own); any other failure (a mic
+    // busy in another app…) keeps the ONE gentle hint.
+    if (micNoDevice(e)) return;
+    if (micPermError(e)) { showMicGuide(() => toggleVoice(true)); return; }
+    micDeniedHint();
     return;
   }
   await iceReady;
@@ -15372,7 +15474,7 @@ async function onClubSeatTap(seat, occupantId, anchorEl) {
     }
     return;
   }
-  const ok = await cv.ensureMic();
+  const ok = await cv.ensureMic(false, () => onClubSeatTap(seat, occupantId, anchorEl));
   if (!ok) return;
   cv.wantMic = true;
   cv.wantSeat = seat;
@@ -16512,17 +16614,25 @@ const cv = {
     if (box) box.innerHTML = '';
     this.paintBtns();
   },
-  async ensureMic(silent) {
+  async ensureMic(silent, retry) {
     if (this.stream && this.stream.getAudioTracks().some((t) => t.readyState === 'live')) return true;
     // up109: no capture API → fail quietly (the club mic button is
-    // hidden at boot in that case anyway); a deliberate attempt
-    // that is denied earns the one gentle hint, never the old
-    // red toast; automatic re-acquires (silent) never hint.
+    // hidden at boot in that case anyway); automatic re-acquires
+    // (silent) never show anything.
+    // up110: a permission block on a DELIBERATE attempt opens the
+    // fix-it guide (retry re-runs the caller's whole action);
+    // other denials keep the one gentle hint; no device = silent.
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       return true;
-    } catch (e) { if (!silent && !micNoDevice(e)) micDeniedHint(); return false; }
+    } catch (e) {
+      if (!silent && !micNoDevice(e)) {
+        if (micPermError(e)) showMicGuide(retry);
+        else micDeniedHint();
+      }
+      return false;
+    }
   },
   setMic(on) {
     const micWas = this.micOn;
@@ -16819,7 +16929,7 @@ $('#btn-cl-speaker').onclick = () => {
   document.querySelectorAll('#cl-audios audio').forEach((a) => { a.muted = !cv.speaker; if (cv.speaker) { const p = a.play(); if (p && p.catch) p.catch(() => {}); } });
   cv.paintBtns();
 };
-$('#btn-cl-mic').onclick = async () => {
+async function clubMicTap() {
   if (!roomClub()) return;
   if (cv.mySeat() >= 0) {
     // Seated: the mic button toggles the MIC ONLY — muting keeps
@@ -16828,7 +16938,7 @@ $('#btn-cl-mic').onclick = async () => {
     // 2026-11-09; before this the button stood you up).
     if (cv.micOn) { cv.wantMic = false; cv.setMic(false); }
     else {
-      const ok = await cv.ensureMic();
+      const ok = await cv.ensureMic(false, clubMicTap);
       if (!ok) return;
       cv.wantMic = true;
       cv.setMic(true);
@@ -16838,7 +16948,8 @@ $('#btn-cl-mic').onclick = async () => {
   const box = $('#cl-seats');
   if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
   toast(T('clSeatsHint'));
-};
+}
+$('#btn-cl-mic').onclick = clubMicTap;
 // any tap unlocks club audio playback (Android gesture rule)
 document.addEventListener('pointerdown', () => {
   if (!cv.joined) return;
