@@ -1919,6 +1919,25 @@ button:disabled {
   border-radius: 12px;
   box-shadow: none;
 }
+#ov-micguide .mg-intro {
+  font-size: 15px;
+  margin: 0 0 6px;
+}
+#ov-micguide .mg-steps {
+  text-align: start;
+  font-size: 15px;
+  line-height: 1.85;
+  margin: 6px 4px;
+}
+#ov-micguide .mg-alt {
+  text-align: start;
+  font-size: 13.5px;
+  opacity: .85;
+  line-height: 1.8;
+  border-top: 1px dashed rgba(255, 255, 255, .3);
+  padding-top: 9px;
+  margin-top: 4px;
+}
 .hm-hero {
   text-align: center;
   margin-top: 8px;
@@ -12150,6 +12169,24 @@ button:disabled {
   </div>
 </div>
 
+<!-- ======== MIC PERMISSION GUIDE (up110) ======== -->
+<div class="overlay" id="ov-micguide">
+  <div class="panel">
+    <h2 id="micg-title">د مایکروفون اجازه</h2>
+    <p class="mg-intro" id="micg-intro">کروم ستاسو مایکروفون بند کړی دی — د خلاصولو لپاره دا ګامونه واخلئ:</p>
+    <div class="mg-steps">
+      <div id="micg-s1">۱ — د صفحې په سر کې د ⋮ (درې ټکي) تڼۍ ووهئ</div>
+      <div id="micg-s2">۲ — «تنظیمات» ← «د سایټ تنظیمات» ← «مایکروفون»</div>
+      <div id="micg-s3">۳ — د دې سایټ نوم ومومئ او «اجازه» وټاکئ</div>
+    </div>
+    <p class="mg-alt" id="micg-alt">یا: په ادرس پټۍ کې د قفل نښه ووهئ ← «اجازه‌نامې» ← «مایکروفون» ← «اجازه»</p>
+    <div class="pf-btns">
+      <button type="button" id="btn-micg-retry">بیا کوښښ وکړه</button>
+      <button type="button" id="btn-micg-close" class="ghost">بندول</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======== SETTINGS POPUP ======== -->
 <div class="overlay" id="ov-settings">
   <div class="st-wrap">
@@ -12874,6 +12911,13 @@ const STR = {
     noConn: "\u0627\u0693\u06CC\u06A9\u0647 \u0646\u0634\u062A\u0647",
     micUnavailable: "\u0645\u0627\u06CC\u06A9\u0631\u0648\u0641\u0648\u0646 \u0646\u0634\u062A\u0647",
     micHint: "\u0645\u0627\u06CC\u06A9\u0631\u0648\u0641\u0648\u0646 \u062A\u0647 \u0627\u062C\u0627\u0632\u0647 \u0646\u0634\u062A\u0647 \u2014 \u062F \u0628\u0631\u0627\u0648\u0632\u0631 \u0644\u0647 \u062A\u0646\u0638\u06CC\u0645\u0627\u062A\u0648 \u06CC\u06D0 \u0627\u062C\u0627\u0632\u0647 \u0648\u0631\u06A9\u0693\u0647",
+    micGuideTitle: "\u062F \u0645\u0627\u06CC\u06A9\u0631\u0648\u0641\u0648\u0646 \u0627\u062C\u0627\u0632\u0647",
+    micGuideIntro: "\u06A9\u0631\u0648\u0645 \u0633\u062A\u0627\u0633\u0648 \u0645\u0627\u06CC\u06A9\u0631\u0648\u0641\u0648\u0646 \u0628\u0646\u062F \u06A9\u0693\u06CC \u062F\u06CC \u2014 \u062F \u062E\u0644\u0627\u0635\u0648\u0644\u0648 \u0644\u067E\u0627\u0631\u0647 \u062F\u0627 \u06AB\u0627\u0645\u0648\u0646\u0647 \u0648\u0627\u062E\u0644\u0626:",
+    micGuideStep1: "\u06F1 \u2014 \u062F \u0635\u0641\u062D\u06D0 \u067E\u0647 \u0633\u0631 \u06A9\u06D0 \u062F \u22EE (\u062F\u0631\u06D0 \u067C\u06A9\u064A) \u062A\u06BC\u06CD \u0648\u0648\u0647\u0626",
+    micGuideStep2: "\u06F2 \u2014 \xAB\u062A\u0646\u0638\u06CC\u0645\u0627\u062A\xBB \u2190 \xAB\u062F \u0633\u0627\u06CC\u067C \u062A\u0646\u0638\u06CC\u0645\u0627\u062A\xBB \u2190 \xAB\u0645\u0627\u06CC\u06A9\u0631\u0648\u0641\u0648\u0646\xBB",
+    micGuideStep3: "\u06F3 \u2014 \u062F \u062F\u06D0 \u0633\u0627\u06CC\u067C \u0646\u0648\u0645 \u0648\u0645\u0648\u0645\u0626 \u0627\u0648 \xAB\u0627\u062C\u0627\u0632\u0647\xBB \u0648\u067C\u0627\u06A9\u0626",
+    micGuideAlt: "\u06CC\u0627: \u067E\u0647 \u0627\u062F\u0631\u0633 \u067E\u067C\u06CD \u06A9\u06D0 \u062F \u0642\u0641\u0644 \u0646\u069A\u0647 \u0648\u0648\u0647\u0626 \u2190 \xAB\u0627\u062C\u0627\u0632\u0647\u200C\u0646\u0627\u0645\u06D0\xBB \u2190 \xAB\u0645\u0627\u06CC\u06A9\u0631\u0648\u0641\u0648\u0646\xBB \u2190 \xAB\u0627\u062C\u0627\u0632\u0647\xBB",
+    micGuideRetry: "\u0628\u06CC\u0627 \u06A9\u0648\u069A\u069A \u0648\u06A9\u0693\u0647",
     voiceDiag: "\u062F \u063A\u0696 \u062D\u0627\u0644\u062A",
     voiceConnected: "\u063A\u0696 \u0648\u0635\u0644 \u0634\u0648",
     voiceFailed: "\u063A\u0696 \u0648\u0635\u0644 \u0646\u0634\u0648 \u2014 \u0628\u06CC\u0627 \u0647\u0685\u0647 \u0648\u06A9\u0693\u0647",
@@ -13397,6 +13441,13 @@ const STR = {
     noConn: "\u0627\u062A\u0635\u0627\u0644 \u0646\u06CC\u0633\u062A",
     micUnavailable: "\u0645\u0627\u06CC\u06A9 \u062F\u0631 \u062F\u0633\u062A\u0631\u0633 \u0646\u06CC\u0633\u062A",
     micHint: "\u0645\u06CC\u06A9\u0631\u0648\u0641\u0648\u0646 \u0627\u062C\u0627\u0632\u0647 \u0646\u062F\u0627\u0631\u062F \u2014 \u0627\u0632 \u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u0645\u0631\u0648\u0631\u06AF\u0631 \u0627\u062C\u0627\u0632\u0647\u200C\u0627\u0634 \u0628\u062F\u0647",
+    micGuideTitle: "\u0627\u062C\u0627\u0632\u0647\u0654 \u0645\u06CC\u06A9\u0631\u0648\u0641\u0648\u0646",
+    micGuideIntro: "\u06A9\u0631\u0648\u0645 \u0645\u06CC\u06A9\u0631\u0648\u0641\u0648\u0646\u200C\u062A\u0627\u0646 \u0631\u0627 \u0628\u0633\u062A\u0647 \u0627\u0633\u062A \u2014 \u0628\u0631\u0627\u06CC \u0628\u0627\u0632 \u06A9\u0631\u062F\u0646\u0634 \u0627\u06CC\u0646 \u0642\u062F\u0645\u200C\u0647\u0627 \u0631\u0627 \u0628\u0631\u062F\u0627\u0631\u06CC\u062F:",
+    micGuideStep1: "\u06F1 \u2014 \u0628\u0627\u0644\u0627\u06CC \u0635\u0641\u062D\u0647\u060C \u062F\u06A9\u0645\u0647\u0654 \u22EE (\u0633\u0647 \u0646\u0642\u0637\u0647) \u0631\u0627 \u0628\u0632\u0646\u06CC\u062F",
+    micGuideStep2: "\u06F2 \u2014 \xAB\u062A\u0646\u0638\u06CC\u0645\u0627\u062A\xBB \u2190 \xAB\u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u0633\u0627\u06CC\u062A\xBB \u2190 \xAB\u0645\u06CC\u06A9\u0631\u0648\u0641\u0648\u0646\xBB",
+    micGuideStep3: "\u06F3 \u2014 \u0646\u0627\u0645 \u0627\u06CC\u0646 \u0633\u0627\u06CC\u062A \u0631\u0627 \u067E\u06CC\u062F\u0627 \u06A9\u0646\u06CC\u062F \u0648 \xAB\u0627\u062C\u0627\u0632\u0647\xBB \u0631\u0627 \u0627\u0646\u062A\u062E\u0627\u0628 \u06A9\u0646\u06CC\u062F",
+    micGuideAlt: "\u06CC\u0627: \u0631\u0648\u06CC \u0639\u0644\u0627\u0645\u062A \u0642\u0641\u0644 \u062F\u0631 \u0646\u0648\u0627\u0631 \u0622\u062F\u0631\u0633 \u0628\u0632\u0646\u06CC\u062F \u2190 \xAB\u0645\u062C\u0648\u0632\u0647\u0627\xBB \u2190 \xAB\u0645\u06CC\u06A9\u0631\u0648\u0641\u0648\u0646\xBB \u2190 \xAB\u0627\u062C\u0627\u0632\u0647\xBB",
+    micGuideRetry: "\u062F\u0648\u0628\u0627\u0631\u0647 \u06A9\u0648\u0634\u0634 \u06A9\u0646",
     voiceDiag: "\u062A\u0634\u062E\u06CC\u0635 \u0635\u062F\u0627",
     voiceConnected: "\u0635\u062F\u0627 \u0648\u0635\u0644 \u0634\u062F",
     voiceFailed: "\u0635\u062F\u0627 \u0648\u0635\u0644 \u0646\u0634\u062F \u2014 \u062F\u0648\u0628\u0627\u0631\u0647 \u062A\u0644\u0627\u0634 \u06A9\u0646",
@@ -13920,6 +13971,13 @@ const STR = {
     noConn: "Not connected",
     micUnavailable: "Microphone unavailable",
     micHint: "Microphone is not allowed \u2014 allow it in your browser settings",
+    micGuideTitle: "Microphone permission",
+    micGuideIntro: "Chrome has blocked your microphone \u2014 to unblock it, follow these steps:",
+    micGuideStep1: "1 \u2014 Tap the \u22EE (three dots) button at the top of the screen",
+    micGuideStep2: "2 \u2014 Settings \u2192 Site settings \u2192 Microphone",
+    micGuideStep3: '3 \u2014 Find this site in the list and choose "Allow"',
+    micGuideAlt: "Or: tap the lock icon in the address bar \u2192 Permissions \u2192 Microphone \u2192 Allow",
+    micGuideRetry: "Try again",
     voiceDiag: "Voice diagnostics",
     voiceConnected: "Voice connected",
     voiceFailed: "Voice could not connect \u2014 try again",
@@ -14302,6 +14360,14 @@ function applyI18n() {
   set("#notif-title", "notifTitle");
   set("#btn-notif-close", "closeBtn");
   set("#btn-notif-push", "notifPushBtn");
+  set("#micg-title", "micGuideTitle");
+  set("#micg-intro", "micGuideIntro");
+  set("#micg-s1", "micGuideStep1");
+  set("#micg-s2", "micGuideStep2");
+  set("#micg-s3", "micGuideStep3");
+  set("#micg-alt", "micGuideAlt");
+  set("#btn-micg-retry", "micGuideRetry");
+  set("#btn-micg-close", "closeBtn");
   aria("#btn-bell", "notifTitle");
   set("#bp-title", "backSection");
   aria("#btn-back-edit", "backSection");
@@ -15660,6 +15726,46 @@ function micDeniedHint() {
 function micNoDevice(e) {
   return !!e && (e.name === "NotFoundError" || e.name === "OverconstrainedError");
 }
+function micPermError(e) {
+  return !!e && e.name === "NotAllowedError";
+}
+async function micPermDenied() {
+  try {
+    if (navigator.permissions && navigator.permissions.query) {
+      const st = await navigator.permissions.query({ name: "microphone" });
+      return !!st && st.state === "denied";
+    }
+  } catch (e) {
+  }
+  return false;
+}
+let micRetryFn = null;
+function showMicGuide(retry) {
+  if (typeof retry === "function") micRetryFn = retry;
+  const ov = $("#ov-micguide");
+  if (ov) ov.classList.add("show");
+}
+function closeMicGuide() {
+  const ov = $("#ov-micguide");
+  if (ov) ov.classList.remove("show");
+}
+$("#btn-micg-close").onclick = () => closeMicGuide();
+{
+  const mgOv = $("#ov-micguide");
+  if (mgOv) mgOv.addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) closeMicGuide();
+  });
+}
+$("#btn-micg-retry").onclick = async () => {
+  const fn = micRetryFn;
+  closeMicGuide();
+  if (fn) {
+    try {
+      await fn();
+    } catch (e) {
+    }
+  }
+};
 let MIC_UNMUTE_CAP_MS = 1e4;
 let MIC_MUTE_REACQ_MS = 2500;
 let MIC_SELFCHECK_MS = 3e3;
@@ -15931,7 +16037,7 @@ function toggleSpeaker() {
   }
   paintVoiceDots(state);
 }
-async function toggleVoice() {
+async function toggleVoice(skipPermCheck) {
   if (micPending) {
     cancelMicPending("tap");
     return;
@@ -15943,6 +16049,10 @@ async function toggleVoice() {
   if (!RTCPeerCtor || !MIC_API) {
     return;
   }
+  if (!skipPermCheck && await micPermDenied()) {
+    showMicGuide(() => toggleVoice(true));
+    return;
+  }
   const gen = ++micGen;
   const gumPromise = navigator.mediaDevices.getUserMedia({ audio: true });
   const iceReady = refreshIceServers();
@@ -15950,7 +16060,12 @@ async function toggleVoice() {
   try {
     stream = await gumPromise;
   } catch (e) {
-    if (!micNoDevice(e)) micDeniedHint();
+    if (micNoDevice(e)) return;
+    if (micPermError(e)) {
+      showMicGuide(() => toggleVoice(true));
+      return;
+    }
+    micDeniedHint();
     return;
   }
   await iceReady;
@@ -22287,7 +22402,7 @@ async function onClubSeatTap(seat, occupantId, anchorEl) {
     }
     return;
   }
-  const ok = await cv.ensureMic();
+  const ok = await cv.ensureMic(false, () => onClubSeatTap(seat, occupantId, anchorEl));
   if (!ok) return;
   cv.wantMic = true;
   cv.wantSeat = seat;
@@ -23405,14 +23520,17 @@ const cv = {
     if (box) box.innerHTML = "";
     this.paintBtns();
   },
-  async ensureMic(silent) {
+  async ensureMic(silent, retry) {
     if (this.stream && this.stream.getAudioTracks().some((t) => t.readyState === "live")) return true;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       return true;
     } catch (e) {
-      if (!silent && !micNoDevice(e)) micDeniedHint();
+      if (!silent && !micNoDevice(e)) {
+        if (micPermError(e)) showMicGuide(retry);
+        else micDeniedHint();
+      }
       return false;
     }
   },
@@ -23760,14 +23878,14 @@ $("#btn-cl-speaker").onclick = () => {
   });
   cv.paintBtns();
 };
-$("#btn-cl-mic").onclick = async () => {
+async function clubMicTap() {
   if (!roomClub()) return;
   if (cv.mySeat() >= 0) {
     if (cv.micOn) {
       cv.wantMic = false;
       cv.setMic(false);
     } else {
-      const ok = await cv.ensureMic();
+      const ok = await cv.ensureMic(false, clubMicTap);
       if (!ok) return;
       cv.wantMic = true;
       cv.setMic(true);
@@ -23777,7 +23895,8 @@ $("#btn-cl-mic").onclick = async () => {
   const box = $("#cl-seats");
   if (box) box.scrollIntoView({ behavior: "smooth", block: "center" });
   toast(T("clSeatsHint"));
-};
+}
+$("#btn-cl-mic").onclick = clubMicTap;
 document.addEventListener("pointerdown", () => {
   if (!cv.joined) return;
   document.querySelectorAll("#cl-audios audio").forEach((a) => {
