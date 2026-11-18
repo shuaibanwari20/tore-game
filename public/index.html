@@ -712,6 +712,73 @@
     filter: drop-shadow(0 3px 5px rgba(20,0,20,.55));
     display: flex; align-items: center; justify-content: center; }
   .hm-gear svg { width: 26px; height: 26px; display: block; }
+  /* feat5: the notifications bell — a gear-sized round button in
+     the home top bar carrying a red unread badge. */
+  .hm-bell { width: 38px; height: 38px; margin: 0; padding: 0; flex: 0 0 auto; position: relative;
+    background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.28), rgba(96,54,176,.38) 72%);
+    border: 1.5px solid rgba(238,201,95,.8); border-radius: 50%; cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 3px 8px rgba(20,0,30,.35);
+    font-size: 20px; line-height: 1; display: flex; align-items: center; justify-content: center;
+    filter: drop-shadow(0 3px 5px rgba(20,0,20,.55)); }
+  .hm-bell:active { transform: scale(.93); }
+  #bell-badge { position: absolute; top: -2px; inset-inline-end: -2px; min-width: 18px; height: 18px;
+    padding: 0 4px; border-radius: 999px; background: #d92338; color: #fff; border: 1.5px solid #fff;
+    font-size: 11px; font-weight: 800; line-height: 15px; text-align: center; box-sizing: border-box; }
+  #bell-badge.hidden { display: none; }
+  /* feat5: notification centre — dark violet glass panel (new UI):
+     header with a gold-ringed bell, per-row cards with round icon
+     chips; unread rows glow brighter with a gold edge dot. */
+  #ov-notifs .nt-panel { background: linear-gradient(165deg, rgba(62,34,110,.93), rgba(28,13,56,.95));
+    border: 1px solid rgba(216,180,255,.38); border-radius: 22px; color: #fff; text-align: start;
+    padding: 16px 14px 14px; box-shadow: 0 18px 44px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.14);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .nt-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .nt-hbell { width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto; font-size: 20px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.25), rgba(96,54,176,.35) 72%);
+    border: 2px solid #eec95f; box-shadow: 0 3px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.3); }
+  #ov-notifs .nt-head h2 { margin: 0; flex: 1; color: #fff; font-size: 20px; }
+  .nt-count { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; flex: 0 0 auto;
+    background: #d92338; color: #fff; font-size: 12px; font-weight: 800; line-height: 22px; text-align: center;
+    box-sizing: border-box; box-shadow: 0 2px 8px rgba(217,35,56,.5); }
+  .nt-count.hidden { display: none; }
+  .nt-x { width: 32px; height: 32px; margin: 0; padding: 0; border-radius: 50%; flex: 0 0 auto; cursor: pointer;
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.28); color: #fff; font-size: 14px;
+    line-height: 1; display: flex; align-items: center; justify-content: center; box-shadow: none; }
+  .nt-list { max-height: 54vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 2px; }
+  .nt-row { position: relative; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px;
+    padding-inline-end: 24px; border-radius: 14px; background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.09); }
+  .nt-row.unread { background: rgba(150,104,255,.17); border-color: rgba(216,180,255,.4); }
+  .nt-row.unread::after { content: ''; position: absolute; top: 12px; inset-inline-end: 10px; width: 8px; height: 8px;
+    border-radius: 50%; background: #ffd75e; box-shadow: 0 0 7px rgba(255,215,94,.9); }
+  .nt-ic { width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto; font-size: 20px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); }
+  .nt-row.k-gift .nt-ic { background: linear-gradient(160deg, #ffe9a3, #d9a92f); border-color: #ffedb5;
+    box-shadow: 0 3px 10px rgba(238,201,95,.35); }
+  .nt-row.k-freq .nt-ic { background: linear-gradient(160deg, #8b5cf6, #6d28d9); border-color: rgba(255,255,255,.25); }
+  .nt-row.k-faccept .nt-ic { background: linear-gradient(160deg, #34d399, #059669); border-color: rgba(255,255,255,.25); }
+  .nt-row.k-invite .nt-ic { background: linear-gradient(160deg, #60a5fa, #2563eb); border-color: rgba(255,255,255,.25); }
+  .nt-row.k-clubann .nt-ic { background: linear-gradient(160deg, #fb923c, #ea580c); border-color: rgba(255,255,255,.25); }
+  .nt-row.k-clubinvite .nt-ic { background: linear-gradient(160deg, #fbbf24, #b45309); border-color: rgba(255,255,255,.25); }
+  .nt-main { min-width: 0; flex: 1; padding-top: 2px; }
+  .nt-txt { font-size: 14.5px; font-weight: 600; line-height: 1.45; color: #fff; }
+  .nt-row:not(.unread) .nt-txt { color: rgba(255,255,255,.78); }
+  .nt-sub { font-size: 12.5px; color: rgba(255,255,255,.85); line-height: 1.45; margin-top: 2px; }
+  .nt-time { font-size: 11px; color: rgba(226,205,255,.55); margin-top: 3px; }
+  #notif-list .fr-empty { text-align: center; color: rgba(255,255,255,.65); font-size: 14px;
+    opacity: 1; padding: 24px 10px 18px; line-height: 1.5; }
+  #notif-list .fr-empty::before { content: '🔔'; display: flex; align-items: center; justify-content: center;
+    width: 64px; height: 64px; margin: 0 auto 12px; border-radius: 50%; font-size: 30px;
+    background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.15); }
+  #ov-notifs #btn-notif-push { width: 100%; margin-top: 12px; border-radius: 12px; border: 0;
+    background: linear-gradient(180deg, #ffe9a3, #e9bd45); color: #3a2403; font-weight: 800;
+    box-shadow: 0 4px 14px rgba(238,201,95,.3); }
+  #btn-notif-push.hidden { display: none; }
+  #ov-notifs .pf-btns { margin-top: 12px; }
+  #ov-notifs #btn-notif-close { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.25);
+    color: #fff; border-radius: 12px; box-shadow: none; }
 
   /* Title zone: the suits, the big gold wordmark, the tagline —
      compacted in the ludomenu reskin so the cards own the screen,
@@ -1057,6 +1124,11 @@
   .fr-who { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; }
   .fr-meta { min-width: 0; }
   .fr-name { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* feat5: the pulsing red «زوندی» badge on the row of a friend who
+     is in a live match (its dot reuses the club live pulse). */
+  .fr-live { display: inline-flex; align-items: center; gap: 3px; margin-inline-start: 6px;
+    background: #c22333; color: #fff; font-size: 9.5px; font-weight: 800; line-height: 1;
+    padding: 3px 6px; border-radius: 999px; border: 1px solid #ff8fa0; vertical-align: 2px; }
   .fr-sub { font-size: 11.5px; opacity: .85; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
   .fr-actions { display: flex; gap: 6px; flex: 0 0 auto; align-items: center; }
   .fr-act { width: auto; margin: 0; padding: 7px 11px; font-size: 13.5px; font-weight: 700;
@@ -3425,6 +3497,9 @@
           <button type="button" class="hm-pill" id="btn-wallet-coins" aria-label="سکه"><svg class="coin-ic" aria-hidden="true"><use href="#coinSym"></use></svg> <b id="wallet-coins">–</b></button>
           <button type="button" class="hm-pill gem" id="btn-wallet-gems" aria-label="الماس">💎 <b id="wallet-gems">–</b></button>
         </div>
+        <!-- feat5: notifications bell — the badge is the unread
+             count from the server inbox (s-init / s-notif). -->
+        <button class="hm-bell" id="btn-bell" aria-label="اعلان‌ها">🔔<span id="bell-badge" class="hidden"></span></button>
         <button class="hm-gear" id="btn-settings" aria-label="امادګي">
           <svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="gearG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cdbfe8"/></linearGradient></defs><path fill-rule="evenodd" fill="url(#gearG)" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg>
         </button>
@@ -4728,6 +4803,23 @@
 
 <!-- ======== PROFILE POPUP ======== -->
 
+<!-- ======== NOTIFICATIONS POPUP (feat5, new-UI panel) ======== -->
+<div class="overlay" id="ov-notifs">
+  <div class="panel nt-panel">
+    <div class="nt-head">
+      <span class="nt-hbell" aria-hidden="true">🔔</span>
+      <h2 id="notif-title">اعلان‌ها</h2>
+      <span id="notif-count" class="nt-count hidden"></span>
+      <button type="button" id="btn-notif-x" class="nt-x" aria-label="بندول">✕</button>
+    </div>
+    <div class="nt-list" id="notif-list"></div>
+    <button type="button" id="btn-notif-push" class="hidden">فعال‌کردن اعلان‌های تلفن</button>
+    <div class="pf-btns">
+      <button type="button" id="btn-notif-close" class="ghost">بند کړه</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======== SETTINGS POPUP ======== -->
 <div class="overlay" id="ov-settings">
   <div class="st-wrap">
@@ -5103,6 +5195,15 @@ const STR = {
     event_eidadha27: 'د لوی اختر جشن',
     shopEquip: 'وې کاروه',
     watchBtn: 'تماشا',
+    notifTitle: 'اعلان‌ها',
+    notifEmpty: 'هېڅ اعلان نشته',
+    nFreq: (name) => name + ' د ملګرتیا غوښتنه درولېږله',
+    nFaccept: (name) => name + ' ستا د ملګرتیا غوښتنه ومنله',
+    nGift: (name, amount) => name + ' ' + amount + ' سکې ډالۍ درکړې',
+    nInvite: (name) => name + ' لوبې ته بلنه درکړه',
+    nClubAnn: (club) => 'د «' + club + '» کلب تازه اعلان',
+    nClubInvite: (name, club) => name + ' «' + club + '» کلب ته بلنه درکړه',
+    notifPushBtn: 'د تلفن اعلان‌ها فعال کړه',
     errSocialNotInGame: 'هغه اوس په لوبه کې نه دی',
     errClubPollActive: 'یوه رایه‌اچونه لا روانه ده',
     errClubNoPoll: 'رایه‌اچونه نشته',
@@ -5585,6 +5686,15 @@ const STR = {
     event_eidadha27: 'جشن عید قربان',
     shopEquip: 'استفاده کن',
     watchBtn: 'تماشا',
+    notifTitle: 'اعلان‌ها',
+    notifEmpty: 'اعلانی نیست',
+    nFreq: (name) => name + ' برایت درخواست دوستی فرستاد',
+    nFaccept: (name) => name + ' درخواست دوستی‌ات را قبول کرد',
+    nGift: (name, amount) => name + ' ' + amount + ' سکه برایت هدیه فرستاد',
+    nInvite: (name) => name + ' به بازی دعوتت کرد',
+    nClubAnn: (club) => 'اعلان تازهٔ باشگاه «' + club + '»',
+    nClubInvite: (name, club) => name + ' به باشگاه «' + club + '» دعوتت کرد',
+    notifPushBtn: 'فعال‌کردن اعلان‌های تلفن',
     errSocialNotInGame: 'الان در بازی نیست',
     errClubPollActive: 'یک رأی‌گیری هنوز در جریان است',
     errClubNoPoll: 'رأی‌گیری‌ای نیست',
@@ -6067,6 +6177,15 @@ const STR = {
     event_eidadha27: 'Eid al-Adha festival',
     shopEquip: 'Use',
     watchBtn: 'Watch',
+    notifTitle: 'Notifications',
+    notifEmpty: 'No notifications',
+    nFreq: (name) => name + ' sent you a friend request',
+    nFaccept: (name) => name + ' accepted your friend request',
+    nGift: (name, amount) => name + ' sent you a gift of ' + amount + ' coins',
+    nInvite: (name) => name + ' invited you to a game',
+    nClubAnn: (club) => 'New announcement in «' + club + '»',
+    nClubInvite: (name, club) => name + ' invited you to the club «' + club + '»',
+    notifPushBtn: 'Enable phone notifications',
     errSocialNotInGame: 'Not in a game right now',
     errClubPollActive: 'A poll is already running',
     errClubNoPoll: 'There is no poll',
@@ -6716,6 +6835,10 @@ function applyI18n() {
   set('#btn-rematch-accept', 'rematchAccept');
   set('#btn-rematch-decline', 'rematchDecline');
   set('#btn-pv2-watch', 'watchBtn');
+  set('#notif-title', 'notifTitle');
+  set('#btn-notif-close', 'closeBtn');
+  set('#btn-notif-push', 'notifPushBtn');
+  aria('#btn-bell', 'notifTitle');
   set('#bp-title', 'backSection');
   aria('#btn-back-edit', 'backSection');
   aria('#btn-backpick-x', 'closeBtn');
@@ -6737,6 +6860,7 @@ function setLang(code) {
   if (!STR[code] || code === LANG) { if (STR[code]) markLangRows(); return; }
   LANG = code;
   try { localStorage.setItem('tore.lang', code); } catch (e) { /* private mode */ }
+  bumpSyncTs('settings'); pushSyncSection('settings'); // feat5: the language rides the settings section
   applyI18n();
   if (window.TorePlayer) TorePlayer.paint();
   if ($('#ov-settings').classList.contains('show')) paintSettings();
@@ -7125,6 +7249,99 @@ function validBack(n) {
   n = Number(n);
   return Number.isInteger(n) && n >= 1 && n <= 7 ? n : 1;
 }
+// ============ feat5: profile / settings / favorites server sync ==
+// The server keeps a mirror copy of the player's own profile,
+// settings and music favorites per identity (social-core's
+// profileSync), stamped per section with a client updatedAt —
+// last-writer-wins. HAD_LOCAL_PROFILE is captured BEFORE anything
+// can write a profile: a device with NO local profile is "fresh"
+// and pulls the server copy at its first s-init instead of
+// overwriting it with defaults (its sections ride the hello
+// stamped 0, which the server never lets win).
+const HAD_LOCAL_PROFILE = (() => { try { return !!localStorage.getItem('tore.profile'); } catch (e) { return true; } })();
+let syncTs = { profile: 0, settings: 0, favs: 0 };
+try {
+  const s = JSON.parse(localStorage.getItem('tore.syncTs') || 'null');
+  if (s && typeof s === 'object') syncTs = { profile: +s.profile || 0, settings: +s.settings || 0, favs: +s.favs || 0 };
+} catch (e) { /* fresh */ }
+function saveSyncTs() { try { localStorage.setItem('tore.syncTs', JSON.stringify(syncTs)); } catch (e) { /* private mode */ } }
+if (HAD_LOCAL_PROFILE && !syncTs.profile && !syncTs.settings && !syncTs.favs) {
+  // Migration: an existing player meets sync for the first time —
+  // adopt the local copies as the current truth, stamped now.
+  const now = Date.now();
+  syncTs = { profile: now, settings: now, favs: now };
+  saveSyncTs();
+}
+let applyingRemote = false;   // true while a pulled server copy is being applied (no re-push, no re-stamp)
+let syncPullDone = false;
+function bumpSyncTs(sec) { if (applyingRemote) return; syncTs[sec] = Date.now(); saveSyncTs(); }
+function syncProfileData() {
+  return { name: profile.name, avatar: profile.avatar, photo: profile.photo, country: profile.country,
+    felt: profile.felt, back: profile.back, frame: profile.frame, chatStyle: profile.chatStyle, nameManual: !!profile.nameManual };
+}
+function syncSettingsData() {
+  return { lang: LANG, musicOn: toreSetting('music', true), vibrate: toreSetting('vibrate', false), chatOn: toreSetting('chat', true) };
+}
+function syncFavsData() { return (window.TorePlayer && TorePlayer.favsList) ? TorePlayer.favsList() : []; }
+function syncSnapshot() {
+  return {
+    profile: { data: syncProfileData(), ts: syncTs.profile },
+    settings: { data: syncSettingsData(), ts: syncTs.settings },
+    favs: { data: syncFavsData(), ts: syncTs.favs },
+  };
+}
+function pushSyncSection(sec) {
+  if (applyingRemote) return;
+  try {
+    if (!sws || sws.readyState !== 1) return;
+    const sync = {};
+    sync[sec] = { data: sec === 'profile' ? syncProfileData() : sec === 'settings' ? syncSettingsData() : syncFavsData(), ts: syncTs[sec] };
+    socialSend({ type: 's-sync', sync });
+  } catch (e) { /* sync is best-effort; the next hello re-sends the snapshot */ }
+}
+function onMpFavsChanged() { bumpSyncTs('favs'); pushSyncSection('favs'); }
+// A pulled server copy lands (fresh device): apply each section
+// with the client's own validators, keep the server's stamps, then
+// re-hello so the directory + room payloads pick the profile up.
+function applyServerSync(m) {
+  if (!m || m.empty) return;
+  applyingRemote = true;
+  try {
+    if (m.profile && typeof m.profile === 'object') {
+      const p = m.profile;
+      profile = {
+        name: (typeof p.name === 'string' && p.name.trim()) ? p.name.trim().slice(0, 20) : '',
+        avatar: validAvatar(p.avatar) ? p.avatar : 'av1',
+        country: (typeof p.country === 'string' && p.country.trim()) ? p.country.trim() : 'افغانستان',
+        photo: (typeof p.photo === 'string' && (p.photo.startsWith('https://') || p.photo.startsWith('/p-photo/'))) ? p.photo.slice(0, 300) : '',
+        felt: validFelt(p.felt),
+        back: validBack(p.back),
+        frame: (typeof p.frame === 'string' && /^fr[1-6]$/.test(p.frame)) ? p.frame : '',
+        chatStyle: (typeof p.chatStyle === 'string' && /^chat[1-3]$/.test(p.chatStyle)) ? p.chatStyle : '',
+        nameManual: p.nameManual === true,
+      };
+      saveProfile();
+      if (m.ts && m.ts.profile) syncTs.profile = m.ts.profile;
+    }
+    if (m.settings && typeof m.settings === 'object') {
+      const s = m.settings;
+      if (typeof s.lang === 'string' && s.lang !== LANG && STR[s.lang]) setLang(s.lang);
+      setToreSetting('music', s.musicOn !== false);
+      setToreSetting('vibrate', s.vibrate === true);
+      setToreSetting('chat', s.chatOn !== false);
+      paintSettings();
+      if (m.ts && m.ts.settings) syncTs.settings = m.ts.settings;
+    }
+    if (Array.isArray(m.favs) && window.TorePlayer && TorePlayer.favsSet) {
+      TorePlayer.favsSet(m.favs);
+      if (m.ts && m.ts.favs) syncTs.favs = m.ts.favs;
+    }
+    saveSyncTs();
+    renderProfileButton();
+    socialHello();
+  } catch (e) { /* a bad pull must never break the boot */ }
+  applyingRemote = false;
+}
 function loadProfile() {
   let p = null;
   try { p = JSON.parse(localStorage.getItem('tore.profile') || 'null'); } catch (e) { p = null; }
@@ -7147,6 +7364,7 @@ function saveProfile() {
   localStorage.setItem('tore.profile', JSON.stringify(profile));
   localStorage.removeItem('tore.name'); // migrated — profile is the only store now
   renderProfileButton();
+  bumpSyncTs('profile'); pushSyncSection('profile'); // feat5: mirror to the server copy
 }
 function myName() {
   return (profile.name || '').trim() || session?.name || T('playerName');
@@ -11233,6 +11451,8 @@ function toreSetting(key, dflt) {
 }
 function setToreSetting(key, on) {
   try { localStorage.setItem('tore.set.' + key, on ? '1' : '0'); } catch (e) { /* private mode */ }
+  // feat5: the three synced toggles mirror to the server copy
+  if (key === 'music' || key === 'vibrate' || key === 'chat') { bumpSyncTs('settings'); pushSyncSection('settings'); }
 }
 // up107: DND + invisible were removed from the Settings sheet
 // (owner order 2026-11-18) — force any stale local mirror OFF at
@@ -11456,7 +11676,7 @@ const TorePlayer = (() => {
   let pageOpen = false;
   let favs = new Set();
   try { favs = new Set(JSON.parse(localStorage.getItem('tore.mpFavs') || '[]')); } catch (e) { /* fresh */ }
-  const saveFavs = () => { try { localStorage.setItem('tore.mpFavs', JSON.stringify([...favs])); } catch (e) { /* private mode */ } };
+  const saveFavs = () => { try { localStorage.setItem('tore.mpFavs', JSON.stringify([...favs])); } catch (e) { /* private mode */ } if (typeof onMpFavsChanged === 'function') onMpFavsChanged(); };
   const curEl = $p('#mp-cur'), durEl = $p('#mp-dur');
   const bcBtn = $p('#mp-bc'), chipImg = $p('#mp-chip-img'), chipBadge = $p('#mp-chip-badge');
   const SVG_PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
@@ -11952,6 +12172,14 @@ const TorePlayer = (() => {
     collapse(v) { collapsed = !!v; save(); paint(); },
     setChipPos(x, y) { chipPos = { x, y }; save(); paint(); },
     openPlaylist, closePlaylist,
+    // feat5: profile sync reads/writes the favorites set through
+    // here (the set itself stays private to the player module).
+    favsList() { return [...favs]; },
+    favsSet(arr) {
+      favs = new Set((Array.isArray(arr) ? arr : []).filter((n) => Number.isInteger(n) && n >= 1 && n <= MP_TRACKS.length));
+      saveFavs();
+      paint();
+    },
     bcToggle, onBcState: applyBc,
     micHook, // up43b: the voice funnels (room + club) pause/resume the music with my mic
     onMasterToggle() {
@@ -12251,6 +12479,17 @@ function bindToggleRow(id, key, dflt, after) {
 bindToggleRow('#row-set-vibrate', 'vibrate', false, null);
 bindToggleRow('#row-set-chat', 'chat', true, applyChatSetting);
 bindToggleRow('#row-set-music', 'music', true, () => { if (window.TorePlayer) window.TorePlayer.onMasterToggle(); });
+$('#btn-bell').onclick = () => { connectSocial(); openNotifs(); };
+$('#btn-notif-close').onclick = closeNotifs;
+$('#btn-notif-x').onclick = closeNotifs;
+$('#ov-notifs').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeNotifs(); });
+$('#btn-notif-push').onclick = async () => {
+  try {
+    const p = await Notification.requestPermission();
+    if (p === 'granted') await subscribePush();
+  } catch (e) { /* best-effort */ }
+  renderNotifs();
+};
 $('#btn-settings').onclick = openSettings;
 $('#btn-settings-close').onclick = closeSettings;
 $('#ov-settings').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeSettings(); });
@@ -12935,7 +13174,7 @@ function socialSend(obj) {
   if (sws && sws.readyState === 1) { try { sws.send(JSON.stringify(obj)); } catch (e) { /* gone */ } }
 }
 function socialHello() {
-  socialSend({ type: 's-hello', pid: myPid(), profile: profilePayload() });
+  socialSend({ type: 's-hello', pid: myPid(), profile: profilePayload(), sync: syncSnapshot() });
 }
 // up89: when the player comes back to the game (app switch, screen
 // unlock), re-hello on the live social socket — the server
@@ -13028,6 +13267,9 @@ function onSocialMsg(m) {
     if (m.wallet) setWallet(m.wallet); // up47: the wallet rides s-init
     if (m.event !== undefined) setSocialEvent(m.event); // feat3: seasonal event state
     if (m.refs) setRefs(m.refs); // feat3: referral totals
+    if (m.notifs) { notifList = m.notifs; notifUnread = m.notifUnread || 0; paintNotifBadge(); } // feat5: the inbox rides s-init
+    if (!HAD_LOCAL_PROFILE && !syncPullDone) { syncPullDone = true; socialSend({ type: 's-profile-pull' }); } // feat5: a fresh device pulls its server copy
+    maybeSubscribePush(); // feat5: Android PWA push (a no-op unless standalone + permission already granted)
     applySocialLists(m);
   } else if (m.type === 's-wallet') {
     setWallet(m.wallet); // up47: balance/ownership push (claim, buy, escrow, settle…)
@@ -13065,6 +13307,23 @@ function onSocialMsg(m) {
     renderLeaders();
   } else if (m.type === 's-watch-state') {
     if (m.code) spectateGame(m.code);
+  } else if (m.type === 's-notif') {
+    // feat5: a live notification — prepend (dedupe by id), re-badge,
+    // and re-render the centre if it happens to be open.
+    if (m.notif && !notifList.some((n) => n.nid === m.notif.nid)) {
+      notifList.unshift(m.notif);
+      if (notifList.length > 30) notifList.length = 30;
+    }
+    notifUnread = (typeof m.unread === 'number') ? m.unread : notifUnread + 1;
+    paintNotifBadge();
+    if ($('#ov-notifs').classList.contains('show')) renderNotifs();
+  } else if (m.type === 's-notifs') {
+    notifList = m.list || [];
+    notifUnread = m.unread || 0;
+    paintNotifBadge();
+    if ($('#ov-notifs').classList.contains('show')) renderNotifs();
+  } else if (m.type === 's-profile-data') {
+    applyServerSync(m); // feat5: the pulled server copy lands
   } else if (m.type === 's-club-vs-invited') {
     onClubVsInvited(m);
   } else if (m.type === 's-club-vs-declined') {
@@ -14104,6 +14363,15 @@ function personRow(p, actions, opts) {
     moon.textContent = ' 🌙';
     moon.title = T('setDnd');
     nm.appendChild(moon);
+  }
+  if (p.ingame) { // feat5: a friend in a live match wears the pulsing «زوندی» badge
+    const lv = document.createElement('span');
+    lv.className = 'fr-live';
+    const dt = document.createElement('span');
+    dt.className = 'cl-live-dot';
+    lv.appendChild(dt);
+    lv.appendChild(document.createTextNode(T('clLive')));
+    nm.appendChild(lv);
   }
   const sub = document.createElement('div');
   sub.className = 'fr-sub';
@@ -18071,6 +18339,138 @@ function spectateGame(code) {
 // A friend's «تماشا»: ask the social server for his room code;
 // the s-watch-state answer carries it back (an s-error
 // socialNotInGame toasts «هغه اوس په لوبه کې نه دی» instead).
+// ============ feat5: notification centre ============
+let notifList = [];
+let notifUnread = 0;
+function paintNotifBadge() {
+  const b = $('#bell-badge');
+  if (!b) return;
+  b.textContent = faNum(notifUnread);
+  b.classList.toggle('hidden', !notifUnread);
+}
+function notifIcon(kind) {
+  return { freq: '👋', faccept: '✅', gift: '🎁', invite: '🎮', clubann: '📣', clubinvite: '🏆' }[kind] || '🔔';
+}
+function notifText(n) {
+  const nm = n.name || T('playerName');
+  switch (n.kind) {
+    case 'freq': return T('nFreq', nm);
+    case 'faccept': return T('nFaccept', nm);
+    case 'gift': return T('nGift', nm, faNum(n.amount || 0));
+    case 'invite': return T('nInvite', nm);
+    case 'clubann': return T('nClubAnn', n.club || '');
+    case 'clubinvite': return T('nClubInvite', nm, n.club || '');
+    default: return n.text || '';
+  }
+}
+function notifTime(ts) {
+  const d = new Date(ts || Date.now());
+  return d.toDateString() === new Date().toDateString()
+    ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString([], { day: 'numeric', month: 'numeric' });
+}
+function renderNotifs() {
+  const box = $('#notif-list');
+  if (!box) return;
+  box.innerHTML = '';
+  const cnt = $('#notif-count');
+  if (cnt) {
+    const un = notifList.filter((n) => !n.read).length;
+    cnt.textContent = faNum(un);
+    cnt.classList.toggle('hidden', !un);
+  }
+  if (!notifList.length) box.appendChild(frEmpty(T('notifEmpty')));
+  notifList.forEach((n) => {
+    const row = document.createElement('div');
+    row.className = 'nt-row k-' + (n.kind || 'note') + (n.read ? '' : ' unread');
+    const ic = document.createElement('span');
+    ic.className = 'nt-ic';
+    ic.textContent = notifIcon(n.kind);
+    const main = document.createElement('div');
+    main.className = 'nt-main';
+    const tx = document.createElement('div');
+    tx.className = 'nt-txt';
+    tx.textContent = notifText(n);
+    main.appendChild(tx);
+    if (n.kind === 'clubann' && n.text) {
+      const sub = document.createElement('div');
+      sub.className = 'nt-sub';
+      sub.textContent = n.text;
+      main.appendChild(sub);
+    }
+    const tm = document.createElement('div');
+    tm.className = 'nt-time';
+    tm.textContent = notifTime(n.ts);
+    main.appendChild(tm);
+    row.appendChild(ic);
+    row.appendChild(main);
+    box.appendChild(row);
+  });
+  paintPushBtn();
+}
+function openNotifs() {
+  renderNotifs();
+  $('#ov-notifs').classList.add('show');
+  if (notifUnread) {
+    // Opening the centre marks the inbox read — locally at once,
+    // and on the server (its s-notifs reply confirms the state).
+    notifList.forEach((n) => { n.read = true; });
+    notifUnread = 0;
+    paintNotifBadge();
+    socialSend({ type: 's-notifs-read' });
+  }
+}
+function closeNotifs() { $('#ov-notifs').classList.remove('show'); }
+
+// ============ feat5: Web Push subscription (Android PWA) =======
+// Only an installed Android app whose notification permission is
+// ALREADY granted subscribes silently; everyone else opts in from
+// the notification centre's button. iOS never reaches here (no
+// service worker is registered there, per U72) and every failure
+// is swallowed — push is an extra, never a dependency.
+function pushSupported() {
+  try {
+    return !pwaIsIOS() && pwaStandalone() && 'serviceWorker' in navigator &&
+      'PushManager' in window && 'Notification' in window;
+  } catch (e) { return false; }
+}
+function paintPushBtn() {
+  const b = $('#btn-notif-push');
+  if (!b) return;
+  let show = false;
+  try { show = pushSupported() && Notification.permission === 'default'; } catch (e) { /* no Notification here */ }
+  b.classList.toggle('hidden', !show);
+}
+function urlB64ToUint8(s) {
+  const pad = '='.repeat((4 - (s.length % 4)) % 4);
+  const raw = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+async function subscribePush() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const r = await fetch('/push-key');
+      if (!r.ok) return; // the host carries no VAPID key — nothing to subscribe with
+      const j = await r.json();
+      if (!j || !j.key) return;
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(j.key) });
+    }
+    if (sub) socialSend({ type: 's-push-sub', sub: sub.toJSON() });
+  } catch (e) { /* push is best-effort */ }
+}
+let pushTried = false;
+function maybeSubscribePush() {
+  if (pushTried) return;
+  pushTried = true;
+  try {
+    if (pushSupported() && Notification.permission === 'granted') subscribePush();
+  } catch (e) { /* best-effort */ }
+}
+
 function requestWatch(p) {
   if (!p || !p.id) return;
   spectateReturn = !$('#scr-friends').classList.contains('hidden') ? 'friends' : 'home';
