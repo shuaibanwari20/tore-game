@@ -6087,6 +6087,9 @@ button:disabled {
   visibility: visible;
   transition: transform .25s, opacity .2s;
 }
+#toast.info {
+  background: #43307a;
+}
 #vdiag {
   position: fixed;
   top: 10px;
@@ -12870,6 +12873,7 @@ const STR = {
     disconnected: "\u0627\u0693\u06CC\u06A9\u0647 \u067E\u0631\u06D0 \u0634\u0648\u0647 \u2014 \u0628\u06CC\u0627 \u0646\u069A\u0644\u0648\u0644 \u06A9\u06D0\u0696\u064A\u2026",
     noConn: "\u0627\u0693\u06CC\u06A9\u0647 \u0646\u0634\u062A\u0647",
     micUnavailable: "\u0645\u0627\u06CC\u06A9\u0631\u0648\u0641\u0648\u0646 \u0646\u0634\u062A\u0647",
+    micHint: "\u0645\u0627\u06CC\u06A9\u0631\u0648\u0641\u0648\u0646 \u062A\u0647 \u0627\u062C\u0627\u0632\u0647 \u0646\u0634\u062A\u0647 \u2014 \u062F \u0628\u0631\u0627\u0648\u0632\u0631 \u0644\u0647 \u062A\u0646\u0638\u06CC\u0645\u0627\u062A\u0648 \u06CC\u06D0 \u0627\u062C\u0627\u0632\u0647 \u0648\u0631\u06A9\u0693\u0647",
     voiceDiag: "\u062F \u063A\u0696 \u062D\u0627\u0644\u062A",
     voiceConnected: "\u063A\u0696 \u0648\u0635\u0644 \u0634\u0648",
     voiceFailed: "\u063A\u0696 \u0648\u0635\u0644 \u0646\u0634\u0648 \u2014 \u0628\u06CC\u0627 \u0647\u0685\u0647 \u0648\u06A9\u0693\u0647",
@@ -13392,6 +13396,7 @@ const STR = {
     disconnected: "\u0627\u062A\u0635\u0627\u0644 \u0642\u0637\u0639 \u0634\u062F \u2014 \u062F\u0631 \u062D\u0627\u0644 \u0627\u062A\u0635\u0627\u0644 \u062F\u0648\u0628\u0627\u0631\u0647\u2026",
     noConn: "\u0627\u062A\u0635\u0627\u0644 \u0646\u06CC\u0633\u062A",
     micUnavailable: "\u0645\u0627\u06CC\u06A9 \u062F\u0631 \u062F\u0633\u062A\u0631\u0633 \u0646\u06CC\u0633\u062A",
+    micHint: "\u0645\u06CC\u06A9\u0631\u0648\u0641\u0648\u0646 \u0627\u062C\u0627\u0632\u0647 \u0646\u062F\u0627\u0631\u062F \u2014 \u0627\u0632 \u062A\u0646\u0638\u06CC\u0645\u0627\u062A \u0645\u0631\u0648\u0631\u06AF\u0631 \u0627\u062C\u0627\u0632\u0647\u200C\u0627\u0634 \u0628\u062F\u0647",
     voiceDiag: "\u062A\u0634\u062E\u06CC\u0635 \u0635\u062F\u0627",
     voiceConnected: "\u0635\u062F\u0627 \u0648\u0635\u0644 \u0634\u062F",
     voiceFailed: "\u0635\u062F\u0627 \u0648\u0635\u0644 \u0646\u0634\u062F \u2014 \u062F\u0648\u0628\u0627\u0631\u0647 \u062A\u0644\u0627\u0634 \u06A9\u0646",
@@ -13914,6 +13919,7 @@ const STR = {
     disconnected: "Connection lost \u2014 reconnecting\u2026",
     noConn: "Not connected",
     micUnavailable: "Microphone unavailable",
+    micHint: "Microphone is not allowed \u2014 allow it in your browser settings",
     voiceDiag: "Voice diagnostics",
     voiceConnected: "Voice connected",
     voiceFailed: "Voice could not connect \u2014 try again",
@@ -14463,9 +14469,10 @@ function renderMenuFans() {
   fill("fan-create", ["AH", "TD"]);
 }
 let toastTimer = null;
-function toast(msg) {
+function toast(msg, kind) {
   const t = $("#toast");
   t.textContent = msg;
+  t.classList.toggle("info", kind === "info");
   t.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove("show"), 3600);
@@ -15643,6 +15650,16 @@ let AUDIO_WATCH_MS = 2e3;
 let AUDIO_FROZEN_MS = 4e3;
 let EL_STALL_MS = 3e3;
 let micPending = null;
+const MIC_API = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+let micHintShown = false;
+function micDeniedHint() {
+  if (micHintShown) return;
+  micHintShown = true;
+  toast(T("micHint"), "info");
+}
+function micNoDevice(e) {
+  return !!e && (e.name === "NotFoundError" || e.name === "OverconstrainedError");
+}
 let MIC_UNMUTE_CAP_MS = 1e4;
 let MIC_MUTE_REACQ_MS = 2500;
 let MIC_SELFCHECK_MS = 3e3;
@@ -15863,6 +15880,13 @@ const onMicTap = () => {
 eachMicBtn((b) => {
   b.onclick = onMicTap;
 });
+if (!MIC_API) {
+  eachMicBtn((b) => {
+    b.style.display = "none";
+  });
+  const clMicBtn = $("#btn-cl-mic");
+  if (clMicBtn) clMicBtn.style.display = "none";
+}
 eachSpeakerBtn((b) => {
   b.onclick = () => {
     toggleSpeaker();
@@ -15916,8 +15940,7 @@ async function toggleVoice() {
     stopMic();
     return;
   }
-  if (!RTCPeerCtor || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    toast(T("micUnavailable"));
+  if (!RTCPeerCtor || !MIC_API) {
     return;
   }
   const gen = ++micGen;
@@ -15927,7 +15950,7 @@ async function toggleVoice() {
   try {
     stream = await gumPromise;
   } catch (e) {
-    toast(T("micUnavailable"));
+    if (!micNoDevice(e)) micDeniedHint();
     return;
   }
   await iceReady;
@@ -15948,7 +15971,6 @@ async function toggleVoice() {
       } catch (e) {
       }
     });
-    toast(T("micUnavailable"));
     return;
   }
   if (track.muted) {
@@ -15998,7 +16020,6 @@ function startMicPending(gen, stream) {
     eachMicBtn((b) => b.classList.remove("pending"));
     stopStreamTracks(stream);
     voiceEvent("mic unavailable: track never unmuted");
-    toast(T("micUnavailable"));
   }, MIC_UNMUTE_CAP_MS);
   if (!track.muted) finish();
 }
@@ -16102,7 +16123,6 @@ function micSuperviseTick() {
       reacquireMic();
     } else if (micMuteHealed && !micReacquiring && dur >= MIC_MUTE_REACQ_MS + MIC_UNMUTE_CAP_MS) {
       voiceEvent("mic off: track stuck muted even after a re-acquire");
-      toast(T("micUnavailable"));
       stopMic();
     }
   } else if (micMuteSince) {
@@ -16124,7 +16144,6 @@ async function reacquireMic() {
   if (!stream) {
     micReacquiring = false;
     if (micOn && g === micGen) {
-      toast(T("micUnavailable"));
       stopMic();
     }
     return;
@@ -16138,7 +16157,6 @@ async function reacquireMic() {
   if (!ntr || ntr.readyState === "ended") {
     stopStreamTracks(stream);
     micReacquiring = false;
-    toast(T("micUnavailable"));
     stopMic();
     return;
   }
@@ -23387,17 +23405,14 @@ const cv = {
     if (box) box.innerHTML = "";
     this.paintBtns();
   },
-  async ensureMic() {
+  async ensureMic(silent) {
     if (this.stream && this.stream.getAudioTracks().some((t) => t.readyState === "live")) return true;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      toast(T("clMicDenied"));
-      return false;
-    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       return true;
     } catch (e) {
-      toast(T("clMicDenied"));
+      if (!silent && !micNoDevice(e)) micDeniedHint();
       return false;
     }
   },
@@ -23485,7 +23500,7 @@ const cv = {
       }
     }
     if (seated && this.wantMic && !this.micOn) {
-      this.ensureMic().then((ok) => {
+      this.ensureMic(true).then((ok) => {
         if (ok) this.setMic(true);
         else this.wantMic = false;
       });
