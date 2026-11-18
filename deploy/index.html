@@ -2092,6 +2092,7 @@
     opacity: 0; visibility: hidden; pointer-events: none;
   }
   #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; transition: transform .25s, opacity .2s; }
+  #toast.info { background: #43307a; }
   /* ---------- voice diagnostics overlay (long-press the mic) ----------
      A small dark LTR monospace card, toggled by a ~600 ms press on
      the mic button. Pointer events land only on the card itself, so
@@ -5524,6 +5525,7 @@ const STR = {
     disconnected: 'اړیکه پرې شوه — بیا نښلول کېږي…',
     noConn: 'اړیکه نشته',
     micUnavailable: 'مایکروفون نشته',
+    micHint: 'مایکروفون ته اجازه نشته — د براوزر له تنظیماتو یې اجازه ورکړه',
     voiceDiag: 'د غږ حالت',
     voiceConnected: 'غږ وصل شو',
     voiceFailed: 'غږ وصل نشو — بیا هڅه وکړه',
@@ -6015,6 +6017,7 @@ const STR = {
     disconnected: 'اتصال قطع شد — در حال اتصال دوباره…',
     noConn: 'اتصال نیست',
     micUnavailable: 'مایک در دسترس نیست',
+    micHint: 'میکروفون اجازه ندارد — از تنظیمات مرورگر اجازه‌اش بده',
     voiceDiag: 'تشخیص صدا',
     voiceConnected: 'صدا وصل شد',
     voiceFailed: 'صدا وصل نشد — دوباره تلاش کن',
@@ -6506,6 +6509,7 @@ const STR = {
     disconnected: 'Connection lost — reconnecting…',
     noConn: 'Not connected',
     micUnavailable: 'Microphone unavailable',
+    micHint: 'Microphone is not allowed — allow it in your browser settings',
     voiceDiag: 'Voice diagnostics',
     voiceConnected: 'Voice connected',
     voiceFailed: 'Voice could not connect — try again',
@@ -7035,9 +7039,10 @@ function renderMenuFans() {
   fill('fan-create', ['AH', 'TD']);
 }
 let toastTimer = null;
-function toast(msg) {
+function toast(msg, kind) {
   const t = $('#toast');
   t.textContent = msg;
+  t.classList.toggle('info', kind === 'info'); // up109: gentle informational variant (not the red error look)
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 3600);
@@ -8165,7 +8170,22 @@ let EL_STALL_MS = 3000;     // element currentTime frozen this long → stalled
 // before any heal may fire; and a post-toggle self-check gives
 // a wedged sender exactly one track-first re-form.
 let micPending = null; // { gen, stream, track, poll, cap, onUnmute } while a muted acquisition waits to unmute
-let MIC_UNMUTE_CAP_MS = 10000; // pending gives up (toast + honest off) after this
+// up109: capture-API presence is decided ONCE. In-app WebViews
+// (Telegram's browser etc.) and insecure contexts have no
+// navigator.mediaDevices at all — there the mic buttons hide
+// quietly at boot instead of erroring on every tap, and no
+// automatic path ever shows the red «مایکروفون نشته» toast again:
+// a deliberate tap that is denied earns ONE gentle hint per
+// session; a missing device stays completely silent.
+const MIC_API = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+let micHintShown = false;
+function micDeniedHint() {
+  if (micHintShown) return;
+  micHintShown = true;
+  toast(T('micHint'), 'info');
+}
+function micNoDevice(e) { return !!e && (e.name === 'NotFoundError' || e.name === 'OverconstrainedError'); }
+let MIC_UNMUTE_CAP_MS = 10000; // pending gives up (silent, honest off) after this
 let MIC_MUTE_REACQ_MS = 2500;  // local track muted this long mid-session → one re-acquisition
 let MIC_SELFCHECK_MS = 3000;   // post-mic-on outbound-growth check
 let FLAG_GRACE_MS = 7000;      // no watchdog heal within this window after a flag edge
@@ -8446,6 +8466,14 @@ const onMicTap = () => {
   toggleVoice();
 };
 eachMicBtn((b) => { b.onclick = onMicTap; });
+// up109: no capture API in this environment — hide every mic
+// button quietly (table, lobby, club room). Voice simply is not
+// offered here; everything else in the game works as normal.
+if (!MIC_API) {
+  eachMicBtn((b) => { b.style.display = 'none'; });
+  const clMicBtn = $('#btn-cl-mic');
+  if (clMicBtn) clMicBtn.style.display = 'none';
+}
 eachSpeakerBtn((b) => { b.onclick = () => { toggleSpeaker(); }; });
 $('#vdiag-close').onclick = () => { closeVoiceDiag(); };
 
@@ -8492,9 +8520,8 @@ async function toggleVoice() {
   // mic was never announced, so "off" is just dropping the wait.
   if (micPending) { cancelMicPending('tap'); return; }
   if (micOn) { stopMic(); return; }
-  if (!RTCPeerCtor || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    toast(T('micUnavailable'));
-    return;
+  if (!RTCPeerCtor || !MIC_API) {
+    return; // up109: no capture API here — buttons are hidden; never an error toast
   }
   // Ordering (first-activation rule): the local stream is
   // acquired FIRST and only then is voice announced and pairs
@@ -8514,7 +8541,9 @@ async function toggleVoice() {
   try {
     stream = await gumPromise;
   } catch (e) {
-    toast(T('micUnavailable'));
+    // up109: no mic device at all → completely silent; a denial
+    // or a mic busy in another app → ONE gentle hint per session.
+    if (!micNoDevice(e)) micDeniedHint();
     return;
   }
   await iceReady;
@@ -8534,8 +8563,7 @@ async function toggleVoice() {
     // A stream with no live track announces a mic that can never
     // send anything — every pair would negotiate around silence.
     stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} });
-    toast(T('micUnavailable'));
-    return;
+    return; // up109: silent — a dead capture device is not the player's fault
   }
   if (track.muted) {
     // Android Chrome can hand back a track that starts MUTED —
@@ -8550,8 +8578,8 @@ async function toggleVoice() {
     // micPending until the track unmutes (event-driven, with a
     // poll for stacks that drop the event), and only then does
     // the normal mic-on flow run. If the cap expires first,
-    // the mic gives up honestly — toast, stream stopped, mic
-    // still off — instead of announcing silence.
+    // the mic gives up honestly — stream stopped, mic still
+    // off, silently (up109) — instead of announcing silence.
     startMicPending(gen, stream);
     return;
   }
@@ -8590,7 +8618,7 @@ function startMicPending(gen, stream) {
     eachMicBtn((b) => b.classList.remove('pending'));
     stopStreamTracks(stream);
     voiceEvent('mic unavailable: track never unmuted');
-    toast(T('micUnavailable'));
+    // up109: no toast — the give-up is logged for diagnostics only
   }, MIC_UNMUTE_CAP_MS);
   if (!track.muted) finish(); // unmuted between the check and the wiring
 }
@@ -8687,8 +8715,7 @@ function micSuperviseTick() {
       reacquireMic();
     } else if (micMuteHealed && !micReacquiring && dur >= MIC_MUTE_REACQ_MS + MIC_UNMUTE_CAP_MS) {
       voiceEvent('mic off: track stuck muted even after a re-acquire');
-      toast(T('micUnavailable'));
-      stopMic();
+      stopMic(); // up109: silent — an automatic path never shows the error toast
     }
   } else if (micMuteSince) {
     micMuteSince = 0;
@@ -8705,7 +8732,7 @@ async function reacquireMic() {
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) {}
   if (!stream) {
     micReacquiring = false;
-    if (micOn && g === micGen) { toast(T('micUnavailable')); stopMic(); }
+    if (micOn && g === micGen) { stopMic(); } // up109: silent (automatic re-acquire)
     return;
   }
   if (!micOn || g !== micGen) { stopStreamTracks(stream); micReacquiring = false; return; }
@@ -8713,8 +8740,7 @@ async function reacquireMic() {
   if (!ntr || ntr.readyState === 'ended') {
     stopStreamTracks(stream);
     micReacquiring = false;
-    toast(T('micUnavailable'));
-    stopMic();
+    stopMic(); // up109: silent (automatic re-acquire)
     return;
   }
   const old = localStream;
@@ -16486,13 +16512,17 @@ const cv = {
     if (box) box.innerHTML = '';
     this.paintBtns();
   },
-  async ensureMic() {
+  async ensureMic(silent) {
     if (this.stream && this.stream.getAudioTracks().some((t) => t.readyState === 'live')) return true;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast(T('clMicDenied')); return false; }
+    // up109: no capture API → fail quietly (the club mic button is
+    // hidden at boot in that case anyway); a deliberate attempt
+    // that is denied earns the one gentle hint, never the old
+    // red toast; automatic re-acquires (silent) never hint.
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       return true;
-    } catch (e) { toast(T('clMicDenied')); return false; }
+    } catch (e) { if (!silent && !micNoDevice(e)) micDeniedHint(); return false; }
   },
   setMic(on) {
     const micWas = this.micOn;
@@ -16570,7 +16600,7 @@ const cv = {
       }
     }
     if (seated && this.wantMic && !this.micOn) {
-      this.ensureMic().then((ok) => { if (ok) this.setMic(true); else this.wantMic = false; });
+      this.ensureMic(true).then((ok) => { if (ok) this.setMic(true); else this.wantMic = false; }); // up109: automatic wake-heal — silent
     } else if (!seated && this.micOn) {
       this.wantMic = false;
       this.setMic(false);
