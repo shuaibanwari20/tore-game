@@ -106,6 +106,23 @@ export async function readSession(request, env) {
   return { provider: s.provider, sub: s.sub, name: s.name || '', email: s.email || '', picture: s.picture || '' };
 }
 
+/**
+ * The owner's admin account (up111): the ONE email whose session
+ * carries admin rights. This comparison is safe to make on the
+ * session payload because every path that mints a session derives
+ * the email from a SERVER-VERIFIED source — the Google OAuth code
+ * exchange (ID token straight from Google's token endpoint),
+ * Google's tokeninfo (email_verified required) or a Firebase ID
+ * token (RS256 JWKS + claims) in handleFirebaseToken, or a proven
+ * email code — and the cookie itself is HMAC-signed with
+ * SESSION_SECRET, so no client can claim this email. Compared
+ * normalized (trim + lowercase), like all email handling here.
+ */
+export const ADMIN_EMAIL = 'shuaibanwari30@gmail.com';
+export function isAdminUser(user) {
+  return !!user && normalizeEmail(user.email || '') === ADMIN_EMAIL;
+}
+
 async function startOAuth(request, env, provider) {
   const isGoogle = provider === 'google';
   const clientId = isGoogle ? env.GOOGLE_CLIENT_ID : env.FB_APP_ID;
