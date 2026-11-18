@@ -11843,14 +11843,6 @@ button:disabled {
         <span class="st-tog-lbl" id="st-chat-lbl">د لوبې چټ</span>
         <span class="st-check on" id="st-chat-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
       </div>
-      <div class="st-togrow" id="row-set-dnd" role="switch" aria-checked="false" tabindex="0">
-        <span class="st-tog-lbl" id="st-dnd-lbl">مزاحم نشو</span>
-        <span class="st-check" id="st-dnd-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
-      </div>
-      <div class="st-togrow" id="row-set-invisible" role="switch" aria-checked="false" tabindex="0">
-        <span class="st-tog-lbl" id="st-invisible-lbl">پټ حالت</span>
-        <span class="st-check" id="st-invisible-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
-      </div>
       <div class="st-togrow" id="row-set-music" role="switch" aria-checked="false" tabindex="0">
         <span class="st-tog-lbl" id="st-music-lbl">د شاليد موسيقي</span>
         <span class="st-check" id="st-music-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg></span>
@@ -13885,8 +13877,6 @@ function applyI18n() {
   set("#pf-stat-country-lbl", "pfStatCountry");
   set("#st-vibrate-lbl", "setVibrate");
   set("#st-chat-lbl", "setChat");
-  set("#st-dnd-lbl", "setDnd");
-  set("#st-invisible-lbl", "setInvisible");
   set("#st-music-lbl", "setMusic");
   set("#mp-list-title", "musList");
   const plSearchEl = $("#pl-search");
@@ -17883,6 +17873,8 @@ function setToreSetting(key, on) {
   } catch (e) {
   }
 }
+setToreSetting("dnd", false);
+setToreSetting("invisible", false);
 function buzz(pattern) {
   if (!toreSetting("vibrate", false)) return;
   if (navigator.vibrate) {
@@ -18764,8 +18756,6 @@ function paintSettings() {
     const rw = $(row);
     if (rw) rw.setAttribute("aria-checked", String(on));
   };
-  paintTog("#st-dnd-check", "#row-set-dnd", toreSetting("dnd", false));
-  paintTog("#st-invisible-check", "#row-set-invisible", toreSetting("invisible", false));
   paintTog("#st-music-check", "#row-set-music", toreSetting("music", true));
   paintFelts();
   paintBacks();
@@ -19010,12 +19000,6 @@ function bindToggleRow(id, key, dflt, after) {
 }
 bindToggleRow("#row-set-vibrate", "vibrate", false, null);
 bindToggleRow("#row-set-chat", "chat", true, applyChatSetting);
-bindToggleRow("#row-set-dnd", "dnd", false, () => {
-  if (typeof socialSend === "function") socialSend({ type: "s-dnd", on: toreSetting("dnd", false) });
-});
-bindToggleRow("#row-set-invisible", "invisible", false, () => {
-  if (typeof socialSend === "function") socialSend({ type: "s-invisible", on: toreSetting("invisible", false) });
-});
 bindToggleRow("#row-set-music", "music", true, () => {
   if (window.TorePlayer) window.TorePlayer.onMasterToggle();
 });
@@ -19722,8 +19706,10 @@ function onSocialMsg(m) {
   if (m.type === "s-init") {
     socialMe = m.me;
     if (m.uid) socialUid = String(m.uid);
-    if (typeof m.dnd === "boolean") setToreSetting("dnd", m.dnd);
-    if (typeof m.invisible === "boolean") setToreSetting("invisible", m.invisible);
+    if (m.dnd) socialSend({ type: "s-dnd", on: false });
+    if (m.invisible) socialSend({ type: "s-invisible", on: false });
+    setToreSetting("dnd", false);
+    setToreSetting("invisible", false);
     renderMyId();
     if (m.wallet) setWallet(m.wallet);
     if (m.event !== void 0) setSocialEvent(m.event);
