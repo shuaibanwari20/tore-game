@@ -604,6 +604,7 @@ export class GameServer {
     // (no public route proxies /internal/* to the DO).
     if (reqPath.startsWith('/internal/tickets/') && request.method === 'POST') return this._ticketRoute(reqPath, request);
     if (reqPath.startsWith('/internal/authkv/') && request.method === 'POST') return this._authKvRoute(reqPath, request);
+    if (reqPath.startsWith('/internal/admin/') && request.method === 'POST') return this._adminRoute(reqPath, request);
     if (reqPath === '/club-cover' && request.method === 'POST') return this._coverUpload(request);
     if (reqPath.startsWith('/club-cover/') && request.method === 'GET') return this._coverGet(reqPath.slice('/club-cover/'.length));
     // Uploaded PROFILE photos (F17): POST /p-photo stores the
@@ -675,6 +676,35 @@ export class GameServer {
     if (reqPath === '/internal/authkv/otp-verify') return Response.json({ result: await this.otp.verify(email, body && body.code) });
     if (reqPath === '/internal/authkv/idmap-get') return Response.json({ sub: await this.idmap.get(email) });
     if (reqPath === '/internal/authkv/idmap-set') return Response.json({ sub: await this.idmap.setIfAbsent(email, body && body.sub) });
+    return new Response('not found', { status: 404 });
+  }
+
+  // up111: the admin panel's data path. ONLY the Worker calls
+  // these, and only after IT has verified the session and the
+  // admin email (worker.js /admin/*) — the admin identity in the
+  // body is therefore trusted data for the audit log, exactly as
+  // the authkv/ticket bodies are trusted on their routes. All the
+  // wallet work runs in the social core (adminGrant & friends),
+  // so a grant is ledgered and persisted like any other credit.
+  async _adminRoute(reqPath, request) {
+    let body = {};
+    try { body = await request.json(); } catch { /* empty body */ }
+    const core = await this._ensureSocial();
+    if (reqPath === '/internal/admin/player') {
+      const info = core.adminPlayerInfo(body && body.uid);
+      return info
+        ? Response.json({ ok: true, player: info })
+        : Response.json({ ok: false, error: 'notfound' }, { status: 404 });
+    }
+    if (reqPath === '/internal/admin/grant') {
+      const r = core.adminGrant(
+        { email: (body && body.adminEmail) || '', sub: (body && body.adminSub) || '' },
+        body && body.uid, body && body.currency, body && body.amount);
+      return Response.json(r, { status: r.ok ? 200 : (r.error === 'notfound' ? 404 : 400) });
+    }
+    if (reqPath === '/internal/admin/grants') {
+      return Response.json({ ok: true, grants: core.adminGrantsList(20) });
+    }
     return new Response('not found', { status: 404 });
   }
 
