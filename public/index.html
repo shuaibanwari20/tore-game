@@ -787,6 +787,15 @@
   #ov-micguide .mg-alt { text-align: start; font-size: 13.5px; opacity: .85; line-height: 1.8;
     border-top: 1px dashed rgba(255,255,255,.3); padding-top: 9px; margin-top: 4px; }
 
+  /* up111: admin panel — rows of input+button inside the shared
+     .panel; the confirm popup must paint above every overlay. */
+  .ad-row { display: flex; gap: 8px; margin-top: 8px; }
+  .ad-row button { width: auto; flex: none; margin-top: 0; padding: 10px 14px; }
+  .ad-row input { flex: 1; min-width: 0; text-align: center; }
+  #ad-info, #ad-result { font-size: 15px; min-height: 22px; margin-top: 8px; }
+  #ad-list { text-align: start; font-size: 13.5px; line-height: 1.9; max-height: 140px; overflow-y: auto; margin-top: 6px; }
+  #ov-confirm { z-index: 50; }
+
   /* Title zone: the suits, the big gold wordmark, the tagline —
      compacted in the ludomenu reskin so the cards own the screen,
      like the reference's airy middle. */
@@ -4034,6 +4043,7 @@
           <div class="pf-xpbar"><div class="pf-xpfill" id="pf-xp-fill"></div></div>
         </div>
         <button type="button" class="pf-leadersbtn" id="btn-leaders">د اونۍ غوره لوبغاړي</button>
+        <button type="button" class="pf-leadersbtn hidden" id="btn-admin">ادمین</button>
         <button type="button" id="btn-logout" class="st-logout" aria-label="له حسابه وتل">
           <svg viewBox="0 0 24 24">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -4846,6 +4856,29 @@
   </div>
 </div>
 
+<!-- ======== ADMIN PANEL (up111) ======== -->
+<div class="overlay" id="ov-admin">
+  <div class="panel">
+    <h2 id="ad-title">ادمین</h2>
+    <div class="ad-row">
+      <input id="ad-id" type="text" inputmode="numeric" maxlength="6" dir="ltr" placeholder="123456">
+      <button type="button" id="btn-ad-find">ومومه</button>
+    </div>
+    <div id="ad-info"></div>
+    <div class="ad-row">
+      <button type="button" id="btn-ad-coins">سکه</button>
+      <button type="button" id="btn-ad-gems" class="ghost">الماس</button>
+      <input id="ad-amt" type="text" inputmode="numeric" dir="ltr" placeholder="5000">
+    </div>
+    <div class="pf-btns">
+      <button type="button" id="btn-ad-send">روان کړه</button>
+      <button type="button" id="btn-ad-close" class="ghost">بندول</button>
+    </div>
+    <div id="ad-result"></div>
+    <div id="ad-list"></div>
+  </div>
+</div>
+
 <!-- ======== SETTINGS POPUP ======== -->
 <div class="overlay" id="ov-settings">
   <div class="st-wrap">
@@ -5281,6 +5314,15 @@ const STR = {
     ledRefund: 'شرط بېرته',
     ledBuy: 'اخیستل',
     ledForfeit: 'شرط پرېښودل',
+    ledAdmin: 'د ادمین ډالۍ',
+    adminTitle: 'ادمین',
+    adminFind: 'ومومه',
+    adminSend: 'روان کړه',
+    adminLevel: 'کچه',
+    adminHistory: 'وروستي ورکړې',
+    adminNotFound: 'لوبغاړی ونه موندل شو',
+    adminDone: 'ورکړل شو ✓',
+    adminAmount: 'مقدار؟',
     stakeLbl: 'شرط',
     stakeFree: 'وړیا',
     stakeLine: (n) => 'د دې کوټې شرط: ' + n + ' سکه',
@@ -5780,6 +5822,15 @@ const STR = {
     ledRefund: 'برگشت شرط',
     ledBuy: 'خرید',
     ledForfeit: 'ترک شرط',
+    ledAdmin: 'هدیهٔ ادمین',
+    adminTitle: 'ادمین',
+    adminFind: 'پیدا کن',
+    adminSend: 'ارسال کن',
+    adminLevel: 'سطح',
+    adminHistory: 'ارسال‌های اخیر',
+    adminNotFound: 'بازیکن پیدا نشد',
+    adminDone: 'ارسال شد ✓',
+    adminAmount: 'مقدار؟',
     stakeLbl: 'شرط',
     stakeFree: 'رایگان',
     stakeLine: (n) => 'شرط این اتاق: ' + n + ' سکه',
@@ -6279,6 +6330,15 @@ const STR = {
     ledRefund: 'Stake refund',
     ledBuy: 'Purchase',
     ledForfeit: 'Stake forfeited',
+    ledAdmin: 'Admin grant',
+    adminTitle: 'Admin',
+    adminFind: 'Find',
+    adminSend: 'Send',
+    adminLevel: 'Level',
+    adminHistory: 'Recent grants',
+    adminNotFound: 'Player not found',
+    adminDone: 'Sent ✓',
+    adminAmount: 'Amount?',
     stakeLbl: 'Stake',
     stakeFree: 'Free',
     stakeLine: (n) => 'Room stake: ' + n + ' coins',
@@ -6896,6 +6956,13 @@ function applyI18n() {
   set('#micg-alt', 'micGuideAlt');
   set('#btn-micg-retry', 'micGuideRetry');
   set('#btn-micg-close', 'closeBtn');
+  set('#ad-title', 'adminTitle');
+  set('#btn-admin', 'adminTitle');
+  set('#btn-ad-find', 'adminFind');
+  set('#btn-ad-send', 'adminSend');
+  set('#btn-ad-close', 'closeBtn');
+  set('#btn-ad-coins', 'coinsLbl');
+  set('#btn-ad-gems', 'gemsLbl');
   aria('#btn-bell', 'notifTitle');
   set('#bp-title', 'backSection');
   aria('#btn-back-edit', 'backSection');
@@ -12998,6 +13065,9 @@ async function initSessionUser() {
     if (r.ok) user = await r.json();
   } catch (e) { /* no auth on this host — nothing to adopt */ }
   if (!user) return;
+  // up111: the admin entry appears ONLY when the server marked
+  // this verified session as the owner's (see the panel below).
+  if (user.isAdmin) { const ab = $('#btn-admin'); if (ab) ab.classList.remove('hidden'); }
   let changed = false;
   const acctName = (typeof user.name === 'string' ? user.name : '').trim().slice(0, 20);
   if (acctName && !profile.nameManual && profile.name !== acctName) { profile.name = acctName; changed = true; }
@@ -13009,6 +13079,89 @@ async function initSessionUser() {
   }
   if (changed) { saveProfile(); renderProfileButton(); }
 }
+
+// ---------- admin panel (up111) ----------
+// Shown only to the owner's verified admin session (the hook in
+// initSessionUser unhides the profile-page button). The panel is a thin UI
+// over /admin/* — the server re-checks the admin email on every
+// call, so nothing here is a security boundary. Grants AND
+// deductions (negative amount) ride the same endpoint; the send
+// always goes through the shared askConfirm popup first.
+let adCur = 'coins', adPlayer = null;
+async function adApi(path, opts) {
+  let j = null;
+  try {
+    const r = await fetch(path, { credentials: 'same-origin', ...(opts || {}) });
+    try { j = await r.json(); } catch (e) { /* not json */ }
+    return { ok: r.ok, j };
+  } catch (e) { return { ok: false, j: null }; }
+}
+function adShowInfo() {
+  const p = adPlayer;
+  $('#ad-info').textContent = p
+    ? p.name + ' · ' + T('adminLevel') + ' ' + p.level + ' · 🪙 ' + (p.coins == null ? '—' : p.coins) + ' · 💎 ' + (p.gems == null ? '—' : p.gems)
+    : '';
+}
+async function adFind() {
+  const id = $('#ad-id').value.trim();
+  adPlayer = null; adShowInfo();
+  if (!/^\d{6}$/.test(id)) { $('#ad-result').textContent = T('adminNotFound'); return; }
+  const { ok, j } = await adApi('/admin/player?id=' + id);
+  if (!ok || !j || !j.player) { $('#ad-result').textContent = T('adminNotFound'); return; }
+  adPlayer = j.player;
+  $('#ad-result').textContent = '';
+  adShowInfo();
+}
+async function adGrants() {
+  const { ok, j } = await adApi('/admin/grants');
+  const box = $('#ad-list');
+  box.textContent = '';
+  if (!ok || !j || !Array.isArray(j.grants) || !j.grants.length) return;
+  const head = document.createElement('div');
+  head.textContent = T('adminHistory');
+  box.appendChild(head);
+  j.grants.forEach((g) => {
+    const d = document.createElement('div');
+    const when = new Date(g.ts);
+    d.textContent = g.name + ' (' + g.uid + ') · ' + (g.amount > 0 ? '+' : '') + g.amount + ' '
+      + (g.currency === 'gems' ? '💎' : '🪙') + ' · ' + when.getHours() + ':' + String(when.getMinutes()).padStart(2, '0');
+    box.appendChild(d);
+  });
+}
+function adSetCur(c) {
+  adCur = c;
+  $('#btn-ad-coins').classList.toggle('ghost', c !== 'coins');
+  $('#btn-ad-gems').classList.toggle('ghost', c !== 'gems');
+}
+$('#btn-admin').onclick = () => {
+  $('#ov-admin').classList.add('show');
+  adSetCur('coins');
+  adGrants();
+  if (adPlayer) adShowInfo();
+};
+$('#btn-ad-close').onclick = () => $('#ov-admin').classList.remove('show');
+{ const aov = $('#ov-admin'); if (aov) aov.addEventListener('click', (e) => { if (e.target === e.currentTarget) aov.classList.remove('show'); }); }
+$('#btn-ad-find').onclick = adFind;
+$('#btn-ad-coins').onclick = () => adSetCur('coins');
+$('#btn-ad-gems').onclick = () => adSetCur('gems');
+$('#btn-ad-send').onclick = async () => {
+  if (!adPlayer) { await adFind(); if (!adPlayer) return; }
+  const amt = Number($('#ad-amt').value.trim());
+  if (!Number.isInteger(amt) || amt === 0) { $('#ad-result').textContent = '⚠️ ' + T('adminAmount'); return; }
+  const body = adPlayer.name + ' · ' + (amt > 0 ? '+' : '') + amt + ' ' + (adCur === 'gems' ? '💎' : '🪙');
+  askConfirm(T('adminTitle'), body, T('adminSend'), async () => {
+    const { ok, j } = await adApi('/admin/grant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId: adPlayer.uid, currency: adCur, amount: amt }),
+    });
+    if (!ok || !j || !j.ok) { $('#ad-result').textContent = '✗ ' + ((j && j.error) || ''); return; }
+    adPlayer.coins = j.coins; adPlayer.gems = j.gems;
+    $('#ad-result').textContent = T('adminDone');
+    adShowInfo();
+    adGrants();
+  });
+};
 
 // The landing's carpet is plain CSS markup; its menu fans are real
 // card faces rendered by renderMenuFans() below (the faces are FILES
@@ -13782,7 +13935,7 @@ function renderShopCoins(body) {
   if (led.length) {
     body.appendChild(shopEl('div', 'shop-h', '🧾 ' + T('ledgerTitle')));
     const box = shopEl('div', 'shop-ledger');
-    const kindKey = { grant: 'ledGrant', bonus: 'ledBonus', chest: 'ledChest', stake: 'ledStake', win: 'ledWin', refund: 'ledRefund', buy: 'ledBuy', forfeit: 'ledForfeit' };
+    const kindKey = { grant: 'ledGrant', bonus: 'ledBonus', chest: 'ledChest', stake: 'ledStake', win: 'ledWin', refund: 'ledRefund', buy: 'ledBuy', forfeit: 'ledForfeit', admin: 'ledAdmin' };
     led.forEach((e) => {
       const row = shopEl('div', 'shop-led-row');
       let label = T(kindKey[e.kind] || 'ledBuy');
@@ -13792,7 +13945,7 @@ function renderShopCoins(body) {
       }
       row.appendChild(shopEl('span', '', label));
       const amt = shopEl('span', 'shop-led-amt ' + (e.amount > 0 ? 'plus' : (e.amount < 0 ? 'minus' : '')));
-      amt.innerHTML = (e.amount > 0 ? '+' : '') + e.amount + ' ' + COIN_IC;
+      amt.innerHTML = (e.amount > 0 ? '+' : '') + e.amount + ' ' + (e.cur === 'gems' ? '💎' : COIN_IC);
       row.appendChild(amt);
       box.appendChild(row);
     });
