@@ -495,6 +495,26 @@ function activeEvent(now) {
 // renders exactly these; anything else is dropped here.
 const CLUB_REACTIONS = ['❤️', '😂', '😮', '👍', '🔥', '👏'];
 
+// feat5 (2026-11-18): NOTIFICATIONS + WEB PUSH + PROFILE SYNC.
+// Notifications: a per-player inbox (newest first, capped) written
+// by notify() at the exact moments the events already happen — a
+// friend request lands, a request is accepted, a gift arrives, a
+// club announcement changes, a lobby/club invite is sent. The list
+// rides s-init, new entries push live as s-notif, the panel's open
+// marks them read (s-notifs-read). Web Push: subscription records
+// (cap 3 devices) stored per player; notify() hands an OFFLINE
+// player's notification to the host's pushSend hook — the DO host
+// implements RFC 8291/8292 behind its VAPID secret and simply does
+// not supply the hook until the secret exists, so an unconfigured
+// host degrades to the in-app centre alone. Profile sync: the
+// player's own profile / settings / music favorites, kept server-
+// side per identity with a per-section updatedAt (client clock,
+// last-writer-wins); a fresh device pulls them with s-profile-pull.
+const NOTIF_CAP = 30;         // notifications kept per player
+const PUSH_SUB_CAP = 3;       // push subscriptions (devices) per player
+const SYNC_FAV_CAP = 200;     // music favorites kept in a sync section
+const SYNC_LANGS = ['ps', 'fa', 'en'];
+
 // Kabul calendar day ('YYYY-MM-DD') for a timestamp: shift by
 // +4:30 and read the UTC fields — the same trick kabulWeekKey
 // uses (Afghanistan Time has no DST, so the shift is exact).
@@ -588,6 +608,13 @@ class SocialCore {
     // RUNTIME ONLY.
     this.referrals = new Map();
     this.clubMsgSeq = new Map();
+    // feat5: notification inboxes, web-push subscriptions and the
+    // server-side profile/settings/favorites copies — all persist
+    // WITH the social state (serialize/load below).
+    this.notifs = new Map();    // id -> [notif, …] newest first
+    this.pushSubs = new Map();  // id -> [{endpoint,p256dh,auth,ts}]
+    this.profiles = new Map();  // id -> {profile,settings,favs,ts:{profile,settings,favs}}
+    this._notifSeq = 0;         // runtime counter for notif ids (re-seeded on load)
   }
 
   // ---------- persistence (DO host; Node ignores) ----------
@@ -603,6 +630,9 @@ class SocialCore {
       wallets: Object.fromEntries(this.wallets),
       escrows: Object.fromEntries(this.escrows),
       referrals: Object.fromEntries(this.referrals),
+      notifs: Object.fromEntries(this.notifs),
+      pushSubs: Object.fromEntries(this.pushSubs),
+      profiles: Object.fromEntries(this.profiles),
     };
   }
   load(data) {
@@ -643,6 +673,24 @@ class SocialCore {
     for (const r of this.referrals.values()) {
       if (!r || typeof r !== 'object' || typeof r.by !== 'string') continue;
       r.paid = !!r.paid;
+    }
+    // feat5 (older snapshots carry none of these at all — every map
+    // defaults to empty and fills lazily, exactly like the wallets).
+    this.notifs = new Map(Object.entries(data.notifs || {}));
+    for (const [k, l] of this.notifs) {
+      if (!Array.isArray(l)) { this.notifs.set(k, []); continue; }
+      if (l.length > NOTIF_CAP) l.length = NOTIF_CAP;
+      for (const n of l) if (n && typeof n.nid === 'number' && n.nid > this._notifSeq) this._notifSeq = n.nid;
+    }
+    this.pushSubs = new Map(Object.entries(data.pushSubs || {}));
+    for (const [k, l] of this.pushSubs) {
+      if (!Array.isArray(l)) { this.pushSubs.set(k, []); continue; }
+      if (l.length > PUSH_SUB_CAP) l.length = PUSH_SUB_CAP;
+    }
+    this.profiles = new Map(Object.entries(data.profiles || {}));
+    for (const r of this.profiles.values()) {
+      if (!r || typeof r !== 'object') continue;
+      if (!r.ts || typeof r.ts !== 'object') r.ts = { profile: 0, settings: 0, favs: 0 };
     }
   }
   _persist() { if (this.hooks.persist) { try { this.hooks.persist(this.serialize()); } catch (e) { /* host logs */ } } }
@@ -1291,7 +1339,7 @@ class SocialCore {
     // included) and its state rides s-init, so the home balance
     // pills paint with the very first social frame.
     this._wallet(id, true);
-    this._send(id, { type: 's-init', me: id, uid: uid || null, dnd: !!(prev && prev.dnd), invisible: !!(prev && prev.invisible), ...this.listsFor(id), stats: this.statsOf(id), leaders: this.weeklyLeaders(10), wallet: this.walletState(id), event: this.eventState(), refs: this.referralStats(id) });
+    this._send(id, { type: 's-init', me: id, uid: uid || null, dnd: !!(prev && prev.dnd), invisible: !!(prev && prev.invisible), ...this.listsFor(id), stats: this.statsOf(id), leaders: this.weeklyLeaders(10), wallet: this.walletState(id), event: this.eventState(), refs: this.referralStats(id), notifs: this.notifsFor(id), notifUnread: this.notifUnread(id) });
     this.refreshClub(id, true); // the clubs state rides right behind the init
   }
 
@@ -1375,6 +1423,12 @@ class SocialCore {
       case 's-gift': return this.giftSend(id, msg.to, msg.amount);
       case 's-event-claim': return this.eventClaim(id);
       case 's-watch': return this.watch(id, msg.to);
+      case 's-notifs': return this.notifsSend(id);
+      case 's-notifs-read': return this.notifsMarkRead(id);
+      case 's-push-sub': return this.pushSubscribe(id, msg.sub);
+      case 's-push-unsub': return this.pushUnsubscribe(id, msg.endpoint);
+      case 's-sync': return this.profileSync(id, msg.sync);
+      case 's-profile-pull': return this.profilePull(id);
       case 's-club-create': return this.clubCreate(id, msg);
       case 's-club-search': return this.clubSearch(id, msg.q);
       case 's-club-enter': return this.clubEnter(id, msg.club);
@@ -1484,10 +1538,12 @@ class SocialCore {
       this._linkFriends(id, to);
       this._persist();
       this.refreshBoth(id, to);
+      this.notify(to, { kind: 'faccept', from: id, name: this.person(id).name });
       return;
     }
     this.requests.set(reqKey(id, to), { from: id, to, ts: Date.now() });
     this._persist();
+    this.notify(to, { kind: 'freq', from: id, name: this.person(id).name });
     this.refresh(id); // my outgoing list grows
     if (this.isOnline(to)) {
       this._send(to, { type: 's-requested', from: this.personFor(to, id) });
@@ -1501,6 +1557,7 @@ class SocialCore {
     if (accept) this._linkFriends(id, from);
     this._persist();
     this.refreshBoth(id, from); // accept: both lists gain a friend; decline: sender's outgoing clears
+    if (accept) this.notify(from, { kind: 'faccept', from: id, name: this.person(id).name });
   }
 
   unfriend(id, other) {
@@ -1668,6 +1725,7 @@ class SocialCore {
       for (const [k, t] of this.pendingInvites) if (now - t >= INVITE_PENDING_MS) this.pendingInvites.delete(k);
     }
     this._send(to, { type: 's-invited', from: this.personFor(to, id), code, src: this.inviteSource(id, to, code) });
+    this.notify(to, { kind: 'invite', from: id, name: this.person(id).name, code });
   }
 
   inviteReply(id, from, code, accept) {
@@ -2060,6 +2118,7 @@ class SocialCore {
     if (this.clubInvites.has(reqKey(club.cid, to))) return this._error(id, 'clubDuplicate');
     if (club.members.length >= CLUB_CAP) return this._error(id, 'clubFull');
     this.clubInvites.set(reqKey(club.cid, to), { club: club.cid, from: id, to, ts: Date.now() });
+    this.notify(to, { kind: 'clubinvite', from: id, name: this.person(id).name, club: club.name });
     this._persistClubs();
     this.refreshClub(id);
     this.refreshClub(to);
@@ -2316,7 +2375,172 @@ class SocialCore {
     this.walletSend(toId);
     if (this.isOnline(toId)) this._send(toId, { type: 's-gift-got', from: id, name: this.person(id).name, amount });
     this._send(id, { type: 's-gift-sent', to: toId, amount });
+    this.notify(toId, { kind: 'gift', from: id, name: this.person(id).name, amount });
     return true;
+  }
+
+  // ---------- feat5: notifications ----------
+  // One writer for every inbox. The entry stores only rendering
+  // PARAMETERS (kind + actor name snapshot + amount / club / text):
+  // the client words it in the reader's own language, so a stored
+  // notification never goes stale when the language flips. Online
+  // players get the live s-notif push; OFFLINE players with a push
+  // subscription are handed to the host's pushSend hook (absent on
+  // hosts without VAPID configured — the inbox still fills).
+  notify(id, entry) {
+    if (typeof id !== 'string' || !entry || typeof entry.kind !== 'string') return;
+    const n = {
+      nid: ++this._notifSeq, kind: entry.kind,
+      from: typeof entry.from === 'string' ? entry.from : '',
+      name: typeof entry.name === 'string' ? entry.name.slice(0, 40) : '',
+      amount: (typeof entry.amount === 'number' && entry.amount > 0) ? Math.floor(entry.amount) : 0,
+      club: typeof entry.club === 'string' ? entry.club.slice(0, 40) : '',
+      text: typeof entry.text === 'string' ? entry.text.slice(0, CLUB_ANN_MAX) : '',
+      code: typeof entry.code === 'string' ? entry.code.slice(0, 8) : '',
+      ts: Date.now(), read: false,
+    };
+    const list = this.notifs.get(id) || [];
+    list.unshift(n);
+    while (list.length > NOTIF_CAP) list.pop();
+    this.notifs.set(id, list);
+    this._persist();
+    if (this.isOnline(id)) {
+      this._send(id, { type: 's-notif', notif: n, unread: this.notifUnread(id) });
+    } else if (typeof this.hooks.pushSend === 'function') {
+      const subs = this.pushSubs.get(id);
+      if (subs && subs.length) {
+        try { this.hooks.pushSend(id, subs.slice(), n); } catch (e) { /* a push failure never breaks the event */ }
+      }
+    }
+  }
+  notifsFor(id) { return (this.notifs.get(id) || []).slice(); }
+  notifUnread(id) {
+    const l = this.notifs.get(id);
+    return l ? l.reduce((a, n) => a + (n.read ? 0 : 1), 0) : 0;
+  }
+  notifsSend(id) { this._send(id, { type: 's-notifs', list: this.notifsFor(id), unread: this.notifUnread(id) }); }
+  notifsMarkRead(id) {
+    const l = this.notifs.get(id);
+    if (l) {
+      let changed = false;
+      for (const n of l) if (!n.read) { n.read = true; changed = true; }
+      if (changed) this._persist();
+    }
+    this._send(id, { type: 's-notifs', list: this.notifsFor(id), unread: 0 });
+  }
+
+  // ---------- feat5: web-push subscriptions ----------
+  // Plain storage + validation; the actual sending lives in the
+  // DO host (webpush.js) behind its VAPID secret. An endpoint is
+  // the identity of a subscription: re-subscribing the same
+  // browser replaces its own record, never a second slot.
+  pushSubscribe(id, sub) {
+    if (!sub || typeof sub !== 'object') return;
+    if (typeof sub.endpoint !== 'string' || !/^https:\/\//.test(sub.endpoint)) return;
+    const keys = (sub.keys && typeof sub.keys === 'object') ? sub.keys : {};
+    if (typeof keys.p256dh !== 'string' || !keys.p256dh || typeof keys.auth !== 'string' || !keys.auth) return;
+    const entry = {
+      endpoint: sub.endpoint.slice(0, 512),
+      p256dh: keys.p256dh.slice(0, 200),
+      auth: keys.auth.slice(0, 100),
+      ts: Date.now(),
+    };
+    const list = (this.pushSubs.get(id) || []).filter((s) => s.endpoint !== entry.endpoint);
+    list.unshift(entry);
+    while (list.length > PUSH_SUB_CAP) list.pop();
+    this.pushSubs.set(id, list);
+    this._persist();
+  }
+  pushUnsubscribe(id, endpoint) {
+    const l = this.pushSubs.get(id);
+    if (!l || typeof endpoint !== 'string') return;
+    const next = l.filter((s) => s.endpoint !== endpoint);
+    if (next.length !== l.length) { this.pushSubs.set(id, next); this._persist(); }
+  }
+  // Host cleanup: a push service answering 404/410 has forgotten
+  // the subscription — drop it from whichever player holds it.
+  pushDropEndpoint(endpoint) {
+    for (const [pid, l] of this.pushSubs) {
+      if (l.some((s) => s.endpoint === endpoint)) this.pushUnsubscribe(pid, endpoint);
+    }
+  }
+
+  // ---------- feat5: profile / settings / favorites sync ----------
+  // The server copy is a MIRROR, never an authority over the live
+  // directory: hello() still owns name/avatar/photo for presence,
+  // and the cleaners below mirror its rules (an uploaded-photo
+  // path must name the player's OWN uid; a frame/chat style must
+  // be owned). Sections land independently, last-writer-wins by
+  // the client-sent per-section updatedAt; a section stamped 0
+  // (a fresh device's defaults) can never overwrite a real copy.
+  _cleanSyncProfile(id, p) {
+    if (!p || typeof p !== 'object') return null;
+    let photo = cleanPhoto(p.photo);
+    const upm = photo.match(UPLOADED_PHOTO_RE);
+    if (upm && upm[1] !== this.uidOf(id)) photo = '';
+    let avatar = cleanAvatar(p.avatar);
+    if (avatar === 'google' && !photo) avatar = null;
+    const felt = p.felt === 'ev1' ? 'ev1'
+      : (typeof p.felt === 'number' && Number.isInteger(p.felt) && p.felt >= 1 && p.felt <= 11) ? p.felt : 11;
+    return {
+      name: cleanName(p.name) || '',
+      avatar: avatar || 'av1',
+      photo,
+      country: cleanCountry(p.country) || '',
+      felt,
+      back: (typeof p.back === 'number' && Number.isInteger(p.back) && p.back >= 1 && p.back <= 7) ? p.back : 1,
+      frame: (typeof p.frame === 'string' && /^fr[1-6]$/.test(p.frame) && this.ownsCosmetic(id, p.frame)) ? p.frame : '',
+      chatStyle: (typeof p.chatStyle === 'string' && /^chat[1-3]$/.test(p.chatStyle) && this.ownsCosmetic(id, p.chatStyle)) ? p.chatStyle : '',
+      nameManual: p.nameManual === true,
+    };
+  }
+  _cleanSyncSettings(s) {
+    if (!s || typeof s !== 'object') return null;
+    return {
+      lang: SYNC_LANGS.includes(s.lang) ? s.lang : 'ps',
+      musicOn: s.musicOn !== false,
+      vibrate: s.vibrate === true,
+      chatOn: s.chatOn !== false,
+    };
+  }
+  _cleanSyncFavs(f) {
+    if (!Array.isArray(f)) return null;
+    const seen = new Set();
+    const out = [];
+    for (const v of f) {
+      const n = (typeof v === 'number') ? Math.floor(v) : NaN;
+      if (Number.isInteger(n) && n >= 1 && n <= 1000 && !seen.has(n)) { seen.add(n); out.push(n); }
+      if (out.length >= SYNC_FAV_CAP) break;
+    }
+    return out;
+  }
+  profileSync(id, sync) {
+    if (!sync || typeof sync !== 'object') return;
+    let rec = this.profiles.get(id);
+    if (!rec) rec = { profile: null, settings: null, favs: null, ts: { profile: 0, settings: 0, favs: 0 } };
+    let changed = false;
+    for (const sec of ['profile', 'settings', 'favs']) {
+      const inc = sync[sec];
+      if (!inc || typeof inc !== 'object') continue;
+      const ts = (typeof inc.ts === 'number' && inc.ts > 0) ? Math.floor(inc.ts) : 0;
+      if (ts <= (rec.ts[sec] || 0)) continue;
+      const clean = sec === 'profile' ? this._cleanSyncProfile(id, inc.data)
+        : sec === 'settings' ? this._cleanSyncSettings(inc.data)
+        : this._cleanSyncFavs(inc.data);
+      if (clean === null) continue;
+      rec[sec] = clean;
+      rec.ts[sec] = ts;
+      changed = true;
+    }
+    if (changed) { this.profiles.set(id, rec); this._persist(); }
+  }
+  profilePull(id) {
+    const rec = this.profiles.get(id);
+    if (!rec || (!rec.profile && !rec.settings && !rec.favs)) {
+      this._send(id, { type: 's-profile-data', empty: true });
+      return;
+    }
+    this._send(id, { type: 's-profile-data', profile: rec.profile, settings: rec.settings, favs: rec.favs, ts: rec.ts });
   }
 
   // ---------- feat3: club voice messages + reactions ----------
@@ -2455,6 +2679,11 @@ class SocialCore {
     club.announcement = this._cleanAnnouncement(text);
     this._persistClubs();
     this.fanClub(club.cid);
+    if (club.announcement) {
+      for (const m of club.members) {
+        if (m.id !== id) this.notify(m.id, { kind: 'clubann', from: id, club: club.name, text: club.announcement });
+      }
+    }
   }
 
   // ---------- club polls (feature 10) ----------

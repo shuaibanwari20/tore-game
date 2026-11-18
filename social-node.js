@@ -90,9 +90,10 @@ function createNodeSocial(opts) {
         sockets.get(myId).add(ws);
         core.socketOpened(myId);
         core.hello(myId, msg.profile || {});
+        if (msg.sync) core.profileSync(myId, msg.sync); // feat5: profile/settings/favorites snapshot
         return;
       }
-      if (msg.type === 's-hello') { core.hello(myId, msg.profile || {}); return; }
+      if (msg.type === 's-hello') { core.hello(myId, msg.profile || {}); if (msg.sync) core.profileSync(myId, msg.sync); return; }
       core.handleMessage(myId, msg);
     });
     const gone = () => {
