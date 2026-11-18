@@ -53,6 +53,15 @@ FIREBASE_PROJECT_ID = "tore-game"
 # https://tore-game.shuaibanwari20.workers.dev/auth/google/callback
 # (verified 2026-11-13).
 GOOGLE_CLIENT_ID = "162385253173-d6kvmg8vvutsb4577lpuuufvtt7vv9os.apps.googleusercontent.com"
+# feat5 Web Push (notifications for the installed Android PWA):
+# the VAPID PUBLIC key — a public identifier, safe to commit; the
+# client fetches it from GET /push-key as its PushManager
+# applicationServerKey. The matching PRIVATE key is NOT a var: it
+# goes in the dashboard as the WEBPUSH_VAPID_PRIVATE *secret*
+# (Workers & Pages -> tore-game -> Settings -> Variables and
+# Secrets). While the secret is unset, push sending no-ops and
+# only the in-app notification centre works.
+WEBPUSH_VAPID_PUBLIC = "BGRR64_jJfYobJK1rGqT16YR3UVjfgsvk67dGZRTj7JLjeR1qNs43MNTsUfO1MBqqkCMMfO-1SfiUBCzcuj3QJw"
 # ExpressTURN for game voice — the PREFERRED provider: its free
 # plan is 1,000 GB/month, needs no card, and issues LONG-TERM
 # (static) TURN credentials, so the Worker never fetches anything

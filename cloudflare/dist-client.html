@@ -1623,6 +1623,302 @@ button:disabled {
   height: 26px;
   display: block;
 }
+.hm-bell {
+  width: 38px;
+  height: 38px;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+  position: relative;
+  background:
+    radial-gradient(
+      circle at 32% 28%,
+      rgba(255, 255, 255, .28),
+      rgba(96, 54, 176, .38) 72%);
+  border: 1.5px solid rgba(238, 201, 95, .8);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 3px 8px rgba(20, 0, 30, .35);
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 3px 5px rgba(20, 0, 20, .55));
+}
+.hm-bell:active {
+  transform: scale(.93);
+}
+#bell-badge {
+  position: absolute;
+  top: -2px;
+  inset-inline-end: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #d92338;
+  color: #fff;
+  border: 1.5px solid #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 15px;
+  text-align: center;
+  box-sizing: border-box;
+}
+#bell-badge.hidden {
+  display: none;
+}
+#ov-notifs .nt-panel {
+  background:
+    linear-gradient(
+      165deg,
+      rgba(62, 34, 110, .93),
+      rgba(28, 13, 56, .95));
+  border: 1px solid rgba(216, 180, 255, .38);
+  border-radius: 22px;
+  color: #fff;
+  text-align: start;
+  padding: 16px 14px 14px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.nt-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.nt-hbell {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(
+      circle at 32% 28%,
+      rgba(255, 255, 255, .25),
+      rgba(96, 54, 176, .35) 72%);
+  border: 2px solid #eec95f;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .3);
+}
+#ov-notifs .nt-head h2 {
+  margin: 0;
+  flex: 1;
+  color: #fff;
+  font-size: 20px;
+}
+.nt-count {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  background: #d92338;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 22px;
+  text-align: center;
+  box-sizing: border-box;
+  box-shadow: 0 2px 8px rgba(217, 35, 56, .5);
+}
+.nt-count.hidden {
+  display: none;
+}
+.nt-x {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  cursor: pointer;
+  background: rgba(255, 255, 255, .1);
+  border: 1px solid rgba(255, 255, 255, .28);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+}
+.nt-list {
+  max-height: 54vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px;
+}
+.nt-row {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  padding-inline-end: 24px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .09);
+}
+.nt-row.unread {
+  background: rgba(150, 104, 255, .17);
+  border-color: rgba(216, 180, 255, .4);
+}
+.nt-row.unread::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  inset-inline-end: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffd75e;
+  box-shadow: 0 0 7px rgba(255, 215, 94, .9);
+}
+.nt-ic {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, .1);
+  border: 1px solid rgba(255, 255, 255, .16);
+}
+.nt-row.k-gift .nt-ic {
+  background:
+    linear-gradient(
+      160deg,
+      #ffe9a3,
+      #d9a92f);
+  border-color: #ffedb5;
+  box-shadow: 0 3px 10px rgba(238, 201, 95, .35);
+}
+.nt-row.k-freq .nt-ic {
+  background:
+    linear-gradient(
+      160deg,
+      #8b5cf6,
+      #6d28d9);
+  border-color: rgba(255, 255, 255, .25);
+}
+.nt-row.k-faccept .nt-ic {
+  background:
+    linear-gradient(
+      160deg,
+      #34d399,
+      #059669);
+  border-color: rgba(255, 255, 255, .25);
+}
+.nt-row.k-invite .nt-ic {
+  background:
+    linear-gradient(
+      160deg,
+      #60a5fa,
+      #2563eb);
+  border-color: rgba(255, 255, 255, .25);
+}
+.nt-row.k-clubann .nt-ic {
+  background:
+    linear-gradient(
+      160deg,
+      #fb923c,
+      #ea580c);
+  border-color: rgba(255, 255, 255, .25);
+}
+.nt-row.k-clubinvite .nt-ic {
+  background:
+    linear-gradient(
+      160deg,
+      #fbbf24,
+      #b45309);
+  border-color: rgba(255, 255, 255, .25);
+}
+.nt-main {
+  min-width: 0;
+  flex: 1;
+  padding-top: 2px;
+}
+.nt-txt {
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #fff;
+}
+.nt-row:not(.unread) .nt-txt {
+  color: rgba(255, 255, 255, .78);
+}
+.nt-sub {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, .85);
+  line-height: 1.45;
+  margin-top: 2px;
+}
+.nt-time {
+  font-size: 11px;
+  color: rgba(226, 205, 255, .55);
+  margin-top: 3px;
+}
+#notif-list .fr-empty {
+  text-align: center;
+  color: rgba(255, 255, 255, .65);
+  font-size: 14px;
+  opacity: 1;
+  padding: 24px 10px 18px;
+  line-height: 1.5;
+}
+#notif-list .fr-empty::before {
+  content: "\1f514";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  font-size: 30px;
+  background: rgba(255, 255, 255, .07);
+  border: 1px solid rgba(255, 255, 255, .15);
+}
+#ov-notifs #btn-notif-push {
+  width: 100%;
+  margin-top: 12px;
+  border-radius: 12px;
+  border: 0;
+  background:
+    linear-gradient(
+      180deg,
+      #ffe9a3,
+      #e9bd45);
+  color: #3a2403;
+  font-weight: 800;
+  box-shadow: 0 4px 14px rgba(238, 201, 95, .3);
+}
+#btn-notif-push.hidden {
+  display: none;
+}
+#ov-notifs .pf-btns {
+  margin-top: 12px;
+}
+#ov-notifs #btn-notif-close {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .25);
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: none;
+}
 .hm-hero {
   text-align: center;
   margin-top: 8px;
@@ -2687,6 +2983,21 @@ button:disabled {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.fr-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-inline-start: 6px;
+  background: #c22333;
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 999px;
+  border: 1px solid #ff8fa0;
+  vertical-align: 2px;
 }
 .fr-sub {
   font-size: 11.5px;
@@ -10513,6 +10824,9 @@ button:disabled {
           <button type="button" class="hm-pill" id="btn-wallet-coins" aria-label="سکه"><svg class="coin-ic" aria-hidden="true"><use href="#coinSym"></use></svg> <b id="wallet-coins">–</b></button>
           <button type="button" class="hm-pill gem" id="btn-wallet-gems" aria-label="الماس">💎 <b id="wallet-gems">–</b></button>
         </div>
+        <!-- feat5: notifications bell — the badge is the unread
+             count from the server inbox (s-init / s-notif). -->
+        <button class="hm-bell" id="btn-bell" aria-label="اعلان‌ها">🔔<span id="bell-badge" class="hidden"></span></button>
         <button class="hm-gear" id="btn-settings" aria-label="امادګي">
           <svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="gearG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cdbfe8"/></linearGradient></defs><path fill-rule="evenodd" fill="url(#gearG)" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg>
         </button>
@@ -11816,6 +12130,23 @@ button:disabled {
 
 <!-- ======== PROFILE POPUP ======== -->
 
+<!-- ======== NOTIFICATIONS POPUP (feat5, new-UI panel) ======== -->
+<div class="overlay" id="ov-notifs">
+  <div class="panel nt-panel">
+    <div class="nt-head">
+      <span class="nt-hbell" aria-hidden="true">🔔</span>
+      <h2 id="notif-title">اعلان‌ها</h2>
+      <span id="notif-count" class="nt-count hidden"></span>
+      <button type="button" id="btn-notif-x" class="nt-x" aria-label="بندول">✕</button>
+    </div>
+    <div class="nt-list" id="notif-list"></div>
+    <button type="button" id="btn-notif-push" class="hidden">فعال‌کردن اعلان‌های تلفن</button>
+    <div class="pf-btns">
+      <button type="button" id="btn-notif-close" class="ghost">بند کړه</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======== SETTINGS POPUP ======== -->
 <div class="overlay" id="ov-settings">
   <div class="st-wrap">
@@ -12194,6 +12525,15 @@ const STR = {
     event_eidadha27: "\u062F \u0644\u0648\u06CC \u0627\u062E\u062A\u0631 \u062C\u0634\u0646",
     shopEquip: "\u0648\u06D0 \u06A9\u0627\u0631\u0648\u0647",
     watchBtn: "\u062A\u0645\u0627\u0634\u0627",
+    notifTitle: "\u0627\u0639\u0644\u0627\u0646\u200C\u0647\u0627",
+    notifEmpty: "\u0647\u06D0\u0685 \u0627\u0639\u0644\u0627\u0646 \u0646\u0634\u062A\u0647",
+    nFreq: (name) => name + " \u062F \u0645\u0644\u06AB\u0631\u062A\u06CC\u0627 \u063A\u0648\u069A\u062A\u0646\u0647 \u062F\u0631\u0648\u0644\u06D0\u0696\u0644\u0647",
+    nFaccept: (name) => name + " \u0633\u062A\u0627 \u062F \u0645\u0644\u06AB\u0631\u062A\u06CC\u0627 \u063A\u0648\u069A\u062A\u0646\u0647 \u0648\u0645\u0646\u0644\u0647",
+    nGift: (name, amount) => name + " " + amount + " \u0633\u06A9\u06D0 \u0689\u0627\u0644\u06CD \u062F\u0631\u06A9\u0693\u06D0",
+    nInvite: (name) => name + " \u0644\u0648\u0628\u06D0 \u062A\u0647 \u0628\u0644\u0646\u0647 \u062F\u0631\u06A9\u0693\u0647",
+    nClubAnn: (club) => "\u062F \xAB" + club + "\xBB \u06A9\u0644\u0628 \u062A\u0627\u0632\u0647 \u0627\u0639\u0644\u0627\u0646",
+    nClubInvite: (name, club) => name + " \xAB" + club + "\xBB \u06A9\u0644\u0628 \u062A\u0647 \u0628\u0644\u0646\u0647 \u062F\u0631\u06A9\u0693\u0647",
+    notifPushBtn: "\u062F \u062A\u0644\u0641\u0646 \u0627\u0639\u0644\u0627\u0646\u200C\u0647\u0627 \u0641\u0639\u0627\u0644 \u06A9\u0693\u0647",
     errSocialNotInGame: "\u0647\u063A\u0647 \u0627\u0648\u0633 \u067E\u0647 \u0644\u0648\u0628\u0647 \u06A9\u06D0 \u0646\u0647 \u062F\u06CC",
     errClubPollActive: "\u06CC\u0648\u0647 \u0631\u0627\u06CC\u0647\u200C\u0627\u0686\u0648\u0646\u0647 \u0644\u0627 \u0631\u0648\u0627\u0646\u0647 \u062F\u0647",
     errClubNoPoll: "\u0631\u0627\u06CC\u0647\u200C\u0627\u0686\u0648\u0646\u0647 \u0646\u0634\u062A\u0647",
@@ -12707,6 +13047,15 @@ const STR = {
     event_eidadha27: "\u062C\u0634\u0646 \u0639\u06CC\u062F \u0642\u0631\u0628\u0627\u0646",
     shopEquip: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u06A9\u0646",
     watchBtn: "\u062A\u0645\u0627\u0634\u0627",
+    notifTitle: "\u0627\u0639\u0644\u0627\u0646\u200C\u0647\u0627",
+    notifEmpty: "\u0627\u0639\u0644\u0627\u0646\u06CC \u0646\u06CC\u0633\u062A",
+    nFreq: (name) => name + " \u0628\u0631\u0627\u06CC\u062A \u062F\u0631\u062E\u0648\u0627\u0633\u062A \u062F\u0648\u0633\u062A\u06CC \u0641\u0631\u0633\u062A\u0627\u062F",
+    nFaccept: (name) => name + " \u062F\u0631\u062E\u0648\u0627\u0633\u062A \u062F\u0648\u0633\u062A\u06CC\u200C\u0627\u062A \u0631\u0627 \u0642\u0628\u0648\u0644 \u06A9\u0631\u062F",
+    nGift: (name, amount) => name + " " + amount + " \u0633\u06A9\u0647 \u0628\u0631\u0627\u06CC\u062A \u0647\u062F\u06CC\u0647 \u0641\u0631\u0633\u062A\u0627\u062F",
+    nInvite: (name) => name + " \u0628\u0647 \u0628\u0627\u0632\u06CC \u062F\u0639\u0648\u062A\u062A \u06A9\u0631\u062F",
+    nClubAnn: (club) => "\u0627\u0639\u0644\u0627\u0646 \u062A\u0627\u0632\u0647\u0654 \u0628\u0627\u0634\u06AF\u0627\u0647 \xAB" + club + "\xBB",
+    nClubInvite: (name, club) => name + " \u0628\u0647 \u0628\u0627\u0634\u06AF\u0627\u0647 \xAB" + club + "\xBB \u062F\u0639\u0648\u062A\u062A \u06A9\u0631\u062F",
+    notifPushBtn: "\u0641\u0639\u0627\u0644\u200C\u06A9\u0631\u062F\u0646 \u0627\u0639\u0644\u0627\u0646\u200C\u0647\u0627\u06CC \u062A\u0644\u0641\u0646",
     errSocialNotInGame: "\u0627\u0644\u0627\u0646 \u062F\u0631 \u0628\u0627\u0632\u06CC \u0646\u06CC\u0633\u062A",
     errClubPollActive: "\u06CC\u06A9 \u0631\u0623\u06CC\u200C\u06AF\u06CC\u0631\u06CC \u0647\u0646\u0648\u0632 \u062F\u0631 \u062C\u0631\u06CC\u0627\u0646 \u0627\u0633\u062A",
     errClubNoPoll: "\u0631\u0623\u06CC\u200C\u06AF\u06CC\u0631\u06CC\u200C\u0627\u06CC \u0646\u06CC\u0633\u062A",
@@ -13220,6 +13569,15 @@ const STR = {
     event_eidadha27: "Eid al-Adha festival",
     shopEquip: "Use",
     watchBtn: "Watch",
+    notifTitle: "Notifications",
+    notifEmpty: "No notifications",
+    nFreq: (name) => name + " sent you a friend request",
+    nFaccept: (name) => name + " accepted your friend request",
+    nGift: (name, amount) => name + " sent you a gift of " + amount + " coins",
+    nInvite: (name) => name + " invited you to a game",
+    nClubAnn: (club) => "New announcement in \xAB" + club + "\xBB",
+    nClubInvite: (name, club) => name + " invited you to the club \xAB" + club + "\xBB",
+    notifPushBtn: "Enable phone notifications",
     errSocialNotInGame: "Not in a game right now",
     errClubPollActive: "A poll is already running",
     errClubNoPoll: "There is no poll",
@@ -13935,6 +14293,10 @@ function applyI18n() {
   set("#btn-rematch-accept", "rematchAccept");
   set("#btn-rematch-decline", "rematchDecline");
   set("#btn-pv2-watch", "watchBtn");
+  set("#notif-title", "notifTitle");
+  set("#btn-notif-close", "closeBtn");
+  set("#btn-notif-push", "notifPushBtn");
+  aria("#btn-bell", "notifTitle");
   set("#bp-title", "backSection");
   aria("#btn-back-edit", "backSection");
   aria("#btn-backpick-x", "closeBtn");
@@ -13959,6 +14321,8 @@ function setLang(code) {
     localStorage.setItem("tore.lang", code);
   } catch (e) {
   }
+  bumpSyncTs("settings");
+  pushSyncSection("settings");
   applyI18n();
   if (window.TorePlayer) TorePlayer.paint();
   if ($("#ov-settings").classList.contains("show")) paintSettings();
@@ -14416,6 +14780,117 @@ function validBack(n) {
   n = Number(n);
   return Number.isInteger(n) && n >= 1 && n <= 7 ? n : 1;
 }
+const HAD_LOCAL_PROFILE = (() => {
+  try {
+    return !!localStorage.getItem("tore.profile");
+  } catch (e) {
+    return true;
+  }
+})();
+let syncTs = { profile: 0, settings: 0, favs: 0 };
+try {
+  const s = JSON.parse(localStorage.getItem("tore.syncTs") || "null");
+  if (s && typeof s === "object") syncTs = { profile: +s.profile || 0, settings: +s.settings || 0, favs: +s.favs || 0 };
+} catch (e) {
+}
+function saveSyncTs() {
+  try {
+    localStorage.setItem("tore.syncTs", JSON.stringify(syncTs));
+  } catch (e) {
+  }
+}
+if (HAD_LOCAL_PROFILE && !syncTs.profile && !syncTs.settings && !syncTs.favs) {
+  const now = Date.now();
+  syncTs = { profile: now, settings: now, favs: now };
+  saveSyncTs();
+}
+let applyingRemote = false;
+let syncPullDone = false;
+function bumpSyncTs(sec) {
+  if (applyingRemote) return;
+  syncTs[sec] = Date.now();
+  saveSyncTs();
+}
+function syncProfileData() {
+  return {
+    name: profile.name,
+    avatar: profile.avatar,
+    photo: profile.photo,
+    country: profile.country,
+    felt: profile.felt,
+    back: profile.back,
+    frame: profile.frame,
+    chatStyle: profile.chatStyle,
+    nameManual: !!profile.nameManual
+  };
+}
+function syncSettingsData() {
+  return { lang: LANG, musicOn: toreSetting("music", true), vibrate: toreSetting("vibrate", false), chatOn: toreSetting("chat", true) };
+}
+function syncFavsData() {
+  return window.TorePlayer && TorePlayer.favsList ? TorePlayer.favsList() : [];
+}
+function syncSnapshot() {
+  return {
+    profile: { data: syncProfileData(), ts: syncTs.profile },
+    settings: { data: syncSettingsData(), ts: syncTs.settings },
+    favs: { data: syncFavsData(), ts: syncTs.favs }
+  };
+}
+function pushSyncSection(sec) {
+  if (applyingRemote) return;
+  try {
+    if (!sws || sws.readyState !== 1) return;
+    const sync = {};
+    sync[sec] = { data: sec === "profile" ? syncProfileData() : sec === "settings" ? syncSettingsData() : syncFavsData(), ts: syncTs[sec] };
+    socialSend({ type: "s-sync", sync });
+  } catch (e) {
+  }
+}
+function onMpFavsChanged() {
+  bumpSyncTs("favs");
+  pushSyncSection("favs");
+}
+function applyServerSync(m) {
+  if (!m || m.empty) return;
+  applyingRemote = true;
+  try {
+    if (m.profile && typeof m.profile === "object") {
+      const p = m.profile;
+      profile = {
+        name: typeof p.name === "string" && p.name.trim() ? p.name.trim().slice(0, 20) : "",
+        avatar: validAvatar(p.avatar) ? p.avatar : "av1",
+        country: typeof p.country === "string" && p.country.trim() ? p.country.trim() : "\u0627\u0641\u063A\u0627\u0646\u0633\u062A\u0627\u0646",
+        photo: typeof p.photo === "string" && (p.photo.startsWith("https://") || p.photo.startsWith("/p-photo/")) ? p.photo.slice(0, 300) : "",
+        felt: validFelt(p.felt),
+        back: validBack(p.back),
+        frame: typeof p.frame === "string" && /^fr[1-6]$/.test(p.frame) ? p.frame : "",
+        chatStyle: typeof p.chatStyle === "string" && /^chat[1-3]$/.test(p.chatStyle) ? p.chatStyle : "",
+        nameManual: p.nameManual === true
+      };
+      saveProfile();
+      if (m.ts && m.ts.profile) syncTs.profile = m.ts.profile;
+    }
+    if (m.settings && typeof m.settings === "object") {
+      const s = m.settings;
+      if (typeof s.lang === "string" && s.lang !== LANG && STR[s.lang]) setLang(s.lang);
+      setToreSetting("music", s.musicOn !== false);
+      setToreSetting("vibrate", s.vibrate === true);
+      setToreSetting("chat", s.chatOn !== false);
+      paintSettings();
+      if (m.ts && m.ts.settings) syncTs.settings = m.ts.settings;
+    }
+    if (Array.isArray(m.favs) && window.TorePlayer && TorePlayer.favsSet) {
+      TorePlayer.favsSet(m.favs);
+      if (m.ts && m.ts.favs) syncTs.favs = m.ts.favs;
+    }
+    saveSyncTs();
+    renderProfileButton();
+    socialHello();
+  } catch (e) {
+  }
+  applyingRemote = false;
+}
 function loadProfile() {
   let p = null;
   try {
@@ -14442,6 +14917,8 @@ function saveProfile() {
   localStorage.setItem("tore.profile", JSON.stringify(profile));
   localStorage.removeItem("tore.name");
   renderProfileButton();
+  bumpSyncTs("profile");
+  pushSyncSection("profile");
 }
 function myName() {
   return (profile.name || "").trim() || session?.name || T("playerName");
@@ -17872,6 +18349,10 @@ function setToreSetting(key, on) {
     localStorage.setItem("tore.set." + key, on ? "1" : "0");
   } catch (e) {
   }
+  if (key === "music" || key === "vibrate" || key === "chat") {
+    bumpSyncTs("settings");
+    pushSyncSection("settings");
+  }
 }
 setToreSetting("dnd", false);
 setToreSetting("invisible", false);
@@ -18073,6 +18554,7 @@ const TorePlayer = (() => {
       localStorage.setItem("tore.mpFavs", JSON.stringify([...favs]));
     } catch (e) {
     }
+    if (typeof onMpFavsChanged === "function") onMpFavsChanged();
   };
   const curEl = $p("#mp-cur"), durEl = $p("#mp-dur");
   const bcBtn = $p("#mp-bc"), chipImg = $p("#mp-chip-img"), chipBadge = $p("#mp-chip-badge");
@@ -18697,6 +19179,16 @@ const TorePlayer = (() => {
     },
     openPlaylist,
     closePlaylist,
+    // feat5: profile sync reads/writes the favorites set through
+    // here (the set itself stays private to the player module).
+    favsList() {
+      return [...favs];
+    },
+    favsSet(arr) {
+      favs = new Set((Array.isArray(arr) ? arr : []).filter((n) => Number.isInteger(n) && n >= 1 && n <= MP_TRACKS.length));
+      saveFavs();
+      paint();
+    },
     bcToggle,
     onBcState: applyBc,
     micHook,
@@ -19003,6 +19495,23 @@ bindToggleRow("#row-set-chat", "chat", true, applyChatSetting);
 bindToggleRow("#row-set-music", "music", true, () => {
   if (window.TorePlayer) window.TorePlayer.onMasterToggle();
 });
+$("#btn-bell").onclick = () => {
+  connectSocial();
+  openNotifs();
+};
+$("#btn-notif-close").onclick = closeNotifs;
+$("#btn-notif-x").onclick = closeNotifs;
+$("#ov-notifs").addEventListener("click", (e) => {
+  if (e.target === e.currentTarget) closeNotifs();
+});
+$("#btn-notif-push").onclick = async () => {
+  try {
+    const p = await Notification.requestPermission();
+    if (p === "granted") await subscribePush();
+  } catch (e) {
+  }
+  renderNotifs();
+};
 $("#btn-settings").onclick = openSettings;
 $("#btn-settings-close").onclick = closeSettings;
 $("#ov-settings").addEventListener("click", (e) => {
@@ -19614,7 +20123,7 @@ function socialSend(obj) {
   }
 }
 function socialHello() {
-  socialSend({ type: "s-hello", pid: myPid(), profile: profilePayload() });
+  socialSend({ type: "s-hello", pid: myPid(), profile: profilePayload(), sync: syncSnapshot() });
 }
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) return;
@@ -19714,6 +20223,16 @@ function onSocialMsg(m) {
     if (m.wallet) setWallet(m.wallet);
     if (m.event !== void 0) setSocialEvent(m.event);
     if (m.refs) setRefs(m.refs);
+    if (m.notifs) {
+      notifList = m.notifs;
+      notifUnread = m.notifUnread || 0;
+      paintNotifBadge();
+    }
+    if (!HAD_LOCAL_PROFILE && !syncPullDone) {
+      syncPullDone = true;
+      socialSend({ type: "s-profile-pull" });
+    }
+    maybeSubscribePush();
     applySocialLists(m);
   } else if (m.type === "s-wallet") {
     setWallet(m.wallet);
@@ -19757,6 +20276,21 @@ function onSocialMsg(m) {
     renderLeaders();
   } else if (m.type === "s-watch-state") {
     if (m.code) spectateGame(m.code);
+  } else if (m.type === "s-notif") {
+    if (m.notif && !notifList.some((n) => n.nid === m.notif.nid)) {
+      notifList.unshift(m.notif);
+      if (notifList.length > 30) notifList.length = 30;
+    }
+    notifUnread = typeof m.unread === "number" ? m.unread : notifUnread + 1;
+    paintNotifBadge();
+    if ($("#ov-notifs").classList.contains("show")) renderNotifs();
+  } else if (m.type === "s-notifs") {
+    notifList = m.list || [];
+    notifUnread = m.unread || 0;
+    paintNotifBadge();
+    if ($("#ov-notifs").classList.contains("show")) renderNotifs();
+  } else if (m.type === "s-profile-data") {
+    applyServerSync(m);
   } else if (m.type === "s-club-vs-invited") {
     onClubVsInvited(m);
   } else if (m.type === "s-club-vs-declined") {
@@ -20801,6 +21335,15 @@ function personRow(p, actions, opts) {
     moon.textContent = " \u{1F319}";
     moon.title = T("setDnd");
     nm.appendChild(moon);
+  }
+  if (p.ingame) {
+    const lv = document.createElement("span");
+    lv.className = "fr-live";
+    const dt = document.createElement("span");
+    dt.className = "cl-live-dot";
+    lv.appendChild(dt);
+    lv.appendChild(document.createTextNode(T("clLive")));
+    nm.appendChild(lv);
   }
   const sub = document.createElement("div");
   sub.className = "fr-sub";
@@ -24533,6 +25076,142 @@ function spectateGame(code) {
   intentionalClose = false;
   gateFaces();
   connect(() => send({ type: "spectate", code, ...profilePayload() }));
+}
+let notifList = [];
+let notifUnread = 0;
+function paintNotifBadge() {
+  const b = $("#bell-badge");
+  if (!b) return;
+  b.textContent = faNum(notifUnread);
+  b.classList.toggle("hidden", !notifUnread);
+}
+function notifIcon(kind) {
+  return { freq: "\u{1F44B}", faccept: "\u2705", gift: "\u{1F381}", invite: "\u{1F3AE}", clubann: "\u{1F4E3}", clubinvite: "\u{1F3C6}" }[kind] || "\u{1F514}";
+}
+function notifText(n) {
+  const nm = n.name || T("playerName");
+  switch (n.kind) {
+    case "freq":
+      return T("nFreq", nm);
+    case "faccept":
+      return T("nFaccept", nm);
+    case "gift":
+      return T("nGift", nm, faNum(n.amount || 0));
+    case "invite":
+      return T("nInvite", nm);
+    case "clubann":
+      return T("nClubAnn", n.club || "");
+    case "clubinvite":
+      return T("nClubInvite", nm, n.club || "");
+    default:
+      return n.text || "";
+  }
+}
+function notifTime(ts) {
+  const d = new Date(ts || Date.now());
+  return d.toDateString() === (/* @__PURE__ */ new Date()).toDateString() ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString([], { day: "numeric", month: "numeric" });
+}
+function renderNotifs() {
+  const box = $("#notif-list");
+  if (!box) return;
+  box.innerHTML = "";
+  const cnt = $("#notif-count");
+  if (cnt) {
+    const un = notifList.filter((n) => !n.read).length;
+    cnt.textContent = faNum(un);
+    cnt.classList.toggle("hidden", !un);
+  }
+  if (!notifList.length) box.appendChild(frEmpty(T("notifEmpty")));
+  notifList.forEach((n) => {
+    const row = document.createElement("div");
+    row.className = "nt-row k-" + (n.kind || "note") + (n.read ? "" : " unread");
+    const ic = document.createElement("span");
+    ic.className = "nt-ic";
+    ic.textContent = notifIcon(n.kind);
+    const main = document.createElement("div");
+    main.className = "nt-main";
+    const tx = document.createElement("div");
+    tx.className = "nt-txt";
+    tx.textContent = notifText(n);
+    main.appendChild(tx);
+    if (n.kind === "clubann" && n.text) {
+      const sub = document.createElement("div");
+      sub.className = "nt-sub";
+      sub.textContent = n.text;
+      main.appendChild(sub);
+    }
+    const tm = document.createElement("div");
+    tm.className = "nt-time";
+    tm.textContent = notifTime(n.ts);
+    main.appendChild(tm);
+    row.appendChild(ic);
+    row.appendChild(main);
+    box.appendChild(row);
+  });
+  paintPushBtn();
+}
+function openNotifs() {
+  renderNotifs();
+  $("#ov-notifs").classList.add("show");
+  if (notifUnread) {
+    notifList.forEach((n) => {
+      n.read = true;
+    });
+    notifUnread = 0;
+    paintNotifBadge();
+    socialSend({ type: "s-notifs-read" });
+  }
+}
+function closeNotifs() {
+  $("#ov-notifs").classList.remove("show");
+}
+function pushSupported() {
+  try {
+    return !pwaIsIOS() && pwaStandalone() && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  } catch (e) {
+    return false;
+  }
+}
+function paintPushBtn() {
+  const b = $("#btn-notif-push");
+  if (!b) return;
+  let show2 = false;
+  try {
+    show2 = pushSupported() && Notification.permission === "default";
+  } catch (e) {
+  }
+  b.classList.toggle("hidden", !show2);
+}
+function urlB64ToUint8(s) {
+  const pad = "=".repeat((4 - s.length % 4) % 4);
+  const raw = atob((s + pad).replace(/-/g, "+").replace(/_/g, "/"));
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+async function subscribePush() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const r = await fetch("/push-key");
+      if (!r.ok) return;
+      const j = await r.json();
+      if (!j || !j.key) return;
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(j.key) });
+    }
+    if (sub) socialSend({ type: "s-push-sub", sub: sub.toJSON() });
+  } catch (e) {
+  }
+}
+let pushTried = false;
+function maybeSubscribePush() {
+  if (pushTried) return;
+  pushTried = true;
+  try {
+    if (pushSupported() && Notification.permission === "granted") subscribePush();
+  } catch (e) {
+  }
 }
 function requestWatch(p) {
   if (!p || !p.id) return;

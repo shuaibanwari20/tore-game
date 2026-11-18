@@ -41,8 +41,15 @@
  * client; the asset route also files the music player's nine
  * cover photos (/music/c1..c9.jpg). The songs themselves are
  * never intercepted — they stream from the host with Range.
+ *
+ * v6 (feat5, 2026-11-18): Web Push handlers — a `push` event shows
+ * the notification the server sent (friend requests, gifts, game
+ * invites that landed while the app was closed), and a tap on it
+ * focuses the game (or opens it). The fetch laws above are
+ * unchanged; push is an Android-PWA-only surface (the worker is
+ * never registered on iOS, per U72).
  */
-const SW_VERSION = 'v5';
+const SW_VERSION = 'v6';
 const STATIC_CACHE = 'tore-static-' + SW_VERSION;
 const SHELL_CACHE = 'tore-shell-' + SW_VERSION;
 const ASSET_CACHE = 'tore-assets-' + SW_VERSION;
@@ -107,7 +114,7 @@ self.addEventListener('fetch', (event) => {
   //     versioned asset cache; a miss fetches once and stores the
   //     copy. Only 200s are stored. A new SW_VERSION (shipped with
   //     any client rebuild that changes the art) retires the lot.
-  if (path.startsWith('/cards/') || path.startsWith('/carpets/') || path === '/carpet.jpg' || /^\/music\/c[1-9]\.jpg$/.test(path)) {
+  if (path.startsWith('/cards/') || path.startsWith('/carpets/') || path === '/carpet.jpg' || /^\/music\/c([1-9]|[12][0-9]|30)\.jpg$/.test(path)) {
     event.respondWith(
       caches.open(ASSET_CACHE).then((cache) => cache.match(req, { ignoreSearch: true }).then((hit) => hit || fetch(req).then((res) => {
         if (res && res.status === 200) {
@@ -138,4 +145,47 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Everything else (stickers, covers, …): untouched.
+});
+
+// ---------- feat5: Web Push ----------
+// The server (webpush.js in the Durable Object) sends an
+// aes128gcm-encrypted {title, body} payload; the push service
+// delivers it here even with the app fully closed. A notification
+// tap focuses an open game window when there is one, else opens
+// the game fresh.
+self.addEventListener('push', (event) => {
+  let data = { title: '52 Online', body: '' };
+  try {
+    if (event.data) {
+      const j = event.data.json();
+      if (j && typeof j === 'object') data = { title: j.title || data.title, body: j.body || '' };
+    }
+  } catch (e) {
+    try { data.body = event.data ? event.data.text() : ''; } catch (e2) { /* keep the default */ }
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag: 'tore-notif',
+      data: { url: '/' },
+    }).catch(() => { /* a failed show must never fail the push */ })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        try {
+          if (new URL(c.url).origin === self.location.origin && 'focus' in c) return c.focus();
+        } catch (e) { /* try the next window */ }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+      return undefined;
+    }).catch(() => { /* nothing else to do */ })
+  );
 });
