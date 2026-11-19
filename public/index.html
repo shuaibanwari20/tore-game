@@ -13237,6 +13237,27 @@ async function initSessionUser() {
     if (r.ok) user = await r.json();
   } catch (e) { /* no auth on this host — nothing to adopt */ }
   if (!user) return;
+  // up117: the local profile belongs to ONE account. If a DIFFERENT
+  // account has signed in on this device, the previous account's
+  // local profile — its uploaded photo, its frame, its name — must
+  // not leak into this one: wipe it, reset the sync stamps, and pull
+  // THIS account's own server copy instead.
+  const acctKey = String(user.email || user.sub || '').trim();
+  if (acctKey) {
+    let prevAcct = '';
+    try { prevAcct = localStorage.getItem('tore.acct') || ''; } catch (e) { /* private mode */ }
+    if (prevAcct && prevAcct !== acctKey) {
+      profile = { name: '', avatar: 'av1', country: 'افغانستان', photo: '', felt: 11, back: 1, frame: '', chatStyle: '', nameManual: false };
+      try { localStorage.removeItem('tore.profile'); } catch (e) { /* ignore */ }
+      if (window.TorePlayer && TorePlayer.favsSet) { try { TorePlayer.favsSet([]); } catch (e) { /* ignore */ } }
+      syncTs = { profile: 0, settings: 0, favs: 0 }; saveSyncTs();
+      syncReady = false; syncPullDone = false;
+      try { localStorage.setItem('tore.acct', acctKey); } catch (e) { /* ignore */ }
+      if (typeof sws !== 'undefined' && sws && sws.readyState === 1) { socialHello(); socialSend({ type: 's-profile-pull' }); syncPullDone = true; }
+    } else if (!prevAcct) {
+      try { localStorage.setItem('tore.acct', acctKey); } catch (e) { /* ignore */ }
+    }
+  }
   // up111: the admin entry appears ONLY when the server marked
   // this verified session as the owner's (see the panel below).
   if (user.isAdmin) { const ab = $('#btn-admin'); if (ab) ab.classList.remove('hidden'); }
