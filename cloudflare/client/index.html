@@ -15395,8 +15395,9 @@ if (HAD_LOCAL_PROFILE && !syncTs.profile && !syncTs.settings && !syncTs.favs) {
 }
 let applyingRemote = false;
 let syncPullDone = false;
+let syncReady = false;
 function bumpSyncTs(sec) {
-  if (applyingRemote) return;
+  if (applyingRemote || !syncReady) return;
   syncTs[sec] = Date.now();
   saveSyncTs();
 }
@@ -15420,14 +15421,15 @@ function syncFavsData() {
   return window.TorePlayer && TorePlayer.favsList ? TorePlayer.favsList() : [];
 }
 function syncSnapshot() {
+  const ts = (sec) => syncReady ? syncTs[sec] : 0;
   return {
-    profile: { data: syncProfileData(), ts: syncTs.profile },
-    settings: { data: syncSettingsData(), ts: syncTs.settings },
-    favs: { data: syncFavsData(), ts: syncTs.favs }
+    profile: { data: syncProfileData(), ts: ts("profile") },
+    settings: { data: syncSettingsData(), ts: ts("settings") },
+    favs: { data: syncFavsData(), ts: ts("favs") }
   };
 }
 function pushSyncSection(sec) {
-  if (applyingRemote) return;
+  if (applyingRemote || !syncReady) return;
   try {
     if (!sws || sws.readyState !== 1) return;
     const sync = {};
@@ -15441,10 +15443,19 @@ function onMpFavsChanged() {
   pushSyncSection("favs");
 }
 function applyServerSync(m) {
-  if (!m || m.empty) return;
+  if (!m) return;
+  if (m.empty) {
+    const now0 = Date.now();
+    if (!syncTs.profile) syncTs.profile = now0;
+    if (!syncTs.settings) syncTs.settings = now0;
+    if (!syncTs.favs) syncTs.favs = now0;
+    saveSyncTs();
+    socialHello();
+    return;
+  }
   applyingRemote = true;
   try {
-    if (m.profile && typeof m.profile === "object") {
+    if (m.profile && typeof m.profile === "object" && (!m.ts || (m.ts.profile || 0) > (syncTs.profile || 0))) {
       const p = m.profile;
       profile = {
         name: typeof p.name === "string" && p.name.trim() ? p.name.trim().slice(0, 20) : "",
@@ -15460,7 +15471,7 @@ function applyServerSync(m) {
       saveProfile();
       if (m.ts && m.ts.profile) syncTs.profile = m.ts.profile;
     }
-    if (m.settings && typeof m.settings === "object") {
+    if (m.settings && typeof m.settings === "object" && (!m.ts || (m.ts.settings || 0) > (syncTs.settings || 0))) {
       const s = m.settings;
       if (typeof s.lang === "string" && s.lang !== LANG && STR[s.lang]) setLang(s.lang);
       setToreSetting("music", s.musicOn !== false);
@@ -15469,10 +15480,14 @@ function applyServerSync(m) {
       paintSettings();
       if (m.ts && m.ts.settings) syncTs.settings = m.ts.settings;
     }
-    if (Array.isArray(m.favs) && window.TorePlayer && TorePlayer.favsSet) {
+    if (Array.isArray(m.favs) && window.TorePlayer && TorePlayer.favsSet && (!m.ts || (m.ts.favs || 0) > (syncTs.favs || 0))) {
       TorePlayer.favsSet(m.favs);
       if (m.ts && m.ts.favs) syncTs.favs = m.ts.favs;
     }
+    const now1 = Date.now();
+    if (!m.profile && !syncTs.profile) syncTs.profile = now1;
+    if (!m.settings && !syncTs.settings) syncTs.settings = now1;
+    if (!m.favs && !syncTs.favs) syncTs.favs = now1;
     saveSyncTs();
     renderProfileButton();
     socialHello();
@@ -20526,7 +20541,7 @@ async function initSessionUser() {
     changed = true;
   }
   const pic = typeof user.picture === "string" && user.picture.startsWith("https://") ? user.picture.slice(0, 300) : "";
-  if (pic && pic !== profile.photo) {
+  if (pic && pic !== profile.photo && !String(profile.photo || "").startsWith("/p-photo/")) {
     profile.photo = pic;
     changed = true;
   }
@@ -21158,6 +21173,9 @@ function socialSend(obj) {
 }
 function socialHello() {
   socialSend({ type: "s-hello", pid: myPid(), profile: profilePayload(), sync: syncSnapshot() });
+  if (!syncReady) setTimeout(() => {
+    syncReady = true;
+  }, 8e3);
 }
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) return;
@@ -21262,7 +21280,7 @@ function onSocialMsg(m) {
       notifUnread = m.notifUnread || 0;
       paintNotifBadge();
     }
-    if (!HAD_LOCAL_PROFILE && !syncPullDone) {
+    if (!syncPullDone) {
       syncPullDone = true;
       socialSend({ type: "s-profile-pull" });
     }
@@ -21324,6 +21342,7 @@ function onSocialMsg(m) {
     paintNotifBadge();
     if ($("#ov-notifs").classList.contains("show")) renderNotifs();
   } else if (m.type === "s-profile-data") {
+    syncReady = true;
     applyServerSync(m);
   } else if (m.type === "s-club-vs-invited") {
     onClubVsInvited(m);
