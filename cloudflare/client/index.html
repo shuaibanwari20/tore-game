@@ -1919,6 +1919,271 @@ button:disabled {
   border-radius: 12px;
   box-shadow: none;
 }
+.ad-card {
+  background:
+    linear-gradient(
+      165deg,
+      rgba(62, 34, 110, .55),
+      rgba(28, 13, 56, .65));
+  border: 1px solid rgba(216, 180, 255, .35);
+  border-radius: 22px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .35);
+}
+.ad-h {
+  font-size: 16px;
+  font-weight: 900;
+  color: #ffd75e;
+  margin: 2px 0 10px;
+}
+.ad-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.ad-stat {
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+.ad-stat .k {
+  font-size: 12px;
+  color: rgba(255, 255, 255, .65);
+}
+.ad-stat .v {
+  font-size: 21px;
+  font-weight: 900;
+  color: #fff;
+  margin-top: 2px;
+}
+.ad-searchrow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ad-searchrow input {
+  flex: 1;
+  min-width: 0;
+}
+#scr-admin input,
+#scr-admin textarea,
+#scr-adetail input,
+#scr-adetail textarea {
+  background: rgba(6, 24, 16, .88);
+  color: #f8ecd0;
+  border: 1px solid rgba(255, 215, 94, .55);
+  border-radius: 12px;
+  padding: 11px 12px;
+  font-size: 15px;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+#scr-admin textarea,
+#scr-adetail textarea {
+  resize: vertical;
+}
+#scr-admin input::placeholder,
+#scr-admin textarea::placeholder,
+#scr-adetail input::placeholder,
+#scr-adetail textarea::placeholder {
+  color: rgba(248, 236, 208, .45);
+}
+.ad-sbtn {
+  width: auto;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  border: 1.5px solid #ffe98a;
+  background:
+    linear-gradient(
+      180deg,
+      #ffb52e,
+      #f08c00);
+  color: #4a2400;
+  font-weight: 900;
+  font-size: 15px;
+  font-family: inherit;
+}
+.ad-chips {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.ad-chip {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: rgba(43, 6, 54, .72);
+  border: 1.5px solid rgba(255, 255, 255, .25);
+  color: #ffd7f2;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: inherit;
+}
+.ad-chip.sel {
+  background:
+    linear-gradient(
+      180deg,
+      #d81b74,
+      #8f1160);
+  border-color: #ffd75e;
+  color: #fff;
+}
+.ad-bal {
+  margin-inline-start: auto;
+  text-align: end;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.55;
+  flex: 0 0 auto;
+}
+.ad-bal .g {
+  color: #9be7ff;
+}
+.ad-tag {
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  vertical-align: 2px;
+}
+.ad-tag.ban {
+  background: #d92338;
+  color: #fff;
+}
+.ad-tag.on {
+  background: #1d9e57;
+  color: #fff;
+}
+.ad-more {
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 11px;
+  border-radius: 14px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .25);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14.5px;
+  font-family: inherit;
+}
+.ad-hint {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, .6);
+  line-height: 1.8;
+  text-align: center;
+  margin: 4px 0 0;
+}
+.ad-quick {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.ad-quick span {
+  flex: 1;
+  text-align: center;
+  padding: 7px 0;
+  border-radius: 10px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, .07);
+  border: 1px solid rgba(255, 255, 255, .14);
+  font-size: 13px;
+  font-weight: 800;
+  color: #ffd7f2;
+}
+.ad-btnrow {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.ad-btnrow > * {
+  flex: 1;
+}
+.ad-btnrow .shop-claim {
+  margin: 0;
+}
+.ad-danger {
+  width: auto;
+  margin: 0;
+  padding: 11px;
+  border-radius: 16px;
+  cursor: pointer;
+  background:
+    linear-gradient(
+      180deg,
+      #e0483e,
+      #b02a20);
+  border: 1.5px solid #ff9a8a;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  font-family: inherit;
+}
+.ad-danger.wide {
+  width: 100%;
+  margin-bottom: 12px;
+}
+.ad-danger.ad-unban {
+  background:
+    linear-gradient(
+      180deg,
+      #2fbf71,
+      #1d8a4c);
+  border-color: #8affc1;
+}
+.ad-ghost {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px;
+  border-radius: 14px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .25);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14.5px;
+  font-family: inherit;
+}
+.ad-amt {
+  font-weight: 900;
+  font-size: 15px;
+  white-space: nowrap;
+}
+.ad-amt.plus {
+  color: #5eeaa0;
+}
+.ad-amt.min {
+  color: #ff8f84;
+}
+.ad-phead {
+  text-align: center;
+  margin-bottom: 12px;
+}
+.ad-phead .pavatar {
+  margin: 0 auto;
+  display: block;
+}
+.ad-phead h3 {
+  margin: 8px 0 2px;
+  font-size: 19px;
+  color: #fff;
+}
+.ad-sub {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, .75);
+  line-height: 1.7;
+}
 #ov-micguide .mg-intro {
   font-size: 15px;
   margin: 0 0 6px;
@@ -2638,7 +2903,9 @@ button:disabled {
 #scr-picker,
 #scr-leaders,
 #scr-shop,
-#scr-playlist {
+#scr-playlist,
+#scr-admin,
+#scr-adetail {
   position: fixed;
   inset: 0;
   height: 100vh;
@@ -2663,7 +2930,9 @@ button:disabled {
 #scr-pview,
 #scr-leaders,
 #scr-shop,
-#scr-playlist {
+#scr-playlist,
+#scr-admin,
+#scr-adetail {
   background-color: #6d0d3f;
   background-image:
     linear-gradient(
@@ -2705,7 +2974,9 @@ button:disabled {
 #scr-picker,
 #scr-leaders,
 #scr-shop,
-#scr-playlist {
+#scr-playlist,
+#scr-admin,
+#scr-adetail {
   display: flex;
   flex-direction: column;
   overflow-y: hidden;
@@ -2725,7 +2996,8 @@ button:disabled {
 #scr-clubseatreqs .hm-nav,
 #scr-picker .hm-nav,
 #scr-leaders .hm-nav,
-#scr-shop .hm-nav {
+#scr-shop .hm-nav,
+#scr-admin .hm-nav {
   margin: 0;
   flex: none;
   width: 100%;
@@ -11586,6 +11858,103 @@ button:disabled {
   </nav>
 </section>
 
+
+<!-- ======== ADMIN (پنل مدیریت) — up113: native shell screen ======== -->
+<section id="scr-admin" class="hidden">
+  <div class="fr-scroll">
+    <div class="fr-inner">
+      <div class="cp-head">
+        <button class="fr-back" id="btn-admin-back">→</button>
+        <h2>پنل مدیریت 🛡️</h2>
+      </div>
+      <div class="shop-tabs" id="ad-tabs">
+        <button type="button" class="shop-tab sel" data-atab="dash">داشبورد</button>
+        <button type="button" class="shop-tab" data-atab="players">بازیکن‌ها</button>
+        <button type="button" class="shop-tab" data-atab="clubs">کلب‌ها</button>
+        <button type="button" class="shop-tab" data-atab="cast">اعلان</button>
+        <button type="button" class="shop-tab" data-atab="log">تاریخچه</button>
+      </div>
+      <div id="ad-view-dash"></div>
+      <div id="ad-view-players" class="hidden">
+        <div class="ad-searchrow"><input id="ad-pq" type="text" placeholder="جستجو با آیدی ۶ رقمی یا نام…"><button class="ad-sbtn" id="ad-pgo">بگرد</button></div>
+        <div class="ad-chips" id="ad-chips">
+          <button class="ad-chip sel" data-af="all">همه</button>
+          <button class="ad-chip" data-af="online">آنلاین</button>
+          <button class="ad-chip" data-af="banned">بن‌شده</button>
+          <button class="ad-chip" data-af="rich">ثروتمندترین</button>
+        </div>
+        <div class="ad-card" id="ad-plist"></div>
+        <button class="ad-more hidden" id="ad-pmore">بیشتر نشان بده</button>
+        <p class="ad-hint">روی هر بازیکن بزن تا پروفایل کامل، تاریخچهٔ کیف پول و دکمه‌های بن/ارسال باز شود.</p>
+      </div>
+      <div id="ad-view-clubs" class="hidden"><div class="ad-card" id="ad-clist"></div></div>
+      <div id="ad-view-cast" class="hidden">
+        <div class="ad-card">
+          <div class="ad-h">📣 اعلان به همهٔ بازیکن‌ها</div>
+          <textarea id="ad-cast-text" rows="3" maxlength="200" placeholder="متن اعلان…"></textarea>
+          <button class="shop-claim" id="ad-cast-send">ارسال به همه</button>
+          <p class="ad-hint">به صندوق اعلانِ همهٔ بازیکن‌ها می‌رود و در تاریخچه ثبت می‌شود.</p>
+        </div>
+      </div>
+      <div id="ad-view-log" class="hidden"><div class="ad-card" id="ad-llist"></div></div>
+    </div>
+  </div>
+<nav class="hm-nav">
+    <button class="hm-navitem" id="adnav-friends">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M1.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M27.5 42c.5-7.5 4.2-12 9.5-12s9 4.5 9.5 12z" fill="url(#nvGold)"/><path d="M10.5 43c.8-9.5 6.3-15 13.5-15s12.7 5.5 13.5 15z" fill="url(#nvBlue)"/><circle cx="11" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="37" cy="23" r="6.6" fill="url(#nvGold)"/><circle cx="24" cy="19.5" r="8.4" fill="url(#nvWhite)"/></svg></span>
+      <span class="nl">ملګري</span>
+    </button>
+    <button class="hm-navitem" id="adnav-clubs">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M15 5h18v6.5a9 9 0 0 1-18 0z" fill="url(#nvGold)"/><path d="M15 8.5H8a7 7 0 0 0 7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M33 8.5h7a7 7 0 0 1-7.4 7" fill="none" stroke="url(#nvGold)" stroke-width="3.6" stroke-linecap="round"/><path d="M22 20h4v13h-4z" fill="url(#nvGold)"/><path d="M15 33h18l2.6 6H12.4z" fill="url(#nvGold)"/><rect x="11.5" y="39" width="25" height="4.6" rx="2.3" fill="url(#nvGold)"/><path d="M24 7.6l1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5z" fill="#fff3c4"/></svg></span>
+      <span class="nl">کلبونه</span>
+    </button>
+    <button class="hm-navitem" id="adnav-home">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33.5" y="10" width="5.5" height="9" rx="1.2" fill="url(#nvGold)"/><path d="M10.5 21h27V40a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3z" fill="url(#nvWhite)"/><path d="M24 3.5 2.5 22.5h7L24 11l14.5 11.5h7z" fill="url(#nvGold)" stroke="rgba(122,77,0,.35)" stroke-width="1"/><path d="M19.5 43V32a4.5 4.5 0 0 1 9 0v11z" fill="#a86e00"/><circle cx="26.8" cy="37.5" r="1.1" fill="#ffe98a"/></svg></span>
+      <span class="nl">کور</span>
+    </button>
+    <button class="hm-navitem" id="adnav-shop">
+      <span class="bubble"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10.5 21h27v20a2.5 2.5 0 0 1-2.5 2.5H13a2.5 2.5 0 0 1-2.5-2.5z" fill="url(#nvWhite)"/><path d="M20.8 43.5V33a3.2 3.2 0 0 1 6.4 0v10.5z" fill="#a86e00"/><rect x="30" y="27.5" width="5.4" height="5.4" rx="1.2" fill="url(#nvGold)"/><path d="M7 7.5h34l2.5 11.5h-39z" fill="url(#nvPink)"/><circle cx="12" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="24" cy="19" r="3.4" fill="url(#nvPink)"/><circle cx="36" cy="19" r="3.4" fill="url(#nvPink)"/><path d="M24 10.1l.95 1.95 2.15.3-1.55 1.5.37 2.13L24 15l-1.92 1.02.37-2.13-1.55-1.5 2.15-.3z" fill="#fff3c4"/></svg></span>
+      <span class="nl">پلورنځی</span>
+    </button>
+    <button class="hm-navitem" id="adnav-chat">
+      <span class="ni"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="19" y="4" width="25" height="20" rx="7" fill="url(#nvGreen)"/><path d="M35 22.5 35 30l-7.5-6.5z" fill="#28b751"/><rect x="4" y="15" width="29" height="22" rx="8" fill="url(#nvPink)"/><path d="M11 35.5 11 43l8-6.6z" fill="#e84393"/><ellipse cx="29" cy="9" rx="7" ry="2.6" fill="#fff" opacity=".35"/><ellipse cx="13" cy="20" rx="8" ry="2.8" fill="#fff" opacity=".35"/><circle cx="12.5" cy="26" r="2.1" fill="#fff"/><circle cx="18.5" cy="26" r="2.1" fill="#fff"/><circle cx="24.5" cy="26" r="2.1" fill="#fff"/></svg></span>
+      <span class="nl">چت</span>
+    </button>
+  </nav>
+</section>
+
+<!-- ======== ADMIN PLAYER (مشخصات بازیکن) ======== -->
+<section id="scr-adetail" class="hidden">
+  <div class="fr-scroll">
+    <div class="fr-inner">
+      <div class="cp-head">
+        <button class="fr-back" id="btn-adetail-back">→</button>
+        <h2>مشخصات بازیکن</h2>
+      </div>
+      <div id="ad-p-head"></div>
+      <div class="ad-stats" id="ad-p-stats"></div>
+      <div class="ad-card">
+        <div class="ad-h">💰 ارسال / کم‌کردن</div>
+        <div class="ad-chips">
+          <button class="ad-chip sel" id="ad-cur-coins">سکه</button>
+          <button class="ad-chip" id="ad-cur-gems">الماس 💎</button>
+        </div>
+        <input id="ad-amt" type="number" inputmode="numeric" placeholder="مقدار">
+        <div class="ad-quick"><span data-amt="100">100</span><span data-amt="500">500</span><span data-amt="1000">1,000</span><span data-amt="10000">10,000</span><span data-amt="100000">100,000</span></div>
+        <div class="ad-btnrow"><button class="shop-claim" id="ad-send">➕ ارسال</button><button class="ad-danger" id="ad-take">➖ کم‌کردن</button></div>
+      </div>
+      <div class="ad-card">
+        <div class="ad-h">📩 اعلان خصوصی</div>
+        <textarea id="ad-note" rows="2" maxlength="200" placeholder="متن اعلان برای این بازیکن…"></textarea>
+        <button class="ad-ghost" id="ad-notice-send">ارسال اعلان</button>
+      </div>
+      <button class="ad-danger wide" id="ad-ban">⛔ بن‌کردن بازیکن</button>
+      <div class="ad-h">🧾 تاریخچهٔ کیف پول</div>
+      <div class="ad-card" id="ad-p-ledger"></div>
+    </div>
+  </div>
+</section>
+
 <!-- ======== CLUBS (کلبونه) ======== -->
 <section id="scr-clubs" class="hidden">
   <!-- ======== DISCOVERY (Ludo-style clubs home) ======== -->
@@ -20064,8 +20433,385 @@ async function initSessionUser() {
     renderProfileButton();
   }
 }
-$("#btn-admin").onclick = () => {
-  location.href = "/admin";
+$("#btn-admin").onclick = () => openAdmin();
+const ADM = { tab: "dash", filter: "all", off: 0, total: 0, cur: "coins", player: null };
+const AD_COIN = '<svg class="coin-ic" aria-hidden="true"><use href="#coinSym"></use></svg>';
+const AD_KIND = { grant: "\u0647\u062F\u06CC\u0647", bonus: "\u062C\u0627\u06CC\u0632\u0647 \u0631\u0648\u0632\u0627\u0646\u0647", chest: "\u0635\u0646\u062F\u0648\u0642", stake: "\u0634\u0631\u0637 \u0628\u0627\u0632\u06CC", win: "\u0628\u0631\u062F \u0628\u0627\u0632\u06CC", refund: "\u0628\u0631\u06AF\u0634\u062A", buy: "\u062E\u0631\u06CC\u062F \u0641\u0631\u0648\u0634\u06AF\u0627\u0647", forfeit: "\u062A\u0631\u06A9 \u0628\u0627\u0632\u06CC", admin: "\u0627\u0631\u0633\u0627\u0644 \u0627\u062F\u0645\u06CC\u0646", gift: "\u0647\u062F\u06CC\u0647 \u0627\u0632 \u0628\u0627\u0632\u06CC\u06A9\u0646" };
+const AD_ACT = { grant: "\u0627\u0631\u0633\u0627\u0644", ban: "\u26D4 \u0628\u0646", unban: "\u2705 \u0628\u0631\u062F\u0627\u0634\u062A\u0646 \u0628\u0646", broadcast: "\u{1F4E3} \u0627\u0639\u0644\u0627\u0646 \u0639\u0645\u0648\u0645\u06CC", notice: "\u{1F4E9} \u0627\u0639\u0644\u0627\u0646 \u062E\u0635\u0648\u0635\u06CC" };
+async function admApi(path, opts) {
+  try {
+    const r = await fetch(path, Object.assign({ credentials: "same-origin" }, opts || {}));
+    let j = null;
+    try {
+      j = await r.json();
+    } catch (e) {
+    }
+    return { ok: r.ok, st: r.status, j };
+  } catch (e) {
+    return { ok: false, st: 0, j: null };
+  }
+}
+function admFmt(n) {
+  return n == null ? "\u2014" : Number(n).toLocaleString("en-US");
+}
+function admEsc(s) {
+  const d = document.createElement("div");
+  d.textContent = s == null ? "" : String(s);
+  return d.innerHTML;
+}
+function admRel(ts) {
+  if (!ts) return "\u2014";
+  const s = Math.max(0, Date.now() - ts), m = Math.floor(s / 6e4);
+  if (m < 1) return "\u0647\u0645\u06CC\u0646 \u062D\u0627\u0644\u0627";
+  if (m < 60) return m + " \u062F\u0642\u06CC\u0642\u0647 \u067E\u06CC\u0634";
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + " \u0633\u0627\u0639\u062A \u067E\u06CC\u0634";
+  const d = Math.floor(h / 24);
+  if (d < 30) return d + " \u0631\u0648\u0632 \u067E\u06CC\u0634";
+  return new Date(ts).toLocaleDateString("fa-AF");
+}
+function admHideScreens() {
+  ["scr-friends", "scr-chats", "scr-profile", "scr-clubs", "scr-clubpage", "scr-clubmembers", "scr-clubseatreqs", "scr-picker", "scr-leaders", "scr-shop"].forEach((id) => $("#" + id).classList.add("hidden"));
+}
+function openAdmin() {
+  admHideScreens();
+  $("#scr-adetail").classList.add("hidden");
+  $("#scr-admin").classList.remove("hidden");
+  admGo(ADM.tab);
+}
+function closeAdmin() {
+  $("#scr-admin").classList.add("hidden");
+  $("#scr-adetail").classList.add("hidden");
+  $("#scr-profile").classList.remove("hidden");
+}
+function admGo(tab) {
+  ADM.tab = tab;
+  document.querySelectorAll("#ad-tabs .shop-tab").forEach((b) => b.classList.toggle("sel", b.dataset.atab === tab));
+  ["dash", "players", "clubs", "cast", "log"].forEach((t) => $("#ad-view-" + t).classList.toggle("hidden", t !== tab));
+  if (tab === "dash") admDash();
+  if (tab === "players") admPlayers(false);
+  if (tab === "clubs") admClubs();
+  if (tab === "log") admLog();
+}
+document.querySelectorAll("#ad-tabs .shop-tab").forEach((b) => {
+  b.onclick = () => admGo(b.dataset.atab);
+});
+$("#btn-admin-back").onclick = () => closeAdmin();
+$("#adnav-home").onclick = () => {
+  $("#scr-admin").classList.add("hidden");
+  $("#scr-adetail").classList.add("hidden");
+};
+$("#adnav-friends").onclick = () => {
+  closeAdmin();
+  $("#scr-profile").classList.add("hidden");
+  openFriends();
+};
+$("#adnav-clubs").onclick = () => {
+  closeAdmin();
+  $("#scr-profile").classList.add("hidden");
+  openClubs();
+};
+$("#adnav-shop").onclick = () => {
+  closeAdmin();
+  $("#scr-profile").classList.add("hidden");
+  openShop();
+};
+$("#adnav-chat").onclick = () => {
+  closeAdmin();
+  $("#scr-profile").classList.add("hidden");
+  openChats();
+};
+async function admDash() {
+  const box = $("#ad-view-dash");
+  box.innerHTML = '<div class="fr-empty">\u062F\u0631 \u062D\u0627\u0644 \u0628\u0627\u0631\u06AF\u0630\u0627\u0631\u06CC\u2026</div>';
+  const r = await admApi("/admin/stats");
+  if (!r.ok || !r.j) {
+    box.innerHTML = '<div class="fr-empty">\u062E\u0637\u0627 \u062F\u0631 \u0628\u0627\u0631\u06AF\u0630\u0627\u0631\u06CC (' + r.st + ")</div>";
+    return;
+  }
+  const s = r.j.stats;
+  const cells = [["\u{1F465} \u06A9\u0644 \u0628\u0627\u0632\u06CC\u06A9\u0646\u200C\u0647\u0627", s.players], ["\u{1F7E2} \u0622\u0646\u0644\u0627\u06CC\u0646", s.online], ["\u{1F3AE} \u062F\u0627\u062E\u0644 \u0628\u0627\u0632\u06CC", s.ingame], ["\u{1F3E0} \u06A9\u0644\u0628\u200C\u0647\u0627", s.clubs], ["\u{1FA99} \u06A9\u0644 \u0633\u06A9\u0647\u200C\u0647\u0627", s.coins], ["\u{1F48E} \u06A9\u0644 \u0627\u0644\u0645\u0627\u0633\u200C\u0647\u0627", s.gems], ["\u{1F4C5} \u0641\u0639\u0627\u0644 \u0627\u0645\u0631\u0648\u0632", s.activeToday], ["\u{1F381} \u0627\u0631\u0633\u0627\u0644 \u0627\u0645\u0631\u0648\u0632", s.grantsToday]];
+  let h = '<div class="ad-stats">' + cells.map((c) => '<div class="ad-stat"><div class="k">' + c[0] + '</div><div class="v">' + admFmt(c[1]) + "</div></div>").join("") + "</div>";
+  h += '<div class="ad-h">\u{1F558} \u0622\u062E\u0631\u06CC\u0646 \u06A9\u0627\u0631\u0647\u0627</div><div class="ad-card" id="ad-dash-log"></div>';
+  h += '<div class="ad-h">\u{1F3C6} \u06A9\u0644\u0628\u200C\u0647\u0627\u06CC \u0628\u0631\u062A\u0631</div><div class="ad-card" id="ad-dash-clubs"></div>';
+  box.innerHTML = h;
+  admFillLog($("#ad-dash-log"), 6);
+  const rc = await admApi("/admin/clubs");
+  const cb = $("#ad-dash-clubs");
+  if (rc.ok && rc.j && rc.j.clubs && rc.j.clubs.length) {
+    cb.innerHTML = "";
+    rc.j.clubs.slice(0, 5).forEach((c) => cb.appendChild(admClubRow(c)));
+  } else cb.innerHTML = '<div class="fr-empty">\u06A9\u0644\u0648\u0628\u06CC \u0646\u06CC\u0633\u062A</div>';
+}
+function admLogRow(e) {
+  const row = document.createElement("div");
+  row.className = "fr-row";
+  const meta = document.createElement("div");
+  meta.className = "fr-meta";
+  const nm = document.createElement("div");
+  nm.className = "fr-name";
+  nm.style.fontSize = "13.5px";
+  let title = AD_ACT[e.action] || e.action;
+  if (e.action === "grant") title += " \u0628\u0631\u0627\u06CC " + (e.name || "");
+  else if (e.action === "broadcast") title += " \u0628\u0647 " + admFmt(e.sent) + " \u0628\u0627\u0632\u06CC\u06A9\u0646";
+  else if (e.name) title += " \u2014 " + e.name;
+  nm.textContent = title;
+  const sub = document.createElement("div");
+  sub.className = "fr-sub";
+  sub.textContent = admRel(e.ts) + (e.text ? " \xB7 \xAB" + e.text + "\xBB" : "");
+  meta.append(nm, sub);
+  row.appendChild(meta);
+  if (e.action === "grant") {
+    const end = document.createElement("div");
+    end.className = "ad-amt " + (e.amount > 0 ? "plus" : "min");
+    end.textContent = (e.amount > 0 ? "+" : "\u2212") + admFmt(Math.abs(e.amount)) + (e.currency === "gems" ? " \u{1F48E}" : " \u{1FA99}");
+    row.appendChild(end);
+  }
+  return row;
+}
+async function admFillLog(box, limit) {
+  if (!box) return;
+  const r = await admApi("/admin/log");
+  if (!r.ok || !r.j || !r.j.log || !r.j.log.length) {
+    box.innerHTML = '<div class="fr-empty">\u0647\u0646\u0648\u0632 \u06A9\u0627\u0631\u06CC \u062B\u0628\u062A \u0646\u0634\u062F\u0647</div>';
+    return;
+  }
+  box.innerHTML = "";
+  r.j.log.slice(0, limit || 50).forEach((e) => box.appendChild(admLogRow(e)));
+}
+function admLog() {
+  admFillLog($("#ad-llist"), 50);
+}
+function admClubRow(c) {
+  const row = document.createElement("div");
+  row.className = "fr-row";
+  const who = document.createElement("div");
+  who.className = "fr-who";
+  who.appendChild(avatarEl(c.name, null, 38, null));
+  const meta = document.createElement("div");
+  meta.className = "fr-meta";
+  const nm = document.createElement("div");
+  nm.className = "fr-name";
+  nm.textContent = c.name;
+  const sub = document.createElement("div");
+  sub.className = "fr-sub";
+  sub.textContent = "\u0622\u06CC\u062F\u06CC " + admFmt(c.cid) + " \xB7 \u0645\u0627\u0644\u06A9: " + (c.ownerName || "") + " (" + admFmt(c.ownerUid) + ")";
+  meta.append(nm, sub);
+  who.appendChild(meta);
+  row.appendChild(who);
+  const end = document.createElement("div");
+  end.className = "ad-bal";
+  end.textContent = admFmt(c.members) + " \u0639\u0636\u0648";
+  row.appendChild(end);
+  return row;
+}
+async function admClubs() {
+  const box = $("#ad-clist");
+  box.innerHTML = '<div class="fr-empty">\u062F\u0631 \u062D\u0627\u0644 \u0628\u0627\u0631\u06AF\u0630\u0627\u0631\u06CC\u2026</div>';
+  const r = await admApi("/admin/clubs");
+  if (!r.ok || !r.j || !r.j.clubs || !r.j.clubs.length) {
+    box.innerHTML = '<div class="fr-empty">' + (r.ok ? "\u06A9\u0644\u0648\u0628\u06CC \u0646\u06CC\u0633\u062A" : "\u062E\u0637\u0627 \u062F\u0631 \u0628\u0627\u0631\u06AF\u0630\u0627\u0631\u06CC (" + r.st + ")") + "</div>";
+    return;
+  }
+  box.innerHTML = "";
+  r.j.clubs.forEach((c) => box.appendChild(admClubRow(c)));
+}
+function admRow(x) {
+  const row = document.createElement("div");
+  row.className = "fr-row";
+  row.style.cursor = "pointer";
+  const who = document.createElement("div");
+  who.className = "fr-who";
+  who.appendChild(avatarEl(x.name, x.avatar, 38, x.photo));
+  const meta = document.createElement("div");
+  meta.className = "fr-meta";
+  const nm = document.createElement("div");
+  nm.className = "fr-name";
+  nm.textContent = x.name || "\u0628\u0627\u0632\u06CC\u06A9\u0646";
+  if (x.banned) {
+    const t = document.createElement("span");
+    t.className = "ad-tag ban";
+    t.textContent = "\u0628\u0646\u200C\u0634\u062F\u0647";
+    nm.append(" ", t);
+  } else if (x.online) {
+    const t = document.createElement("span");
+    t.className = "ad-tag on";
+    t.textContent = x.ingame ? "\u062F\u0627\u062E\u0644 \u0628\u0627\u0632\u06CC" : "\u0622\u0646\u0644\u0627\u06CC\u0646";
+    nm.append(" ", t);
+  }
+  const sub = document.createElement("div");
+  sub.className = "fr-sub";
+  sub.textContent = "\u0622\u06CC\u062F\u06CC " + admFmt(x.uid) + " \xB7 \u0633\u0637\u062D " + admFmt(x.level) + " \xB7 " + (x.online ? "\u0622\u0646\u0644\u0627\u06CC\u0646" : admRel(x.lastSeen));
+  meta.append(nm, sub);
+  who.appendChild(meta);
+  row.appendChild(who);
+  const end = document.createElement("div");
+  end.className = "ad-bal";
+  end.innerHTML = AD_COIN + " " + admFmt(x.coins) + '<br><span class="g">\u{1F48E} ' + admFmt(x.gems) + "</span>";
+  row.appendChild(end);
+  row.onclick = () => openAdetail(x.uid);
+  return row;
+}
+async function admPlayers(more) {
+  if (!more) ADM.off = 0;
+  const q = encodeURIComponent($("#ad-pq").value.trim());
+  const r = await admApi("/admin/players?q=" + q + "&f=" + ADM.filter + "&o=" + ADM.off);
+  const box = $("#ad-plist");
+  if (!r.ok || !r.j) {
+    if (!more) box.innerHTML = '<div class="fr-empty">\u062E\u0637\u0627 \u062F\u0631 \u0628\u0627\u0631\u06AF\u0630\u0627\u0631\u06CC (' + r.st + ")</div>";
+    return;
+  }
+  ADM.total = r.j.total || 0;
+  if (!more) box.innerHTML = "";
+  if (!r.j.rows.length && !more) box.innerHTML = '<div class="fr-empty">\u0628\u0627\u0632\u06CC\u06A9\u0646\u06CC \u067E\u06CC\u062F\u0627 \u0646\u0634\u062F</div>';
+  r.j.rows.forEach((x) => box.appendChild(admRow(x)));
+  ADM.off += r.j.rows.length;
+  $("#ad-pmore").classList.toggle("hidden", ADM.off >= ADM.total);
+}
+$("#ad-pgo").onclick = () => admPlayers(false);
+$("#ad-pq").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") admPlayers(false);
+});
+$("#ad-pmore").onclick = () => admPlayers(true);
+document.querySelectorAll("#ad-chips .ad-chip").forEach((c) => {
+  c.onclick = () => {
+    ADM.filter = c.dataset.af;
+    document.querySelectorAll("#ad-chips .ad-chip").forEach((x) => x.classList.toggle("sel", x === c));
+    admPlayers(false);
+  };
+});
+$("#ad-cast-send").onclick = () => {
+  const t = $("#ad-cast-text").value.trim();
+  if (!t) {
+    toast("\u26A0\uFE0F \u0627\u0648\u0644 \u0645\u062A\u0646 \u0627\u0639\u0644\u0627\u0646 \u0631\u0627 \u0628\u0646\u0648\u06CC\u0633");
+    return;
+  }
+  askConfirm("\u{1F4E3} \u0627\u0639\u0644\u0627\u0646 \u0639\u0645\u0648\u0645\u06CC", "\u0627\u06CC\u0646 \u0627\u0639\u0644\u0627\u0646 \u0628\u0647 \u0647\u0645\u0647\u0654 \u0628\u0627\u0632\u06CC\u06A9\u0646\u200C\u0647\u0627 \u0627\u0631\u0633\u0627\u0644 \u0634\u0648\u062F\u061F", "\u0627\u0631\u0633\u0627\u0644", async () => {
+    const r = await admApi("/admin/broadcast", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: t }) });
+    if (r.ok && r.j && r.j.ok) {
+      toast("\u{1F4E3} \u0628\u0647 " + admFmt(r.j.sent) + " \u0628\u0627\u0632\u06CC\u06A9\u0646 \u0627\u0631\u0633\u0627\u0644 \u0634\u062F");
+      $("#ad-cast-text").value = "";
+    } else toast("\u2717 \u0646\u0634\u062F: " + (r.j && r.j.error || "\u062E\u0637\u0627 " + r.st));
+  });
+};
+async function openAdetail(uid) {
+  if (!uid) return;
+  $("#scr-admin").classList.add("hidden");
+  $("#scr-adetail").classList.remove("hidden");
+  $("#ad-p-head").innerHTML = '<div class="fr-empty">\u062F\u0631 \u062D\u0627\u0644 \u0628\u0627\u0631\u06AF\u0630\u0627\u0631\u06CC\u2026</div>';
+  $("#ad-p-stats").innerHTML = "";
+  $("#ad-p-ledger").innerHTML = "";
+  const r = await admApi("/admin/player?id=" + encodeURIComponent(uid));
+  if (!r.ok || !r.j || !r.j.player) {
+    $("#ad-p-head").innerHTML = '<div class="fr-empty">\u0628\u0627\u0632\u06CC\u06A9\u0646 \u067E\u06CC\u062F\u0627 \u0646\u0634\u062F (' + r.st + ")</div>";
+    return;
+  }
+  const p = r.j.player;
+  ADM.player = p;
+  const head = $("#ad-p-head");
+  head.className = "ad-phead";
+  head.innerHTML = "";
+  head.appendChild(avatarEl(p.name, p.avatar, 76, p.photo));
+  const h3 = document.createElement("h3");
+  h3.textContent = p.name || "\u0628\u0627\u0632\u06CC\u06A9\u0646";
+  head.appendChild(h3);
+  const sub = document.createElement("div");
+  sub.className = "ad-sub";
+  sub.innerHTML = "\u0622\u06CC\u062F\u06CC " + admFmt(p.uid) + " \xB7 \u0633\u0637\u062D " + admFmt(p.level) + (p.club ? " \xB7 \u0639\u0636\u0648 \u06A9\u0644\u0628 " + admEsc(p.club.name) : "") + " \xB7 " + admFmt(p.friends) + " \u062F\u0648\u0633\u062A<br>" + (p.banned ? '<span class="ad-tag ban">\u0628\u0646\u200C\u0634\u062F\u0647</span> ' : "") + (p.ingame ? '<span style="color:#5eeaa0">\u0622\u0646\u0644\u0627\u06CC\u0646 \u2014 \u062F\u0627\u062E\u0644 \u0628\u0627\u0632\u06CC</span>' : p.online ? '<span style="color:#5eeaa0">\u0622\u0646\u0644\u0627\u06CC\u0646</span>' : "\u0622\u062E\u0631\u06CC\u0646 \u0628\u0627\u0632\u062F\u06CC\u062F: " + admRel(p.lastSeen));
+  head.appendChild(sub);
+  const cells = [["\u{1FA99} \u0633\u06A9\u0647", p.coins], ["\u{1F48E} \u0627\u0644\u0645\u0627\u0633", p.gems], ["\u{1F3C6} \u0628\u0631\u062F", p.wins], ["\u0628\u0627\u062E\u062A", p.losses]];
+  $("#ad-p-stats").innerHTML = cells.map((c) => '<div class="ad-stat"><div class="k">' + c[0] + '</div><div class="v">' + admFmt(c[1]) + "</div></div>").join("");
+  const banBtn = $("#ad-ban");
+  if (p.banned) {
+    banBtn.textContent = "\u2705 \u0628\u0631\u062F\u0627\u0634\u062A\u0646 \u0628\u0646";
+    banBtn.classList.add("ad-unban");
+  } else {
+    banBtn.textContent = "\u26D4 \u0628\u0646\u200C\u06A9\u0631\u062F\u0646 \u0628\u0627\u0632\u06CC\u06A9\u0646";
+    banBtn.classList.remove("ad-unban");
+  }
+  const lb = $("#ad-p-ledger");
+  if (p.ledger && p.ledger.length) {
+    lb.innerHTML = "";
+    p.ledger.forEach((e) => {
+      const row = document.createElement("div");
+      row.className = "fr-row";
+      const meta = document.createElement("div");
+      meta.className = "fr-meta";
+      const nm = document.createElement("div");
+      nm.className = "fr-name";
+      nm.style.fontSize = "13.5px";
+      nm.textContent = (AD_KIND[e.kind] || e.kind) + (e.cur === "gems" ? " \u{1F48E}" : " \u{1FA99}");
+      const sb = document.createElement("div");
+      sb.className = "fr-sub";
+      sb.textContent = admRel(e.ts);
+      meta.append(nm, sb);
+      row.appendChild(meta);
+      const end = document.createElement("div");
+      end.className = "ad-amt " + (e.amount > 0 ? "plus" : "min");
+      end.textContent = (e.amount > 0 ? "+" : "\u2212") + admFmt(Math.abs(e.amount));
+      row.appendChild(end);
+      lb.appendChild(row);
+    });
+  } else lb.innerHTML = '<div class="fr-empty">\u062A\u0631\u0627\u06A9\u0646\u0634\u06CC \u062B\u0628\u062A \u0646\u0634\u062F\u0647</div>';
+}
+$("#btn-adetail-back").onclick = () => {
+  $("#scr-adetail").classList.add("hidden");
+  $("#scr-admin").classList.remove("hidden");
+  admGo(ADM.tab);
+};
+function admSetCur(c) {
+  ADM.cur = c;
+  $("#ad-cur-coins").classList.toggle("sel", c === "coins");
+  $("#ad-cur-gems").classList.toggle("sel", c === "gems");
+}
+$("#ad-cur-coins").onclick = () => admSetCur("coins");
+$("#ad-cur-gems").onclick = () => admSetCur("gems");
+document.querySelectorAll(".ad-quick span").forEach((sp) => {
+  sp.onclick = () => {
+    $("#ad-amt").value = sp.dataset.amt;
+  };
+});
+function admGrant(sign) {
+  if (!ADM.player) return;
+  const amt = Math.floor(Math.abs(Number($("#ad-amt").value) || 0)) * sign;
+  if (!amt) {
+    toast("\u26A0\uFE0F \u0627\u0648\u0644 \u0645\u0642\u062F\u0627\u0631 \u0631\u0627 \u0628\u0646\u0648\u06CC\u0633");
+    return;
+  }
+  const label = (amt > 0 ? "+" : "\u2212") + admFmt(Math.abs(amt)) + (ADM.cur === "gems" ? " \u0627\u0644\u0645\u0627\u0633 \u{1F48E}" : " \u0633\u06A9\u0647 \u{1FA99}");
+  askConfirm(amt > 0 ? "\u2795 \u0627\u0631\u0633\u0627\u0644" : "\u2796 \u06A9\u0645\u200C\u06A9\u0631\u062F\u0646", label + " \u0628\u0631\u0627\u06CC " + (ADM.player.name || "\u0628\u0627\u0632\u06CC\u06A9\u0646") + "\u061F", "\u062A\u0627\u06CC\u06CC\u062F", async () => {
+    const r = await admApi("/admin/grant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: ADM.player.uid, currency: ADM.cur, amount: amt }) });
+    if (r.ok && r.j && r.j.ok) {
+      toast("\u2713 \u0627\u0646\u062C\u0627\u0645 \u0634\u062F \u2014 \u0645\u0648\u062C\u0648\u062F\u06CC \u062A\u0627\u0632\u0647: \u{1FA99} " + admFmt(r.j.coins) + " \xB7 \u{1F48E} " + admFmt(r.j.gems));
+      openAdetail(ADM.player.uid);
+    } else toast("\u2717 \u0646\u0634\u062F: " + (r.j && r.j.error || "\u062E\u0637\u0627 " + r.st));
+  });
+}
+$("#ad-send").onclick = () => admGrant(1);
+$("#ad-take").onclick = () => admGrant(-1);
+$("#ad-ban").onclick = () => {
+  if (!ADM.player) return;
+  const target = !ADM.player.banned;
+  askConfirm(target ? "\u26D4 \u0628\u0646\u200C\u06A9\u0631\u062F\u0646" : "\u2705 \u0628\u0631\u062F\u0627\u0634\u062A\u0646 \u0628\u0646", target ? "\u0628\u0627\u0632\u06CC\u06A9\u0646 " + ADM.player.name + " \u0628\u0646 \u0634\u0648\u062F\u061F \u062F\u06CC\u06AF\u0631 \u0646\u0645\u06CC\u200C\u062A\u0648\u0627\u0646\u062F \u0628\u0627\u0632\u06CC \u0628\u0633\u0627\u0632\u062F \u06CC\u0627 \u0648\u0627\u0631\u062F \u0628\u0627\u0632\u06CC \u0634\u0648\u062F." : "\u0628\u0646 " + ADM.player.name + " \u0628\u0631\u062F\u0627\u0634\u062A\u0647 \u0634\u0648\u062F\u061F", "\u062A\u0627\u06CC\u06CC\u062F", async () => {
+    const r = await admApi("/admin/ban", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: ADM.player.uid, banned: target }) });
+    if (r.ok && r.j && r.j.ok) {
+      toast(target ? "\u26D4 \u0628\u0646 \u0634\u062F" : "\u2705 \u0628\u0646 \u0628\u0631\u062F\u0627\u0634\u062A\u0647 \u0634\u062F");
+      openAdetail(ADM.player.uid);
+    } else toast("\u2717 \u0646\u0634\u062F");
+  });
+};
+$("#ad-notice-send").onclick = async () => {
+  if (!ADM.player) return;
+  const t = $("#ad-note").value.trim();
+  if (!t) {
+    toast("\u26A0\uFE0F \u0627\u0648\u0644 \u0645\u062A\u0646 \u0627\u0639\u0644\u0627\u0646 \u0631\u0627 \u0628\u0646\u0648\u06CC\u0633");
+    return;
+  }
+  const r = await admApi("/admin/notice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: ADM.player.uid, text: t }) });
+  if (r.ok && r.j && r.j.ok) {
+    toast("\u{1F4E9} \u0627\u0639\u0644\u0627\u0646 \u062E\u0635\u0648\u0635\u06CC \u0627\u0631\u0633\u0627\u0644 \u0634\u062F");
+    $("#ad-note").value = "";
+  } else toast("\u2717 \u0646\u0634\u062F");
 };
 (function dressHome() {
   renderMenuFans();
