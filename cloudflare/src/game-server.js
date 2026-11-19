@@ -1158,7 +1158,9 @@ export class GameServer {
       // increments — every hello reconciles this identity's count
       // with the sockets the runtime actually holds for it.
       core.reconcileOnline(sid, this._liveCountAll(sid, null));
-      core.hello(sid, helloProfile);
+      // up114: the verified session email rides as a separate
+      // argument (never inside the client-controlled profile).
+      core.hello(sid, helloProfile, (att.user && att.user.email) || '');
       // feat5: the hello frame also carries the profile/settings/
       // favorites sync snapshot (the core applies it per section,
       // last-writer-wins — the session-owned fields above are not

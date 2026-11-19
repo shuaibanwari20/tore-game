@@ -1274,6 +1274,7 @@ class SocialCore {
       coins: w ? w.coins : null, gems: w ? w.gems : null,
       // up112: the separate panel's full player view.
       avatar: p.avatar, photo: p.photo, country: p.country,
+      email: (rec && rec.email) || '', // up114: admin-only field
       played: st.p, wins: st.w, losses: st.l,
       friends: (this.friends.get(id) || new Set()).size,
       club: club ? { cid: club.cid, name: club.name } : null,
@@ -1526,7 +1527,7 @@ class SocialCore {
     for (let n = 100000; n <= 999999; n++) if (!taken.has(String(n))) return String(n);
     return null; // directory impossibly full — caller keeps uid null
   }
-  hello(id, profile) {
+  hello(id, profile, sessionEmail) {
     profile = profile || {};
     const prev = this.directory.get(id);
     // The permanent player ID: kept from the existing record when
@@ -1560,6 +1561,12 @@ class SocialCore {
       // F46: the invisible flag survives re-hello the same way
       // (set ONLY by the s-invisible frame, never by hello).
       invisible: !!(prev && prev.invisible),
+      // up114: the account email, stamped ONLY from the server-
+      // verified session (the game-server passes it as a separate
+      // argument — a client hello can never set it). Server-side
+      // only: person() never exposes it; ONLY the admin detail
+      // (adminPlayerInfo) returns it. Survives re-hello.
+      email: (typeof sessionEmail === 'string' && sessionEmail.includes('@') && sessionEmail.length <= 160) ? sessionEmail : ((prev && prev.email) || ''),
       // up112: the admin ban flag survives re-hello the same way
       // (set ONLY from the admin panel, never by hello).
       banned: !!(prev && prev.banned),
