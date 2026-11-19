@@ -4217,7 +4217,6 @@
       <label class="pf-label" id="pf-name-lbl" for="pf-name">نوم</label>
       <input id="pf-name" type="text" maxlength="20" placeholder="نوم دې — لکه احمد" autocomplete="name">
       <span class="pf-label" id="pf-avatar-lbl">انځور</span>
-      <button type="button" class="pf-upload" id="btn-pf-upload">📷 <span id="pf-upload-lbl">انځور اپلود کړه</span></button>
       <div class="pf-grid" id="pf-grid"></div>
       <div class="pf-btns">
         <button id="btn-profile-save">ساتل</button>
@@ -4833,7 +4832,6 @@
 
 <!-- the one hidden file picker behind every cover-upload tile -->
 <input type="file" id="cover-file" accept="image/*" class="hidden">
-<input type="file" id="photo-file" accept="image/*" class="hidden">
 
 <!-- ======== FRIEND DM ======== -->
 <section id="scr-dm" class="hidden">
@@ -7604,7 +7602,7 @@ function applyServerSync(m) {
         name: (typeof p.name === 'string' && p.name.trim()) ? p.name.trim().slice(0, 20) : '',
         avatar: validAvatar(p.avatar) ? p.avatar : 'av1',
         country: (typeof p.country === 'string' && p.country.trim()) ? p.country.trim() : 'افغانستان',
-        photo: (typeof p.photo === 'string' && (p.photo.startsWith('https://') || p.photo.startsWith('/p-photo/'))) ? p.photo.slice(0, 300) : '',
+        photo: (typeof p.photo === 'string' && p.photo.startsWith('https://')) ? p.photo.slice(0, 300) : '',
         felt: validFelt(p.felt),
         back: validBack(p.back),
         frame: (typeof p.frame === 'string' && /^fr[1-6]$/.test(p.frame)) ? p.frame : '',
@@ -7649,7 +7647,7 @@ function loadProfile() {
     name: (typeof p.name === 'string' && p.name.trim()) ? p.name.trim().slice(0, 20) : oldName.slice(0, 20),
     avatar: validAvatar(p.avatar) ? p.avatar : 'av1',
     country: (typeof p.country === 'string' && p.country.trim()) ? p.country.trim() : 'افغانستان',
-    photo: (typeof p.photo === 'string' && (p.photo.startsWith('https://') || p.photo.startsWith('/p-photo/'))) ? p.photo.slice(0, 300) : '',
+    photo: (typeof p.photo === 'string' && p.photo.startsWith('https://')) ? p.photo.slice(0, 300) : '',
     felt: validFelt(p.felt),
     back: validBack(p.back),
     frame: (typeof p.frame === 'string' && /^fr[1-6]$/.test(p.frame)) ? p.frame : '',
@@ -13266,7 +13264,7 @@ async function initSessionUser() {
   if (acctName && !profile.nameManual && profile.name !== acctName) { profile.name = acctName; changed = true; }
   const pic = (typeof user.picture === 'string' && user.picture.startsWith('https://'))
     ? user.picture.slice(0, 300) : '';
-  if (pic && pic !== profile.photo && !String(profile.photo || '').startsWith('/p-photo/')) { profile.photo = pic; changed = true; } // up116: an uploaded photo is the player's chosen one — the Google picture never overwrites it
+  if (pic && pic !== profile.photo) { profile.photo = pic; changed = true; } // up118: photo upload is removed — the Gmail picture is the only photo a player can show
   if (profile.photo && (profile.avatar === 'av1' || profile.avatar === 'google')) {
     if (profile.avatar !== 'google') { profile.avatar = 'google'; changed = true; }
   }
@@ -16696,100 +16694,6 @@ async function uploadClubCover(blob) {
   toast(T('clCoverSaved'));
   return true;
 }
-// ----- F17: upload own profile photo -----
-// Mirrors the club-cover flow: the picked image is downscaled on
-// a canvas (max 1024×1024 since up38 — the large photo viewer
-// shows the stored file, so it must stay near-original quality;
-// JPEG, quality ladder down until the blob is ≤500 KB, under the
-// 512 KB server cap) and POSTed to /p-photo — never over the social
-// socket. The SERVER derives the player identity (Worker session
-// cookie / Node x-tore-pid), stores the blob in the social store
-// and points the directory record at /p-photo/<uid>.jpg?v=N; the
-// client then wears it through the normal 'google'-style photo
-// path (profile.photo + avatar 'google'), so every render site
-// (own profile, friends rows, player view, table badges, club
-// lists) shows it unchanged.
-let photoPickCb = null;
-function pickPhotoFile(cb) {
-  photoPickCb = cb;
-  const inp = $('#photo-file');
-  if (!inp) return;
-  inp.value = '';
-  inp.click();
-}
-$('#photo-file').addEventListener('change', (e) => {
-  const f = e.target.files && e.target.files[0];
-  const cb = photoPickCb;
-  photoPickCb = null;
-  if (f && cb) cb(f);
-});
-async function photoFileToBlob(file) {
-  if (!file) return null;
-  let bmp = null;
-  try { bmp = await createImageBitmap(file); } catch (e) { bmp = null; }
-  if (!bmp) {
-    bmp = await new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => resolve(null);
-      img.src = URL.createObjectURL(file);
-    });
-    if (!bmp) return null;
-  }
-  const w = bmp.width || bmp.naturalWidth;
-  const h = bmp.height || bmp.naturalHeight;
-  if (!w || !h) return null;
-  const sc = Math.min(1, 1024 / w, 1024 / h);
-  const cnv = document.createElement('canvas');
-  cnv.width = Math.max(1, Math.round(w * sc));
-  cnv.height = Math.max(1, Math.round(h * sc));
-  cnv.getContext('2d').drawImage(bmp, 0, 0, cnv.width, cnv.height);
-  const encode = (q) => new Promise((resolve) => {
-    if (cnv.toBlob) cnv.toBlob((b) => resolve(b), 'image/jpeg', q);
-    else resolve(null);
-  });
-  for (const q of [0.85, 0.78, 0.68, 0.58]) {
-    const b = await encode(q);
-    if (b && b.size <= 500 * 1024) return b;
-    if (b && q === 0.58) return b; // smallest we can make — the server cap still guards
-  }
-  return null;
-}
-async function uploadProfilePhoto(blob) {
-  if (!blob) return false;
-  const headers = { 'Content-Type': 'image/jpeg' };
-  let pid = '';
-  try { pid = localStorage.getItem('tore.pid') || ''; } catch (e) { /* private mode */ }
-  if (pid) headers['x-tore-pid'] = pid;
-  let res = null;
-  try {
-    res = await fetch('/p-photo', { method: 'POST', headers, body: blob, credentials: 'same-origin' });
-  } catch (e) { /* offline */ }
-  if (!res) { toast(T('errServerError')); return false; }
-  if (!res.ok) {
-    let code = '';
-    try { code = (await res.json()).error || ''; } catch (e) { /* not json */ }
-    toast(code === 'photoTooBig' ? T('errPhotoTooBig')
-      : code === 'photoBadType' ? T('errCoverBadType')
-      : T('errServerError'));
-    return false;
-  }
-  let out = null;
-  try { out = await res.json(); } catch (e) { /* not json */ }
-  if (!out || !out.photo) { toast(T('errServerError')); return false; }
-  profile.photo = out.photo;
-  pfAvatar = 'google';
-  pfPersist(); // commits avatar+photo locally and re-hellos the directory
-  pfRenderGrid();
-  pfRenderPreview();
-  toast(T('pfPhotoSaved'));
-  return true;
-}
-$('#btn-pf-upload').onclick = () => pickPhotoFile(async (file) => {
-  const blob = await photoFileToBlob(file);
-  if (blob) await uploadProfilePhoto(blob);
-});
-
 function buildCatRow(box, current, onPick) {
   if (!box) return;
   box.innerHTML = '';
