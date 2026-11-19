@@ -13390,7 +13390,7 @@ async function openAdetail(uid) {
   head.appendChild(avatarEl(p.name, p.avatar, 76, p.photo));
   const h3 = document.createElement('h3'); h3.textContent = p.name || 'بازیکن'; head.appendChild(h3);
   const sub = document.createElement('div'); sub.className = 'ad-sub';
-  sub.innerHTML = 'آیدی ' + admFmt(p.uid) + ' · سطح ' + admFmt(p.level) + (p.club ? ' · عضو کلب ' + admEsc(p.club.name) : '') + ' · ' + admFmt(p.friends) + ' دوست<br>' +
+  sub.innerHTML = 'آیدی ' + admFmt(p.uid) + ' · سطح ' + admFmt(p.level) + (p.club ? ' · عضو کلب ' + admEsc(p.club.name) : '') + ' · ' + admFmt(p.friends) + ' دوست' + (p.email ? '<br>📧 ' + admEsc(p.email) : '') + '<br>' +
     (p.banned ? '<span class="ad-tag ban">بن‌شده</span> ' : '') +
     (p.ingame ? '<span style="color:#5eeaa0">آنلاین — داخل بازی</span>' : (p.online ? '<span style="color:#5eeaa0">آنلاین</span>' : 'آخرین بازدید: ' + admRel(p.lastSeen)));
   head.appendChild(sub);
