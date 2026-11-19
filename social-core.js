@@ -543,7 +543,8 @@ function cleanAvatar(v) {
 const UPLOADED_PHOTO_RE = /^\/p-photo\/(\d{6})\.jpg\?v=(\d{1,6})$/;
 function cleanPhoto(p) {
   if (typeof p !== 'string' || !p || p.length > 300) return '';
-  if (UPLOADED_PHOTO_RE.test(p)) return p;
+  // up118: photo upload is removed — only the player's Google
+  // (Gmail) picture may be shown; uploaded /p-photo paths die here.
   if (!p.startsWith('https://')) return '';
   if (!p.includes('googleusercontent.com')) return '';
   return p;
