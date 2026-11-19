@@ -100,7 +100,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261119-acct2';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261119-noupload';
 // The PREVIOUS client version's URL — last-resort fallback for
 // serveClient (see the header comment): that build was live long
 // enough that its edge copies are warm in the POPs, so when a fresh
@@ -908,6 +908,11 @@ export default {
       return stub.fetch(request);
     }
 
+    if (path === '/p-photo' && request.method === 'POST') {
+      // up118: photo upload is removed — players show their Gmail
+      // picture or a built-in avatar only.
+      return new Response(JSON.stringify({ error: 'photoUploadRemoved' }), { status: 410, headers: { 'Content-Type': 'application/json' } });
+    }
     if (path === '/p-photo' && request.method === 'POST') {
       // A player uploads HIS OWN profile photo (F17). Session
       // rules are exactly the cover route's: with the gate on, no
