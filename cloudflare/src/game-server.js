@@ -705,6 +705,32 @@ export class GameServer {
     if (reqPath === '/internal/admin/grants') {
       return Response.json({ ok: true, grants: core.adminGrantsList(20) });
     }
+    // up112: the separate admin panel's full-access routes.
+    const adm = { email: (body && body.adminEmail) || '', sub: (body && body.adminSub) || '' };
+    if (reqPath === '/internal/admin/stats') {
+      return Response.json({ ok: true, stats: core.adminStats() });
+    }
+    if (reqPath === '/internal/admin/players') {
+      return Response.json({ ok: true, ...core.adminPlayers(body || {}) });
+    }
+    if (reqPath === '/internal/admin/ban') {
+      const r = core.adminSetBan(adm, body && body.uid, !!(body && body.banned));
+      return Response.json(r, { status: r.ok ? 200 : 404 });
+    }
+    if (reqPath === '/internal/admin/clubs') {
+      return Response.json({ ok: true, clubs: core.adminClubs() });
+    }
+    if (reqPath === '/internal/admin/broadcast') {
+      const r = core.adminBroadcast(adm, body && body.text);
+      return Response.json(r, { status: r.ok ? 200 : 400 });
+    }
+    if (reqPath === '/internal/admin/notice') {
+      const r = core.adminNotice(adm, body && body.uid, body && body.text);
+      return Response.json(r, { status: r.ok ? 200 : (r.error === 'notfound' ? 404 : 400) });
+    }
+    if (reqPath === '/internal/admin/log') {
+      return Response.json({ ok: true, log: core.adminLogList(50) });
+    }
     return new Response('not found', { status: 404 });
   }
 
@@ -1141,6 +1167,10 @@ export class GameServer {
       return;
     }
     if (!att.sid) return; // hello first
+    // up112: a banned player keeps his hello (presence and lastSeen
+    // stay truthful for the admin panel) but every social ACTION —
+    // friends, clubs, chat, gifts, invites — is dropped here.
+    if (core.isBanned(att.sid)) return;
     core.handleMessage(att.sid, msg);
     // An invite may have reaped stale seats (see _verifyBusy): the
     // social path returns before webSocketMessage's trailing
@@ -1940,6 +1970,14 @@ export class GameServer {
     const needsAuth = msg.type === 'create' || msg.type === 'join' || msg.type === 'reconnect' || msg.type === 'spectate';
     if (this.authEnabled && needsAuth && !att.user) {
       return sendError(ws, 'اول با گوگل یا فیسبوک وارد شو', 'signInFirst');
+    }
+    // up112: a player banned from the admin panel cannot create,
+    // join, reconnect to or spectate a game.
+    if (needsAuth && att.user && att.user.sub) {
+      const core = await this._ensureSocial();
+      if (core.isBanned('g:' + String(att.user.sub))) {
+        return sendError(ws, 'حساب تو توسط مدیریت بسته شده است', 'banned');
+      }
     }
     // Clubs v8: a SPECTATOR attachment is receive-only. It may
     // leave; every other frame (play, chat, rtc, start, …) is

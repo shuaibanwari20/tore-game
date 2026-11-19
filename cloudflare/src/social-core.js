@@ -439,6 +439,7 @@ const WALLET_CHEST_MS = 4 * 3600 * 1000; // chest cooldown: 4 hours
 const WALLET_LEDGER_CAP = 100;        // newest entries kept per wallet
 const ADMIN_GRANT_CAP = { coins: 1000000, gems: 100000 }; // up111: per-grant caps for the owner's admin panel
 const ADMIN_GRANTS_KEEP = 200;        // up111: admin audit-log entries kept
+const ADMIN_LOG_KEEP = 200;           // up112: unified admin action log entries kept
 const STAKE_TIERS = [0, 100, 500, 1000, 5000]; // validated by the hosts too
 // The shop catalogue (ظاهری tab) — COSMETICS ONLY. sku -> price in
 // سکه. The default card back (back1) and the default cream carpet
@@ -611,6 +612,12 @@ class SocialCore {
     // adminGrant(), read by the Worker /admin/grants route. Rides
     // serialize()/load() with the wallet state.
     this.adminGrants = [];
+    // up112: the unified admin action log (grants, bans, notices,
+    // broadcasts — newest first) for the separate admin panel.
+    this.adminLog = [];
+    // up112: while true, notify() skips its per-call persist (the
+    // broadcast loop persists ONCE at the end instead).
+    this._bulk = false;
     // feat3: referrals id -> {by, paid, ts} (persisted with the
     // social state). The per-club message-id counters are
     // RUNTIME ONLY.
@@ -638,6 +645,7 @@ class SocialCore {
       wallets: Object.fromEntries(this.wallets),
       escrows: Object.fromEntries(this.escrows),
       adminGrants: this.adminGrants,
+      adminLog: this.adminLog,
       referrals: Object.fromEntries(this.referrals),
       notifs: Object.fromEntries(this.notifs),
       pushSubs: Object.fromEntries(this.pushSubs),
@@ -675,6 +683,10 @@ class SocialCore {
     this.adminGrants = Array.isArray(data.adminGrants)
       ? data.adminGrants.filter((g) => g && typeof g === 'object') : [];
     if (this.adminGrants.length > ADMIN_GRANTS_KEEP) this.adminGrants.length = ADMIN_GRANTS_KEEP;
+    // up112 unified admin log (older snapshots carry none at all).
+    this.adminLog = Array.isArray(data.adminLog)
+      ? data.adminLog.filter((g) => g && typeof g === 'object') : [];
+    if (this.adminLog.length > ADMIN_LOG_KEEP) this.adminLog.length = ADMIN_LOG_KEEP;
     for (const e of this.escrows.values()) {
       if (!e || typeof e !== 'object') continue;
       if (!Array.isArray(e.stakes)) e.stakes = [];
@@ -1253,9 +1265,26 @@ class SocialCore {
     const p = this.person(id);
     const st = this.statsOf(id);
     const w = this.walletView(id);
+    const wr = this._wallet(id, false);
+    const cid = this.clubOf.get(id) || null;
+    const club = cid ? this.clubs.get(cid) : null;
+    const rec = this.directory.get(id);
     return {
       uid: String(uid), name: p.name, level: st.level, xp: st.xp,
       coins: w ? w.coins : null, gems: w ? w.gems : null,
+      // up112: the separate panel's full player view.
+      avatar: p.avatar, photo: p.photo, country: p.country,
+      played: st.p, wins: st.w, losses: st.l,
+      friends: (this.friends.get(id) || new Set()).size,
+      club: club ? { cid: club.cid, name: club.name } : null,
+      owned: w ? w.owned : [],
+      banned: !!(rec && rec.banned),
+      lastSeen: rec ? (rec.lastSeen || 0) : 0,
+      online: this.isOnline(id), ingame: this.isInGame(id), inlobby: this.isInLobby(id),
+      ledger: wr ? wr.ledger.slice(-20).reverse().map((e) => ({
+        ts: e.ts, kind: e.kind, amount: e.amount, balance: e.balance,
+        cur: e.cur || 'coins', ref: e.ref || '',
+      })) : [],
     };
   }
   // One grant — or, with a negative amount, a deduction (the
@@ -1295,6 +1324,7 @@ class SocialCore {
     };
     this.adminGrants.unshift(entry);
     if (this.adminGrants.length > ADMIN_GRANTS_KEEP) this.adminGrants.length = ADMIN_GRANTS_KEEP;
+    this._adminLog(admin, 'grant', { target: id, uid: String(uid), name: entry.name, currency, amount: applied });
     this._persist();
     this.walletSend(id);
     return { ok: true, ...entry };
@@ -1302,6 +1332,138 @@ class SocialCore {
   adminGrantsList(limit) {
     const n = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 50) : 20;
     return this.adminGrants.slice(0, n);
+  }
+
+  // ---------- admin panel (up112) ----------
+  // The separate full-access admin page (Worker GET /admin, data
+  // over /admin/*). Like the grants above, these methods only ever
+  // run on the Worker's internal call after IT verified the admin
+  // email; the admin identity arrives as data for the audit log.
+  _adminLog(admin, action, data) {
+    const e = {
+      ts: Date.now(), by: (admin && admin.email) || '', action,
+      ...((data && typeof data === 'object') ? data : {}),
+    };
+    this.adminLog.unshift(e);
+    if (this.adminLog.length > ADMIN_LOG_KEEP) this.adminLog.length = ADMIN_LOG_KEEP;
+    return e;
+  }
+  adminLogList(limit) {
+    const n = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 100) : 50;
+    return this.adminLog.slice(0, n);
+  }
+  isBanned(id) {
+    const r = this.directory.get(id);
+    return !!(r && r.banned);
+  }
+  adminStats() {
+    let coins = 0, gems = 0;
+    for (const w of this.wallets.values()) {
+      if (w) { coins += w.coins || 0; gems += w.gems || 0; }
+    }
+    const today = kabulDayKey(Date.now());
+    let activeToday = 0, grantsToday = 0, ingame = 0;
+    for (const r of this.directory.values()) {
+      if (r && r.lastSeen && kabulDayKey(r.lastSeen) === today) activeToday++;
+    }
+    for (const g of this.adminGrants) if (g && kabulDayKey(g.ts) === today) grantsToday++;
+    for (const id of this.directory.keys()) if (this.isInGame(id)) ingame++;
+    return {
+      players: this.directory.size, online: this.online.size, ingame,
+      clubs: this.clubs.size, coins, gems, escrows: this.escrows.size,
+      activeToday, grantsToday,
+    };
+  }
+  adminPlayers(opts) {
+    opts = opts || {};
+    const q = typeof opts.q === 'string' ? opts.q.trim().toLowerCase() : '';
+    const filter = typeof opts.filter === 'string' ? opts.filter : 'all';
+    const rows = [];
+    for (const rec of this.directory.values()) {
+      if (!rec || !rec.id) continue;
+      const id = rec.id;
+      const p = this.person(id);
+      const st = this.statsOf(id);
+      const w = this.walletView(id);
+      const row = {
+        uid: p.uid, name: p.name, avatar: p.avatar, photo: p.photo,
+        level: st.level, xp: st.xp, played: st.p, wins: st.w, losses: st.l,
+        coins: w ? w.coins : null, gems: w ? w.gems : null,
+        online: this.isOnline(id), ingame: this.isInGame(id),
+        banned: !!rec.banned, lastSeen: rec.lastSeen || 0,
+      };
+      if (q) {
+        const inUid = !!row.uid && String(row.uid).includes(q);
+        const inName = (row.name || '').toLowerCase().includes(q);
+        if (!inUid && !inName) continue;
+      }
+      if (filter === 'online' && !row.online) continue;
+      if (filter === 'banned' && !row.banned) continue;
+      rows.push(row);
+    }
+    if (filter === 'rich') rows.sort((a, b) => (b.coins || 0) - (a.coins || 0));
+    else rows.sort((a, b) => (Number(b.online) - Number(a.online)) || (b.lastSeen - a.lastSeen));
+    const total = rows.length;
+    const off = Number.isInteger(opts.offset) && opts.offset > 0 ? opts.offset : 0;
+    const lim = Number.isInteger(opts.limit) && opts.limit > 0 ? Math.min(opts.limit, 100) : 50;
+    return { total, rows: rows.slice(off, off + lim) };
+  }
+  adminSetBan(admin, uid, banned) {
+    const id = this._idByUid(typeof uid === 'string' ? uid : String(uid || ''));
+    if (!id) return { ok: false, error: 'notfound' };
+    const rec = this.directory.get(id);
+    if (!rec) return { ok: false, error: 'notfound' };
+    rec.banned = !!banned;
+    this._adminLog(admin, rec.banned ? 'ban' : 'unban', { target: id, uid: String(uid), name: rec.name });
+    this._persist();
+    return { ok: true, uid: String(uid), name: rec.name, banned: rec.banned };
+  }
+  adminClubs() {
+    const rows = [];
+    for (const c of this.clubs.values()) {
+      if (!c) continue;
+      const owner = c.owner ? this.person(c.owner) : null;
+      rows.push({
+        cid: c.cid, name: c.name,
+        ownerName: owner ? owner.name : '', ownerUid: owner ? owner.uid : null,
+        members: Array.isArray(c.members) ? c.members.length : 0,
+        created: c.created || 0,
+      });
+    }
+    rows.sort((a, b) => b.members - a.members);
+    return rows.slice(0, 200);
+  }
+  // One announcement into EVERY player's inbox (kind 'announce' —
+  // the client renders its text under a 📣 row). The per-notify
+  // persist is suppressed for the loop and paid once at the end:
+  // a full-state serialize per player would make a broadcast to a
+  // thousand players a thousand serializes.
+  adminBroadcast(admin, text) {
+    const t = typeof text === 'string' ? text.trim() : '';
+    if (!t) return { ok: false, error: 'empty' };
+    if (t.length > CLUB_ANN_MAX) return { ok: false, error: 'toolong' };
+    let sent = 0;
+    this._bulk = true;
+    try {
+      for (const id of this.directory.keys()) {
+        this.notify(id, { kind: 'announce', name: '52 Online', text: t });
+        sent++;
+      }
+    } finally { this._bulk = false; }
+    this._adminLog(admin, 'broadcast', { text: t, sent });
+    this._persist();
+    return { ok: true, sent };
+  }
+  adminNotice(admin, uid, text) {
+    const t = typeof text === 'string' ? text.trim() : '';
+    if (!t) return { ok: false, error: 'empty' };
+    if (t.length > CLUB_ANN_MAX) return { ok: false, error: 'toolong' };
+    const id = this._idByUid(typeof uid === 'string' ? uid : String(uid || ''));
+    if (!id) return { ok: false, error: 'notfound' };
+    this.notify(id, { kind: 'announce', name: '52 Online', text: t });
+    this._adminLog(admin, 'notice', { target: id, uid: String(uid), name: this.person(id).name, text: t });
+    this._persist();
+    return { ok: true };
   }
 
   // ---------- spectate friends (feature 3) ----------
@@ -1398,6 +1560,9 @@ class SocialCore {
       // F46: the invisible flag survives re-hello the same way
       // (set ONLY by the s-invisible frame, never by hello).
       invisible: !!(prev && prev.invisible),
+      // up112: the admin ban flag survives re-hello the same way
+      // (set ONLY from the admin panel, never by hello).
+      banned: !!(prev && prev.banned),
       photoV: (prev && typeof prev.photoV === 'number' && prev.photoV > 0) ? prev.photoV : 0,
       lastSeen: Date.now(),
     });
@@ -2480,7 +2645,7 @@ class SocialCore {
     list.unshift(n);
     while (list.length > NOTIF_CAP) list.pop();
     this.notifs.set(id, list);
-    this._persist();
+    if (!this._bulk) this._persist();
     if (this.isOnline(id)) {
       this._send(id, { type: 's-notif', notif: n, unread: this.notifUnread(id) });
     } else if (typeof this.hooks.pushSend === 'function') {

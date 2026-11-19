@@ -94,12 +94,13 @@ import { GameServer } from './game-server.js';
 import { gatePage } from './gate-page.js';
 import { emailFinishPage } from './email-finish-page.js';
 import { fbPage } from './fb-page.js';
+import { adminPage } from './admin-page.js';
 
 export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261118-admin';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261119-admin2';
 // The PREVIOUS client version's URL — last-resort fallback for
 // serveClient (see the header comment): that build was live long
 // enough that its edge copies are warm in the POPs, so when a fresh
@@ -997,6 +998,21 @@ export default {
       return serveTurnCredentials(env);
     }
 
+    if (path === '/admin' && request.method === 'GET') {
+      // up112: the SEPARATE admin panel page (its own new UI). The
+      // gate is the same as the API's: a verified session whose
+      // VERIFIED email is the admin email. No session -> back to
+      // the game gate; a non-admin session -> a plain 403.
+      const user = await auth.readSession(request, env);
+      if (!user) return Response.redirect(url.origin + '/', 302);
+      if (!auth.isAdminUser(user)) {
+        return new Response('403 — admin only', { status: 403, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+      }
+      return new Response(adminPage(user), {
+        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+      });
+    }
+
     if (path.startsWith('/admin/')) {
       // up111: the owner's admin panel API — grant/deduct coins
       // and gems to any player by his 6-digit ID. THE GATE IS
@@ -1030,6 +1046,45 @@ export default {
         });
       }
       if (path === '/admin/grants' && request.method === 'GET') return call('grants', {});
+      // up112: full-access routes for the separate admin panel.
+      if (path === '/admin/stats' && request.method === 'GET') return call('stats', {});
+      if (path === '/admin/players' && request.method === 'GET') {
+        return call('players', {
+          q: url.searchParams.get('q') || '',
+          filter: url.searchParams.get('f') || 'all',
+          offset: Number(url.searchParams.get('o')) || 0,
+        });
+      }
+      if (path === '/admin/clubs' && request.method === 'GET') return call('clubs', {});
+      if (path === '/admin/log' && request.method === 'GET') return call('log', {});
+      if (path === '/admin/ban' && request.method === 'POST') {
+        let body = null;
+        try { body = await request.json(); } catch { body = null; }
+        const playerId = body && typeof body.playerId === 'string' ? body.playerId : '';
+        if (!/^\d{6}$/.test(playerId)) return Response.json({ ok: false, error: 'bad id' }, { status: 400 });
+        return call('ban', {
+          uid: playerId, banned: !!(body && body.banned),
+          adminEmail: user.email, adminSub: user.sub,
+        });
+      }
+      if (path === '/admin/broadcast' && request.method === 'POST') {
+        let body = null;
+        try { body = await request.json(); } catch { body = null; }
+        return call('broadcast', {
+          text: body && typeof body.text === 'string' ? body.text : '',
+          adminEmail: user.email, adminSub: user.sub,
+        });
+      }
+      if (path === '/admin/notice' && request.method === 'POST') {
+        let body = null;
+        try { body = await request.json(); } catch { body = null; }
+        const playerId = body && typeof body.playerId === 'string' ? body.playerId : '';
+        if (!/^\d{6}$/.test(playerId)) return Response.json({ ok: false, error: 'bad id' }, { status: 400 });
+        return call('notice', {
+          uid: playerId, text: body && typeof body.text === 'string' ? body.text : '',
+          adminEmail: user.email, adminSub: user.sub,
+        });
+      }
       return Response.json({ ok: false, error: 'not found' }, { status: 404 });
     }
 
