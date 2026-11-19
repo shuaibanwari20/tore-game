@@ -1273,6 +1273,7 @@ class SocialCore {
       // up112: the separate panel's full player view.
       avatar: p.avatar, photo: p.photo, country: p.country,
       email: (rec && rec.email) || '', // up114: admin-only field
+      frame: p.frame || '', // up115: the worn avatar frame
       played: st.p, wins: st.w, losses: st.l,
       friends: (this.friends.get(id) || new Set()).size,
       club: club ? { cid: club.cid, name: club.name } : null,

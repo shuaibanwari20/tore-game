@@ -2586,7 +2586,28 @@
   .fr-ring { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-sizing: border-box; z-index: 3; }
   .fr-ring.fr1 { border: 3px solid #ffd75e; box-shadow: inset 0 0 0 1.5px #8a6414, inset 0 0 9px rgba(255,215,94,.5); }
   .fr-ring.fr2 { border: 3px solid #c77dff; box-shadow: inset 0 0 0 1.5px #5b2a86, inset 0 0 9px rgba(199,125,255,.55); }
-  .fr-ring.fr3 { border: 3px solid #ff7847; box-shadow: inset 0 0 0 1.5px #7d2231, inset 0 0 10px rgba(255,120,71,.6); }
+  /* up115: fr3 is REAL FIRE — a flame plate behind the avatar (its
+     edges warped by the #frfire turbulence filter on large avatars),
+     a hot edge, rising embers and a breathing glow. */
+  .fr-ring.fr3 { border: 3px solid #ff8a2a; overflow: visible; animation: fr3glow 1.1s ease-in-out infinite alternate; }
+  .pavatar.fr3-host { overflow: visible; }
+  .pavatar.fr3-host > img, .pavatar.fr3-host > svg { border-radius: inherit; }
+  .fr-ring.fr3::before { content: ''; position: absolute; inset: 1px; border-radius: inherit; background: transparent;
+    box-shadow: 0 0 0 4px #ffd23e, 0 0 0 8px #ffa41f, 0 0 0 13px #f2620f, 0 0 0 18px rgba(194,46,4,.92), 0 0 22px 16px rgba(255,100,0,.28); }
+  .fr-ring.fr3.fr-lg::before { filter: url(#frfire); animation: fr3flick .17s ease-in-out infinite alternate; }
+  .fr-ring.fr3::after { content: ''; position: absolute; inset: -15px; border-radius: 40%; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(circle 3.2px at 16% 90%, rgba(255,205,80,.95), rgba(255,140,0,0) 62%),
+      radial-gradient(circle 2px at 42% 97%, rgba(255,170,45,.9), rgba(255,120,0,0) 60%),
+      radial-gradient(circle 3.2px at 71% 92%, rgba(255,215,95,.95), rgba(255,150,0,0) 62%),
+      radial-gradient(circle 1.9px at 90% 72%, rgba(255,175,55,.85), rgba(255,120,0,0) 60%),
+      radial-gradient(circle 1.9px at 6% 68%, rgba(255,175,55,.85), rgba(255,120,0,0) 60%);
+    animation: fr3embers 1.45s linear infinite; }
+  @keyframes fr3glow { from { box-shadow: inset 0 0 0 1.5px #8f1d04, inset 0 0 9px rgba(255,140,40,.55), 0 0 11px 2px rgba(255,106,0,.42), 0 0 26px 6px rgba(255,64,0,.16); } to { box-shadow: inset 0 0 0 1.5px #8f1d04, inset 0 0 12px rgba(255,150,50,.75), 0 0 17px 3px rgba(255,116,10,.62), 0 0 38px 9px rgba(255,64,0,.26); } }
+  @keyframes fr3flick { from { transform: scale(1) rotate(-1.1deg); } to { transform: scale(1.045) rotate(1.1deg); } }
+  @keyframes fr3embers { 0% { transform: translateY(4px); opacity: 0; } 22% { opacity: .95; } 70% { opacity: .7; } 100% { transform: translateY(-11px); opacity: 0; } }
+  .fr-ring.fr5 { animation: fr5glow 1.15s ease-in-out infinite alternate; }
+  @keyframes fr5glow { from { box-shadow: 0 0 9px rgba(255,150,50,.45); } to { box-shadow: 0 0 16px rgba(255,130,30,.75); } }
   .fr-ring.fr4 { border: 3px solid #3ddc97; box-shadow: inset 0 0 0 1.5px #0d5c3f, inset 0 0 9px rgba(61,220,151,.55); }
   /* feat4: animated premium frames — a spinning conic ring, masked to a band */
   .fr-ring.fr5, .fr-ring.fr6 { border: none; overflow: hidden; box-shadow: 0 0 10px rgba(255,160,60,.5); }
@@ -3541,6 +3562,7 @@
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><filter id="frfire" x="-25%" y="-25%" width="150%" height="150%"><feTurbulence type="fractalNoise" baseFrequency="0.08 0.13" numOctaves="2" seed="8" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="13"/></filter></defs></svg>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="nvGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset=".45" stop-color="#f7c948"/><stop offset="1" stop-color="#d18d06"/></linearGradient><linearGradient id="nvPink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb1e3"/><stop offset=".5" stop-color="#f0569f"/><stop offset="1" stop-color="#c2187a"/></linearGradient><linearGradient id="nvGreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8f5cd"/><stop offset=".5" stop-color="#3fce62"/><stop offset="1" stop-color="#1d9e4b"/></linearGradient><linearGradient id="nvBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe0ff"/><stop offset=".5" stop-color="#55a8f5"/><stop offset="1" stop-color="#2470c2"/></linearGradient><linearGradient id="nvWhite" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9d4ee"/></linearGradient><linearGradient id="clCoin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset="1" stop-color="#d18d06"/></linearGradient><linearGradient id="clGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe98a"/><stop offset="1" stop-color="#e0a408"/></linearGradient><linearGradient id="clViolet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b388ff"/><stop offset="1" stop-color="#6d28d9"/></linearGradient><symbol id="coinSym" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.4" fill="url(#clCoin)" stroke="#9c6d00" stroke-width="1.7"/><circle cx="12" cy="12" r="7.8" fill="none" stroke="#b57f00" stroke-width="1" opacity=".65"/><path d="M12 7.4l1.09 3.1 3.28.08-2.61 1.99.93 3.15L12 13.85l-2.69 1.87.93-3.15-2.61-1.99 3.28-.08z" fill="#a86e00"/></symbol></defs></svg>
 <div id="splash" aria-hidden="true">
   <div class="sp-city" aria-hidden="true"><svg viewBox="0 0 480 150" preserveAspectRatio="xMidYMax slice"><path fill="#8e4bd0" opacity=".38" d="M-6 150V62h54v88zM58 150V44h40v106zM112 150V70h58v80zM188 150V38h44v112zM248 150V60h62v90zM326 150V48h42v102zM384 150V66h56v84zM452 150V54h36v96z"/><path fill="#451c72" opacity=".92" d="M-10 150V88h48v62zM50 150V74h36v76zM100 150V96h52v54zM166 150V66h40v84zM222 150V90h58v60zM300 150V76h44v74zM360 150V94h52v56zM428 150V82h58v68z"/><path fill="#27094a" d="M-14 150v-42h56v42zM56 150v-50h44v50zM112 150v-36h60v36zM186 150v-46h38v46zM236 150v-40h54v40zM304 150v-48h16v48zM336 150v-38h48v38zM398 150v-44h66v44z"/><path fill="#27094a" d="M304 102a8 7 0 0 1 16 0z"/><path fill="#ffd98a" opacity=".85" d="M66 112h3v5h-3zM78 122h3v5h-3zM126 122h3v5h-3zM146 130h3v5h-3zM196 114h3v5h-3zM206 126h3v5h-3zM248 120h3v5h-3zM266 132h3v5h-3zM310 112h3v5h-3zM348 122h3v5h-3zM368 132h3v5h-3zM410 116h3v5h-3zM432 128h3v5h-3zM20 118h3v5h-3zM-2 130h3v5h-3z"/><path fill="#ffedbe" opacity=".9" d="M84 108h3v5h-3zM158 118h3v5h-3zM256 108h3v5h-3zM356 110h3v5h-3zM446 118h3v5h-3zM32 132h3v5h-3z"/><rect y="143" width="480" height="7" fill="#0d0122"/><path stroke="#0d0122" stroke-width="3" fill="none" stroke-linecap="round" d="M40 150c1-10 2-16 4-22M44 128c-6-4-11-3-15 1M44 128c-4-6-9-7-13-5M44 128c-1-7 2-11 6-12M44 128c4-5 9-6 13-3M44 128c6-2 11 0 14 4M448 150c-1-9-2-14-4-19M444 131c-6-4-11-3-14 1M444 131c-4-6-9-7-13-5M444 131c-1-6 2-10 6-11M444 131c4-5 9-5 12-3M444 131c6-2 10 0 13 4"/></svg></div>
@@ -7610,7 +7632,7 @@ function loadProfile() {
     photo: (typeof p.photo === 'string' && (p.photo.startsWith('https://') || p.photo.startsWith('/p-photo/'))) ? p.photo.slice(0, 300) : '',
     felt: validFelt(p.felt),
     back: validBack(p.back),
-    frame: (typeof p.frame === 'string' && /^fr[1-4]$/.test(p.frame)) ? p.frame : '',
+    frame: (typeof p.frame === 'string' && /^fr[1-6]$/.test(p.frame)) ? p.frame : '',
     chatStyle: (typeof p.chatStyle === 'string' && /^chat[1-3]$/.test(p.chatStyle)) ? p.chatStyle : '',
     nameManual: p.nameManual === true,
   };
@@ -7687,7 +7709,7 @@ function avatarEl(name, av, px, photo, frame) {
   d.className = 'pavatar';
   // feat3 (#19): the worn avatar frame rides as an overlay ring;
   // appended LAST (below) once the tile content exists.
-  d.dataset.frame = (typeof frame === 'string' && /^fr[1-4]$/.test(frame)) ? frame : '';
+  d.dataset.frame = (typeof frame === 'string' && /^fr[1-6]$/.test(frame)) ? frame : '';
   if (px) { d.style.width = px + 'px'; d.style.height = px + 'px'; }
   if (av && typeof av === 'object' && av.t === 'bot') {
     d.innerHTML = AVATAR_BOT_SVG;
@@ -7700,13 +7722,13 @@ function avatarEl(name, av, px, photo, frame) {
   } else {
     d.innerHTML = AVATAR_ART[(typeof av === 'string' && AVATAR_ART[av]) ? av : 'av1'].svg;
   }
-  if (d.dataset.frame) { const r = document.createElement('span'); r.className = 'fr-ring ' + d.dataset.frame; d.appendChild(r); }
+  if (d.dataset.frame) { if (d.dataset.frame === 'fr3') d.classList.add('fr3-host'); const r = document.createElement('span'); r.className = 'fr-ring ' + d.dataset.frame + ((!px || px >= 52) ? ' fr-lg' : ''); d.appendChild(r); }
   return d;
 }
 function renderProfileButton() {
   const slot = $('#home-avatar-slot');
   slot.innerHTML = '';
-  slot.appendChild(avatarEl(profile.name, profile.avatar, 56, profile.photo));
+  slot.appendChild(avatarEl(profile.name, profile.avatar, 56, profile.photo, profile.frame));
   // The player's name sits beside the avatar; placeholder until one is saved.
   $('#home-name').textContent = (profile.name || '').trim() || T('playerPlaceholder');
 }
@@ -12671,7 +12693,7 @@ function openPhotoView(person) {
   const box = $('#photoview-av');
   if (!box) return;
   box.innerHTML = '';
-  box.appendChild(avatarEl(person.name || '', person.avatar, 264, hqPhotoSrc(person.photo)));
+  box.appendChild(avatarEl(person.name || '', person.avatar, 264, hqPhotoSrc(person.photo), person.frame));
   $('#ov-photoview').classList.add('show');
 }
 function closePhotoView() { $('#ov-photoview').classList.remove('show'); }
@@ -12954,7 +12976,7 @@ function pfRenderPreview() {
   const box = $('#pf-preview-av');
   if (box) {
     box.innerHTML = '';
-    box.appendChild(avatarEl('', pfAvatar, 88, pfAvatar === 'google' ? profile.photo : undefined));
+    box.appendChild(avatarEl('', pfAvatar, 88, pfAvatar === 'google' ? profile.photo : undefined, profile.frame));
   }
   pfRenderHead();
 }
@@ -13387,7 +13409,7 @@ async function openAdetail(uid) {
   const head = $('#ad-p-head');
   head.className = 'ad-phead';
   head.innerHTML = '';
-  head.appendChild(avatarEl(p.name, p.avatar, 76, p.photo));
+  head.appendChild(avatarEl(p.name, p.avatar, 76, p.photo, p.frame));
   const h3 = document.createElement('h3'); h3.textContent = p.name || 'بازیکن'; head.appendChild(h3);
   const sub = document.createElement('div'); sub.className = 'ad-sub';
   sub.innerHTML = 'آیدی ' + admFmt(p.uid) + ' · سطح ' + admFmt(p.level) + (p.club ? ' · عضو کلب ' + admEsc(p.club.name) : '') + ' · ' + admFmt(p.friends) + ' دوست' + (p.email ? '<br>📧 ' + admEsc(p.email) : '') + '<br>' +
@@ -14768,7 +14790,7 @@ function renderPview(d) {
   if (d.id) cachePerson(d);
   const avBox = $('#pv2-preview-av');
   avBox.innerHTML = '';
-  avBox.appendChild(avatarEl(d.name || '', d.avatar, 88, d.photo));
+  avBox.appendChild(avatarEl(d.name || '', d.avatar, 88, d.photo, d.frame));
   $('#pv2-name').textContent = d.name || T('playerName');
   const fl = d.country ? countryFlag(d.country) : '';
   $('#pv2-country').textContent = d.country ? (fl ? fl + ' ' : '') + dispCountry(d.country) : '—';
