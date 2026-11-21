@@ -7751,7 +7751,7 @@ button:disabled {
   box-shadow: inset 0 0 0 1.5px #5b2a86, inset 0 0 9px rgba(199, 125, 255, .55);
 }
 .fr-ring.fr3 {
-  border: 3px solid #ff8a2a;
+  border: 1.5px solid #ff9a3c;
   overflow: visible;
   animation: fr3glow 1.1s ease-in-out infinite alternate;
 }
@@ -7765,19 +7765,17 @@ button:disabled {
 .fr-ring.fr3::before {
   content: "";
   position: absolute;
-  inset: 1px;
+  inset: -1px;
   border-radius: inherit;
-  background: transparent;
+  pointer-events: none;
   box-shadow:
-    0 0 0 4px #ffd23e,
-    0 0 0 8px #ffa41f,
-    0 0 0 13px #f2620f,
-    0 0 0 18px rgba(194, 46, 4, .92),
-    0 0 22px 16px rgba(255, 100, 0, .28);
+    0 0 9px 3px rgba(255, 140, 30, .55),
+    0 0 22px 8px rgba(255, 92, 10, .34),
+    0 0 44px 18px rgba(206, 40, 6, .22),
+    0 0 80px 34px rgba(150, 18, 0, .12);
 }
 .fr-ring.fr3.fr-lg::before {
-  filter: url(#frfire);
-  animation: fr3flick .17s ease-in-out infinite alternate;
+  animation: none;
 }
 .fr-ring.fr3::after {
   content: "";
@@ -7811,26 +7809,10 @@ button:disabled {
 }
 @keyframes fr3glow {
   from {
-    box-shadow:
-      inset 0 0 0 1.5px #8f1d04,
-      inset 0 0 9px rgba(255, 140, 40, .55),
-      0 0 11px 2px rgba(255, 106, 0, .42),
-      0 0 26px 6px rgba(255, 64, 0, .16);
+    box-shadow: inset 0 0 0 1px #8f1d04, inset 0 0 7px rgba(255, 120, 30, .34);
   }
   to {
-    box-shadow:
-      inset 0 0 0 1.5px #8f1d04,
-      inset 0 0 12px rgba(255, 150, 50, .75),
-      0 0 17px 3px rgba(255, 116, 10, .62),
-      0 0 38px 9px rgba(255, 64, 0, .26);
-  }
-}
-@keyframes fr3flick {
-  from {
-    transform: scale(1) rotate(-1.1deg);
-  }
-  to {
-    transform: scale(1.045) rotate(1.1deg);
+    box-shadow: inset 0 0 0 1px #8f1d04, inset 0 0 11px rgba(255, 130, 36, .46);
   }
 }
 @keyframes fr3embers {
@@ -26951,11 +26933,10 @@ window.ToreBots = (function() {
     };
     return SPR
   }
+  /* demo-true density: ~1400 at 232px, power-law scaled (110 @56, 250 @88, ~1760 @264) */
   function budget(s) {
-    if (s <= 56) return Math.round(cl(90 * s / 56, 34, 90));
-    if (s <= 88) return Math.round(lp(90, 200, (s - 56) / 32));
-    if (s <= 264) return Math.round(lp(200, 500, (s - 88) / 176));
-    return 500
+    var n = 1400 * Math.pow(s / 232, 1.79);
+    return Math.round(s < 232 ? Math.min(1400, Math.max(70, n)) : Math.min(1800, n))
   }
   window.attachFireFrame = function (hostEl, sizePx) {
     try {
@@ -26963,6 +26944,10 @@ window.ToreBots = (function() {
       /* free capacity held by canvases whose host has left the document */
       sweep();
       if (liveCount() >= CAP) return;
+      /* keep the summed particle load sane even with six big tiles */
+      var allL = document.querySelectorAll('.fr-fire-canvas'), used = 0, li;
+      for (li = 0; li < allL.length; li++) if (!allL[li]._ffDead && allL[li].isConnected) used += allL[li]._ffMax || 0;
+      var allowed = Math.max(700, 4600 - used);
       var size = +sizePx || 0, cv, main, fx, fxc, mask, G, dpr, MAX, S, SZ, AK;
       if (!(size > 0)) size = Math.round(hostEl.getBoundingClientRect().width || 56);
       if (size < 40) return;
@@ -26970,12 +26955,19 @@ window.ToreBots = (function() {
       if (window.getComputedStyle(hostEl).position === 'static') hostEl.style.position = 'relative';
       var sp = sprites();
       dpr = Math.min(2, window.devicePixelRatio || 1);
-      MAX = budget(size);
-      S = size * 0.55;                       /* vertical dynamics sized to the 42% top pad */
-      SZ = cl(Math.pow(232 / size, 0.12), 0.9, 1.4);
-      AK = cl(Math.pow(232 / size, 0.3), 1, 1.7);
-      var SZW = cl(Math.pow(232 / size, 0.34), 1, 1.75); /* small frames draw thicker so they still read as fire */
-      G = { size: size, side: Math.round(size * 0.24), top: Math.round(size * 0.42), bot: Math.round(size * 0.16) };
+      MAX = Math.min(budget(size), allowed);
+      
+      S = size * (1.32 - 0.28 * cl(size / 232, 0, 1));   /* demo's own spatial scale */
+      SZ = cl(Math.pow(232 / size, 0.1), 0.92, 1.25);
+      AK = cl(Math.pow(232 / size, 0.14), 1, 1.35);
+      var SZW = cl(Math.pow(232 / size, 0.16), 1, 1.35); /* small frames draw thicker so they still read as fire */
+      G = {
+        size: size,
+        side: Math.round(size * 0.24),
+        /* 42% ring padding, plus extra sky on big avatars so flames reach demo height */
+        top: Math.round(size * 0.42) + (size >= 160 ? Math.round(size * 0.34) : 0),
+        bot: Math.round(size * 0.16)
+      };
       G.w = size + G.side * 2; G.h = G.top + size + G.bot;
       var x0 = G.side, y0 = G.top, x1 = x0 + size, y1 = y0 + size, R = size * 0.22;
       cv = document.createElement('canvas');
@@ -27029,7 +27021,7 @@ window.ToreBots = (function() {
         return pts[lo]
       }
       /* ---- flamelet tongues ---- */
-      var tongues = [], plumes = [], parts = [], embers = [], rateK = cl(MAX / 760, 0.1, 1);
+      var tongues = [], plumes = [], parts = [], embers = [], rateK = cl(MAX / 1400, 0.12, 1.5);
       function tongue(kind, slot, n) {
         var b;
         if (kind === 'top') {
@@ -27047,9 +27039,9 @@ window.ToreBots = (function() {
         var pw = kind === 'top' ? 1 : kind === 'corner' ? 0.85 : kind === 'side' ? 0.55 : 0.2;
         return {
           x: b.x, y: b.y, nx: b.nx, ny: b.ny, heat: b.heat, kind: kind, age: 0, life: rr(0.8, 2.8),
-          hMul: kind === 'top' ? (rn() < 0.24 ? rr(1.0, 1.45) : rr(0.32, 1.0)) : kind === 'corner' ? rr(0.5, 1.1) : kind === 'side' ? rr(0.4, 0.9) : rr(0.3, 0.6),
+          hMul: kind === 'top' ? (rn() < 0.22 ? rr(1.15, 1.65) : rr(0.35, 1.05)) : kind === 'corner' ? rr(0.5, 1.1) : kind === 'side' ? rr(0.4, 0.9) : rr(0.3, 0.6),
           swayPhase: rn() * TAU, swayFreq: rr(0.6, 1.8), swayAmp: S * rr(0.012, 0.04) * (0.4 + pw), width: size * rr(0.02, 0.05) * (size < 100 ? 1.9 : 1),
-          emitRate: (kind === 'top' ? rr(78, 120) : kind === 'corner' ? rr(46, 74) : kind === 'side' ? rr(20, 34) : rr(5, 11)) * cl(S / 121, 0.34, 1.4) * rateK,
+          emitRate: (kind === 'top' ? rr(78, 120) : kind === 'corner' ? rr(46, 74) : kind === 'side' ? rr(20, 34) : rr(5, 11)) * cl(S / 241, 0.34, 1.5) * rateK,
           emitAcc: rn() * 2, burstIn: rr(0.12, 0.7), slot: slot, slotCount: n, power: pw,
           drift: rn() * TAU, dominance: 0.5 + 1.4 * Math.pow(rn(), 2.1)
         }
@@ -27093,7 +27085,7 @@ window.ToreBots = (function() {
         if (burst && rn() < 0.14) ember(p.x, p.y, true);
       }
       function ember(x, y, warm) {
-        if (embers.length >= Math.min(MAX * 0.12, 44)) return;
+        if (embers.length >= Math.min(MAX * 0.08, 52)) return;
         embers.push({ x: x + rr(-2, 2), y: y + rr(-2, 2), vx: rr(-0.4, 0.4) * S * 0.3, vy: -S * rr(0.35, 1) * 1.3 * (warm ? 1.2 : 1), age: 0, life: rr(0.5, 1.8), size: size * rr(0.006, 0.015), seed: rn() * TAU, flick: rr(10, 26), drift: rr(0.6, 1.7) })
       }
       var eAcc = 0, surge = 1, br = { v: 0.5, t: 0.5 }, tm = 0, fill = 1;
@@ -27144,10 +27136,10 @@ window.ToreBots = (function() {
           e.x += e.vx * dt; e.y += e.vy * dt;
         }
         /* fill controller: hold the population near the approved density */
-        var want = MAX * 0.82;
+        var want = MAX * 0.9;
         if (parts.length < want * 0.85) fill = Math.min(fill * (1 + dt * 3.2) + 0.002, 6);
         else if (parts.length > want * 1.12 || parts.length >= MAX) fill = Math.max(fill * (1 - dt * 2), 0.25);
-        eAcc += Math.min(MAX * 0.1, 44) * 0.5 * dt * surge * rateK * fill * (RM ? 0.6 : 1);
+        eAcc += Math.min(MAX * 0.08, 52) * 0.55 * dt * surge * rateK * fill * (RM ? 0.6 : 1);
         while (eAcc >= 1) { eAcc -= 1; var q = anyPt(); ember(q.x + q.nx * rr(0, 2), q.y + q.ny * rr(0, 2), false) }
       }
       function draw() {
@@ -27158,7 +27150,7 @@ window.ToreBots = (function() {
         fxc.globalCompositeOperation = 'lighter'; fxc.setTransform(dpr, 0, 0, dpr, 0, 0);
         for (i = 0; i < plumes.length; i++) {
           var pl = plumes[i], br2 = 0.6 + 0.4 * Math.sin(pl.phase + tm * pl.freq) + 0.1 * Math.sin(pl.phase * 2.7 + tm * pl.freq * 3.1),
-            pw2 = size * pl.wide * (0.92 + 0.16 * br2) * 2.2, ph = size * pl.tall * br2 * 1.05 * surge, px2 = pl.x + Math.sin(pl.phase + tm * pl.freq * 0.8) * size * 0.03;
+            pw2 = size * pl.wide * (0.92 + 0.16 * br2) * 2.2, ph = size * pl.tall * br2 * 1.7 * surge, px2 = pl.x + Math.sin(pl.phase + tm * pl.freq * 0.8) * size * 0.03;
           fxc.globalAlpha = cl(0.1 * br2, 0, 0.22);
           fxc.drawImage(pl.deep ? sp.envD : sp.env, px2 - pw2 / 2, y0 - ph * 0.46, pw2, ph);
         }
@@ -27169,8 +27161,8 @@ window.ToreBots = (function() {
           fl = 0.35 + 0.65 * Math.abs(Math.sin(tm * (2.2 + h1 * 5.2) + h1 * 17) * Math.sin(tm * (1.1 + h2n * 2.2) + i * 0.63));
           patch = 0.25 + 0.75 * Math.pow(0.5 + 0.5 * Math.sin(pt.x * 0.055 + tm * 1.4 + h2n * 6) * Math.sin(pt.y * 0.07 - tm * 1.1), 1.6);
           szr = size * 0.17 * (0.6 + 0.4 * pt.heat) * (0.75 + 0.5 * fl + 0.35 * h1);
-          a = (0.05 + 0.44 * Math.pow(pt.heat, 1.35) * fl) * patch * (1 - 0.74 * cl(-pt.ny, 0, 1)) * (1 + 0.5 * Math.abs(pt.nx)) * 0.55;
-          fxc.globalAlpha = cl(a * (0.8 + 0.2 * surge), 0, 0.34);
+          a = (0.05 + 0.44 * Math.pow(pt.heat, 1.35) * fl) * patch * (1 - 0.55 * cl(-pt.ny, 0, 1)) * (1 + 0.5 * Math.abs(pt.nx)) * 0.9;
+          fxc.globalAlpha = cl(a * (0.8 + 0.2 * surge), 0, 0.6);
           fxc.drawImage(sp.rim, pt.x - szr / 2 + pt.nx * szr * 0.08, pt.y - szr / 2 + pt.ny * szr * 0.08, szr, szr);
         }
         fxc.globalAlpha = 1;
@@ -27259,6 +27251,7 @@ window.ToreBots = (function() {
       hostEl.appendChild(cv);
       cv._ffHost = hostEl;
       cv._ffKill = kill;
+      cv._ffMax = MAX;
       lastP = performance.now();
       raf = requestAnimationFrame(loop);
       return cv
