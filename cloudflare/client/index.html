@@ -7849,6 +7849,18 @@ button:disabled {
 .pavatar.fr1-host {
   overflow: visible;
 }
+.fr-leaf-canvas {
+  position: absolute;
+  pointer-events: none;
+  z-index: 4;
+}
+.pavatar.fr4-host {
+  overflow: visible;
+}
+.pavatar.fr4-host > img,
+.pavatar.fr4-host > svg {
+  border-radius: inherit;
+}
 .pavatar.fr1-host > img,
 .pavatar.fr1-host > svg {
   border-radius: inherit;
@@ -7865,8 +7877,17 @@ button:disabled {
   }
 }
 .fr-ring.fr4 {
-  border: 3px solid #3ddc97;
-  box-shadow: inset 0 0 0 1.5px #0d5c3f, inset 0 0 9px rgba(61, 220, 151, .55);
+  border: 2px solid #17482b;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(60, 126, 70, .36),
+      rgba(10, 43, 28, .22) 48%,
+      rgba(51, 112, 58, .32));
+  box-shadow:
+    inset 0 0 0 1px rgba(133, 190, 111, .55),
+    inset 0 0 8px rgba(13, 62, 36, .82),
+    0 0 5px rgba(32, 111, 53, .58);
 }
 .fr-ring.fr5,
 .fr-ring.fr6 {
@@ -15595,7 +15616,7 @@ function avatarEl(name, av, px, photo, frame) {
     d.innerHTML = AVATAR_ART[typeof av === "string" && AVATAR_ART[av] ? av : "av1"].svg;
   }
   if (d.dataset.frame) {
-    if (d.dataset.frame === "fr3" || d.dataset.frame === "fr1") d.classList.add(d.dataset.frame + "-host");
+    if (d.dataset.frame === "fr3" || d.dataset.frame === "fr1" || d.dataset.frame === "fr4") d.classList.add(d.dataset.frame + "-host");
     const r = document.createElement("span");
     r.className = "fr-ring " + d.dataset.frame + (!px || px >= 52 ? " fr-lg" : "");
     d.appendChild(r);
@@ -15608,6 +15629,12 @@ function avatarEl(name, av, px, photo, frame) {
     if (d.dataset.frame === "fr1" && (!px || px >= 52)) {
       try {
         attachGoldFrame(d, px || 56);
+      } catch (e) {
+      }
+    }
+    if (d.dataset.frame === "fr4" && (!px || px >= 52)) {
+      try {
+        attachLeafFrame(d, px || 56);
       } catch (e) {
       }
     }
@@ -28446,6 +28473,109 @@ window.ToreBots = (function() {
     }
   };
 })();
+</script>
+<script>
+(function (w, d) {
+  var slots = [], timer = null, MAX = 6;
+  function contains(node) { return !!(node && d.documentElement.contains(node)); }
+  function removeSlot(slot) {
+    if (slot.canvas && slot.canvas.parentNode) slot.canvas.parentNode.removeChild(slot.canvas);
+    slot.canvas = null; slot.ctx = null; slot.w = 0; slot.h = 0;
+  }
+  function stopIfEmpty() {
+    var i;
+    for (i = slots.length - 1; i >= 0; i--) if (!contains(slots[i].host)) { removeSlot(slots[i]); slots.splice(i, 1); }
+    if (!slots.length && timer) { w.clearInterval(timer); timer = null; }
+  }
+  function start() {
+    if (!timer) timer = w.setInterval(tick, 100);
+  }
+  function attachLeafFrame(hostEl, sizePx) {
+    try {
+      if (!hostEl || !hostEl.appendChild) return;
+      var i;
+      for (i = 0; i < slots.length; i++) if (slots[i].host === hostEl) return;
+      slots.push({ host: hostEl, canvas: null, ctx: null, w: 0, h: 0, last: 0, phase: Math.random() * 100 });
+      start();
+    } catch (e) {}
+  }
+  function tick() {
+    try {
+      stopIfEmpty();
+      var now = +new Date(), live = 0, i, slot, r, c, ctx, ratio, width, height;
+      for (i = 0; i < slots.length; i++) if (slots[i].canvas) live++;
+      for (i = 0; i < slots.length; i++) {
+        slot = slots[i];
+        if (!contains(slot.host)) continue;
+        r = slot.host.getBoundingClientRect();
+        width = r.width || (r.right - r.left); height = r.height || (r.bottom - r.top);
+        if (!(width >= 52 && height >= 52)) { if (slot.canvas) { removeSlot(slot); live--; } continue; }
+        if (!slot.canvas) {
+          if (live >= MAX) continue;
+          c = d.createElement('canvas'); c.className = 'fr-leaf-canvas'; c.setAttribute('aria-hidden', 'true');
+          c.style.left = '0px'; c.style.top = '0px'; c.style.width = '100%'; c.style.height = '100%';
+          slot.host.appendChild(c); slot.canvas = c; slot.ctx = c.getContext && c.getContext('2d');
+          if (!slot.ctx) { removeSlot(slot); continue; }
+          live++;
+        }
+        c = slot.canvas; ctx = slot.ctx;
+        ratio = Math.min(2, w.devicePixelRatio || 1);
+        if (Math.abs(slot.w - width) > 1 || Math.abs(slot.h - height) > 1 || c.width !== Math.round(width * ratio) || c.height !== Math.round(height * ratio)) {
+          slot.w = width; slot.h = height; c.width = Math.max(1, Math.round(width * ratio)); c.height = Math.max(1, Math.round(height * ratio));
+        }
+        if (r.bottom < 0 || r.right < 0 || r.top > (w.innerHeight || d.documentElement.clientHeight) || r.left > (w.innerWidth || d.documentElement.clientWidth)) continue;
+        if (now - slot.last < 30) continue;
+        slot.last = now; ctx.setTransform(ratio, 0, 0, ratio, 0, 0); ctx.clearRect(0, 0, width, height);
+        draw(ctx, width, height, now, slot.phase);
+      }
+      stopIfEmpty();
+    } catch (e) {}
+  }
+  function draw(ctx, width, height, now, phase) {
+    var s = Math.min(width, height), small = s < 90, count = small ? 18 : 48;
+    function point(t, inset) {
+      var u = ((t % 1) + 1) % 1, x = inset, y = inset, ww = width - 2 * inset, hh = height - 2 * inset, q = u * 4, rad = s * .20, a;
+      if (q < 1) return [x + rad + (ww - 2 * rad) * q, y];
+      if (q < 2) { a = q - 1; return [x + ww, y + rad + (hh - 2 * rad) * a]; }
+      if (q < 3) { a = q - 2; return [x + ww - rad - (ww - 2 * rad) * a, y + hh]; }
+      a = q - 3; return [x, y + hh - rad - (hh - 2 * rad) * a];
+    }
+    function rand(n) { var x = Math.sin(n * 127.1 + 11.7) * 43758.5453; return x - Math.floor(x); }
+    function leaf(x, y, angle, len, wid, colors, seed, soft) {
+      var sway = Math.sin(now * .00055 + seed + phase) * .075, grad;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(angle + sway);
+      if (soft) ctx.filter = 'blur(1px)';
+      grad = ctx.createLinearGradient(0, -wid * .6, len, wid * .5);
+      grad.addColorStop(0, colors[0]); grad.addColorStop(.48, colors[1]); grad.addColorStop(1, colors[2]);
+      ctx.fillStyle = grad; ctx.shadowColor = 'rgba(1,20,8,.34)'; ctx.shadowBlur = soft ? 3 : 1.6; ctx.shadowOffsetY = 1;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(len * .18, -wid * .8, len * .76, -wid * .68, len, 0); ctx.bezierCurveTo(len * .72, wid * .53, len * .24, wid * .58, 0, 0); ctx.fill(); ctx.shadowColor = 'transparent';
+      ctx.strokeStyle = 'rgba(183,240,174,.58)'; ctx.lineWidth = Math.max(.45, wid * .055); ctx.beginPath(); ctx.moveTo(2, 0); ctx.quadraticCurveTo(len * .47, -wid * .09, len * .96, 0); ctx.stroke();
+      var j, p; for (j = 1; j <= 3; j++) { p = j * .22; ctx.globalAlpha = .42; ctx.lineWidth = Math.max(.3, wid * .027); ctx.beginPath(); ctx.moveTo(len * p, 0); ctx.quadraticCurveTo(len * p + len * .1, -wid * .25, len * p + len * .22, -wid * .34); ctx.stroke(); ctx.beginPath(); ctx.moveTo(len * p, 0); ctx.quadraticCurveTo(len * p + len * .1, wid * .18, len * p + len * .23, wid * .24); ctx.stroke(); }
+      ctx.globalAlpha = .17; ctx.strokeStyle = '#e4ffce'; ctx.lineWidth = Math.max(.5, wid * .09); ctx.beginPath(); ctx.moveTo(len * .2, -wid * .35); ctx.quadraticCurveTo(len * .48, -wid * .52, len * .7, -wid * .37); ctx.stroke(); ctx.restore();
+    }
+    var layer, i, t, p, tangent, dx, dy, along, outward, side, angle, len, wid, ox, oy, colors;
+    for (layer = 0; layer < 3; layer++) for (i = 0; i < count; i++) {
+      t = (i + rand(i + layer * 91) * .52) / count; p = point(t, s * (.04 + layer * .012)); tangent = point(t + .001, s * .05);
+      dx = tangent[0] - p[0]; dy = tangent[1] - p[1]; along = Math.atan2(dy, dx); outward = along - Math.PI / 2;
+      if (t > .25 && t < .75) outward = along + Math.PI / 2;
+      side = i % 2 ? 1 : -1; angle = outward + side * (.38 + rand(i * 4 + layer) * .42);
+      len = s * (small ? .11 : .145) * (.75 + rand(i + layer * 5) * .55); wid = len * (.36 + rand(i * 9 + layer) * .18);
+      ox = Math.cos(outward) * s * (layer * .007); oy = Math.sin(outward) * s * (layer * .007);
+      colors = layer === 0 ? ['#123c25','#1c6036','#347a43'] : layer === 1 ? ['#15502c','#26783b','#56a64e'] : ['#1c6331','#348d42','#70b958'];
+      leaf(p[0] + ox, p[1] + oy, angle, len, wid, colors, i * 2.4 + layer, layer === 0);
+    }
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#174b2d'; ctx.lineWidth = Math.max(1.1, s * .012); ctx.beginPath();
+    for (i = 0; i <= 160; i++) { t = i / 160; p = point(t, s * .038 + Math.sin(t * Math.PI * 12 + now * .00022) * s * .009); if (i) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); }
+    ctx.stroke(); ctx.strokeStyle = 'rgba(130,190,105,.55)'; ctx.lineWidth = Math.max(.45, s * .003); ctx.stroke();
+    var vines = small ? 10 : 27, k;
+    for (i = 0; i < vines; i++) { t = (i + .25) / vines; p = point(t, s * .04); tangent = point(t + .002, s * .04); along = Math.atan2(tangent[1] - p[1], tangent[0] - p[0]); side = i % 2 ? 1 : -1;
+      for (k = 0; k < 2; k++) { angle = along + side * (.85 + k * .24); leaf(p[0], p[1], angle, s * (small ? .075 : .095), s * (small ? .031 : .041), k ? ['#246b35','#419247','#79b75a'] : ['#15512b','#2a7d3b','#60a849'], i * 4 + k, false); side *= -1; }
+    }
+    ctx.restore();
+    if (!small) for (i = 0; i < 5; i++) { p = point((i * .193 + .08) % 1, s * .025); var r = s * (.006 + rand(i) * .003), g = ctx.createRadialGradient(p[0] - r * .35, p[1] - r * .4, 0, p[0], p[1], r * 1.3); g.addColorStop(0, 'rgba(255,255,244,.96)'); g.addColorStop(.28, 'rgba(190,240,220,.72)'); g.addColorStop(1, 'rgba(76,167,128,.13)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(p[0], p[1], r * .72, r, 0, 0, Math.PI * 2); ctx.fill(); }
+  }
+  w.attachLeafFrame = attachLeafFrame;
+})(window, document);
 </script>
 <script>window.ToreEngine = (function() {
   "use strict";
