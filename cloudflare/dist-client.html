@@ -26817,445 +26817,664 @@ window.ToreBots = (function() {
   return module.exports;
 })();
 </script>
-<script>
-(function () {
-  'use strict';
+<script>(function() {
+  "use strict";
   var CAP = 6, SPR = null, RM = false;
   function liveCount() {
-    var all = document.querySelectorAll ? document.querySelectorAll('.fr-fire-canvas') : [], n = 0, i, c;
-    for (i = 0; i < all.length; i++) { c = all[i]; if (!c._ffDead && c.isConnected) n++ }
-    return n
+    var all = document.querySelectorAll ? document.querySelectorAll(".fr-fire-canvas") : [], n = 0, i, c;
+    for (i = 0; i < all.length; i++) {
+      c = all[i];
+      if (!c._ffDead && c.isConnected) n++;
+    }
+    return n;
   }
   function sweep() {
-    var all = document.querySelectorAll ? document.querySelectorAll('.fr-fire-canvas') : [], i, c;
+    var all = document.querySelectorAll ? document.querySelectorAll(".fr-fire-canvas") : [], i, c;
     for (i = 0; i < all.length; i++) {
       c = all[i];
       if (c._ffDead) continue;
       if (!c.isConnected || !c._ffHost || !c._ffHost.isConnected) {
         c._ffDead = 1;
-        if (c._ffKill) { try { c._ffKill() } catch (e0) {} }
-        try { if (c.parentNode) c.parentNode.removeChild(c) } catch (e1) {}
+        if (c._ffKill) {
+          try {
+            c._ffKill();
+          } catch (e0) {
+          }
+        }
+        try {
+          if (c.parentNode) c.parentNode.removeChild(c);
+        } catch (e1) {
+        }
       }
     }
   }
-  try { RM = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) } catch (e) {}
+  try {
+    RM = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  } catch (e) {
+  }
   var TAU = 6.283185307;
-  function cl(v, a, b) { return v < a ? a : v > b ? b : v }
-  function lp(a, b, t) { return a + (b - a) * t }
-  function sm(a, b, x) { var t = cl((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t) }
+  function cl(v, a, b) {
+    return v < a ? a : v > b ? b : v;
+  }
+  function lp(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function sm(a, b, x) {
+    var t = cl((x - a) / (b - a), 0, 1);
+    return t * t * (3 - 2 * t);
+  }
   var sd = 20180307;
-  function rn() { sd = (sd * 1664525 + 1013904223) & 2147483647; return sd / 2147483647 }
-  function rr(a, b) { return a + rn() * (b - a) }
-  function mk(w, h) { var k = document.createElement('canvas'); k.width = Math.max(1, w | 0); k.height = Math.max(1, h | 0); return k }
-  function ng(n, r) { var g = new Float32Array(n * n), i; for (i = 0; i < g.length; i++) g[i] = r(); return g }
+  function rn() {
+    sd = sd * 1664525 + 1013904223 & 2147483647;
+    return sd / 2147483647;
+  }
+  function rr(a, b) {
+    return a + rn() * (b - a);
+  }
+  function mk(w, h) {
+    var k = document.createElement("canvas");
+    k.width = Math.max(1, w | 0);
+    k.height = Math.max(1, h | 0);
+    return k;
+  }
+  function ng(n, r) {
+    var g = new Float32Array(n * n), i;
+    for (i = 0; i < g.length; i++) g[i] = r();
+    return g;
+  }
   function nz(g, n, x, y) {
-    var fx = x * n, fy = y * n, ix = Math.floor(fx), iy = Math.floor(fy),
-      x0 = ((ix % n) + n) % n, y0 = ((iy % n) + n) % n, x1 = (x0 + 1) % n, y1 = (y0 + 1) % n,
-      tx = fx - ix, ty = fy - iy, a, b, c, d;
-    tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
-    a = g[y0 * n + x0]; b = g[y0 * n + x1]; c = g[y1 * n + x0]; d = g[y1 * n + x1];
-    return (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty
+    var fx = x * n, fy = y * n, ix = Math.floor(fx), iy = Math.floor(fy), x0 = (ix % n + n) % n, y0 = (iy % n + n) % n, x1 = (x0 + 1) % n, y1 = (y0 + 1) % n, tx = fx - ix, ty = fy - iy, a, b, c, d;
+    tx = tx * tx * (3 - 2 * tx);
+    ty = ty * ty * (3 - 2 * ty);
+    a = g[y0 * n + x0];
+    b = g[y0 * n + x1];
+    c = g[y1 * n + x0];
+    d = g[y1 * n + x1];
+    return (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty;
   }
   function fbm(x, t) {
-    return 0.5 * Math.sin(x * 0.021 + t * 0.37 + 1.7) + 0.3 * Math.sin(x * 0.047 - t * 0.61 + 4.1) + 0.2 * Math.sin(x * 0.11 + t * 0.93 + 0.3)
+    return 0.5 * Math.sin(x * 0.021 + t * 0.37 + 1.7) + 0.3 * Math.sin(x * 0.047 - t * 0.61 + 4.1) + 0.2 * Math.sin(x * 0.11 + t * 0.93 + 0.3);
   }
-  /* temperature ramp: white-hot (255,236,170) -> yellow (255,196,64) -> orange (255,122,18) -> deep red (216,44,2) -> out */
   var RAMPS = [
-    [[255,249,232],[255,236,170],[255,217,138],[255,188,98]],
-    [[255,242,196],[255,196,64],[255,166,52],[245,134,32]],
-    [[255,220,164],[255,122,18],[239,88,12],[200,58,6]],
-    [[255,168,78],[216,44,2],[168,34,4],[122,22,2]],
-    [[236,104,22],[188,46,4],[134,26,2],[88,14,0]]
+    [[255, 249, 232], [255, 236, 170], [255, 217, 138], [255, 188, 98]],
+    [[255, 242, 196], [255, 196, 64], [255, 166, 52], [245, 134, 32]],
+    [[255, 220, 164], [255, 122, 18], [239, 88, 12], [200, 58, 6]],
+    [[255, 168, 78], [216, 44, 2], [168, 34, 4], [122, 22, 2]],
+    [[236, 104, 22], [188, 46, 4], [134, 26, 2], [88, 14, 0]]
   ];
   var DRAW = [1, 0.96, 0.9, 0.55, 0.16], NB = 5, NV = 4, SW = 56;
   function ramp(R, f) {
     var s = cl(f, 0, 1) * 3, i = s | 0, t = s - i, a = R[i], b = R[Math.min(3, i + 1)];
-    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
   }
-  function lcg(seed) { var s = seed; return function () { s = (s * 1664525 + 1013904223) & 2147483647; return s / 2147483647 } }
-  /* tapered flamelet: solid hot body, noise-broken silhouette, pointed tip */
+  function lcg(seed) {
+    var s = seed;
+    return function() {
+      s = s * 1664525 + 1013904223 & 2147483647;
+      return s / 2147483647;
+    };
+  }
   function flameSprite(R, seed, ragged) {
-    var r = lcg(seed), w = SW, h = Math.round(SW * 2.1), k = mk(w, h), g = k.getContext('2d'), cx = w / 2,
-      n1 = 4 + ((r() * 3) | 0), g1 = ng(n1, r), g2 = ng(n1 * 2 + 3, r), im = g.createImageData(w, h), d = im.data, x, y, i;
+    var r = lcg(seed), w = SW, h = Math.round(SW * 2.1), k = mk(w, h), g = k.getContext("2d"), cx = w / 2, n1 = 4 + (r() * 3 | 0), g1 = ng(n1, r), g2 = ng(n1 * 2 + 3, r), im = g.createImageData(w, h), d = im.data, x, y, i;
     for (y = 0; y < h; y++) {
-      var v = y / h, wa = v < 0.72 ? Math.pow(Math.sin(v / 0.72 * 1.5708), 0.55) * 0.92 + 0.08 : Math.pow(1 - (v - 0.72) / 0.3, 0.9),
-        ti = sm(1, 0.86, 1 - v) * 0.85 + 0.15;
+      var v = y / h, wa = v < 0.72 ? Math.pow(Math.sin(v / 0.72 * 1.5708), 0.55) * 0.92 + 0.08 : Math.pow(1 - (v - 0.72) / 0.3, 0.9), ti = sm(1, 0.86, 1 - v) * 0.85 + 0.15;
       wa = cl(wa, 0, 1);
       for (x = 0; x < w; x++) {
-        var u = (x - cx) / (w * 0.5), rad = wa > 0.002 ? Math.abs(u) / wa : 9, nv, a, col;
+        var u = (x - cx) / (w * 0.5), rad = wa > 2e-3 ? Math.abs(u) / wa : 9, nv, a, col;
         if (rad > 1.25) continue;
         nv = 0.62 * nz(g1, n1, x / w * 1.6 + 0.2, y / h * 1.6 + 0.6) + 0.38 * nz(g2, n1 * 2 + 3, x / w * 3.6 + 0.5, y / h * 3.2 + 0.1);
         a = sm(1.02, 0.58, rad) * (0.62 + 0.38 * nv * ragged + 0.3 * (1 - ragged)) * ti;
-        if (a <= 0.004) continue;
+        if (a <= 4e-3) continue;
         col = ramp(R, (1 - cl(1 - v * 0.92 - rad * 0.16, 0, 1)) * 0.91 + 0.024);
         i = (y * w + x) * 4;
-        d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = a * 255 | 0;
+        d[i] = col[0];
+        d[i + 1] = col[1];
+        d[i + 2] = col[2];
+        d[i + 3] = a * 255 | 0;
       }
     }
     g.putImageData(im, 0, 0);
-    return k
+    return k;
   }
   function puffSprite(R, seed) {
-    var r = lcg(seed), w = 72, h = 72, k = mk(w, h), g = k.getContext('2d'), cx = w / 2, cy = h / 2,
-      n1 = 4 + ((r() * 3) | 0), g1 = ng(n1, r), g2 = ng(n1 * 2 + 3, r), im = g.createImageData(w, h), d = im.data, x, y, i;
+    var r = lcg(seed), w = 72, h = 72, k = mk(w, h), g = k.getContext("2d"), cx = w / 2, cy = h / 2, n1 = 4 + (r() * 3 | 0), g1 = ng(n1, r), g2 = ng(n1 * 2 + 3, r), im = g.createImageData(w, h), d = im.data, x, y, i;
     for (y = 0; y < h; y++) for (x = 0; x < w; x++) {
-      var rad = Math.hypot(x - cx, y - cy) / (w * 0.5),
-        nv = 0.6 * nz(g1, n1, x / w * 1.5 + 0.2, y / h * 1.5 + 0.6) + 0.4 * nz(g2, n1 * 2 + 3, x / w * 3.3 + 0.5, y / h * 3.0 + 0.1),
-        a = Math.pow(sm(1.05, 0.2, rad), 1.35) * (0.45 + 0.55 * nv), col;
-      if (a <= 0.004) continue;
+      var rad = Math.hypot(x - cx, y - cy) / (w * 0.5), nv = 0.6 * nz(g1, n1, x / w * 1.5 + 0.2, y / h * 1.5 + 0.6) + 0.4 * nz(g2, n1 * 2 + 3, x / w * 3.3 + 0.5, y / h * 3 + 0.1), a = Math.pow(sm(1.05, 0.2, rad), 1.35) * (0.45 + 0.55 * nv), col;
+      if (a <= 4e-3) continue;
       col = ramp(R, (1 - cl(1 - rad * 0.85 - 0.05, 0, 1)) * 0.824 + 0.039);
       i = (y * w + x) * 4;
-      d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = a * 255 | 0;
+      d[i] = col[0];
+      d[i + 1] = col[1];
+      d[i + 2] = col[2];
+      d[i + 3] = a * 255 | 0;
     }
     g.putImageData(im, 0, 0);
-    return k
+    return k;
   }
   function glow(px, stops) {
-    var k = mk(px, px), g = k.getContext('2d'), h = px / 2, gr = g.createRadialGradient(h, h, 0, h, h, h), i;
+    var k = mk(px, px), g = k.getContext("2d"), h = px / 2, gr = g.createRadialGradient(h, h, 0, h, h, h), i;
     for (i = 0; i < stops.length; i++) gr.addColorStop(stops[i][0], stops[i][1]);
-    g.fillStyle = gr; g.fillRect(0, 0, px, px); return k
+    g.fillStyle = gr;
+    g.fillRect(0, 0, px, px);
+    return k;
   }
   function sprites() {
     if (SPR) return SPR;
     var bands = [], puffs = [], b, v;
     for (b = 0; b < NB; b++) {
-      bands.push([]); puffs.push([]);
+      bands.push([]);
+      puffs.push([]);
       for (v = 0; v < NV; v++) bands[b].push(flameSprite(RAMPS[b], 1783 + b * 977 + v * 131, b === 0 ? 0.45 : 0.8));
       puffs[b].push(puffSprite(RAMPS[b], 30703 + b * 613));
       puffs[b].push(puffSprite(RAMPS[b], 30703 + b * 613 + 97));
     }
     SPR = {
-      bands: bands, puffs: puffs,
-      ember: glow(64, [[0, 'rgba(255,255,246,1)'], [0.14, 'rgba(255,238,176,0.96)'], [0.36, 'rgba(255,176,54,0.4)'], [1, 'rgba(255,104,10,0)']]),
-      rim: glow(96, [[0, 'rgba(255,250,226,0.95)'], [0.18, 'rgba(255,226,130,0.7)'], [0.45, 'rgba(255,150,36,0.22)'], [1, 'rgba(255,90,6,0)']]),
-      env: glow(160, [[0, 'rgba(255,166,58,0.4)'], [0.32, 'rgba(255,104,22,0.16)'], [1, 'rgba(214,50,4,0)']]),
-      envD: glow(160, [[0, 'rgba(255,124,36,0.34)'], [0.36, 'rgba(190,52,6,0.12)'], [1, 'rgba(150,20,0,0)']])
+      bands,
+      puffs,
+      ember: glow(64, [[0, "rgba(255,255,246,1)"], [0.14, "rgba(255,238,176,0.96)"], [0.36, "rgba(255,176,54,0.4)"], [1, "rgba(255,104,10,0)"]]),
+      rim: glow(96, [[0, "rgba(255,250,226,0.95)"], [0.18, "rgba(255,226,130,0.7)"], [0.45, "rgba(255,150,36,0.22)"], [1, "rgba(255,90,6,0)"]]),
+      env: glow(160, [[0, "rgba(255,166,58,0.4)"], [0.32, "rgba(255,104,22,0.16)"], [1, "rgba(214,50,4,0)"]]),
+      envD: glow(160, [[0, "rgba(255,124,36,0.34)"], [0.36, "rgba(190,52,6,0.12)"], [1, "rgba(150,20,0,0)"]])
     };
-    return SPR
+    return SPR;
   }
-  /* demo-true density: ~1400 at 232px, power-law scaled (110 @56, 250 @88, ~1760 @264) */
   function budget(s) {
-    var n = 1400 * Math.pow(s / 232, 1.79);
-    return Math.round(s < 232 ? Math.min(1400, Math.max(70, n)) : Math.min(1800, n))
+    var n = 1400 * Math.pow(s / 232, 1.777);
+    return Math.round(Math.min(1400, Math.max(70, n)));
   }
-  window.attachFireFrame = function (hostEl, sizePx) {
+  window.attachFireFrame = function(hostEl, sizePx) {
     try {
-      if (!hostEl || !hostEl.getBoundingClientRect) return;
-      /* free capacity held by canvases whose host has left the document */
-      sweep();
-      if (liveCount() >= CAP) return;
-      /* keep the summed particle load sane even with six big tiles */
-      var allL = document.querySelectorAll('.fr-fire-canvas'), used = 0, li;
-      for (li = 0; li < allL.length; li++) if (!allL[li]._ffDead && allL[li].isConnected) used += allL[li]._ffMax || 0;
-      var allowed = Math.max(700, 4600 - used);
-      var size = +sizePx || 0, cv, main, fx, fxc, mask, G, dpr, MAX, S, SZ, AK;
-      if (!(size > 0)) size = Math.round(hostEl.getBoundingClientRect().width || 56);
-      if (size < 40) return;
-      if (hostEl.querySelector && hostEl.querySelector('.fr-fire-canvas')) return;
-      if (window.getComputedStyle(hostEl).position === 'static') hostEl.style.position = 'relative';
-      var sp = sprites();
-      dpr = Math.min(2, window.devicePixelRatio || 1);
-      MAX = Math.min(budget(size), allowed);
-      
-      S = size * (1.32 - 0.28 * cl(size / 232, 0, 1));   /* demo's own spatial scale */
-      SZ = cl(Math.pow(232 / size, 0.1), 0.92, 1.25);
-      AK = cl(Math.pow(232 / size, 0.14), 1, 1.35);
-      var SZW = cl(Math.pow(232 / size, 0.16), 1, 1.35); /* small frames draw thicker so they still read as fire */
-      G = {
-        size: size,
-        side: Math.round(size * 0.24),
-        /* 42% ring padding, plus extra sky on big avatars so flames reach demo height */
-        top: Math.round(size * 0.42) + (size >= 160 ? Math.round(size * 0.34) : 0),
-        bot: Math.round(size * 0.16)
-      };
-      G.w = size + G.side * 2; G.h = G.top + size + G.bot;
-      var x0 = G.side, y0 = G.top, x1 = x0 + size, y1 = y0 + size, R = size * 0.22;
-      cv = document.createElement('canvas');
-      cv.className = 'fr-fire-canvas';
-      cv.setAttribute('aria-hidden', 'true');
-      cv.width = Math.round(G.w * dpr); cv.height = Math.round(G.h * dpr);
-      cv.style.left = -G.side + 'px'; cv.style.top = -G.top + 'px';
-      cv.style.width = G.w + 'px'; cv.style.height = G.h + 'px';
-      main = cv.getContext('2d');
-      fx = mk(cv.width, cv.height); fxc = fx.getContext('2d');
-      mask = mk(cv.width, cv.height);
-      /* mask = soft top fade x side fade, multiplied; zero on every canvas edge
-         so the additive fire never ends on a visible rectangle */
-      (function () {
-        var m = mask.getContext('2d'), W = mask.width, H = mask.height, gy, gx;
-        m.setTransform(1, 0, 0, 1, 0, 0);
-        gy = m.createLinearGradient(0, 0, 0, H);
-        var tf = Math.min(0.62, (G.top * 0.62) / H);
-        gy.addColorStop(0, 'rgba(255,255,255,0)');
-        gy.addColorStop(tf, 'rgba(255,255,255,1)');
-        gy.addColorStop(1, 'rgba(255,255,255,1)');
-        m.fillStyle = gy; m.fillRect(0, 0, W, H);
-        m.globalCompositeOperation = 'destination-in';
-        gx = m.createLinearGradient(0, 0, W, 0);
-        gx.addColorStop(0, 'rgba(255,255,255,0)');
-        gx.addColorStop(0.13, 'rgba(255,255,255,1)');
-        gx.addColorStop(0.87, 'rgba(255,255,255,1)');
-        gx.addColorStop(1, 'rgba(255,255,255,0)');
-        m.fillStyle = gx; m.fillRect(0, 0, W, H);
-        m.globalCompositeOperation = 'source-over';
-      })();
-      /* ---- perimeter heat field: densest on top, fewer sides, fewest bottom ---- */
-      var pts = [], heatAt = function (y) { return 0.1 + 0.9 * Math.pow(1 - cl((y - y0) / size, 0, 1), 1.55) };
-      function seg(ax, ay, bx, by, nx, ny, n) {
-        for (var i = 0; i < n; i++) { var t = (i + 0.5) / n, x = lp(ax, bx, t), y = lp(ay, by, t); pts.push({ x: x, y: y, nx: nx, ny: ny, heat: heatAt(y) }) }
-      }
-      function arc(cx, cy, a0, a1, n) {
-        for (var i = 0; i < n; i++) { var a = lp(a0, a1, (i + 0.5) / n), nx = Math.cos(a), ny = Math.sin(a), x = cx + nx * R, y = cy + ny * R; pts.push({ x: x, y: y, nx: nx, ny: ny, heat: heatAt(y) * 1.1 }) }
-      }
-      var eN = Math.max(24, Math.round(size * 0.9)), aN = Math.max(7, Math.round(size * 0.28));
-      seg(x0 + R, y0, x1 - R, y0, 0, -1, eN); arc(x1 - R, y0 + R, -1.5708, 0, aN);
-      seg(x1, y0 + R, x1, y1 - R, 1, 0, eN); arc(x1 - R, y1 - R, 0, 1.5708, aN);
-      seg(x1 - R, y1, x0 + R, y1, 0, 1, eN); arc(x0 + R, y1 - R, 1.5708, 3.1416, aN);
-      seg(x0, y1 - R, x0, y0 + R, -1, 0, eN); arc(x0 + R, y0 + R, 3.1416, 4.7124, aN);
-      var cdf = new Float32Array(pts.length), acc = 0, i0;
-      for (i0 = 0; i0 < pts.length; i0++) { acc += Math.pow(pts[i0].heat, 2.3); cdf[i0] = acc }
-      var cdfT = acc;
-      function anyPt() {
+      let mix = function(a2, b2) {
+        return a2 + (b2 - a2) * fr;
+      }, seg = function(ax, ay, bx, by, nx, ny, n) {
+        for (var i2 = 0; i2 < n; i2++) {
+          var t = (i2 + 0.5) / n, x = lp(ax, bx, t), y = lp(ay, by, t);
+          pts.push({ x, y, nx, ny, heat: heatAt(y) });
+        }
+      }, arc = function(cx, cy, a0, a1, n) {
+        for (var i2 = 0; i2 < n; i2++) {
+          var a = lp(a0, a1, (i2 + 0.5) / n), nx = Math.cos(a), ny = Math.sin(a), x = cx + nx * R, y = cy + ny * R;
+          pts.push({ x, y, nx, ny, heat: heatAt(y) * 1.1 });
+        }
+      }, anyPt = function() {
         var t = rn() * cdfT, lo = 0, hi = pts.length - 1, mid;
-        while (lo < hi) { mid = (lo + hi) >> 1; if (cdf[mid] < t) lo = mid + 1; else hi = mid }
-        return pts[lo]
-      }
-      /* ---- flamelet tongues ---- */
-      var tongues = [], plumes = [], parts = [], embers = [], rateK = cl(MAX / 1400, 0.12, 1.5);
-      function tongue(kind, slot, n) {
+        while (lo < hi) {
+          mid = lo + hi >> 1;
+          if (cdf[mid] < t) lo = mid + 1;
+          else hi = mid;
+        }
+        return pts[lo];
+      }, tongue = function(kind, slot, n) {
         var b;
-        if (kind === 'top') {
+        if (kind === "top") {
           var span = size - R * 1.2, ef = 0.6 + 0.4 * Math.pow(1 - Math.abs(slot / Math.max(1, n - 1) - 0.5) * 2, 0.7);
-          b = { x: x0 + R * 0.6 + ((slot + 0.5) / n) * span + rr(-0.35, 0.35) * (span / n), y: y0 + rr(-0.5, 1), nx: 0, ny: -1, heat: rr(0.88, 1) * ef };
-        } else if (kind === 'corner') {
+          b = { x: x0 + R * 0.6 + (slot + 0.5) / n * span + rr(-0.35, 0.35) * (span / n), y: y0 + rr(-0.5, 1), nx: 0, ny: -1, heat: rr(0.88, 1) * ef };
+        } else if (kind === "corner") {
           var right = slot === 0, a = right ? -0.7854 : 3.927, cx = right ? x1 - R : x0 + R, cy = y0 + R;
           b = { x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R, nx: Math.cos(a) * 0.55, ny: Math.sin(a), heat: rr(0.82, 0.98) };
-        } else if (kind === 'side') {
+        } else if (kind === "side") {
           var rt = slot % 2 === 1, hy = slot < 2 ? 0.18 : 0.42;
-          b = { x: rt ? x1 : x0, y: y0 + cl(hy + rr(-0.05, 0.05), 0.07, 0.6) * size, nx: rt ? 0.4 : -0.4, ny: -0.75, heat: rr(0.5, 0.72) * (1 - hy * 0.35) };
+          b = { x: rt ? x1 : x0, y: y0 + cl(hy + rr(-0.05, 0.05), 0.07, 0.6) * size, nx: rt ? 0.4 : -0.4, ny: -0.75, heat: rr(0.5, 0.72) * (1 - hy * 0.35) * mix(1, 1.25) };
         } else {
-          b = { x: x0 + R + ((slot + 0.5) / n) * (size - 2 * R), y: y1 + rr(-0.5, 0.5), nx: 0, ny: 1, heat: rr(0.16, 0.26) };
+          b = { x: x0 + R + (slot + 0.5) / n * (size - 2 * R), y: y1 + rr(-0.5, 0.5), nx: 0, ny: 1, heat: rr(0.16, 0.26) };
         }
-        var pw = kind === 'top' ? 1 : kind === 'corner' ? 0.85 : kind === 'side' ? 0.55 : 0.2;
+        var pw = kind === "top" ? 1 : kind === "corner" ? 0.85 : kind === "side" ? 0.55 : 0.2;
         return {
-          x: b.x, y: b.y, nx: b.nx, ny: b.ny, heat: b.heat, kind: kind, age: 0, life: rr(0.8, 2.8),
-          hMul: kind === 'top' ? (rn() < 0.22 ? rr(1.15, 1.65) : rr(0.35, 1.05)) : kind === 'corner' ? rr(0.5, 1.1) : kind === 'side' ? rr(0.4, 0.9) : rr(0.3, 0.6),
-          swayPhase: rn() * TAU, swayFreq: rr(0.6, 1.8), swayAmp: S * rr(0.012, 0.04) * (0.4 + pw), width: size * rr(0.02, 0.05) * (size < 100 ? 1.9 : 1),
-          emitRate: (kind === 'top' ? rr(78, 120) : kind === 'corner' ? rr(46, 74) : kind === 'side' ? rr(20, 34) : rr(5, 11)) * cl(S / 241, 0.34, 1.5) * rateK,
-          emitAcc: rn() * 2, burstIn: rr(0.12, 0.7), slot: slot, slotCount: n, power: pw,
-          drift: rn() * TAU, dominance: 0.5 + 1.4 * Math.pow(rn(), 2.1)
-        }
-      }
-      var XK = 232 / size; /* size-invariant noise frequency */
-      var nTop = cl(Math.round(5 + size / 232 * 10), 5, 15), i;
-      if (size < 100) nTop += 3;
-      for (i = 0; i < nTop; i++) tongues.push(tongue('top', i, nTop));
-      if (size > 105) {
-        tongues.push(tongue('corner', 0)); tongues.push(tongue('corner', 1));
-        for (i = 0; i < 2; i++) {
-          var w = tongue('corner', i);
-          w.x = i === 0 ? x1 - R * 0.65 : x0 + R * 0.65; w.y = y0 + R * 0.22; w.nx *= 0.2; w.ny = -1; w.heat = 0.95; w.hMul = rr(0.5, 1);
-          tongues.push(w);
-        }
-      }
-      var nSp = size > 150 ? 3 : size > 70 ? 2 : 1;
-      for (i = 0; i < nSp; i++) { tongues.push(tongue('side', i * 2 + 1)); tongues.push(tongue('side', i * 2)) }
-      if (size > 150) { tongues.push(tongue('side', 5)); tongues.push(tongue('side', 4)); tongues.push(tongue('side', 1)); tongues.push(tongue('side', 0)) }
-      var nBot = size > 120 ? 3 : 2;
-      for (i = 0; i < nBot; i++) tongues.push(tongue('bottom', i, nBot));
-      var nPl = cl(Math.round(size / 58), 3, 5);
-      for (i = 0; i < nPl; i++) plumes.push({ x: x0 + ((i + 0.5) / nPl) * size, phase: rn() * TAU, freq: rr(0.55, 1.5), wide: rr(0.24, 0.4), tall: rr(0.55, 1.05), deep: rn() < 0.4 });
-      function part(tn, burst) {
+          x: b.x,
+          y: b.y,
+          nx: b.nx,
+          ny: b.ny,
+          heat: b.heat,
+          kind,
+          age: 0,
+          life: rr(0.8, 2.8),
+          hMul: kind === "top" ? rn() < 0.22 ? rr(1.15, 1.65) : rr(0.35, 1.05) : kind === "corner" ? rr(0.5, 1.1) : kind === "side" ? rr(0.4, 0.9) : rr(0.3, 0.6),
+          swayPhase: rn() * TAU,
+          swayFreq: rr(0.6, 1.8),
+          swayAmp: S * rr(0.012, 0.04) * (0.4 + pw),
+          width: size * mix(1, 0.62) * rr(0.02, 0.05) * (size < 100 ? 1.9 : 1),
+          emitRate: (kind === "top" ? rr(78, 120) : kind === "corner" ? rr(46, 74) : kind === "side" ? rr(20, 34) : rr(5, 11)) * cl(S / 241, 0.34, 1.5) * rateK,
+          emitAcc: rn() * 2,
+          burstIn: rr(0.12, 0.7),
+          slot,
+          slotCount: n,
+          power: pw,
+          drift: rn() * TAU,
+          dominance: 0.5 + 1.4 * Math.pow(rn(), 2.1)
+        };
+      }, part = function(tn, burst) {
         if (parts.length >= MAX) return;
-        var isB = !burst && rn() < 0.42, dx = tn.nx * (tn.kind === 'side' ? 0.22 : 0.06), dy = tn.kind === 'bottom' ? 0.45 : -1,
-          dl = Math.hypot(dx, dy) || 1, sj = rr(0.65, 1.35) * (burst ? rr(1.2, 1.75) : 1),
-          sp2 = S * (0.2 + tn.power * 0.34) * sj * tn.hMul * (0.85 + 0.3 * Math.abs(fbm(tn.x * XK + tn.drift * 9, tm))),
-          tx = -tn.ny, ty = tn.nx, lat = rr(-0.85, 0.85) * tn.width * 1.6, rim = rn() < (tn.kind === 'bottom' ? 0.7 : 0.24),
-          p = {
-            x: tn.x + tx * lat + tn.nx * rr(0, 1.6), y: tn.y + ty * lat + tn.ny * rr(0, 1.6) + (tn.kind === 'top' ? rr(-3, 4.5) : 0),
-            vx: dx / dl * sp2 * 0.3 + rr(-0.12, 0.12) * S * 0.5, vy: dy / dl * sp2, attach: rn() < 0.3 ? rr(0.12, 0.3) : 0, age: 0,
-            life: rr(0.75, 1.6) * (tn.kind === 'top' ? 1 : tn.kind === 'bottom' ? 0.5 : 0.8),
-            heat0: cl(tn.heat * rr(0.96, 1.1), 0.06, 1.12), baseY: tn.y, seed: rn() * TAU, wobFreq: rr(1, 3), wobAmp: S * rr(0.02, 0.075) * (0.35 + tn.power),
-            size0: size * rr(0.048, 0.1) * (isB ? 1.45 : 1) * (tn.kind === 'bottom' ? 0.75 : 1) * SZ * (SZ > 1.15 ? 1.06 : 1) * cl(Math.pow(430 / MAX, 0.16), 1, 1.3) * 0.92,
-            variant: (rn() * NV) | 0, tn: tn, surgeBias: rr(0.9, 1.1), stretch: (isB ? rr(0.42, 0.62) : rr(0.8, 1.25)) * 1.2,
-            alpha0: (isB ? rr(0.055, 0.1) : rr(0.16, 0.29)) * AK, rim: false, isB: isB
-          };
-        if (rim && !isB) { p.rim = true; p.life = rr(0.3, 0.55); p.vy *= 0.14; p.size0 *= 0.62; p.stretch = rr(0.6, 0.9); p.alpha0 = Math.min(0.5, rr(0.2, 0.34) * AK) }
+        var isB = !burst && rn() < 0.42, dx = tn.nx * (tn.kind === "side" ? 0.22 : 0.06), dy = tn.kind === "bottom" ? 0.45 : -1, dl = Math.hypot(dx, dy) || 1, sj = rr(0.65, 1.35) * (burst ? rr(1.2, 1.75) : 1), sp2 = S * (0.2 + tn.power * 0.34) * sj * tn.hMul * (0.85 + 0.3 * Math.abs(fbm(tn.x * XK + tn.drift * 9, tm))), tx = -tn.ny, ty = tn.nx, lat = rr(-0.85, 0.85) * tn.width * 1.6, rim = rn() < (tn.kind === "bottom" ? 0.7 : 0.24), p = {
+          x: tn.x + tx * lat + tn.nx * rr(0, 1.6),
+          y: tn.y + ty * lat + tn.ny * rr(0, 1.6) + (tn.kind === "top" ? rr(-3, 4.5) : 0),
+          vx: dx / dl * sp2 * 0.3 + rr(-0.12, 0.12) * S * 0.5,
+          vy: dy / dl * sp2,
+          attach: rn() < 0.3 ? rr(0.12, 0.3) : 0,
+          age: 0,
+          life: rr(0.75, 1.6) * (tn.kind === "top" ? 1 : tn.kind === "bottom" ? 0.5 : 0.8),
+          heat0: cl(tn.heat * rr(0.96, 1.1), 0.06, 1.12),
+          baseY: tn.y,
+          seed: rn() * TAU,
+          wobFreq: rr(1, 3),
+          wobAmp: S * rr(0.02, 0.075) * (0.35 + tn.power),
+          size0: size * mix(1, 0.42) * rr(0.048, 0.1) * (isB ? 1.45 : 1) * (tn.kind === "bottom" ? 0.75 : 1) * SZ * (SZ > 1.15 ? 1.06 : 1) * cl(Math.pow(430 / MAX, 0.16), 1, 1.3) * 0.92,
+          variant: rn() * NV | 0,
+          tn,
+          surgeBias: rr(0.9, 1.1),
+          stretch: isB ? rr(0.42, 0.62) : rr(0.8, 1.25) * mix(1, 1.45),
+          alpha0: (isB ? rr(0.055, 0.1) : rr(0.16, 0.29)) * AK * mix(1, 2.9),
+          rim: false,
+          isB
+        };
+        if (rim && !isB) {
+          p.rim = true;
+          p.life = rr(0.3, 0.55);
+          p.vy *= 0.14;
+          p.size0 *= 0.62;
+          p.stretch = rr(0.6, 0.9);
+          p.alpha0 = Math.min(0.5, rr(0.2, 0.34) * AK);
+        }
         parts.push(p);
         if (burst && rn() < 0.14) ember(p.x, p.y, true);
-      }
-      function ember(x, y, warm) {
-        if (embers.length >= Math.min(MAX * 0.08, 52)) return;
-        embers.push({ x: x + rr(-2, 2), y: y + rr(-2, 2), vx: rr(-0.4, 0.4) * S * 0.3, vy: -S * rr(0.35, 1) * 1.3 * (warm ? 1.2 : 1), age: 0, life: rr(0.5, 1.8), size: size * rr(0.006, 0.015), seed: rn() * TAU, flick: rr(10, 26), drift: rr(0.6, 1.7) })
-      }
-      var eAcc = 0, surge = 1, br = { v: 0.5, t: 0.5 }, tm = 0, fill = 1;
-      function surgeUpd(dt) {
+      }, ember = function(x, y, warm) {
+        if (embers.length >= Math.min(MAX * mix(0.08, 0.05), 52)) return;
+        if (x > x0 + 2 && x < x1 - 2 && y > y0 + 2 && y < y1 - 2) {
+          if (fr > 0.5) return;
+        } else {
+        }
+        embers.push({ x: x + rr(-2, 2), y: y + rr(-2, 2), vx: rr(-0.4, 0.4) * S * 0.3, vy: -S * rr(0.35, 1) * 1.3 * (warm ? 1.2 : 1), age: 0, life: rr(0.5, 1.8), size: size * rr(6e-3, 0.015), seed: rn() * TAU, flick: rr(10, 26), drift: rr(0.6, 1.7) });
+      }, surgeUpd = function(dt) {
         if (rn() < dt * 1.2) br.t = rn();
         br.v = lp(br.v, br.t, cl(dt * 0.75, 0, 1));
-        surge = cl(1 + 0.07 * Math.sin(tm * 1.06) + 0.05 * Math.sin(tm * 2.67 + 1.7) + 0.035 * Math.sin(tm * 0.4 + 4.2) + 0.1 * (br.v - 0.5), 0.7, 1.32)
-      }
-      var bandFor = function (t) { return t > 1 ? 0 : t > 0.78 ? 1 : t > 0.5 ? 2 : t > 0.26 ? 3 : 4 };
-      function sim(dt) {
-        var i, tn, p, u, e, sway, buoy = S * 0.8;
-        for (i = 0; i < tongues.length; i++) {
-          tn = tongues[i]; tn.age += dt;
+        surge = cl(1 + 0.07 * Math.sin(tm * 1.06) + 0.05 * Math.sin(tm * 2.67 + 1.7) + 0.035 * Math.sin(tm * 0.4 + 4.2) + 0.1 * (br.v - 0.5), 0.7, 1.32);
+      }, sim = function(dt) {
+        var i2, tn, p, u, e, sway, buoy = S * 0.8;
+        for (i2 = 0; i2 < tongues.length; i2++) {
+          tn = tongues[i2];
+          tn.age += dt;
           if (tn.age > tn.life) {
             var f = tongue(tn.kind, tn.slot, tn.slotCount);
-            if (tn.kind === 'top') f.x = lp(tn.x, f.x, 0.3); else { f.x = tn.x; f.y = tn.y }
-            f.age = 0; tongues[i] = f; continue
+            if (tn.kind === "top") f.x = lp(tn.x, f.x, 0.3);
+            else {
+              f.x = tn.x;
+              f.y = tn.y;
+            }
+            f.age = 0;
+            tongues[i2] = f;
+            continue;
           }
-          var breathe = 0.5 + 0.5 * Math.sin(tn.age / tn.life * Math.PI),
-            cluster = tn.kind === 'top' ? cl(0.86 + 0.44 * fbm(tn.x * XK + tn.drift * 9, tm * 0.7), 0.62, 1.24) : cl(0.78 + 0.38 * fbm(tn.x * XK * 0.7 + tn.drift * 5, tm * 0.6), 0.5, 1.15),
-            rate = tn.emitRate * breathe * cluster * tn.dominance * surge * fill * (RM ? 0.6 : 1), n2 = 0;
+          var breathe = 0.5 + 0.5 * Math.sin(tn.age / tn.life * Math.PI), cluster = tn.kind === "top" ? cl(0.86 + 0.44 * fbm(tn.x * XK + tn.drift * 9, tm * 0.7), 0.62, 1.24) : cl(0.78 + 0.38 * fbm(tn.x * XK * 0.7 + tn.drift * 5, tm * 0.6), 0.5, 1.15), rate = tn.emitRate * breathe * cluster * tn.dominance * surge * fill * (RM ? 0.6 : 1), n2 = 0;
           tn.emitAcc += rate * dt;
-          while (tn.emitAcc >= 1 && n2 < 7) { tn.emitAcc -= 1; n2++; part(tn, false) }
+          while (tn.emitAcc >= 1 && n2 < 7) {
+            tn.emitAcc -= 1;
+            n2++;
+            part(tn, false);
+          }
           tn.burstIn -= dt;
           if (tn.burstIn <= 0) {
             tn.burstIn = rr(0.18, 0.75) * (cluster < 0.4 ? 2.2 : 1);
-            var cnt = Math.max(1, Math.round((1 + (rn() * (tn.kind === 'top' ? 5 : 3) | 0)) * cl(rateK * 1.6, 0.35, 1)));
-            for (n2 = 0; n2 < cnt; n2++) part(tn, true)
+            var cnt = Math.max(1, Math.round((1 + (rn() * (tn.kind === "top" ? 5 : 3) | 0)) * cl(rateK * 1.6, 0.35, 1)));
+            for (n2 = 0; n2 < cnt; n2++) part(tn, true);
           }
         }
-        for (i = parts.length - 1; i >= 0; i--) {
-          p = parts[i]; p.age += dt; u = p.age / p.life;
-          if (u >= 1) { parts[i] = parts[parts.length - 1]; parts.pop(); continue }
+        for (i2 = parts.length - 1; i2 >= 0; i2--) {
+          p = parts[i2];
+          p.age += dt;
+          u = p.age / p.life;
+          if (u >= 1) {
+            parts[i2] = parts[parts.length - 1];
+            parts.pop();
+            continue;
+          }
           tn = p.tn;
           sway = Math.sin(tn.swayPhase + tm * tn.swayFreq) * tn.swayAmp + Math.sin(tn.swayPhase * 1.7 + tm * tn.swayFreq * 2.3) * tn.swayAmp * 0.45;
           p.vy -= buoy * dt * (0.4 + tn.power * 0.85) * (1 - u * 0.28) * p.surgeBias * (p.attach && u < 0.16 ? 0.15 : 1);
           p.vx += sway * dt * 2.2 * (0.2 + u * 1.2);
           p.vx += Math.sin(p.seed + p.age * p.wobFreq * 2.6 + tm * 1.5 + p.y * 0.012) * p.wobAmp * dt * 16;
-          p.vx *= 1 - dt * 0.45; p.vy *= 1 - dt * 0.22;
-          p.x += p.vx * dt; p.y += p.vy * dt;
+          p.vx *= 1 - dt * 0.45;
+          p.vy *= 1 - dt * 0.22;
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
           if (p.y < 2) p.age += dt * 2.5;
         }
-        for (i = embers.length - 1; i >= 0; i--) {
-          e = embers[i]; e.age += dt;
-          if (e.age > e.life) { embers[i] = embers[embers.length - 1]; embers.pop(); continue }
+        for (i2 = embers.length - 1; i2 >= 0; i2--) {
+          e = embers[i2];
+          e.age += dt;
+          if (e.age > e.life) {
+            embers[i2] = embers[embers.length - 1];
+            embers.pop();
+            continue;
+          }
           e.vy -= S * 0.4 * dt;
           e.vx += Math.sin(e.seed + e.age * e.drift * 5 + tm * 1.2) * S * 0.16 * dt;
-          e.x += e.vx * dt; e.y += e.vy * dt;
+          e.x += e.vx * dt;
+          e.y += e.vy * dt;
+          if (fr > 0.5 && e.y < y0 - G.cap * 1.15) e.age = e.life;
         }
-        /* fill controller: hold the population near the approved density */
-        var want = MAX * 0.9;
-        if (parts.length < want * 0.85) fill = Math.min(fill * (1 + dt * 3.2) + 0.002, 6);
+        var want = MAX * 0.82;
+        if (parts.length < want * 0.85) fill = Math.min(fill * (1 + dt * 3.2) + 2e-3, 6);
         else if (parts.length > want * 1.12 || parts.length >= MAX) fill = Math.max(fill * (1 - dt * 2), 0.25);
-        eAcc += Math.min(MAX * 0.08, 52) * 0.55 * dt * surge * rateK * fill * (RM ? 0.6 : 1);
-        while (eAcc >= 1) { eAcc -= 1; var q = anyPt(); ember(q.x + q.nx * rr(0, 2), q.y + q.ny * rr(0, 2), false) }
-      }
-      function draw() {
-        var W = cv.width, H = cv.height, i, p, u, alt, temp, b, a, spr, grow, w2, h2, tn, e, sz, tr, ang, pt, h1, h2n, fl, patch, szr,
-          slice = Math.max(3, Math.round(6 * dpr)), maxAmp = 1.6 * dpr * cl(size / 232, 0.35, 1) * (0.6 + 0.4 * surge), pad = Math.ceil(maxAmp) + 1,
-          until = Math.min(H, Math.round((y0 + size * 0.16) * dpr));
-        fxc.setTransform(1, 0, 0, 1, 0, 0); fxc.clearRect(0, 0, W, H);
-        fxc.globalCompositeOperation = 'lighter'; fxc.setTransform(dpr, 0, 0, dpr, 0, 0);
-        for (i = 0; i < plumes.length; i++) {
-          var pl = plumes[i], br2 = 0.6 + 0.4 * Math.sin(pl.phase + tm * pl.freq) + 0.1 * Math.sin(pl.phase * 2.7 + tm * pl.freq * 3.1),
-            pw2 = size * pl.wide * (0.92 + 0.16 * br2) * 2.2, ph = size * pl.tall * br2 * 1.7 * surge, px2 = pl.x + Math.sin(pl.phase + tm * pl.freq * 0.8) * size * 0.03;
-          fxc.globalAlpha = cl(0.1 * br2, 0, 0.22);
+        eAcc += Math.min(MAX * mix(0.08, 0.05), 52) * 0.55 * dt * surge * rateK * fill * (RM ? 0.6 : 1);
+        while (eAcc >= 1) {
+          eAcc -= 1;
+          var q = anyPt();
+          ember(q.x + q.nx * rr(0, 2), q.y + q.ny * rr(0, 2), false);
+        }
+      }, draw = function() {
+        var W = cv.width, H = cv.height, i2, p, u, alt, temp, b, a, spr, grow, w2, h2, tn, e, sz, tr, ang, pt, h1, h2n, fl, patch, szr, slice = Math.max(3, Math.round(6 * dpr)), maxAmp = 1.6 * dpr * cl(size / 232, 0.35, 1) * (0.6 + 0.4 * surge), pad = Math.ceil(maxAmp) + 1, until = Math.min(H, Math.round((y0 + size * (0.16 - 0.11 * fr)) * dpr));
+        fxc.setTransform(1, 0, 0, 1, 0, 0);
+        fxc.clearRect(0, 0, W, H);
+        fxc.globalCompositeOperation = "lighter";
+        fxc.setTransform(dpr, 0, 0, dpr, 0, 0);
+        for (i2 = 0; i2 < plumes.length; i2++) {
+          var pl = plumes[i2], br2 = 0.6 + 0.4 * Math.sin(pl.phase + tm * pl.freq) + 0.1 * Math.sin(pl.phase * 2.7 + tm * pl.freq * 3.1), pw2 = size * pl.wide * (0.92 + 0.16 * br2) * 2.2, ph = size * pl.tall * br2 * 1.7 * surge, px2 = pl.x + Math.sin(pl.phase + tm * pl.freq * 0.8) * size * 0.03;
+          fxc.globalAlpha = cl(mix(0.1, 0.042) * br2, 0, 0.22);
           fxc.drawImage(pl.deep ? sp.envD : sp.env, px2 - pw2 / 2, y0 - ph * 0.46, pw2, ph);
         }
         fxc.globalAlpha = 1;
         var step = pts.length > 200 ? 2 : 1;
-        for (i = 0; i < pts.length; i += step) {
-          pt = pts[i]; h1 = i * 0.6180339887 % 1; h2n = i * 0.3247179572 % 1;
-          fl = 0.35 + 0.65 * Math.abs(Math.sin(tm * (2.2 + h1 * 5.2) + h1 * 17) * Math.sin(tm * (1.1 + h2n * 2.2) + i * 0.63));
+        for (i2 = 0; i2 < pts.length; i2 += step) {
+          pt = pts[i2];
+          h1 = i2 * 0.6180339887 % 1;
+          h2n = i2 * 0.3247179572 % 1;
+          fl = 0.35 + 0.65 * Math.abs(Math.sin(tm * (2.2 + h1 * 5.2) + h1 * 17) * Math.sin(tm * (1.1 + h2n * 2.2) + i2 * 0.63));
           patch = 0.25 + 0.75 * Math.pow(0.5 + 0.5 * Math.sin(pt.x * 0.055 + tm * 1.4 + h2n * 6) * Math.sin(pt.y * 0.07 - tm * 1.1), 1.6);
-          szr = size * 0.17 * (0.6 + 0.4 * pt.heat) * (0.75 + 0.5 * fl + 0.35 * h1);
-          a = (0.05 + 0.44 * Math.pow(pt.heat, 1.35) * fl) * patch * (1 - 0.55 * cl(-pt.ny, 0, 1)) * (1 + 0.5 * Math.abs(pt.nx)) * 0.9;
-          fxc.globalAlpha = cl(a * (0.8 + 0.2 * surge), 0, 0.6);
+          szr = size * mix(0.17, 0.125) * (0.6 + 0.4 * pt.heat) * (0.75 + 0.5 * fl + 0.35 * h1);
+          a = (0.05 + 0.44 * Math.pow(pt.heat, 1.35) * fl) * patch * (1 - mix(0.62, 0.55) * cl(-pt.ny, 0, 1)) * (1 + 0.5 * Math.abs(pt.nx)) * mix(0.78, (0.08 + 0.92 * Math.pow(pt.heat, 1.45)) * 0.85);
+          fxc.globalAlpha = cl(a * (0.8 + 0.2 * surge), 0, 0.5);
           fxc.drawImage(sp.rim, pt.x - szr / 2 + pt.nx * szr * 0.08, pt.y - szr / 2 + pt.ny * szr * 0.08, szr, szr);
         }
         fxc.globalAlpha = 1;
-        for (i = 0; i < parts.length; i++) {
-          p = parts[i]; u = p.age / p.life;
-          alt = cl((p.baseY - p.y) / (S * 1.15), 0, 1);
-          temp = p.heat0 * Math.pow(1 - u, 0.85) * (1 - 0.42 * alt); b = bandFor(temp);
+        for (i2 = 0; i2 < parts.length; i2++) {
+          p = parts[i2];
+          u = p.age / p.life;
+          alt = cl((p.baseY - p.y) / (fr > 0 ? mix(S * 1.15, G.cap * 1.25) : S * 1.15), 0, 1);
+          temp = p.heat0 * Math.pow(1 - u, 0.85) * (1 - mix(0.42, 0.55) * alt);
+          b = bandFor(temp);
           a = p.alpha0 * DRAW[b] * sm(0, 0.06, u) * Math.pow(1 - u, 2.3) * (0.88 + 0.12 * Math.sin(tm * 6.1 + p.seed * 3.3 + u * 10)) * (1 - 0.62 * Math.pow(alt, 1.35)) * (0.85 + 0.15 * (surge - 0.8) * 2.5);
           if (a <= 0.014) continue;
-          fxc.globalAlpha = cl(a, 0, 1); spr = sp.bands[b][p.variant];
+          fxc.globalAlpha = cl(a, 0, 1);
+          spr = sp.bands[b][p.variant];
           grow = 0.9 + 0.62 * u - 0.82 * u * u * u;
           w2 = Math.max(3, p.size0 * grow * (p.isB ? 2 : 1.55) * SZW);
           h2 = Math.max(4, w2 * 2.1 * p.stretch * (0.9 + 0.45 * u) * (SZW > 1.2 ? 1.12 : 1));
           if (p.isB) {
             fxc.drawImage(spr, p.x - w2 / 2, p.y - h2 * 0.84, w2, h2);
-            fxc.globalAlpha = cl(a * 0.1, 0, 0.06);
-            fxc.drawImage(sp.puffs[b][p.variant & 1], p.x - w2 * 0.85, p.y - h2 * 0.62, w2 * 1.7, h2 * 1.24);
+            if (fr < 0.5) {
+              fxc.globalAlpha = cl(a * 0.1, 0, 0.06);
+              fxc.drawImage(sp.puffs[b][p.variant & 1], p.x - w2 * 0.85, p.y - h2 * 0.62, w2 * 1.7, h2 * 1.24);
+            }
           } else {
             tn = p.tn;
             p.tilt = lp(p.tilt || 0, cl(Math.atan2(p.vx, Math.max(1e-4, -p.vy)) * 0.85 + Math.sin(tm * p.wobFreq * 1.6 + p.seed * 2.1) * 0.3 * (0.4 + u), -1.15, 1.15), 0.2);
-            fxc.translate(p.x, p.y); fxc.rotate(p.tilt);
+            fxc.translate(p.x, p.y);
+            fxc.rotate(p.tilt);
             fxc.drawImage(spr, -w2 / 2, -h2 * 0.84, w2, h2);
             fxc.setTransform(dpr, 0, 0, dpr, 0, 0);
           }
         }
         fxc.globalAlpha = 1;
         fxc.setTransform(1, 0, 0, 1, 0, 0);
-        fxc.globalCompositeOperation = 'destination-in';
+        fxc.globalCompositeOperation = "destination-in";
         fxc.drawImage(mask, 0, 0);
-        fxc.globalCompositeOperation = 'lighter';
-        main.setTransform(1, 0, 0, 1, 0, 0); main.clearRect(0, 0, W, H);
-        main.globalCompositeOperation = 'lighter';
+        fxc.globalCompositeOperation = "lighter";
+        main.setTransform(1, 0, 0, 1, 0, 0);
+        main.clearRect(0, 0, W, H);
+        main.globalCompositeOperation = "lighter";
         for (var y = 0; y < until; y += slice) {
-          var hh = Math.min(slice, until - y), yn = y / H, above = cl((y0 * dpr - y) / Math.max(1, y0 * dpr), 0, 1),
-            amp = maxAmp * (0.2 + 0.8 * above * above),
-            dx = Math.sin(yn * 37 + tm * 3) * amp * 0.5 + Math.sin(yn * 12.3 - tm * 1.6 + 2.1) * amp;
+          var hh = Math.min(slice, until - y), yn = y / H, above = cl((y0 * dpr - y) / Math.max(1, y0 * dpr), 0, 1), amp = maxAmp * (0.2 + 0.8 * above * above), dx = Math.sin(yn * 37 + tm * 3) * amp * 0.5 + Math.sin(yn * 12.3 - tm * 1.6 + 2.1) * amp;
           main.drawImage(fx, 0, y, W, hh, dx - pad, y, W + pad * 2, hh);
         }
         if (until < H) main.drawImage(fx, 0, until, W, H - until, -pad, until, W + pad * 2, H - until);
         main.setTransform(dpr, 0, 0, dpr, 0, 0);
-        for (i = 0; i < embers.length; i++) {
-          e = embers[i]; u = e.age / e.life;
+        for (i2 = 0; i2 < embers.length; i2++) {
+          e = embers[i2];
+          u = e.age / e.life;
           a = (0.4 + 0.6 * Math.abs(Math.sin(e.seed + e.age * e.flick + Math.sin(e.age * 5.7)))) * Math.pow(1 - u, 1.2) * 0.8;
           if (a <= 0.012) continue;
+          if (fr > 0.5 && e.x > x0 + 2 && e.x < x1 - 2 && e.y > y0 + 2 && e.y < y1 - 2) continue;
           sz = Math.max(1.6, e.size * 5 * (1 - u * 0.45));
           tr = Math.min(size * 0.09, Math.hypot(e.vx, e.vy) * 0.05 + sz * 1.5);
           ang = Math.atan2(e.vy, e.vx) + 1.5708;
           main.globalAlpha = a * 0.5;
-          main.translate(e.x, e.y); main.rotate(ang); main.drawImage(sp.ember, -sz / 2, tr * 0.35, sz, tr + sz);
+          main.translate(e.x, e.y);
+          main.rotate(ang);
+          main.drawImage(sp.ember, -sz / 2, tr * 0.35, sz, tr + sz);
           main.setTransform(dpr, 0, 0, dpr, 0, 0);
-          main.globalAlpha = a; main.drawImage(sp.ember, e.x - sz / 2, e.y - sz / 2, sz, sz);
+          main.globalAlpha = a;
+          main.drawImage(sp.ember, e.x - sz / 2, e.y - sz / 2, sz, sz);
         }
-        main.globalAlpha = 1; main.setTransform(1, 0, 0, 1, 0, 0);
-        main.globalCompositeOperation = 'source-over';
-      }
-      var raf = 0, on = true, vis = true, lastP = 0, io = null, dead = false, everConn = false;
-      function loop(now) {
+        main.globalAlpha = 1;
+        main.setTransform(1, 0, 0, 1, 0, 0);
+        main.globalCompositeOperation = "source-over";
+      }, loop = function(now) {
         if (!on || dead) return;
         raf = requestAnimationFrame(loop);
         try {
-          if (!hostEl.isConnected) { if (everConn) { kill(); return } lastP = now; return }
+          if (!hostEl.isConnected) {
+            if (everConn) {
+              kill();
+              return;
+            }
+            lastP = now;
+            return;
+          }
           everConn = true;
-          if (!vis) { lastP = now; return }
-          var dt = (now - lastP) / 1000; lastP = now;
+          if (!vis) {
+            lastP = now;
+            return;
+          }
+          var dt = (now - lastP) / 1e3;
+          lastP = now;
           if (!(dt > 0) || !isFinite(dt)) dt = 1 / 60;
           dt = Math.min(dt, 1 / 24) * (RM ? 0.45 : 1);
           tm += dt;
-          surgeUpd(dt); sim(dt); draw();
-        } catch (e2) { kill() }
-      }
-      function kill() {
+          surgeUpd(dt);
+          sim(dt);
+          draw();
+        } catch (e2) {
+          kill();
+        }
+      }, kill = function() {
         if (dead) return;
-        dead = true; on = false; cv._ffDead = 1;
+        dead = true;
+        on = false;
+        cv._ffDead = 1;
         cancelAnimationFrame(raf);
-        if (io) { try { io.disconnect() } catch (e3) {} io = null }
-        try { if (cv.parentNode) cv.parentNode.removeChild(cv) } catch (e4) {}
-      }
-      if (typeof IntersectionObserver !== 'undefined') {
+        if (io) {
+          try {
+            io.disconnect();
+          } catch (e3) {
+          }
+          io = null;
+        }
         try {
-          io = new IntersectionObserver(function (en) { vis = en[0].isIntersecting; if (vis) lastP = performance.now() }, { threshold: 0.01 });
-          io.observe(cv);
-        } catch (e5) { io = null }
+          if (cv.parentNode) cv.parentNode.removeChild(cv);
+        } catch (e4) {
+        }
+      };
+      if (!hostEl || !hostEl.getBoundingClientRect) return;
+      sweep();
+      if (liveCount() >= CAP) return;
+      var allL = document.querySelectorAll(".fr-fire-canvas"), used = 0, li;
+      for (li = 0; li < allL.length; li++) if (!allL[li]._ffDead && allL[li].isConnected) used += allL[li]._ffMax || 0;
+      var allowed = Math.max(700, 11800 - used);
+      var size = +sizePx || 0, cv, main, fx, fxc, mask, G, dpr, MAX, S, SZ, AK;
+      if (!(size > 0)) size = Math.round(hostEl.getBoundingClientRect().width || 56);
+      if (size < 40) return;
+      if (hostEl.querySelector && hostEl.querySelector(".fr-fire-canvas")) return;
+      if (window.getComputedStyle(hostEl).position === "static") hostEl.style.position = "relative";
+      var sp = sprites();
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      MAX = Math.min(budget(size), allowed);
+      if (size >= 100) MAX = Math.round(Math.min(2600, MAX * 1.25, allowed));
+      var fr = cl((size - 58) / 22, 0, 1);
+      S = size * (1.32 - 0.28 * cl(size / 232, 0, 1));
+      SZ = cl(Math.pow(232 / size, 0.1), 0.92, 1.25);
+      AK = cl(Math.pow(232 / size, 0.14), 1, 1.35) * cl(1148 / Math.max(1, MAX * 0.82), 0.7, 1.15);
+      var SZW = cl(Math.pow(232 / size, 0.16), 1, 1.35);
+      var HF = 1.32 - 0.28 * cl(size / 232, 0, 1);
+      var sideA = Math.round(size * 0.42), sideB = Math.round(size * 0.13), topA = Math.round(size * 0.42) + Math.round(size * 0.78 * HF), topB = Math.round(size * 0.26), botA = Math.round(size * 0.16) + Math.round(size * 0.22), botB = Math.round(size * 0.07);
+      G = {
+        size,
+        side: Math.round(sideA + (sideB - sideA) * fr),
+        top: Math.round(topA + (topB - topA) * fr),
+        bot: Math.round(botA + (botB - botA) * fr)
+      };
+      G.cap = size * 0.2;
+      G.w = size + G.side * 2;
+      G.h = G.top + size + G.bot;
+      var x0 = G.side, y0 = G.top, x1 = x0 + size, y1 = y0 + size, R = size * 0.22;
+      cv = document.createElement("canvas");
+      cv.className = "fr-fire-canvas";
+      cv.setAttribute("aria-hidden", "true");
+      cv.width = Math.round(G.w * dpr);
+      cv.height = Math.round(G.h * dpr);
+      cv.style.left = -G.side + "px";
+      cv.style.top = -G.top + "px";
+      cv.style.width = G.w + "px";
+      cv.style.height = G.h + "px";
+      main = cv.getContext("2d");
+      fx = mk(cv.width, cv.height);
+      fxc = fx.getContext("2d");
+      mask = mk(cv.width, cv.height);
+      (function() {
+        var m = mask.getContext("2d"), cx, cy, rx, ry, gr, k, ins, steps = 9, feather = G.size * 0.075;
+        function rr2(ctx2, x, y, w2, h, r) {
+          if (r > w2 / 2) r = w2 / 2;
+          if (r > h / 2) r = h / 2;
+          ctx2.beginPath();
+          ctx2.moveTo(x + r, y);
+          ctx2.arcTo(x + w2, y, x + w2, y + h, r);
+          ctx2.arcTo(x + w2, y + h, x, y + h, r);
+          ctx2.arcTo(x, y + h, x, y, r);
+          ctx2.arcTo(x, y, x + w2, y, r);
+          ctx2.closePath();
+        }
+        m.setTransform(dpr, 0, 0, dpr, 0, 0);
+        cx = G.w / 2;
+        cy = G.top + G.size * mix(0.42, 0.5);
+        rx = G.w * 0.66;
+        ry = G.h * 0.66;
+        m.save();
+        m.translate(cx, cy);
+        m.scale(1, ry / rx);
+        gr = m.createRadialGradient(0, 0, 0, 0, 0, rx);
+        gr.addColorStop(0, "rgba(255,255,255,1)");
+        gr.addColorStop(0.45, "rgba(255,255,255,1)");
+        gr.addColorStop(0.62, "rgba(255,255,255,0.82)");
+        gr.addColorStop(0.76, "rgba(255,255,255,0.46)");
+        gr.addColorStop(0.88, "rgba(255,255,255,0.16)");
+        gr.addColorStop(1, "rgba(255,255,255,0)");
+        m.fillStyle = gr;
+        m.beginPath();
+        m.arc(0, 0, rx, 0, TAU);
+        m.fill();
+        m.restore();
+        if (fr <= 0) return;
+        m.globalCompositeOperation = "destination-out";
+        for (k = 0; k < steps; k++) {
+          ins = -G.size * 0.035 + feather * (k / steps);
+          m.globalAlpha = (0.1 + 0.9 * (k / (steps - 1))) * fr;
+          rr2(m, x0 + ins, y0 + ins, G.size - ins * 2, G.size - ins * 2, Math.max(2, R - ins * 0.7));
+          m.fill();
+        }
+        m.globalAlpha = 1;
+        m.globalCompositeOperation = "destination-in";
+        var gTop = y0 - G.cap * mix(20, 1), gBot = y0 - G.cap * mix(18, 0.62);
+        gr = m.createLinearGradient(0, gTop, 0, gBot);
+        gr.addColorStop(0, "rgba(255,255,255,0)");
+        gr.addColorStop(0.45, "rgba(255,255,255,0.5)");
+        gr.addColorStop(0.8, "rgba(255,255,255,0.92)");
+        gr.addColorStop(1, "rgba(255,255,255,1)");
+        m.fillStyle = gr;
+        m.fillRect(0, 0, G.w, G.h);
+        m.globalCompositeOperation = "source-over";
+      })();
+      var pts = [], heatAt = function(y) {
+        return 0.1 + 0.9 * Math.pow(1 - cl((y - y0) / size, 0, 1), 1.55);
+      };
+      var eN = Math.max(24, Math.round(size * 0.9)), aN = Math.max(7, Math.round(size * 0.28));
+      seg(x0 + R, y0, x1 - R, y0, 0, -1, eN);
+      arc(x1 - R, y0 + R, -1.5708, 0, aN);
+      seg(x1, y0 + R, x1, y1 - R, 1, 0, eN);
+      arc(x1 - R, y1 - R, 0, 1.5708, aN);
+      seg(x1 - R, y1, x0 + R, y1, 0, 1, eN);
+      arc(x0 + R, y1 - R, 1.5708, 3.1416, aN);
+      seg(x0, y1 - R, x0, y0 + R, -1, 0, eN);
+      arc(x0 + R, y0 + R, 3.1416, 4.7124, aN);
+      var cdf = new Float32Array(pts.length), acc = 0, i0;
+      for (i0 = 0; i0 < pts.length; i0++) {
+        acc += Math.pow(pts[i0].heat, 2.3);
+        cdf[i0] = acc;
       }
-      for (i = 0; i < 260; i++) { tm += 1 / 60; sim(1 / 60) }
-      surgeUpd(1 / 60); draw();
+      var cdfT = acc;
+      var tongues = [], plumes = [], parts = [], embers = [], rateK = cl(MAX / 1400, 0.12, 1.5);
+      var XK = 232 / size;
+      var nTop = cl(Math.round(1 + size / 232 * 13), 5, 15), i;
+      if (size < 100) nTop += 4;
+      for (i = 0; i < nTop; i++) tongues.push(tongue("top", i, nTop));
+      if (size > 105) {
+        tongues.push(tongue("corner", 0));
+        tongues.push(tongue("corner", 1));
+        for (i = 0; i < 2; i++) {
+          var w = tongue("corner", i);
+          w.x = i === 0 ? x1 - R * 0.65 : x0 + R * 0.65;
+          w.y = y0 + R * 0.22;
+          w.nx *= 0.2;
+          w.ny = -1;
+          w.heat = 0.95;
+          w.hMul = rr(0.5, 1);
+          tongues.push(w);
+        }
+      }
+      var nSp = size > 150 ? 3 : size > 70 ? 2 : 1;
+      for (i = 0; i < nSp; i++) {
+        tongues.push(tongue("side", i * 2 + 1));
+        tongues.push(tongue("side", i * 2));
+      }
+      if (size > 150) {
+        tongues.push(tongue("side", 5));
+        tongues.push(tongue("side", 4));
+        tongues.push(tongue("side", 1));
+        tongues.push(tongue("side", 0));
+      }
+      var nBot = size > 120 ? 3 : 2;
+      for (i = 0; i < nBot; i++) tongues.push(tongue("bottom", i, nBot));
+      var nPl = cl(Math.round(size / 58), 3, 5);
+      for (i = 0; i < nPl; i++) plumes.push({ x: x0 + (i + 0.5) / nPl * size, phase: rn() * TAU, freq: rr(0.55, 1.5), wide: rr(0.24, 0.4), tall: rr(0.55, 1.05), deep: rn() < 0.4 });
+      var eAcc = 0, surge = 1, br = { v: 0.5, t: 0.5 }, tm = 0, fill = 1;
+      var bandFor = function(t) {
+        return t > 1 ? 0 : t > 0.78 ? 1 : t > 0.5 ? 2 : t > 0.26 ? 3 : 4;
+      };
+      var raf = 0, on = true, vis = true, lastP = 0, io = null, dead = false, everConn = false;
+      if (typeof IntersectionObserver !== "undefined") {
+        try {
+          io = new IntersectionObserver(function(en) {
+            vis = en[0].isIntersecting;
+            if (vis) lastP = performance.now();
+          }, { threshold: 0.01 });
+          io.observe(cv);
+        } catch (e5) {
+          io = null;
+        }
+      }
+      for (i = 0; i < 260; i++) {
+        tm += 1 / 60;
+        sim(1 / 60);
+      }
+      surgeUpd(1 / 60);
+      draw();
       hostEl.appendChild(cv);
       cv._ffHost = hostEl;
       cv._ffKill = kill;
       cv._ffMax = MAX;
       lastP = performance.now();
       raf = requestAnimationFrame(loop);
-      return cv
-    } catch (e) { return null }
+      return cv;
+    } catch (e) {
+      return null;
+    }
   };
 })();
 </script>
