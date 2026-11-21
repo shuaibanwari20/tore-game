@@ -20388,6 +20388,10 @@ return module.exports; })();
  *  Same renderer as the demo (identical constants), plus the client's safety
  *  rules: one canvas per host, silent failure, DPR <= 2, IO pause, DOM
  *  self-termination, shared cap of 6 live gold canvases, size >= 52px only.
+ *  v3: every canvas is sized from the host's RENDERED rect (and rebuilt when
+ *  that rect changes); sizePx is only a fallback while the host is unlaid-out.
+ *  A host with no rect (e.g. built inside display:none) stays pending and is
+ *  re-measured every 100ms, forever, until the screen is shown — no give-up.
  * ==========================================================================*/
 (function () {
   'use strict';
@@ -20669,6 +20673,9 @@ return module.exports; })();
    *  ENGINE  — one per host
    * ==================================================================== */
   function createEngine(host, size) {
+    /* `size` is the host's MEASURED rendered side (getBoundingClientRect),
+       never the avatarEl sizePx hint — that is what keeps the band exactly
+       on the tile border when CSS (e.g. !important width) resizes the host. */
     /* size tiers: 2 = large, 1 = 64…117, 0 = 52…63 (identical to the demo) */
     var tier = size >= 118 ? 2 : (size >= 64 ? 1 : 0);
     var dpr = Math.min(W.devicePixelRatio || 1, tier === 2 ? 1.5 : 2); /* <= 2 */
@@ -21095,13 +21102,19 @@ return module.exports; })();
   }
 
   /* ======================================================================
-   *  SLOT MANAGER
-   *  A "slot" is one host that wears the gold.  A canvas is created only
-   *  while the slot is on screen AND inside the shared cap; leaving the
-   *  viewport or the DOM removes the canvas again (the CSS ring stays).
+   *  SLOT MANAGER  (v3)
+   *  A "slot" is one host that wears the gold.  Creation is driven by the
+   *  host's RENDERED rect only: a slot stays pending — re-measured every
+   *  100ms, forever, for as long as the host is in the DOM — until it has a
+   *  real rect (>= 52px).  So a host built inside a display:none screen
+   *  (the profile card) gets its canvas the moment that screen is shown,
+   *  without a second attach call.  IntersectionObserver is used only to
+   *  PAUSE a live canvas that is scrolled out of view, never to decide
+   *  whether one may exist.
    * ==================================================================== */
   var SLOTS = [];
   var watchdog = 0;
+  var TICK_MS = 100; /* pending / resize watch — continuous while slots exist */
   var pumping = false;
   var pumpAgain = false;
 
@@ -21110,6 +21123,15 @@ return module.exports; })();
       return !!(el && el.ownerDocument && el.ownerDocument.documentElement &&
         el.ownerDocument.documentElement.contains(el));
     } catch (e) { return false; }
+  }
+
+  /* ---- rendered geometry ---------------------------------------------- */
+  function rectSize(el) {
+    var r = null;
+    try { r = el.getBoundingClientRect ? el.getBoundingClientRect() : null; } catch (e0) {}
+    if (!r || !(r.width > 0) || !(r.height > 0)) return 0;
+    var side = Math.round(r.width < r.height ? r.width : r.height);
+    return side > 0 ? side : 0;
   }
 
   function liveCount() {
@@ -21126,43 +21148,95 @@ return module.exports; })();
       slot.engine = null;
     }
     slot.engineDead = true;
+    slot.frame = 0;
+  }
+
+  /* may we run right now?  we do not ask IntersectionObserver to grant
+     permission — a hidden/displays-none host is simply not intersected, and
+     that is exactly the state we must survive.  We only ask: laid out, tab
+     visible, and (if IO told us) actually on screen. */
+  function visibleNow() {
+    try { if (D.hidden) return false; } catch (e0) {}
+    return true;
+  }
+
+  function drawSlot(slot) {
+    if (!slot.engine || slot.engineDead) return;
+    if (slot.visible && visibleNow()) slot.engine.start();
+    else { slot.engine.stop(); slot.engine.renderStill(); }
+  }
+
+  function buildSlot(slot, f) {
+    try {
+      var engine = createEngine(slot.host, f);
+      slot.host.appendChild(engine.canvas);
+      slot.engine = engine;
+      slot.engineDead = false;
+      slot.frame = f;
+      slot.pending = false;
+      drawSlot(slot);
+      return true;
+    } catch (e1) {
+      slot.engine = null;
+      slot.engineDead = true;
+      slot.frame = 0;
+      slot.pending = true;
+      return false;
+    }
   }
 
   function pump() {
     if (pumping) { pumpAgain = true; return; }
     pumping = true;
+    var k, slot, f;
     var hidden = false;
-    try { hidden = !!D.hidden; } catch (e0) {}
-    var k, slot;
+    try { hidden = !!D.hidden; } catch (e00) {}
 
-    /* 1 — fade out everything that is hidden, off screen or dead */
+    /* 1 — hosts gone from the DOM lose their canvas (self-termination) */
+    for (k = SLOTS.length - 1; k >= 0; k--) {
+      slot = SLOTS[k];
+      if (slot.engine && !inDom(slot.host)) releaseSlot(slot);
+    }
+
+    /* 2 — measure every slot with a canvas: rebuild when the rect changed
+           (resize / re-render) or fell below the gate */
     for (k = 0; k < SLOTS.length; k++) {
       slot = SLOTS[k];
-      if (slot.engine && (!slot.wanted || hidden || !inDom(slot.host))) releaseSlot(slot);
-    }
-    /* 2 — bring up on-screen slots in creation order, within the cap */
-    var live = liveCount();
-    for (k = 0; k < SLOTS.length && live < CAP_GOLD; k++) {
-      slot = SLOTS[k];
-      if (slot.engine || !slot.wanted || hidden) continue;
-      if (!inDom(slot.host)) continue;
-      try {
-        var engine = createEngine(slot.host, slot.size);
-        slot.host.appendChild(engine.canvas);
-        slot.engine = engine;
-        slot.engineDead = false;
-        live++;
-        engine.start();
-      } catch (e1) {
-        slot.engine = null;
+      if (!slot.engine) continue;
+      f = rectSize(slot.host);
+      if (!f) {                      /* layout gone (hidden) — keep, pause */
+        slot.frame = 0;
+        slot.pending = true;
+        releaseSlot(slot);
+        continue;
+      }
+      if (f < 52) { releaseSlot(slot); slot.pending = false; continue; }
+      if (f !== slot.frame) {
+        releaseSlot(slot);
+        buildSlot(slot, f);
       }
     }
-    /* 3 — running engines beyond the cap stop animating (still painted) */
+
+    /* 3 — pending slots: no rect yet → stay pending and retry forever;
+           real rect >= 52 → build (creation order, shared cap) */
+    var live = liveCount();
+    for (k = 0; k < SLOTS.length; k++) {
+      slot = SLOTS[k];
+      if (slot.engine) continue;
+      if (!inDom(slot.host)) continue;
+      f = rectSize(slot.host);
+      if (!f) { slot.pending = true; continue; }      /* keep waiting */
+      if (f < 52) { slot.pending = false; continue; } /* below the gate */
+      if (live >= CAP_GOLD) { slot.pending = true; continue; } /* cap: retry */
+      if (buildSlot(slot, f)) live++;
+    }
+
+    /* 4 — never animate more than the cap; pause off-screen / hidden tab */
     var runningNow = 0;
     for (k = 0; k < SLOTS.length; k++) {
       slot = SLOTS[k];
       if (!slot.engine) continue;
-      if (slot.wanted && !hidden && runningNow < CAP_GOLD) {
+      if (slot.visible && !hidden && runningNow < CAP_GOLD) {
         if (!slot.engine.running) slot.engine.start();
         runningNow++;
       } else if (slot.engine.running) {
@@ -21175,40 +21249,57 @@ return module.exports; })();
     if (pumpAgain) { pumpAgain = false; pump(); }
   }
 
-  function ensureWatchdog() {
+  /* ---------------- one shared, self-driving watch --------------------- */
+  /* Runs while any slot exists. 100ms is enough to catch a display:none
+     screen being shown on the very next layout; a live canvas is untouched
+     by it (only the rect is compared). */
+  function ensureWatch() {
     if (watchdog) return;
-    watchdog = setInterval(function () {
-      var k;
-      for (k = SLOTS.length - 1; k >= 0; k--) {
-        var slot = SLOTS[k];
-        if (!inDom(slot.host)) {
-          releaseSlot(slot);
-          try { if (slot.io) slot.io.disconnect(); } catch (e2) {}
-          try { if (slot.host && slot.host.__goldSlot === slot) slot.host.__goldSlot = null; } catch (e3) {}
-          SLOTS.splice(k, 1);
-        }
+    watchdog = setInterval(sweep, TICK_MS);
+  }
+
+  function sweep() {
+    var k, slot;
+    for (k = SLOTS.length - 1; k >= 0; k--) {
+      slot = SLOTS[k];
+      if (!inDom(slot.host)) {
+        releaseSlot(slot);
+        try { if (slot.io) slot.io.disconnect(); } catch (e2) {}
+        try { if (slot.host && slot.host.__goldSlot === slot) slot.host.__goldSlot = null; } catch (e3) {}
+        SLOTS.splice(k, 1);
       }
-      pump();
-      if (!SLOTS.length && watchdog) {
-        clearInterval(watchdog);
-        watchdog = 0;
-      }
-    }, 600);
+    }
+    pump();
+    if (!SLOTS.length && watchdog) {
+      clearInterval(watchdog);
+      watchdog = 0;
+    }
   }
 
   function onVisibility() {
     pump();
   }
 
+  function onResize() {
+    pump();
+  }
+
   function attachTo(hostEl, sizePx) {
     if (!hostEl || hostEl.nodeType !== 1) return null;
     if (hostEl.__goldSlot) {
-      var existing = hostEl.__goldSlot;
-      return existing.engine || null;
+      pump();                       /* already wearing gold: re-measure now */
+      return hostEl.__goldSlot.engine || null;
     }
 
-    var size = sizePx > 0 ? Math.round(sizePx) : (hostEl.offsetWidth || 0);
-    if (!(size >= 52)) return null; /* the canvas runs from 52px up */
+    /* sizePx is only a fallback HINT for the first measurement; the rect
+       decides everything after it (and the gate is on the rendered size). */
+    var hint = sizePx > 0 ? Math.round(sizePx) : 0;
+    var f0 = rectSize(hostEl);
+
+    /* Hosts with a real rect below the gate stay CSS-only for good.  Hosts
+       with NO rect (display:none, not yet attached) are registered as
+       pending and retried forever — that is the profile-card case. */
+    if (f0 && f0 < 52) return null;
 
     /* make absolute positioning resolve against the avatar itself */
     try {
@@ -21218,34 +21309,49 @@ return module.exports; })();
 
     var slot = {
       host: hostEl,
-      size: size,
       io: null,
       engine: null,
       engineDead: true,
-      wanted: false
+      pending: !f0,
+      visible: true,   /* IO may tighten this; it can never block creation */
+      frame: 0,
+      hint: hint
     };
 
+    /* IntersectionObserver: pause only.  A host that is display:none or not
+       yet on screen reports isIntersecting === false — we keep it non-blocking
+       for creation, but use it to avoid starting an off-screen animation. */
     if (W.IntersectionObserver) {
       try {
         slot.io = new W.IntersectionObserver(function (entries) {
           var e = entries[entries.length - 1];
-          slot.wanted = !!e.isIntersecting;
+          slot.visible = !!e.isIntersecting;
+          drawSlot(slot);
           pump();
         }, { threshold: 0 });
         slot.io.observe(hostEl);
       } catch (e4) { slot.io = null; }
     }
-    if (!slot.io) slot.wanted = true;
 
     hostEl.__goldSlot = slot;
     SLOTS.push(slot);
-    ensureWatchdog();
-    if (!D.__goldVisibilityHooked) {
-      D.__goldVisibilityHooked = true;
+    if (!D.__goldHooked) {
+      D.__goldHooked = true;
       try { D.addEventListener('visibilitychange', onVisibility, false); } catch (e5) {}
+      try { W.addEventListener('resize', onResize, false); } catch (e6) {}
+      try { W.addEventListener('orientationchange', onResize, false); } catch (e7) {}
     }
+    ensureWatch();
     pump();
-    return slot.engine;
+
+    /* if the host is still unlaid-out, measure once more next frame so the
+       common (visible) case never waits for the 100ms tick */
+    if (!f0 && W.requestAnimationFrame) {
+      try {
+        W.requestAnimationFrame(function () { pump(); });
+      } catch (e8) {}
+    }
+    return slot.engine || null;
   }
 
   W.attachGoldFrame = function (hostEl, sizePx) {
