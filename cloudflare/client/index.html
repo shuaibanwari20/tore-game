@@ -27949,7 +27949,7 @@ window.ToreBots = (function() {
     var frameNo = 0;
     function render(t) {
       var cyc = t / SHEEN_PERIOD % 1;
-      var sweep = smoothstep(0, 0.08, cyc) * (1 - smoothstep(0.88, 1, cyc));
+      var sweep2 = smoothstep(0, 0.08, cyc) * (1 - smoothstep(0.88, 1, cyc));
       var phiS = -2.05 + TAU * smoothstep(0, 1, cyc);
       var cosS = Math.cos(phiS);
       var sinS = Math.sin(phiS);
@@ -28008,8 +28008,8 @@ window.ToreBots = (function() {
             } else {
               var fall = 1 - (gn - contact / glowW) / (1 - contact / glowW);
               var shdG = 0.5 + 0.5 * (cosP * cosS + sinP * sinS);
-              var aGlow = clamp(fall, 0, 1) * fall * (0.07 + 0.08 * ld0 + 0.1 * sweep * shdG);
-              var liG = clamp(0.4 + 0.15 * ld0 + 0.15 * sweep, 0, 1) * lutScale | 0;
+              var aGlow = clamp(fall, 0, 1) * fall * (0.07 + 0.08 * ld0 + 0.1 * sweep2 * shdG);
+              var liG = clamp(0.4 + 0.15 * ld0 + 0.15 * sweep2, 0, 1) * lutScale | 0;
               c[pi4] = lut[liG * 3];
               c[pi4 + 1] = lut[liG * 3 + 1];
               c[pi4 + 2] = lut[liG * 3 + 2];
@@ -28054,7 +28054,7 @@ window.ToreBots = (function() {
           sh = shd0 * shd0;
           sh4 = sh * sh * sh;
           belt = smoothstep(0.04, 0.24, dd / band) * (1 - smoothstep(0.82, 1.3, dd / band));
-          glint = sweep * (sh4 * 1.45 + sh * 0.22) * belt * (0.45 + 0.55 * (Lsec / LUT_MAX)) * (0.5 + 0.5 * env);
+          glint = sweep2 * (sh4 * 1.45 + sh * 0.22) * belt * (0.45 + 0.55 * (Lsec / LUT_MAX)) * (0.5 + 0.5 * env);
           L += glint;
           L += flow * 0.07 * belt * (0.5 + 0.5 * ld0);
           L *= 0.985 + 0.015 * sinF(t * 0.83 + 0.6);
@@ -28196,6 +28196,7 @@ window.ToreBots = (function() {
   }
   var SLOTS = [];
   var watchdog = 0;
+  var TICK_MS = 100;
   var pumping = false;
   var pumpAgain = false;
   function inDom(el) {
@@ -28204,6 +28205,16 @@ window.ToreBots = (function() {
     } catch (e) {
       return false;
     }
+  }
+  function rectSize(el) {
+    var r = null;
+    try {
+      r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+    } catch (e0) {
+    }
+    if (!r || !(r.width > 0) || !(r.height > 0)) return 0;
+    var side = Math.round(r.width < r.height ? r.width : r.height);
+    return side > 0 ? side : 0;
   }
   function liveCount() {
     var n = 0;
@@ -28218,6 +28229,40 @@ window.ToreBots = (function() {
       slot.engine = null;
     }
     slot.engineDead = true;
+    slot.frame = 0;
+  }
+  function visibleNow() {
+    try {
+      if (D.hidden) return false;
+    } catch (e0) {
+    }
+    return true;
+  }
+  function drawSlot(slot) {
+    if (!slot.engine || slot.engineDead) return;
+    if (slot.visible && visibleNow()) slot.engine.start();
+    else {
+      slot.engine.stop();
+      slot.engine.renderStill();
+    }
+  }
+  function buildSlot(slot, f) {
+    try {
+      var engine = createEngine(slot.host, f);
+      slot.host.appendChild(engine.canvas);
+      slot.engine = engine;
+      slot.engineDead = false;
+      slot.frame = f;
+      slot.pending = false;
+      drawSlot(slot);
+      return true;
+    } catch (e1) {
+      slot.engine = null;
+      slot.engineDead = true;
+      slot.frame = 0;
+      slot.pending = true;
+      return false;
+    }
   }
   function pump() {
     if (pumping) {
@@ -28225,37 +28270,61 @@ window.ToreBots = (function() {
       return;
     }
     pumping = true;
+    var k, slot, f;
     var hidden = false;
     try {
       hidden = !!D.hidden;
-    } catch (e0) {
+    } catch (e00) {
     }
-    var k, slot;
+    for (k = SLOTS.length - 1; k >= 0; k--) {
+      slot = SLOTS[k];
+      if (slot.engine && !inDom(slot.host)) releaseSlot(slot);
+    }
     for (k = 0; k < SLOTS.length; k++) {
       slot = SLOTS[k];
-      if (slot.engine && (!slot.wanted || hidden || !inDom(slot.host))) releaseSlot(slot);
+      if (!slot.engine) continue;
+      f = rectSize(slot.host);
+      if (!f) {
+        slot.frame = 0;
+        slot.pending = true;
+        releaseSlot(slot);
+        continue;
+      }
+      if (f < 52) {
+        releaseSlot(slot);
+        slot.pending = false;
+        continue;
+      }
+      if (f !== slot.frame) {
+        releaseSlot(slot);
+        buildSlot(slot, f);
+      }
     }
     var live = liveCount();
-    for (k = 0; k < SLOTS.length && live < CAP_GOLD; k++) {
+    for (k = 0; k < SLOTS.length; k++) {
       slot = SLOTS[k];
-      if (slot.engine || !slot.wanted || hidden) continue;
+      if (slot.engine) continue;
       if (!inDom(slot.host)) continue;
-      try {
-        var engine = createEngine(slot.host, slot.size);
-        slot.host.appendChild(engine.canvas);
-        slot.engine = engine;
-        slot.engineDead = false;
-        live++;
-        engine.start();
-      } catch (e1) {
-        slot.engine = null;
+      f = rectSize(slot.host);
+      if (!f) {
+        slot.pending = true;
+        continue;
       }
+      if (f < 52) {
+        slot.pending = false;
+        continue;
+      }
+      if (live >= CAP_GOLD) {
+        slot.pending = true;
+        continue;
+      }
+      if (buildSlot(slot, f)) live++;
     }
     var runningNow = 0;
     for (k = 0; k < SLOTS.length; k++) {
       slot = SLOTS[k];
       if (!slot.engine) continue;
-      if (slot.wanted && !hidden && runningNow < CAP_GOLD) {
+      if (slot.visible && !hidden && runningNow < CAP_GOLD) {
         if (!slot.engine.running) slot.engine.start();
         runningNow++;
       } else if (slot.engine.running) {
@@ -28269,43 +28338,48 @@ window.ToreBots = (function() {
       pump();
     }
   }
-  function ensureWatchdog() {
+  function ensureWatch() {
     if (watchdog) return;
-    watchdog = setInterval(function() {
-      var k;
-      for (k = SLOTS.length - 1; k >= 0; k--) {
-        var slot = SLOTS[k];
-        if (!inDom(slot.host)) {
-          releaseSlot(slot);
-          try {
-            if (slot.io) slot.io.disconnect();
-          } catch (e2) {
-          }
-          try {
-            if (slot.host && slot.host.__goldSlot === slot) slot.host.__goldSlot = null;
-          } catch (e3) {
-          }
-          SLOTS.splice(k, 1);
+    watchdog = setInterval(sweep, TICK_MS);
+  }
+  function sweep() {
+    var k, slot;
+    for (k = SLOTS.length - 1; k >= 0; k--) {
+      slot = SLOTS[k];
+      if (!inDom(slot.host)) {
+        releaseSlot(slot);
+        try {
+          if (slot.io) slot.io.disconnect();
+        } catch (e2) {
         }
+        try {
+          if (slot.host && slot.host.__goldSlot === slot) slot.host.__goldSlot = null;
+        } catch (e3) {
+        }
+        SLOTS.splice(k, 1);
       }
-      pump();
-      if (!SLOTS.length && watchdog) {
-        clearInterval(watchdog);
-        watchdog = 0;
-      }
-    }, 600);
+    }
+    pump();
+    if (!SLOTS.length && watchdog) {
+      clearInterval(watchdog);
+      watchdog = 0;
+    }
   }
   function onVisibility() {
+    pump();
+  }
+  function onResize() {
     pump();
   }
   function attachTo(hostEl, sizePx) {
     if (!hostEl || hostEl.nodeType !== 1) return null;
     if (hostEl.__goldSlot) {
-      var existing = hostEl.__goldSlot;
-      return existing.engine || null;
+      pump();
+      return hostEl.__goldSlot.engine || null;
     }
-    var size = sizePx > 0 ? Math.round(sizePx) : hostEl.offsetWidth || 0;
-    if (!(size >= 52)) return null;
+    var hint = sizePx > 0 ? Math.round(sizePx) : 0;
+    var f0 = rectSize(hostEl);
+    if (f0 && f0 < 52) return null;
     try {
       var cs = W.getComputedStyle ? W.getComputedStyle(hostEl, null) : null;
       if (cs && cs.position === "static") hostEl.style.position = "relative";
@@ -28313,17 +28387,21 @@ window.ToreBots = (function() {
     }
     var slot = {
       host: hostEl,
-      size,
       io: null,
       engine: null,
       engineDead: true,
-      wanted: false
+      pending: !f0,
+      visible: true,
+      /* IO may tighten this; it can never block creation */
+      frame: 0,
+      hint
     };
     if (W.IntersectionObserver) {
       try {
         slot.io = new W.IntersectionObserver(function(entries) {
           var e = entries[entries.length - 1];
-          slot.wanted = !!e.isIntersecting;
+          slot.visible = !!e.isIntersecting;
+          drawSlot(slot);
           pump();
         }, { threshold: 0 });
         slot.io.observe(hostEl);
@@ -28331,19 +28409,34 @@ window.ToreBots = (function() {
         slot.io = null;
       }
     }
-    if (!slot.io) slot.wanted = true;
     hostEl.__goldSlot = slot;
     SLOTS.push(slot);
-    ensureWatchdog();
-    if (!D.__goldVisibilityHooked) {
-      D.__goldVisibilityHooked = true;
+    if (!D.__goldHooked) {
+      D.__goldHooked = true;
       try {
         D.addEventListener("visibilitychange", onVisibility, false);
       } catch (e5) {
       }
+      try {
+        W.addEventListener("resize", onResize, false);
+      } catch (e6) {
+      }
+      try {
+        W.addEventListener("orientationchange", onResize, false);
+      } catch (e7) {
+      }
     }
+    ensureWatch();
     pump();
-    return slot.engine;
+    if (!f0 && W.requestAnimationFrame) {
+      try {
+        W.requestAnimationFrame(function() {
+          pump();
+        });
+      } catch (e8) {
+      }
+    }
+    return slot.engine || null;
   }
   W.attachGoldFrame = function(hostEl, sizePx) {
     try {
