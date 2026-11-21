@@ -2584,7 +2584,7 @@
   /* ---------- feat3 (#19 frames, #6 level, #2 referral, #15 gift, #12/#13 club, #20 event) ---------- */
   .pavatar { position: relative; }
   .fr-ring { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-sizing: border-box; z-index: 3; }
-  .fr-ring.fr1 { border: 3px solid #ffd75e; box-shadow: inset 0 0 0 1.5px #8a6414, inset 0 0 9px rgba(255,215,94,.5); }
+  .fr-ring.fr1 { border: 2px solid #e9bf63; box-shadow: inset 0 0 0 1px #4a2a08, inset 0 0 0 2.2px #b07c22, inset 0 0 2px 3.2px #2a1403, inset 0 7px 10px -8px rgba(255,238,185,.7), 0 0 12px rgba(255,150,40,.32); }
   .fr-ring.fr2 { border: 3px solid #c77dff; box-shadow: inset 0 0 0 1.5px #5b2a86, inset 0 0 9px rgba(199,125,255,.55); }
   /* up115: fr3 is REAL FIRE — a flame plate behind the avatar (its
      edges warped by the #frfire turbulence filter on large avatars),
@@ -2609,6 +2609,9 @@
   /* up119: fr3 wears Arena's canvas particle fire (attachFireFrame,
      spliced at the end of the body) over this fire bed. */
   .fr-fire-canvas { position: absolute; pointer-events: none; z-index: 4; }
+  .fr-gold-canvas { position: absolute; pointer-events: none; z-index: 4; }
+  .pavatar.fr1-host { overflow: visible; }
+  .pavatar.fr1-host > img, .pavatar.fr1-host > svg { border-radius: inherit; }
   .fr-ring.fr5 { animation: fr5glow 1.15s ease-in-out infinite alternate; }
   @keyframes fr5glow { from { box-shadow: 0 0 9px rgba(255,150,50,.45); } to { box-shadow: 0 0 16px rgba(255,130,30,.75); } }
   .fr-ring.fr4 { border: 3px solid #3ddc97; box-shadow: inset 0 0 0 1.5px #0d5c3f, inset 0 0 9px rgba(61,220,151,.55); }
@@ -7743,7 +7746,7 @@ function avatarEl(name, av, px, photo, frame) {
   } else {
     d.innerHTML = AVATAR_ART[(typeof av === 'string' && AVATAR_ART[av]) ? av : 'av1'].svg;
   }
-  if (d.dataset.frame) { if (d.dataset.frame === 'fr3') d.classList.add('fr3-host'); const r = document.createElement('span'); r.className = 'fr-ring ' + d.dataset.frame + ((!px || px >= 52) ? ' fr-lg' : ''); d.appendChild(r); if (d.dataset.frame === 'fr3' && (!px || px >= 52)) { try { attachFireFrame(d, px || 56); } catch (e) {} } }
+  if (d.dataset.frame) { if (d.dataset.frame === 'fr3' || d.dataset.frame === 'fr1') d.classList.add(d.dataset.frame + '-host'); const r = document.createElement('span'); r.className = 'fr-ring ' + d.dataset.frame + ((!px || px >= 52) ? ' fr-lg' : ''); d.appendChild(r); if (d.dataset.frame === 'fr3' && (!px || px >= 52)) { try { attachFireFrame(d, px || 56); } catch (e) {} } if (d.dataset.frame === 'fr1' && (!px || px >= 52)) { try { attachGoldFrame(d, px || 56); } catch (e) {} } }
   return d;
 }
 function renderProfileButton() {
@@ -20375,6 +20378,878 @@ return module.exports; })();
       raf = requestAnimationFrame(loop);
       return cv
     } catch (e) { return null }
+  };
+})();
+</script>
+<script>
+/* ============================================================================
+ *  GOLD ENGINE (fr1) — in-game port of the approved "چوکات طلایی" demo.
+ *  Plain ES5.  Exposes ONE global: window.attachGoldFrame(hostEl, sizePx)
+ *  Same renderer as the demo (identical constants), plus the client's safety
+ *  rules: one canvas per host, silent failure, DPR <= 2, IO pause, DOM
+ *  self-termination, shared cap of 6 live gold canvases, size >= 52px only.
+ * ==========================================================================*/
+(function () {
+  'use strict';
+
+  var W = typeof window !== 'undefined' ? window : null;
+  if (!W) return;
+  /* expose a silent no-op first so a broken/old environment can never throw
+     inside avatarEl; a real implementation replaces it below. */
+  if (W.attachGoldFrame) return;
+  W.attachGoldFrame = function () {};
+
+  var D = W.document;
+  if (!D || typeof D.createElement !== 'function' || typeof requestAnimationFrame !== 'function') return;
+
+  var CAP_GOLD = 6; /* shared cap of live gold canvases (separate from fire) */
+  var TAU = Math.PI * 2;
+
+  /* ---------------------------------------------------------------- helpers */
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+
+  function smoothstep(e0, e1, x) {
+    var t = clamp((x - e0) / (e1 - e0), 0, 1);
+    return t * t * (3 - 2 * t);
+  }
+
+  var SIN_N = 4096;
+  var SIN = new Float32Array(SIN_N);
+  var i;
+  for (i = 0; i < SIN_N; i++) SIN[i] = Math.sin((i / SIN_N) * TAU);
+  var SIN_K = SIN_N / TAU;
+  function sinF(a) { return SIN[((a * SIN_K) | 0) & (SIN_N - 1)]; }
+  function cosF(a) { return sinF(a + Math.PI / 2); }
+
+  var imul = Math.imul || function (a, b) {
+    var ah = (a >>> 16) & 0xffff, al = a & 0xffff;
+    var bh = (b >>> 16) & 0xffff, bl = b & 0xffff;
+    return (al * bl + (((ah * bl + al * bh) << 16) >>> 0)) | 0;
+  };
+
+  function mulberry32(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6d2b79f5) | 0;
+      var t = imul(a ^ (a >>> 15), 1 | a);
+      t = (t + imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function nowMs() {
+    if (W.performance && W.performance.now) return W.performance.now();
+    return +new Date();
+  }
+
+  /* --------------------------------------------------- gold colour ramp ---- */
+  var GOLD_STOPS = [
+    [0.0, 10, 4, 1],
+    [0.08, 40, 20, 4],
+    [0.16, 84, 47, 9],
+    [0.25, 130, 81, 15],
+    [0.35, 170, 113, 23],
+    [0.45, 200, 141, 33],
+    [0.55, 223, 167, 46],
+    [0.64, 238, 187, 62],
+    [0.72, 248, 203, 84],
+    [0.8, 253, 217, 112],
+    [0.88, 255, 231, 146],
+    [0.95, 255, 241, 184],
+    [1.03, 255, 248, 214],
+    [1.1, 255, 246, 212],
+    [1.18, 255, 250, 230]
+  ];
+  var LUT_MAX = 1.18;
+
+  function buildGoldLUT(entries) {
+    var lut = new Uint8Array(entries * 3);
+    var n = GOLD_STOPS.length;
+    for (var k = 0; k < entries; k++) {
+      var L = (k / (entries - 1)) * LUT_MAX;
+      var j = 0;
+      while (j < n - 2 && L > GOLD_STOPS[j + 1][0]) j++;
+      var a = GOLD_STOPS[j];
+      var b = GOLD_STOPS[j + 1];
+      var t = clamp((L - a[0]) / (b[0] - a[0] || 1), 0, 1);
+      lut[k * 3] = a[1] + (b[1] - a[1]) * t;
+      lut[k * 3 + 1] = a[2] + (b[2] - a[2]) * t;
+      lut[k * 3 + 2] = a[3] + (b[3] - a[3]) * t;
+    }
+    return lut;
+  }
+
+  /* ------------------------------------------------ jewellery section ----- */
+  var SECTION_KEYS = [
+    [0.0, 0.06],
+    [0.022, 0.58],
+    [0.05, 0.8],
+    [0.085, 0.46],
+    [0.13, 0.33],
+    [0.19, 0.5],
+    [0.26, 0.86],
+    [0.34, 1.06],
+    [0.44, 1.12],
+    [0.54, 1.02],
+    [0.62, 0.78],
+    [0.7, 0.5],
+    [0.78, 0.37],
+    [0.83, 0.34],
+    [0.87, 0.43],
+    [0.93, 0.64],
+    [0.972, 0.92],
+    [1.0, 0.6],
+    [1.03, 0.3],
+    [1.08, 0.2],
+    [1.2, 0.13],
+    [1.36, 0.09],
+    [1.56, 0.04]
+  ];
+
+  function buildSection(keys, samples) {
+    var out = new Float32Array(samples);
+    var end = keys[keys.length - 1][0];
+    for (var k = 0; k < samples; k++) {
+      var r = (k / (samples - 1)) * end;
+      var j = 0;
+      while (j < keys.length - 2 && r > keys[j + 1][0]) j++;
+      var a = keys[j];
+      var b = keys[j + 1];
+      var u = clamp((r - a[0]) / (b[0] - a[0] || 1), 0, 1);
+      out[k] = a[1] + (b[1] - a[1]) * (u * u * (3 - 2 * u));
+    }
+    return out;
+  }
+
+  function blurSection(src, radius, passes) {
+    var n = src.length;
+    var a = new Float32Array(src);
+    var b = new Float32Array(n);
+    for (var p = 0; p < passes; p++) {
+      var acc = 0;
+      var r = Math.max(1, radius | 0);
+      var k;
+      for (k = -r; k <= r; k++) acc += a[clamp(k, 0, n - 1)];
+      for (k = 0; k < n; k++) {
+        b[k] = acc / (2 * r + 1);
+        acc += a[clamp(k + r + 1, 0, n - 1)] - a[clamp(k - r, 0, n - 1)];
+      }
+      var tmp = a; a = b; b = tmp;
+    }
+    return a;
+  }
+
+  /* ------------------------------------------------------- micro-grain ---- */
+  function valueNoise(size, cells, rand) {
+    var g = new Float32Array(cells * cells);
+    var k;
+    for (k = 0; k < g.length; k++) g[k] = rand();
+    var out = new Float32Array(size * size);
+    var scale = cells / size;
+    for (var y = 0; y < size; y++) {
+      for (var x = 0; x < size; x++) {
+        var fx = x * scale, fy = y * scale;
+        var x0 = Math.floor(fx), y0 = Math.floor(fy);
+        var tx = fx - x0, ty = fy - y0;
+        var sx = tx * tx * (3 - 2 * tx);
+        var sy = ty * ty * (3 - 2 * ty);
+        var x1 = (x0 + 1) % cells;
+        var y1 = (y0 + 1) % cells;
+        var a = g[(y0 % cells) * cells + x0];
+        var b = g[(y0 % cells) * cells + x1];
+        var c = g[y1 * cells + x0];
+        var d = g[y1 * cells + x1];
+        out[y * size + x] = a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+      }
+    }
+    return out;
+  }
+
+  function makeGrain(seed) {
+    var N = 64;
+    var rnd = mulberry32(seed);
+    var n1 = valueNoise(N, 6, rnd);
+    var n2 = valueNoise(N, 13, rnd);
+    var n3 = valueNoise(N, 11, rnd);
+    var out = new Float32Array(N * N);
+    for (var k = 0; k < out.length; k++) out[k] = n1[k] * 0.55 + n2[k] * 0.3 + n3[k] * 0.15;
+    return out;
+  }
+
+  /* ------------------------------------------------------- dust sprites --- */
+  var SPRITES = null;
+  function makeDustSprites() {
+    if (SPRITES) return SPRITES;
+    var dot = D.createElement('canvas');
+    dot.width = dot.height = 64;
+    var dc = dot.getContext('2d');
+    var dg = dc.createRadialGradient(32, 32, 0, 32, 32, 32);
+    dg.addColorStop(0, 'rgba(255,251,238,1)');
+    dg.addColorStop(0.22, 'rgba(255,236,186,0.9)');
+    dg.addColorStop(0.55, 'rgba(255,199,114,0.16)');
+    dg.addColorStop(1, 'rgba(255,176,86,0)');
+    dc.fillStyle = dg;
+    dc.fillRect(0, 0, 64, 64);
+
+    var star = D.createElement('canvas');
+    star.width = star.height = 64;
+    var sc = star.getContext('2d');
+    var cg = sc.createRadialGradient(32, 32, 0, 32, 32, 9);
+    cg.addColorStop(0, 'rgba(255,253,244,1)');
+    cg.addColorStop(0.45, 'rgba(255,232,172,0.75)');
+    cg.addColorStop(1, 'rgba(255,204,124,0)');
+    sc.fillStyle = cg;
+    sc.fillRect(0, 0, 64, 64);
+    sc.globalCompositeOperation = 'lighter';
+    for (var k = 0; k < 2; k++) {
+      sc.save();
+      sc.translate(32, 32);
+      sc.rotate(k === 0 ? 0 : Math.PI / 2);
+      var lg = sc.createLinearGradient(-26, 0, 26, 0);
+      lg.addColorStop(0, 'rgba(255,226,168,0)');
+      lg.addColorStop(0.5, 'rgba(255,246,220,0.9)');
+      lg.addColorStop(1, 'rgba(255,226,168,0)');
+      sc.fillStyle = lg;
+      sc.fillRect(-26, -0.7, 52, 1.4);
+      sc.restore();
+    }
+    SPRITES = { dot: dot, star: star };
+    return SPRITES;
+  }
+
+  /* ------------------------------------------- rounded-rect border walk --- */
+  function makeBorderWalker(size, r) {
+    var edge = size - 2 * r;
+    var arc = (Math.PI / 2) * r;
+    var segs = [
+      { len: edge, at: function (d) { return [r + d, 0]; }, n: function () { return [0, -1]; } },
+      {
+        len: arc,
+        at: function (d) { var a = -Math.PI / 2 + d / r; return [size - r + r * Math.cos(a), r + r * Math.sin(a)]; },
+        n: function (d) { var a = -Math.PI / 2 + d / r; return [Math.cos(a), Math.sin(a)]; }
+      },
+      { len: edge, at: function (d) { return [size, r + d]; }, n: function () { return [1, 0]; } },
+      {
+        len: arc,
+        at: function (d) { var a = d / r; return [size - r + r * Math.cos(a), r + r * Math.sin(a)]; },
+        n: function (d) { var a = d / r; return [Math.cos(a), Math.sin(a)]; }
+      },
+      { len: edge, at: function (d) { return [size - r - d, size]; }, n: function () { return [0, 1]; } },
+      {
+        len: arc,
+        at: function (d) { var a = Math.PI / 2 + d / r; return [size - r + r * Math.cos(a), size - r + r * Math.sin(a)]; },
+        n: function (d) { var a = Math.PI / 2 + d / r; return [Math.cos(a), Math.sin(a)]; }
+      },
+      { len: edge, at: function (d) { return [0, size - r - d]; }, n: function () { return [-1, 0]; } },
+      {
+        len: arc,
+        at: function (d) { var a = Math.PI + d / r; return [r + r * Math.cos(a), size - r + r * Math.sin(a)]; },
+        n: function (d) { var a = Math.PI + d / r; return [Math.cos(a), Math.sin(a)]; }
+      }
+    ];
+    var per = 4 * edge + 4 * arc;
+    return function (param, out) {
+      var d = ((param % 1) + 1) % 1;
+      d *= per;
+      for (var k = 0; k < segs.length; k++) {
+        var s = segs[k];
+        if (d <= s.len || k === segs.length - 1) {
+          var q = s.at(Math.min(d, s.len));
+          var nn = s.n(Math.min(d, s.len));
+          out[0] = q[0]; out[1] = q[1]; out[2] = nn[0]; out[3] = nn[1];
+          return out;
+        }
+        d -= s.len;
+      }
+      return out;
+    };
+  }
+
+  /* ======================================================================
+   *  ENGINE  — one per host
+   * ==================================================================== */
+  function createEngine(host, size) {
+    /* size tiers: 2 = large, 1 = 64…117, 0 = 52…63 (identical to the demo) */
+    var tier = size >= 118 ? 2 : (size >= 64 ? 1 : 0);
+    var dpr = Math.min(W.devicePixelRatio || 1, tier === 2 ? 1.5 : 2); /* <= 2 */
+
+    var pad = Math.ceil(size * 0.13) + 2;
+    var css = size + pad * 2;
+    var N = Math.max(32, Math.round(size * dpr));
+    var step = size / N;
+    var dprPad = Math.round(pad * dpr);
+
+    var cv = D.createElement('canvas');
+    cv.className = 'fr-gold-canvas';
+    cv.setAttribute('aria-hidden', 'true');
+    cv.style.position = 'absolute';
+    cv.style.pointerEvents = 'none';
+    cv.style.zIndex = '4';
+    cv.style.left = '50%';
+    cv.style.top = '50%';
+    cv.style.transform = 'translate(-50%,-50%)';
+    cv.style.width = css + 'px';
+    cv.style.height = css + 'px';
+    cv.width = Math.round(css * dpr);
+    cv.height = Math.round(css * dpr);
+
+    var ctx = cv.getContext('2d');
+    if (!ctx) throw new Error('no 2d context');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    /* ---- geometry (css px of the tile) ---- */
+    var corner = size * 0.22;
+    var band = clamp(size * 0.049, 3.4, 11.6);
+    var bevel = band * 0.56;
+    var dEnd = band + bevel;
+    var glowW = clamp(band * 0.55, 2, 7);
+    var REL_END = dEnd / band;
+
+    /* ---- cross-section, blurred to this tier's texel size ---- */
+    var SEC_N = 512;
+    var secSharp = buildSection(SECTION_KEYS, SEC_N);
+    var texelRel = step / band;
+    var secBlurRadius = clamp(Math.round((texelRel / 0.04) * 2), 1, 22);
+    var section = tier === 2 ? blurSection(secSharp, 1, 1) : blurSection(secSharp, secBlurRadius, 2);
+    var secScale = (SEC_N - 1) / REL_END;
+
+    var walkBorder = makeBorderWalker(size, corner);
+
+    /* perimeter polish streaks */
+    var P1D_N = 1024;
+    var polish = new Float32Array(P1D_N);
+    var r1 = mulberry32(0x9e37);
+    var acc0 = 0.5;
+    for (i = 0; i < P1D_N; i++) {
+      acc0 += (r1() - 0.5) * 0.35;
+      acc0 *= 0.94;
+      polish[i] = acc0;
+    }
+    var P1D_WRAP = P1D_N - 1;
+
+    var img = ctx.createImageData(N, N);
+    var data = img.data;
+    var grain = makeGrain(0x52a1);
+    var grain2 = tier === 2 ? makeGrain(0x77c3) : null;
+    var lutEntries = tier === 0 ? 256 : 512;
+    var lut = buildGoldLUT(lutEntries);
+    var lutScale = (lutEntries - 1) / LUT_MAX;
+
+    /* ---- static maps: only the border texels need them (fast start-up) ---- */
+    var cosM = new Float32Array(N * N);
+    var sinM = new Float32Array(N * N);
+    var envM = new Float32Array(N * N);
+    var winM = new Float32Array(N * N);
+    var polM = new Uint16Array(N * N);
+    var mapLim = dEnd + glowW + 2;
+    var c0 = size / 2;
+    var cc = size / 2 - corner;
+    var x, y, p, dx, dy;
+    for (y = 0; y < N; y++) {
+      var Y = (y + 0.5) * step;
+      dy = Y - c0;
+      var vAbs = dy < 0 ? -dy : dy;
+      var winY = smoothstep(1.02, 0.5, vAbs / corner);
+      for (x = 0; x < N; x++) {
+        p = y * N + x;
+        var X = (x + 0.5) * step;
+        dx = X - c0;
+        var uAbs = dx < 0 ? -dx : dx;
+        var dd0 = size / 2 - (uAbs > vAbs ? uAbs : vAbs);
+        if (uAbs > cc && vAbs > cc) {
+          var ex0 = uAbs - cc, ey0 = vAbs - cc;
+          dd0 = corner - Math.sqrt(ex0 * ex0 + ey0 * ey0);
+        }
+        if (dd0 <= 0 || dd0 > mapLim) continue;
+        var inv = 1 / Math.sqrt(dx * dx + dy * dy);
+        if (!isFinite(inv)) inv = 0;
+        var cx = dx * inv, sy = dy * inv;
+        cosM[p] = cx;
+        sinM[p] = sy;
+        envM[p] = clamp(
+          0.72 + 0.24 * (-cx * 0.55 - sy * 0.84) + 0.1 * (cx * 0.9 - sy * 0.44) + 0.045 * sinF(2 * Math.atan2(dy, dx) + 1.2),
+          0.4,
+          1.2
+        );
+        winM[p] = smoothstep(1.0, 0.42, uAbs / corner) * winY;
+        polM[p] = ((Math.atan2(sy, cx) + Math.PI) * (P1D_N / TAU)) | 0;
+      }
+    }
+
+    /* ---- liquid strata ---- */
+    var ALL_STRATA = [
+      { kx: 1.55, ky: -1.05, w: 0.42, ph: 0.0, amp: 0.9 },
+      { kx: -0.92, ky: 1.85, w: 0.31, ph: 2.1, amp: 0.7 },
+      { kx: 2.35, ky: 1.35, w: 0.63, ph: 4.4, amp: 0.42 },
+      { kx: 0.55, ky: -0.72, w: 0.19, ph: 5.6, amp: 0.75 }
+    ];
+    var strata = ALL_STRATA.slice(0, tier === 2 ? 4 : (tier === 1 ? 3 : 2));
+    var ampSum = 0;
+    for (i = 0; i < strata.length; i++) ampSum += strata[i].amp;
+    var strataNorm = 1 / ampSum;
+    var sCol = [];
+    var sRow = [];
+    var sIdx;
+    for (sIdx = 0; sIdx < strata.length; sIdx++) {
+      sCol.push(new Float32Array(N));
+      sRow.push(new Float32Array(N));
+    }
+    for (x = 0; x < N; x++) {
+      var xn = (x + 0.5) * step - c0;
+      for (sIdx = 0; sIdx < strata.length; sIdx++) {
+        sCol[sIdx][x] = TAU * strata[sIdx].kx * (xn / size) + strata[sIdx].ph;
+      }
+    }
+
+    /* ---- gold dust ---- */
+    var dustCount = tier === 2 ? 20 : (tier === 1 ? 12 : 7);
+    var rnd = mulberry32(0x52052);
+    var dust = [];
+    for (i = 0; i < dustCount; i++) {
+      dust.push({
+        p0: rnd(),
+        drift: (rnd() - 0.5) * 0.014,
+        wob: rnd() * TAU,
+        far: Math.pow(rnd(), 1.6),
+        size: 0.42 + rnd() * 0.72,
+        tw: 0.7 + rnd() * 2.2,
+        ph: rnd() * TAU,
+        onGold: rnd() < 0.45,
+        star: rnd() < 0.24,
+        base: 0.4 + rnd() * 0.6
+      });
+    }
+    var sprites = makeDustSprites();
+    var pos = new Float32Array(4);
+
+    var SHEEN_PERIOD = 5.2;
+    var reduceMotion = false;
+    try {
+      reduceMotion = !!(W.matchMedia && W.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (e0) {}
+
+    var raf = 0;
+    var running = false;
+    var bloomCv = null;
+    var frameNo = 0;
+
+    /* ================================ RENDER ============================= */
+    function render(t) {
+      var cyc = (t / SHEEN_PERIOD) % 1;
+      var sweep = smoothstep(0, 0.08, cyc) * (1 - smoothstep(0.88, 1, cyc));
+      var phiS = -2.05 + TAU * smoothstep(0, 1, cyc);
+      var cosS = Math.cos(phiS);
+      var sinS = Math.sin(phiS);
+
+      var phiA = 2.35 + t * 0.11;
+      var cosA = Math.cos(phiA);
+      var sinA = Math.sin(phiA);
+
+      var st, sy2, row;
+      for (st = 0; st < strata.length; st++) {
+        row = sRow[st];
+        for (y = 0; y < N; y++) {
+          var yn = (y + 0.5) * step - size / 2;
+          row[y] = TAU * strata[st].ky * (yn / size) + t * strata[st].w;
+        }
+      }
+
+      var c = data;
+      var c0i = size / 2;
+      var cci = size / 2 - corner;
+      p = 0;
+      var X, dx, dy, uAbs, vAbs, pi4, dd, liq, sn, s, flow, cosP, sinP, ld0, shd0, env, win;
+      var slide, rr, ri, rf, S0, Lsec, a2, a3, key, room, body, hl, cornerGain, L;
+      var sh, sh4, belt, glint, gi, gr, streak, mid, bounce, cr, cg, cb, li, b3, amber;
+      for (y = 0; y < N; y++) {
+        var Y = (y + 0.5) * step;
+        dy = Y - c0i;
+        vAbs = dy < 0 ? -dy : dy;
+        for (x = 0; x < N; x++, p++) {
+          pi4 = p << 2;
+          X = (x + 0.5) * step;
+          dx = X - c0i;
+          uAbs = dx < 0 ? -dx : dx;
+
+          dd = size / 2 - (uAbs > vAbs ? uAbs : vAbs);
+          if (uAbs > cci && vAbs > cci) {
+            var ex = uAbs - cci, ey = vAbs - cci;
+            dd = corner - Math.sqrt(ex * ex + ey * ey);
+          }
+
+          if (dd <= 0) { c[pi4 + 3] = 0; continue; }
+
+          /* ---- photo zone: thin contact shadow (the metal sits ON the
+             photo) + a contained warm spill — everything else stays clean ---- */
+          if (dd > dEnd) {
+            var gn = (dd - dEnd) / glowW;
+            if (gn >= 1) { c[pi4 + 3] = 0; continue; }
+            cosP = cosM[p]; sinP = sinM[p];
+            ld0 = 0.5 + 0.5 * (cosP * cosA + sinP * sinA);
+            var contact = band * 0.3;
+            if (dd - dEnd < contact) {
+              var anew = (1 - (dd - dEnd) / contact) * 0.55;
+              c[pi4] = 20; c[pi4 + 1] = 10; c[pi4 + 2] = 3;
+              c[pi4 + 3] = anew * 255;
+            } else {
+              var fall = 1 - (gn - contact / glowW) / (1 - contact / glowW);
+              var shdG = 0.5 + 0.5 * (cosP * cosS + sinP * sinS);
+              var aGlow = clamp(fall, 0, 1) * fall * (0.07 + 0.08 * ld0 + 0.1 * sweep * shdG);
+              var liG = (clamp(0.4 + 0.15 * ld0 + 0.15 * sweep, 0, 1) * lutScale) | 0;
+              c[pi4] = lut[liG * 3]; c[pi4 + 1] = lut[liG * 3 + 1]; c[pi4 + 2] = lut[liG * 3 + 2];
+              c[pi4 + 3] = aGlow * 255;
+            }
+            continue;
+          }
+
+          /* ---- liquid strata ---- */
+          liq = 0;
+          for (s = 0; s < strata.length; s++) {
+            sn = sinF(sCol[s][x] + sRow[s][y]);
+            liq += strata[s].amp * (1 - (sn < 0 ? -sn : sn));
+          }
+          liq *= strataNorm * 1.6;
+          if (liq > 1) liq = 1;
+          flow = liq - 0.42;
+
+          /* ---- shade from the cross-section ---- */
+          cosP = cosM[p]; sinP = sinM[p];
+          ld0 = 0.5 + 0.5 * (cosP * cosA + sinP * sinA);
+          shd0 = 0.5 + 0.5 * (cosP * cosS + sinP * sinS);
+          env = envM[p];
+          win = winM[p];
+
+          slide = (ld0 - 0.5) * 0.12 + flow * 0.2 + 0.03 * sinF(t * 0.3 + cosP * 2.3 + sinP * 1.9);
+          rr = (dd / band + slide) * secScale;
+          if (rr < 0) rr = 0;
+          if (rr > SEC_N - 1.001) rr = SEC_N - 1.001;
+          ri = rr | 0;
+          rf = rr - ri;
+          S0 = section[ri];
+          Lsec = S0 + (section[ri + 1] - S0) * rf;
+
+          a2 = cosP * cosP - sinP * sinP;
+          a3 = cosP * (4 * cosP * cosP - 3);
+          key = 0.62 - 0.34 * cosP - 0.5 * sinP;
+          room = clamp(
+            0.34 * (key + 0.86) * 0.58 +
+            0.5 * (0.5 + 0.5 * (cosP * cosA + sinP * sinA)) +
+            0.16 * a2 * Math.cos(phiA * 0.8 + 1.3) +
+            0.12 * a3 * Math.cos(phiA * 0.6 + 0.7),
+            0.1,
+            1.15
+          );
+
+          body = Lsec < 0.46 ? Lsec : 0.46;
+          hl = Lsec > 0.46 ? Lsec - 0.46 : 0;
+          cornerGain = 0.6 + 0.4 * win;
+
+          L = (body * (0.66 + 0.34 * env) * (0.78 + 0.22 * room) + hl * (0.34 + 0.8 * room * room)) * cornerGain;
+
+          sh = shd0 * shd0;
+          sh4 = sh * sh * sh;
+          belt = smoothstep(0.04, 0.24, dd / band) * (1 - smoothstep(0.82, 1.3, dd / band));
+          glint = sweep * (sh4 * 1.45 + sh * 0.22) * belt * (0.45 + 0.55 * (Lsec / LUT_MAX)) * (0.5 + 0.5 * env);
+          L += glint;
+
+          L += flow * 0.07 * belt * (0.5 + 0.5 * ld0);
+          L *= 0.985 + 0.015 * sinF(t * 0.83 + 0.6);
+
+          gi = ((y & 63) << 6) | (x & 63);
+          gr = grain[gi];
+          if (grain2) gr = gr * 0.7 + grain2[gi] * 0.3;
+          L *= 0.958 + gr * 0.084;
+
+          streak = polish[polM[p] & P1D_WRAP] - 0.5;
+          mid = (Lsec > 0.3 && Lsec < 1.0) ? 1 : 0;
+          L *= 1 + streak * 0.06 * mid;
+
+          L += (grain2 ? grain2[gi] : grain[gi]) * 0.004 - 0.002;
+
+          L *= 0.5 + 0.5 * smoothstep(0, 2.1 * step, dd);
+
+          if (L > LUT_MAX) L = LUT_MAX;
+          if (L < 0) L = 0;
+          li = (L * lutScale) | 0;
+          b3 = li * 3;
+          amber = flow > 0 ? flow * belt : 0;
+          cr = lut[b3];
+          cg = lut[b3 + 1] * (1 - amber * 0.045);
+          cb = lut[b3 + 2] * (1 - amber * 0.14);
+          bounce = (1 - clamp(room, 0, 1)) * (Lsec < 0.8 ? 1 : 0.15) * belt * 0.1;
+          if (bounce > 0) {
+            cr += (96 - cr) * bounce * 0.55;
+            cg += (52 - cg) * bounce * 0.55;
+            cb += (118 - cb) * bounce * 0.8;
+          }
+          c[pi4] = cr;
+          c[pi4 + 1] = cg;
+          c[pi4 + 2] = cb;
+          c[pi4 + 3] = smoothstep(0, 1.15 * step, dd) * 255;
+        }
+      }
+
+      /* ========================== COMPOSITE ============================= */
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      ctx.putImageData(img, dprPad, dprPad);
+
+      /* halation: hot speculars bloom faintly, like a real lens */
+      if (tier >= 1 && costAvg < 16 && (frameNo++ & 1) === 0) {
+        var tw = Math.max(24, cv.width >> 2);
+        if (!bloomCv) bloomCv = D.createElement('canvas');
+        if (bloomCv.width !== tw) { bloomCv.width = tw; bloomCv.height = tw; }
+        var bctx = bloomCv.getContext('2d');
+        bctx.clearRect(0, 0, tw, tw);
+        bctx.drawImage(cv, 0, 0, tw, tw);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = tier === 2 ? 0.3 : 0.22;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(bloomCv, 0, 0, cv.width, cv.height);
+        ctx.restore();
+      }
+
+      /* gold dust */
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.save();
+      ctx.translate(pad, pad);
+      ctx.globalCompositeOperation = 'lighter';
+      for (var k = 0; k < dust.length; k++) {
+        var m = dust[k];
+        var par = m.p0 + m.drift * t + 0.004 * sinF(t * 0.16 + m.wob);
+        walkBorder(par, pos);
+        var dist = m.onGold
+          ? -(band * 0.45 + m.far * band * 0.5)
+          : band * 0.05 + m.far * (band * 1.5 + 4) * (0.6 + 0.4 * sinF(t * 0.4 + m.wob));
+        var ddx = pos[0] + pos[2] * dist + 0.7 * sinF(t * 0.5 + m.wob);
+        var ddy = pos[1] + pos[3] * dist + 0.7 * cosF(t * 0.47 + m.wob);
+        var tw2 = sinF(t * m.tw + m.ph);
+        if (tw2 <= 0.08) continue;
+        var tw3 = tw2 * tw2 * tw2;
+        var da = tw3 * m.base * (m.onGold ? 0.9 : 0.42);
+        var ds = m.size * (tier === 2 ? 4.4 : 3.3) * (1 + 0.3 * tw3);
+        if (m.star) {
+          ctx.globalAlpha = da * 0.85;
+          ctx.drawImage(sprites.star, ddx - ds * 1.6, ddy - ds * 1.6, ds * 3.2, ds * 3.2);
+        }
+        ctx.globalAlpha = da;
+        ctx.drawImage(sprites.dot, ddx - ds, ddy - ds, ds * 2, ds * 2);
+      }
+      ctx.restore();
+    }
+
+    /* ============================ lifecycle ============================= */
+    /* adaptive governor: if a frame costs more than ~11 ms the engine steps
+       to every 2nd (then every 3rd) animation frame, so a weak phone degrades
+       to a steady slow-luxury shimmer instead of stuttering. */
+    var costAvg = 4;
+    var skipCounter = 0;
+    function tick() {
+      if (!running) return;
+      var t = (W.__GF_TEST__ === true && typeof W.__GF_T === 'number') ? W.__GF_T : nowMs() / 1000;
+      var t0 = nowMs();
+      skipCounter++;
+      var everyN = costAvg > 19 ? 3 : (costAvg > 11 ? 2 : 1);
+      var doRender = (skipCounter % everyN) === 0 || everyN === 1;
+      if (doRender) {
+        try { render(t); } catch (e1) { running = false; return; }
+        var dt = nowMs() - t0;
+        costAvg = costAvg * 0.85 + dt * 0.15;
+      }
+      raf = requestAnimationFrame(tick);
+    }
+
+    return {
+      canvas: cv,
+      size: size,
+      tier: tier,
+      running: false,
+      start: function () {
+        if (running) return;
+        running = true;
+        if (reduceMotion) {
+          try { render(1.1); } catch (e2) {}
+          return;
+        }
+        raf = requestAnimationFrame(tick);
+      },
+      stop: function () {
+        running = false;
+        cancelAnimationFrame(raf);
+        raf = 0;
+      },
+      renderStill: function () {
+        if (running) return;
+        try { render(1.1); } catch (e3) {}
+      },
+      destroy: function () {
+        running = false;
+        cancelAnimationFrame(raf);
+        raf = 0;
+        try { if (cv.parentNode) cv.parentNode.removeChild(cv); } catch (e4) {}
+      }
+    };
+  }
+
+  /* ======================================================================
+   *  SLOT MANAGER
+   *  A "slot" is one host that wears the gold.  A canvas is created only
+   *  while the slot is on screen AND inside the shared cap; leaving the
+   *  viewport or the DOM removes the canvas again (the CSS ring stays).
+   * ==================================================================== */
+  var SLOTS = [];
+  var watchdog = 0;
+  var pumping = false;
+  var pumpAgain = false;
+
+  function inDom(el) {
+    try {
+      return !!(el && el.ownerDocument && el.ownerDocument.documentElement &&
+        el.ownerDocument.documentElement.contains(el));
+    } catch (e) { return false; }
+  }
+
+  function liveCount() {
+    var n = 0;
+    for (var k = 0; k < SLOTS.length; k++) {
+      if (SLOTS[k].engine && !SLOTS[k].engineDead) n++;
+    }
+    return n;
+  }
+
+  function releaseSlot(slot) {
+    if (slot.engine) {
+      slot.engine.destroy();
+      slot.engine = null;
+    }
+    slot.engineDead = true;
+  }
+
+  function pump() {
+    if (pumping) { pumpAgain = true; return; }
+    pumping = true;
+    var hidden = false;
+    try { hidden = !!D.hidden; } catch (e0) {}
+    var k, slot;
+
+    /* 1 — fade out everything that is hidden, off screen or dead */
+    for (k = 0; k < SLOTS.length; k++) {
+      slot = SLOTS[k];
+      if (slot.engine && (!slot.wanted || hidden || !inDom(slot.host))) releaseSlot(slot);
+    }
+    /* 2 — bring up on-screen slots in creation order, within the cap */
+    var live = liveCount();
+    for (k = 0; k < SLOTS.length && live < CAP_GOLD; k++) {
+      slot = SLOTS[k];
+      if (slot.engine || !slot.wanted || hidden) continue;
+      if (!inDom(slot.host)) continue;
+      try {
+        var engine = createEngine(slot.host, slot.size);
+        slot.host.appendChild(engine.canvas);
+        slot.engine = engine;
+        slot.engineDead = false;
+        live++;
+        engine.start();
+      } catch (e1) {
+        slot.engine = null;
+      }
+    }
+    /* 3 — running engines beyond the cap stop animating (still painted) */
+    var runningNow = 0;
+    for (k = 0; k < SLOTS.length; k++) {
+      slot = SLOTS[k];
+      if (!slot.engine) continue;
+      if (slot.wanted && !hidden && runningNow < CAP_GOLD) {
+        if (!slot.engine.running) slot.engine.start();
+        runningNow++;
+      } else if (slot.engine.running) {
+        slot.engine.stop();
+        slot.engine.renderStill();
+      }
+    }
+
+    pumping = false;
+    if (pumpAgain) { pumpAgain = false; pump(); }
+  }
+
+  function ensureWatchdog() {
+    if (watchdog) return;
+    watchdog = setInterval(function () {
+      var k;
+      for (k = SLOTS.length - 1; k >= 0; k--) {
+        var slot = SLOTS[k];
+        if (!inDom(slot.host)) {
+          releaseSlot(slot);
+          try { if (slot.io) slot.io.disconnect(); } catch (e2) {}
+          try { if (slot.host && slot.host.__goldSlot === slot) slot.host.__goldSlot = null; } catch (e3) {}
+          SLOTS.splice(k, 1);
+        }
+      }
+      pump();
+      if (!SLOTS.length && watchdog) {
+        clearInterval(watchdog);
+        watchdog = 0;
+      }
+    }, 600);
+  }
+
+  function onVisibility() {
+    pump();
+  }
+
+  function attachTo(hostEl, sizePx) {
+    if (!hostEl || hostEl.nodeType !== 1) return null;
+    if (hostEl.__goldSlot) {
+      var existing = hostEl.__goldSlot;
+      return existing.engine || null;
+    }
+
+    var size = sizePx > 0 ? Math.round(sizePx) : (hostEl.offsetWidth || 0);
+    if (!(size >= 52)) return null; /* the canvas runs from 52px up */
+
+    /* make absolute positioning resolve against the avatar itself */
+    try {
+      var cs = W.getComputedStyle ? W.getComputedStyle(hostEl, null) : null;
+      if (cs && cs.position === 'static') hostEl.style.position = 'relative';
+    } catch (e0) {}
+
+    var slot = {
+      host: hostEl,
+      size: size,
+      io: null,
+      engine: null,
+      engineDead: true,
+      wanted: false
+    };
+
+    if (W.IntersectionObserver) {
+      try {
+        slot.io = new W.IntersectionObserver(function (entries) {
+          var e = entries[entries.length - 1];
+          slot.wanted = !!e.isIntersecting;
+          pump();
+        }, { threshold: 0 });
+        slot.io.observe(hostEl);
+      } catch (e4) { slot.io = null; }
+    }
+    if (!slot.io) slot.wanted = true;
+
+    hostEl.__goldSlot = slot;
+    SLOTS.push(slot);
+    ensureWatchdog();
+    if (!D.__goldVisibilityHooked) {
+      D.__goldVisibilityHooked = true;
+      try { D.addEventListener('visibilitychange', onVisibility, false); } catch (e5) {}
+    }
+    pump();
+    return slot.engine;
+  }
+
+  W.attachGoldFrame = function (hostEl, sizePx) {
+    try { return attachTo(hostEl, sizePx); } catch (e) { return null; }
   };
 })();
 </script>
