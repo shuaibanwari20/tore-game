@@ -20014,10 +20014,11 @@ return module.exports; })();
     };
     return SPR
   }
-  /* demo-true density: ~1400 at 232px, power-law scaled (110 @56, 250 @88, ~1760 @264) */
+  /* demo-true density: the demo's own law — 1400 at 232px and capped at 1400
+     (that is what the approved GIF ran at 264 too); 250 @88, 110 @56 */
   function budget(s) {
-    var n = 1400 * Math.pow(s / 232, 1.79);
-    return Math.round(s < 232 ? Math.min(1400, Math.max(70, n)) : Math.min(1800, n))
+    var n = 1400 * Math.pow(s / 232, 1.777);
+    return Math.round(Math.min(1400, Math.max(70, n)))
   }
   window.attachFireFrame = function (hostEl, sizePx) {
     try {
@@ -20028,7 +20029,7 @@ return module.exports; })();
       /* keep the summed particle load sane even with six big tiles */
       var allL = document.querySelectorAll('.fr-fire-canvas'), used = 0, li;
       for (li = 0; li < allL.length; li++) if (!allL[li]._ffDead && allL[li].isConnected) used += allL[li]._ffMax || 0;
-      var allowed = Math.max(700, 4600 - used);
+      var allowed = Math.max(700, 11800 - used);
       var size = +sizePx || 0, cv, main, fx, fxc, mask, G, dpr, MAX, S, SZ, AK;
       if (!(size > 0)) size = Math.round(hostEl.getBoundingClientRect().width || 56);
       if (size < 40) return;
@@ -20037,18 +20038,30 @@ return module.exports; })();
       var sp = sprites();
       dpr = Math.min(2, window.devicePixelRatio || 1);
       MAX = Math.min(budget(size), allowed);
+      if (size >= 100) MAX = Math.round(Math.min(2600, MAX * 1.25, allowed));
+      /* v3 blend: 0 => the approved v2 geometry (small tiles unchanged)
+                  1 => frame fire (big tiles only) */
+      var fr = cl((size - 58) / 22, 0, 1);   /* 56px untouched; 88px already hugs; 100px+ full frame fire */
+      function mix(a2, b2) { return a2 + (b2 - a2) * fr }
       
-      S = size * (1.32 - 0.28 * cl(size / 232, 0, 1));   /* demo's own spatial scale */
+      S = size * (1.32 - 0.28 * cl(size / 232, 0, 1)) ;   /* full demo dynamics — the mask cuts them into frame fire */
       SZ = cl(Math.pow(232 / size, 0.1), 0.92, 1.25);
-      AK = cl(Math.pow(232 / size, 0.14), 1, 1.35);
+      AK = cl(Math.pow(232 / size, 0.14), 1, 1.35) * cl(1148 / Math.max(1, MAX * 0.82), 0.7, 1.15);
       var SZW = cl(Math.pow(232 / size, 0.16), 1, 1.35); /* small frames draw thicker so they still read as fire */
+      /* ring padding (42% top, 24% sides, 16% bottom) PLUS the demo's extra sky:
+         the demo's flame field is wider and taller than the ring itself, which is
+         exactly what gives the approved look its mass on the sides */
+      var HF = 1.32 - 0.28 * cl(size / 232, 0, 1);
+      var sideA = Math.round(size * 0.42), sideB = Math.round(size * 0.13),
+        topA = Math.round(size * 0.42) + Math.round(size * 0.78 * HF), topB = Math.round(size * 0.26),
+        botA = Math.round(size * 0.16) + Math.round(size * 0.22), botB = Math.round(size * 0.07);
       G = {
         size: size,
-        side: Math.round(size * 0.24),
-        /* 42% ring padding, plus extra sky on big avatars so flames reach demo height */
-        top: Math.round(size * 0.42) + (size >= 160 ? Math.round(size * 0.34) : 0),
-        bot: Math.round(size * 0.16)
+        side: Math.round(sideA + (sideB - sideA) * fr),
+        top: Math.round(topA + (topB - topA) * fr),
+        bot: Math.round(botA + (botB - botA) * fr)
       };
+      G.cap = size * 0.20;      /* ceiling: visible tongues stop ~25% above the top edge */
       G.w = size + G.side * 2; G.h = G.top + size + G.bot;
       var x0 = G.side, y0 = G.top, x1 = x0 + size, y1 = y0 + size, R = size * 0.22;
       cv = document.createElement('canvas');
@@ -20060,24 +20073,44 @@ return module.exports; })();
       main = cv.getContext('2d');
       fx = mk(cv.width, cv.height); fxc = fx.getContext('2d');
       mask = mk(cv.width, cv.height);
-      /* mask = soft top fade x side fade, multiplied; zero on every canvas edge
-         so the additive fire never ends on a visible rectangle */
+      /* mask: the demo's soft ellipse, then — on big tiles only — the frame
+         treatment: cut the tile interior out (the photo never gets fire over
+         it) and end the flames at the 25% height cap. */
       (function () {
-        var m = mask.getContext('2d'), W = mask.width, H = mask.height, gy, gx;
-        m.setTransform(1, 0, 0, 1, 0, 0);
-        gy = m.createLinearGradient(0, 0, 0, H);
-        var tf = Math.min(0.62, (G.top * 0.62) / H);
-        gy.addColorStop(0, 'rgba(255,255,255,0)');
-        gy.addColorStop(tf, 'rgba(255,255,255,1)');
-        gy.addColorStop(1, 'rgba(255,255,255,1)');
-        m.fillStyle = gy; m.fillRect(0, 0, W, H);
+        var m = mask.getContext('2d'), cx, cy, rx, ry, gr, k, ins, steps = 9, feather = G.size * 0.075;
+        function rr2(ctx2, x, y, w, h, r) {
+          if (r > w / 2) r = w / 2; if (r > h / 2) r = h / 2;
+          ctx2.beginPath(); ctx2.moveTo(x + r, y);
+          ctx2.arcTo(x + w, y, x + w, y + h, r); ctx2.arcTo(x + w, y + h, x, y + h, r);
+          ctx2.arcTo(x, y + h, x, y, r); ctx2.arcTo(x, y, x + w, y, r); ctx2.closePath();
+        }
+        m.setTransform(dpr, 0, 0, dpr, 0, 0);
+        cx = G.w / 2; cy = G.top + G.size * mix(0.42, 0.5); rx = G.w * 0.66; ry = G.h * 0.66;
+        m.save(); m.translate(cx, cy); m.scale(1, ry / rx);
+        gr = m.createRadialGradient(0, 0, 0, 0, 0, rx);
+        gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.45, 'rgba(255,255,255,1)');
+        gr.addColorStop(0.62, 'rgba(255,255,255,0.82)'); gr.addColorStop(0.76, 'rgba(255,255,255,0.46)');
+        gr.addColorStop(0.88, 'rgba(255,255,255,0.16)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+        m.fillStyle = gr; m.beginPath(); m.arc(0, 0, rx, 0, TAU); m.fill(); m.restore();
+        if (fr <= 0) return;
+        /* interior cut-out, feathered across the border line */
+        m.globalCompositeOperation = 'destination-out';
+        for (k = 0; k < steps; k++) {
+          ins = -G.size * 0.035 + feather * (k / steps);
+          m.globalAlpha = (0.1 + 0.9 * (k / (steps - 1))) * fr;
+          rr2(m, x0 + ins, y0 + ins, G.size - ins * 2, G.size - ins * 2, Math.max(2, R - ins * 0.7));
+          m.fill();
+        }
+        m.globalAlpha = 1;
+        /* ceiling at the cap, feathered so the tips thin out */
         m.globalCompositeOperation = 'destination-in';
-        gx = m.createLinearGradient(0, 0, W, 0);
-        gx.addColorStop(0, 'rgba(255,255,255,0)');
-        gx.addColorStop(0.13, 'rgba(255,255,255,1)');
-        gx.addColorStop(0.87, 'rgba(255,255,255,1)');
-        gx.addColorStop(1, 'rgba(255,255,255,0)');
-        m.fillStyle = gx; m.fillRect(0, 0, W, H);
+        var gTop = y0 - G.cap * mix(20, 1), gBot = y0 - G.cap * mix(18, 0.62);
+        gr = m.createLinearGradient(0, gTop, 0, gBot);
+        gr.addColorStop(0, 'rgba(255,255,255,0)');
+        gr.addColorStop(0.45, 'rgba(255,255,255,0.5)');
+        gr.addColorStop(0.8, 'rgba(255,255,255,0.92)');
+        gr.addColorStop(1, 'rgba(255,255,255,1)');
+        m.fillStyle = gr; m.fillRect(0, 0, G.w, G.h);
         m.globalCompositeOperation = 'source-over';
       })();
       /* ---- perimeter heat field: densest on top, fewer sides, fewest bottom ---- */
@@ -20113,7 +20146,7 @@ return module.exports; })();
           b = { x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R, nx: Math.cos(a) * 0.55, ny: Math.sin(a), heat: rr(0.82, 0.98) };
         } else if (kind === 'side') {
           var rt = slot % 2 === 1, hy = slot < 2 ? 0.18 : 0.42;
-          b = { x: rt ? x1 : x0, y: y0 + cl(hy + rr(-0.05, 0.05), 0.07, 0.6) * size, nx: rt ? 0.4 : -0.4, ny: -0.75, heat: rr(0.5, 0.72) * (1 - hy * 0.35) };
+          b = { x: rt ? x1 : x0, y: y0 + cl(hy + rr(-0.05, 0.05), 0.07, 0.6) * size, nx: rt ? 0.4 : -0.4, ny: -0.75, heat: rr(0.5, 0.72) * (1 - hy * 0.35) * mix(1, 1.25) };
         } else {
           b = { x: x0 + R + ((slot + 0.5) / n) * (size - 2 * R), y: y1 + rr(-0.5, 0.5), nx: 0, ny: 1, heat: rr(0.16, 0.26) };
         }
@@ -20121,15 +20154,15 @@ return module.exports; })();
         return {
           x: b.x, y: b.y, nx: b.nx, ny: b.ny, heat: b.heat, kind: kind, age: 0, life: rr(0.8, 2.8),
           hMul: kind === 'top' ? (rn() < 0.22 ? rr(1.15, 1.65) : rr(0.35, 1.05)) : kind === 'corner' ? rr(0.5, 1.1) : kind === 'side' ? rr(0.4, 0.9) : rr(0.3, 0.6),
-          swayPhase: rn() * TAU, swayFreq: rr(0.6, 1.8), swayAmp: S * rr(0.012, 0.04) * (0.4 + pw), width: size * rr(0.02, 0.05) * (size < 100 ? 1.9 : 1),
+          swayPhase: rn() * TAU, swayFreq: rr(0.6, 1.8), swayAmp: S * rr(0.012, 0.04) * (0.4 + pw), width: size * mix(1, 0.62) * rr(0.02, 0.05) * (size < 100 ? 1.9 : 1),
           emitRate: (kind === 'top' ? rr(78, 120) : kind === 'corner' ? rr(46, 74) : kind === 'side' ? rr(20, 34) : rr(5, 11)) * cl(S / 241, 0.34, 1.5) * rateK,
           emitAcc: rn() * 2, burstIn: rr(0.12, 0.7), slot: slot, slotCount: n, power: pw,
           drift: rn() * TAU, dominance: 0.5 + 1.4 * Math.pow(rn(), 2.1)
         }
       }
       var XK = 232 / size; /* size-invariant noise frequency */
-      var nTop = cl(Math.round(5 + size / 232 * 10), 5, 15), i;
-      if (size < 100) nTop += 3;
+      var nTop = cl(Math.round(1 + size / 232 * 13), 5, 15), i;
+      if (size < 100) nTop += 4;
       for (i = 0; i < nTop; i++) tongues.push(tongue('top', i, nTop));
       if (size > 105) {
         tongues.push(tongue('corner', 0)); tongues.push(tongue('corner', 1));
@@ -20157,16 +20190,17 @@ return module.exports; })();
             vx: dx / dl * sp2 * 0.3 + rr(-0.12, 0.12) * S * 0.5, vy: dy / dl * sp2, attach: rn() < 0.3 ? rr(0.12, 0.3) : 0, age: 0,
             life: rr(0.75, 1.6) * (tn.kind === 'top' ? 1 : tn.kind === 'bottom' ? 0.5 : 0.8),
             heat0: cl(tn.heat * rr(0.96, 1.1), 0.06, 1.12), baseY: tn.y, seed: rn() * TAU, wobFreq: rr(1, 3), wobAmp: S * rr(0.02, 0.075) * (0.35 + tn.power),
-            size0: size * rr(0.048, 0.1) * (isB ? 1.45 : 1) * (tn.kind === 'bottom' ? 0.75 : 1) * SZ * (SZ > 1.15 ? 1.06 : 1) * cl(Math.pow(430 / MAX, 0.16), 1, 1.3) * 0.92,
-            variant: (rn() * NV) | 0, tn: tn, surgeBias: rr(0.9, 1.1), stretch: (isB ? rr(0.42, 0.62) : rr(0.8, 1.25)) * 1.2,
-            alpha0: (isB ? rr(0.055, 0.1) : rr(0.16, 0.29)) * AK, rim: false, isB: isB
+            size0: size * mix(1, 0.42) * rr(0.048, 0.1) * (isB ? 1.45 : 1) * (tn.kind === 'bottom' ? 0.75 : 1) * SZ * (SZ > 1.15 ? 1.06 : 1) * cl(Math.pow(430 / MAX, 0.16), 1, 1.3) * 0.92,
+            variant: (rn() * NV) | 0, tn: tn, surgeBias: rr(0.9, 1.1), stretch: isB ? rr(0.42, 0.62) : rr(0.8, 1.25) * mix(1, 1.45),
+            alpha0: (isB ? rr(0.055, 0.1) : rr(0.16, 0.29)) * AK * mix(1, 2.9), rim: false, isB: isB
           };
         if (rim && !isB) { p.rim = true; p.life = rr(0.3, 0.55); p.vy *= 0.14; p.size0 *= 0.62; p.stretch = rr(0.6, 0.9); p.alpha0 = Math.min(0.5, rr(0.2, 0.34) * AK) }
         parts.push(p);
         if (burst && rn() < 0.14) ember(p.x, p.y, true);
       }
       function ember(x, y, warm) {
-        if (embers.length >= Math.min(MAX * 0.08, 52)) return;
+        if (embers.length >= Math.min(MAX * mix(0.08, 0.05), 52)) return;
+        if (x > x0 + 2 && x < x1 - 2 && y > y0 + 2 && y < y1 - 2) { if (fr > 0.5) return } else { }
         embers.push({ x: x + rr(-2, 2), y: y + rr(-2, 2), vx: rr(-0.4, 0.4) * S * 0.3, vy: -S * rr(0.35, 1) * 1.3 * (warm ? 1.2 : 1), age: 0, life: rr(0.5, 1.8), size: size * rr(0.006, 0.015), seed: rn() * TAU, flick: rr(10, 26), drift: rr(0.6, 1.7) })
       }
       var eAcc = 0, surge = 1, br = { v: 0.5, t: 0.5 }, tm = 0, fill = 1;
@@ -20215,24 +20249,25 @@ return module.exports; })();
           e.vy -= S * 0.4 * dt;
           e.vx += Math.sin(e.seed + e.age * e.drift * 5 + tm * 1.2) * S * 0.16 * dt;
           e.x += e.vx * dt; e.y += e.vy * dt;
+          if (fr > 0.5 && e.y < y0 - G.cap * 1.15) e.age = e.life;
         }
         /* fill controller: hold the population near the approved density */
-        var want = MAX * 0.9;
+        var want = MAX * 0.82;
         if (parts.length < want * 0.85) fill = Math.min(fill * (1 + dt * 3.2) + 0.002, 6);
         else if (parts.length > want * 1.12 || parts.length >= MAX) fill = Math.max(fill * (1 - dt * 2), 0.25);
-        eAcc += Math.min(MAX * 0.08, 52) * 0.55 * dt * surge * rateK * fill * (RM ? 0.6 : 1);
+        eAcc += Math.min(MAX * mix(0.08, 0.05), 52) * 0.55 * dt * surge * rateK * fill * (RM ? 0.6 : 1);
         while (eAcc >= 1) { eAcc -= 1; var q = anyPt(); ember(q.x + q.nx * rr(0, 2), q.y + q.ny * rr(0, 2), false) }
       }
       function draw() {
         var W = cv.width, H = cv.height, i, p, u, alt, temp, b, a, spr, grow, w2, h2, tn, e, sz, tr, ang, pt, h1, h2n, fl, patch, szr,
           slice = Math.max(3, Math.round(6 * dpr)), maxAmp = 1.6 * dpr * cl(size / 232, 0.35, 1) * (0.6 + 0.4 * surge), pad = Math.ceil(maxAmp) + 1,
-          until = Math.min(H, Math.round((y0 + size * 0.16) * dpr));
+          until = Math.min(H, Math.round((y0 + size * (0.16 - 0.11 * fr)) * dpr));
         fxc.setTransform(1, 0, 0, 1, 0, 0); fxc.clearRect(0, 0, W, H);
         fxc.globalCompositeOperation = 'lighter'; fxc.setTransform(dpr, 0, 0, dpr, 0, 0);
         for (i = 0; i < plumes.length; i++) {
           var pl = plumes[i], br2 = 0.6 + 0.4 * Math.sin(pl.phase + tm * pl.freq) + 0.1 * Math.sin(pl.phase * 2.7 + tm * pl.freq * 3.1),
             pw2 = size * pl.wide * (0.92 + 0.16 * br2) * 2.2, ph = size * pl.tall * br2 * 1.7 * surge, px2 = pl.x + Math.sin(pl.phase + tm * pl.freq * 0.8) * size * 0.03;
-          fxc.globalAlpha = cl(0.1 * br2, 0, 0.22);
+          fxc.globalAlpha = cl(mix(0.1, 0.042) * br2, 0, 0.22);
           fxc.drawImage(pl.deep ? sp.envD : sp.env, px2 - pw2 / 2, y0 - ph * 0.46, pw2, ph);
         }
         fxc.globalAlpha = 1;
@@ -20241,16 +20276,16 @@ return module.exports; })();
           pt = pts[i]; h1 = i * 0.6180339887 % 1; h2n = i * 0.3247179572 % 1;
           fl = 0.35 + 0.65 * Math.abs(Math.sin(tm * (2.2 + h1 * 5.2) + h1 * 17) * Math.sin(tm * (1.1 + h2n * 2.2) + i * 0.63));
           patch = 0.25 + 0.75 * Math.pow(0.5 + 0.5 * Math.sin(pt.x * 0.055 + tm * 1.4 + h2n * 6) * Math.sin(pt.y * 0.07 - tm * 1.1), 1.6);
-          szr = size * 0.17 * (0.6 + 0.4 * pt.heat) * (0.75 + 0.5 * fl + 0.35 * h1);
-          a = (0.05 + 0.44 * Math.pow(pt.heat, 1.35) * fl) * patch * (1 - 0.55 * cl(-pt.ny, 0, 1)) * (1 + 0.5 * Math.abs(pt.nx)) * 0.9;
-          fxc.globalAlpha = cl(a * (0.8 + 0.2 * surge), 0, 0.6);
+          szr = size * mix(0.17, 0.125) * (0.6 + 0.4 * pt.heat) * (0.75 + 0.5 * fl + 0.35 * h1);
+          a = (0.05 + 0.44 * Math.pow(pt.heat, 1.35) * fl) * patch * (1 - mix(0.62, 0.55) * cl(-pt.ny, 0, 1)) * (1 + 0.5 * Math.abs(pt.nx)) * mix(0.78, (0.08 + 0.92 * Math.pow(pt.heat, 1.45)) * 0.85);
+          fxc.globalAlpha = cl(a * (0.8 + 0.2 * surge), 0, 0.5);
           fxc.drawImage(sp.rim, pt.x - szr / 2 + pt.nx * szr * 0.08, pt.y - szr / 2 + pt.ny * szr * 0.08, szr, szr);
         }
         fxc.globalAlpha = 1;
         for (i = 0; i < parts.length; i++) {
           p = parts[i]; u = p.age / p.life;
-          alt = cl((p.baseY - p.y) / (S * 1.15), 0, 1);
-          temp = p.heat0 * Math.pow(1 - u, 0.85) * (1 - 0.42 * alt); b = bandFor(temp);
+          alt = cl((p.baseY - p.y) / (fr > 0 ? mix(S * 1.15, G.cap * 1.25) : S * 1.15), 0, 1);
+          temp = p.heat0 * Math.pow(1 - u, 0.85) * (1 - mix(0.42, 0.55) * alt); b = bandFor(temp);
           a = p.alpha0 * DRAW[b] * sm(0, 0.06, u) * Math.pow(1 - u, 2.3) * (0.88 + 0.12 * Math.sin(tm * 6.1 + p.seed * 3.3 + u * 10)) * (1 - 0.62 * Math.pow(alt, 1.35)) * (0.85 + 0.15 * (surge - 0.8) * 2.5);
           if (a <= 0.014) continue;
           fxc.globalAlpha = cl(a, 0, 1); spr = sp.bands[b][p.variant];
@@ -20259,8 +20294,10 @@ return module.exports; })();
           h2 = Math.max(4, w2 * 2.1 * p.stretch * (0.9 + 0.45 * u) * (SZW > 1.2 ? 1.12 : 1));
           if (p.isB) {
             fxc.drawImage(spr, p.x - w2 / 2, p.y - h2 * 0.84, w2, h2);
-            fxc.globalAlpha = cl(a * 0.1, 0, 0.06);
-            fxc.drawImage(sp.puffs[b][p.variant & 1], p.x - w2 * 0.85, p.y - h2 * 0.62, w2 * 1.7, h2 * 1.24);
+            if (fr < 0.5) {   /* the haze puff is a full-tile effect; the frame band doesn't want it */
+              fxc.globalAlpha = cl(a * 0.1, 0, 0.06);
+              fxc.drawImage(sp.puffs[b][p.variant & 1], p.x - w2 * 0.85, p.y - h2 * 0.62, w2 * 1.7, h2 * 1.24);
+            }
           } else {
             tn = p.tn;
             p.tilt = lp(p.tilt || 0, cl(Math.atan2(p.vx, Math.max(1e-4, -p.vy)) * 0.85 + Math.sin(tm * p.wobFreq * 1.6 + p.seed * 2.1) * 0.3 * (0.4 + u), -1.15, 1.15), 0.2);
@@ -20288,6 +20325,7 @@ return module.exports; })();
           e = embers[i]; u = e.age / e.life;
           a = (0.4 + 0.6 * Math.abs(Math.sin(e.seed + e.age * e.flick + Math.sin(e.age * 5.7)))) * Math.pow(1 - u, 1.2) * 0.8;
           if (a <= 0.012) continue;
+          if (fr > 0.5 && e.x > x0 + 2 && e.x < x1 - 2 && e.y > y0 + 2 && e.y < y1 - 2) continue;
           sz = Math.max(1.6, e.size * 5 * (1 - u * 0.45));
           tr = Math.min(size * 0.09, Math.hypot(e.vx, e.vy) * 0.05 + sz * 1.5);
           ang = Math.atan2(e.vy, e.vx) + 1.5708;
