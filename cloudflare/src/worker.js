@@ -854,7 +854,7 @@ export default {
     if (path.startsWith('/carpets/') && request.method === 'GET') {
       // The eleven felt photos and their picker thumbnails.
       const rest = path.slice('/carpets/'.length);
-      if (/^(thumbs\/)?felt([1-9]|1[01]|ev1)\.jpg$/.test(rest)) { // feat3: + the event carpet
+      if (/^(thumbs\/)?felt([1-9]|1[0-2]|ev1)\.jpg$/.test(rest)) { // feat3: + the event carpet
         return serveRepoAsset(env, env.CARPETS_URL || CARPETS_URL_BASE_DEFAULT, rest, 'image/jpeg');
       }
       return new Response('not found', { status: 404 });
