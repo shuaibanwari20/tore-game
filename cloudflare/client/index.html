@@ -27034,8 +27034,9 @@ window.ToreBots = (function() {
   }
   window.attachFireFrame = function(hostEl, sizePx) {
     try {
-      let mix = function(a2, b2) {
-        return a2 + (b2 - a2) * fr;
+      let mix = function(a2, b2, f2) {
+        f2 = f2 === void 0 ? fr : f2;
+        return a2 + (b2 - a2) * f2;
       }, seg = function(ax, ay, bx, by, nx, ny, n) {
         for (var i2 = 0; i2 < n; i2++) {
           var t = (i2 + 0.5) / n, x = lp(ax, bx, t), y = lp(ay, by, t);
@@ -27056,7 +27057,27 @@ window.ToreBots = (function() {
         return pts[lo];
       }, tongue = function(kind, slot, n) {
         var b;
-        if (kind === "top") {
+        if (circ) {
+          var ang2, aTop, wd, cx3, cy3;
+          if (kind === "top") {
+            aTop = -1.5708 + ((slot + 0.5) / n - 0.5) * 2.6 + rr(-0.05, 0.05);
+            ang2 = aTop;
+            b = { x: ccx + Math.cos(ang2) * R, y: ccy + Math.sin(ang2) * R, nx: Math.cos(ang2), ny: Math.sin(ang2), heat: rr(0.88, 1) * (0.6 + 0.4 * Math.pow(Math.cos((aTop + 1.5708) / 1.3 * 1.5708), 0.7)) };
+          } else if (kind === "corner") {
+            aTop = (slot === 0 ? -0.62 : -2.52) + rr(-0.06, 0.06);
+            ang2 = aTop;
+            b = { x: ccx + Math.cos(ang2) * R, y: ccy + Math.sin(ang2) * R, nx: Math.cos(ang2), ny: Math.sin(ang2), heat: rr(0.82, 0.98) };
+          } else if (kind === "side") {
+            aTop = (slot % 2 === 1 ? 0.12 : 3.02) + (slot < 2 ? 0 : slot < 4 ? 0.34 : -0.34);
+            ang2 = aTop;
+            wd = cl(1 - Math.abs(Math.sin(ang2)) * 0.35, 0.3, 1);
+            b = { x: ccx + Math.cos(ang2) * R, y: ccy + Math.sin(ang2) * R, nx: Math.cos(ang2), ny: Math.sin(ang2), heat: rr(0.58, 0.8) * wd * 1.3 };
+          } else {
+            aTop = 1.5708 + ((slot + 0.5) / Math.max(1, n) - 0.5) * 1.4;
+            ang2 = aTop;
+            b = { x: ccx + Math.cos(ang2) * R, y: ccy + Math.sin(ang2) * R, nx: Math.cos(ang2), ny: Math.sin(ang2), heat: rr(0.24, 0.4) };
+          }
+        } else if (kind === "top") {
           var span = size - R * 1.2, ef = 0.6 + 0.4 * Math.pow(1 - Math.abs(slot / Math.max(1, n - 1) - 0.5) * 2, 0.7);
           b = { x: x0 + R * 0.6 + (slot + 0.5) / n * span + rr(-0.35, 0.35) * (span / n), y: y0 + rr(-0.5, 1), nx: 0, ny: -1, heat: rr(0.88, 1) * ef };
         } else if (kind === "corner") {
@@ -27128,9 +27149,8 @@ window.ToreBots = (function() {
         if (burst && rn() < 0.14) ember(p.x, p.y, true);
       }, ember = function(x, y, warm) {
         if (embers.length >= Math.min(MAX * mix(0.08, 0.05), 52)) return;
-        if (x > x0 + 2 && x < x1 - 2 && y > y0 + 2 && y < y1 - 2) {
-          if (fr > 0.5) return;
-        } else {
+        if (circ ? Math.hypot(x - ccx, y - ccy) < R - 2 : x > x0 + 2 && x < x1 - 2 && y > y0 + 2 && y < y1 - 2) {
+          if (circ || fr > 0.5) return;
         }
         embers.push({ x: x + rr(-2, 2), y: y + rr(-2, 2), vx: rr(-0.4, 0.4) * S * 0.3, vy: -S * rr(0.35, 1) * 1.3 * (warm ? 1.2 : 1), age: 0, life: rr(0.5, 1.8), size: size * rr(6e-3, 0.015), seed: rn() * TAU, flick: rr(10, 26), drift: rr(0.6, 1.7) });
       }, surgeUpd = function(dt) {
@@ -27199,7 +27219,7 @@ window.ToreBots = (function() {
           e.vx += Math.sin(e.seed + e.age * e.drift * 5 + tm * 1.2) * S * 0.16 * dt;
           e.x += e.vx * dt;
           e.y += e.vy * dt;
-          if (fr > 0.5 && e.y < y0 - G.cap * 1.15) e.age = e.life;
+          if ((circ || fr > 0.5) && e.y < y0 - G.cap * 1.15) e.age = e.life;
         }
         var want = MAX * 0.82;
         if (parts.length < want * 0.85) fill = Math.min(fill * (1 + dt * 3.2) + 2e-3, 6);
@@ -27211,14 +27231,14 @@ window.ToreBots = (function() {
           ember(q.x + q.nx * rr(0, 2), q.y + q.ny * rr(0, 2), false);
         }
       }, draw = function() {
-        var W = cv.width, H = cv.height, i2, p, u, alt, temp, b, a, spr, grow, w2, h2, tn, e, sz, tr, ang, pt, h1, h2n, fl, patch, szr, slice = Math.max(3, Math.round(6 * dpr)), maxAmp = 1.6 * dpr * cl(size / 232, 0.35, 1) * (0.6 + 0.4 * surge), pad = Math.ceil(maxAmp) + 1, until = Math.min(H, Math.round((y0 + size * (0.16 - 0.11 * fr)) * dpr));
+        var W = cv.width, H = cv.height, i2, p, u, alt, temp, b, a, spr, grow, w2, h2, tn, e, sz, tr, ang, pt, h1, h2n, fl, patch, szr, slice = Math.max(3, Math.round(6 * dpr)), maxAmp = 1.6 * dpr * cl(size / 232, 0.35, 1) * (0.6 + 0.4 * surge), pad = Math.ceil(maxAmp) + 1, until = Math.min(H, Math.round((y0 + size * (circ ? 0.05 : 0.16 - 0.11 * fr)) * dpr));
         fxc.setTransform(1, 0, 0, 1, 0, 0);
         fxc.clearRect(0, 0, W, H);
         fxc.globalCompositeOperation = "lighter";
         fxc.setTransform(dpr, 0, 0, dpr, 0, 0);
         for (i2 = 0; i2 < plumes.length; i2++) {
           var pl = plumes[i2], br2 = 0.6 + 0.4 * Math.sin(pl.phase + tm * pl.freq) + 0.1 * Math.sin(pl.phase * 2.7 + tm * pl.freq * 3.1), pw2 = size * pl.wide * (0.92 + 0.16 * br2) * 2.2, ph = size * pl.tall * br2 * 1.7 * surge, px2 = pl.x + Math.sin(pl.phase + tm * pl.freq * 0.8) * size * 0.03;
-          fxc.globalAlpha = cl(mix(0.1, 0.042) * br2, 0, 0.22);
+          fxc.globalAlpha = cl(mix(0.1, circ ? 0.03 : 0.042) * br2, 0, 0.22);
           fxc.drawImage(pl.deep ? sp.envD : sp.env, px2 - pw2 / 2, y0 - ph * 0.46, pw2, ph);
         }
         fxc.globalAlpha = 1;
@@ -27229,8 +27249,8 @@ window.ToreBots = (function() {
           h2n = i2 * 0.3247179572 % 1;
           fl = 0.35 + 0.65 * Math.abs(Math.sin(tm * (2.2 + h1 * 5.2) + h1 * 17) * Math.sin(tm * (1.1 + h2n * 2.2) + i2 * 0.63));
           patch = 0.25 + 0.75 * Math.pow(0.5 + 0.5 * Math.sin(pt.x * 0.055 + tm * 1.4 + h2n * 6) * Math.sin(pt.y * 0.07 - tm * 1.1), 1.6);
-          szr = size * mix(0.17, 0.125) * (0.6 + 0.4 * pt.heat) * (0.75 + 0.5 * fl + 0.35 * h1);
-          a = (0.05 + 0.44 * Math.pow(pt.heat, 1.35) * fl) * patch * (1 - mix(0.62, 0.55) * cl(-pt.ny, 0, 1)) * (1 + 0.5 * Math.abs(pt.nx)) * mix(0.78, (0.08 + 0.92 * Math.pow(pt.heat, 1.45)) * 0.85);
+          szr = size * mix(0.17, circ ? 0.135 : 0.125, circ ? 1 : fr) * (0.6 + 0.4 * pt.heat) * (0.75 + 0.5 * fl + 0.35 * h1);
+          a = (0.05 + 0.44 * Math.pow(pt.heat, 1.35) * fl) * patch * (1 - (circ ? 0.45 : mix(0.62, 0.55, fr)) * cl(-pt.ny, 0, 1)) * (1 + 0.5 * Math.abs(pt.nx)) * (circ ? (0.16 + 0.84 * Math.pow(pt.heat, 1.2)) * 0.95 : mix(0.78, (0.08 + 0.92 * Math.pow(pt.heat, 1.45)) * 0.85));
           fxc.globalAlpha = cl(a * (0.8 + 0.2 * surge), 0, 0.5);
           fxc.drawImage(sp.rim, pt.x - szr / 2 + pt.nx * szr * 0.08, pt.y - szr / 2 + pt.ny * szr * 0.08, szr, szr);
         }
@@ -27238,8 +27258,8 @@ window.ToreBots = (function() {
         for (i2 = 0; i2 < parts.length; i2++) {
           p = parts[i2];
           u = p.age / p.life;
-          alt = cl((p.baseY - p.y) / (fr > 0 ? mix(S * 1.15, G.cap * 1.25) : S * 1.15), 0, 1);
-          temp = p.heat0 * Math.pow(1 - u, 0.85) * (1 - mix(0.42, 0.55) * alt);
+          alt = cl((p.baseY - p.y) / (fr > 0 || circ ? mix(S * 1.15, G.cap * 1.25) : S * 1.15), 0, 1);
+          temp = p.heat0 * Math.pow(1 - u, 0.85) * (1 - mix(0.42, 0.55, circ ? 1 : fr) * alt);
           b = bandFor(temp);
           a = p.alpha0 * DRAW[b] * sm(0, 0.06, u) * Math.pow(1 - u, 2.3) * (0.88 + 0.12 * Math.sin(tm * 6.1 + p.seed * 3.3 + u * 10)) * (1 - 0.62 * Math.pow(alt, 1.35)) * (0.85 + 0.15 * (surge - 0.8) * 2.5);
           if (a <= 0.014) continue;
@@ -27250,7 +27270,7 @@ window.ToreBots = (function() {
           h2 = Math.max(4, w2 * 2.1 * p.stretch * (0.9 + 0.45 * u) * (SZW > 1.2 ? 1.12 : 1));
           if (p.isB) {
             fxc.drawImage(spr, p.x - w2 / 2, p.y - h2 * 0.84, w2, h2);
-            if (fr < 0.5) {
+            if (fr < 0.5 && !circ) {
               fxc.globalAlpha = cl(a * 0.1, 0, 0.06);
               fxc.drawImage(sp.puffs[b][p.variant & 1], p.x - w2 * 0.85, p.y - h2 * 0.62, w2 * 1.7, h2 * 1.24);
             }
@@ -27282,7 +27302,7 @@ window.ToreBots = (function() {
           u = e.age / e.life;
           a = (0.4 + 0.6 * Math.abs(Math.sin(e.seed + e.age * e.flick + Math.sin(e.age * 5.7)))) * Math.pow(1 - u, 1.2) * 0.8;
           if (a <= 0.012) continue;
-          if (fr > 0.5 && e.x > x0 + 2 && e.x < x1 - 2 && e.y > y0 + 2 && e.y < y1 - 2) continue;
+          if (circ ? Math.hypot(e.x - ccx, e.y - ccy) < R - 2 : fr > 0.5 && e.x > x0 + 2 && e.x < x1 - 2 && e.y > y0 + 2 && e.y < y1 - 2) continue;
           sz = Math.max(1.6, e.size * 5 * (1 - u * 0.45));
           tr = Math.min(size * 0.09, Math.hypot(e.vx, e.vy) * 0.05 + sz * 1.5);
           ang = Math.atan2(e.vy, e.vx) + 1.5708;
@@ -27353,6 +27373,23 @@ window.ToreBots = (function() {
       if (!(size > 0)) size = Math.round(hostEl.getBoundingClientRect().width || 56);
       if (size < 40) return;
       if (hostEl.querySelector && hostEl.querySelector(".fr-fire-canvas")) return;
+      var circ = 0, cs = null;
+      try {
+        cs = window.getComputedStyle(hostEl);
+      } catch (e6) {
+        cs = null;
+      }
+      if (cs) {
+        var brT = cs.borderTopLeftRadius || cs.borderRadius || "", brA = String(brT).split(" ")[0], brV = parseFloat(brA);
+        if (isFinite(brV)) {
+          if (brA.indexOf("%") < 0) brV = brV / Math.max(1, size) * 100;
+          if (brV >= 46) circ = 1;
+        }
+        if (!circ && cs.borderTopWidth) {
+          var bwc = parseFloat(cs.borderTopWidth) || 0;
+          if (bwc > 0.4) circ = 1;
+        }
+      }
       if (window.getComputedStyle(hostEl).position === "static") hostEl.style.position = "relative";
       var sp = sprites();
       dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -27371,10 +27408,16 @@ window.ToreBots = (function() {
         top: Math.round(topA + (topB - topA) * fr),
         bot: Math.round(botA + (botB - botA) * fr)
       };
+      if (circ) {
+        G.side = Math.round(size * 0.24);
+        G.top = Math.round(size * 0.28);
+        G.bot = Math.round(size * 0.1);
+        G.cap = size * 0.18;
+      }
       G.cap = size * 0.2;
       G.w = size + G.side * 2;
       G.h = G.top + size + G.bot;
-      var x0 = G.side, y0 = G.top, x1 = x0 + size, y1 = y0 + size, R = size * 0.22;
+      var x0 = G.side, y0 = G.top, x1 = x0 + size, y1 = y0 + size, R = size * (circ ? 0.5 : 0.22), ccx = x0 + size / 2, ccy = y0 + size / 2;
       cv = document.createElement("canvas");
       cv.className = "fr-fire-canvas";
       cv.setAttribute("aria-hidden", "true");
@@ -27402,36 +27445,59 @@ window.ToreBots = (function() {
           ctx2.closePath();
         }
         m.setTransform(dpr, 0, 0, dpr, 0, 0);
-        cx = G.w / 2;
-        cy = G.top + G.size * mix(0.42, 0.5);
-        rx = G.w * 0.66;
-        ry = G.h * 0.66;
-        m.save();
-        m.translate(cx, cy);
-        m.scale(1, ry / rx);
-        gr = m.createRadialGradient(0, 0, 0, 0, 0, rx);
-        gr.addColorStop(0, "rgba(255,255,255,1)");
-        gr.addColorStop(0.45, "rgba(255,255,255,1)");
-        gr.addColorStop(0.62, "rgba(255,255,255,0.82)");
-        gr.addColorStop(0.76, "rgba(255,255,255,0.46)");
-        gr.addColorStop(0.88, "rgba(255,255,255,0.16)");
-        gr.addColorStop(1, "rgba(255,255,255,0)");
-        m.fillStyle = gr;
-        m.beginPath();
-        m.arc(0, 0, rx, 0, TAU);
-        m.fill();
-        m.restore();
-        if (fr <= 0) return;
-        m.globalCompositeOperation = "destination-out";
-        for (k = 0; k < steps; k++) {
-          ins = -G.size * 0.035 + feather * (k / steps);
-          m.globalAlpha = (0.1 + 0.9 * (k / (steps - 1))) * fr;
-          rr2(m, x0 + ins, y0 + ins, G.size - ins * 2, G.size - ins * 2, Math.max(2, R - ins * 0.7));
+        if (circ) {
+          var rIn = G.size * 0.5, rOut = Math.min(G.w, G.h) * 0.5 - 2;
+          gr = m.createRadialGradient(ccx, ccy, rIn * 0.96, ccx, ccy, Math.max(rIn + 1, rOut));
+          gr.addColorStop(0, "rgba(255,255,255,1)");
+          gr.addColorStop(0.32, "rgba(255,255,255,0.78)");
+          gr.addColorStop(0.62, "rgba(255,255,255,0.4)");
+          gr.addColorStop(0.85, "rgba(255,255,255,0.14)");
+          gr.addColorStop(1, "rgba(255,255,255,0)");
+          m.fillStyle = gr;
+          m.beginPath();
+          m.arc(ccx, ccy, Math.max(rIn + 1, rOut), 0, TAU);
           m.fill();
+          m.globalCompositeOperation = "destination-out";
+          for (k = 0; k < steps; k++) {
+            var rad2 = rIn + G.size * 0.035 - feather * (k / steps);
+            m.globalAlpha = 0.1 + 0.9 * (k / (steps - 1));
+            m.beginPath();
+            m.arc(ccx, ccy, rad2, 0, TAU);
+            m.fill();
+          }
+          m.globalAlpha = 1;
+        } else {
+          cx = G.w / 2;
+          cy = G.top + G.size * mix(0.42, 0.5);
+          rx = G.w * 0.66;
+          ry = G.h * 0.66;
+          m.save();
+          m.translate(cx, cy);
+          m.scale(1, ry / rx);
+          gr = m.createRadialGradient(0, 0, 0, 0, 0, rx);
+          gr.addColorStop(0, "rgba(255,255,255,1)");
+          gr.addColorStop(0.45, "rgba(255,255,255,1)");
+          gr.addColorStop(0.62, "rgba(255,255,255,0.82)");
+          gr.addColorStop(0.76, "rgba(255,255,255,0.46)");
+          gr.addColorStop(0.88, "rgba(255,255,255,0.16)");
+          gr.addColorStop(1, "rgba(255,255,255,0)");
+          m.fillStyle = gr;
+          m.beginPath();
+          m.arc(0, 0, rx, 0, TAU);
+          m.fill();
+          m.restore();
+          if (fr <= 0) return;
+          m.globalCompositeOperation = "destination-out";
+          for (k = 0; k < steps; k++) {
+            ins = -G.size * 0.035 + feather * (k / steps);
+            m.globalAlpha = (0.1 + 0.9 * (k / (steps - 1))) * fr;
+            rr2(m, x0 + ins, y0 + ins, G.size - ins * 2, G.size - ins * 2, Math.max(2, R - ins * 0.7));
+            m.fill();
+          }
+          m.globalAlpha = 1;
         }
-        m.globalAlpha = 1;
         m.globalCompositeOperation = "destination-in";
-        var gTop = y0 - G.cap * mix(20, 1), gBot = y0 - G.cap * mix(18, 0.62);
+        var gTop = circ ? y0 - G.cap : y0 - G.cap * mix(20, 1), gBot = circ ? y0 - G.cap * 0.62 : y0 - G.cap * mix(18, 0.62);
         gr = m.createLinearGradient(0, gTop, 0, gBot);
         gr.addColorStop(0, "rgba(255,255,255,0)");
         gr.addColorStop(0.45, "rgba(255,255,255,0.5)");
@@ -27445,14 +27511,22 @@ window.ToreBots = (function() {
         return 0.1 + 0.9 * Math.pow(1 - cl((y - y0) / size, 0, 1), 1.55);
       };
       var eN = Math.max(24, Math.round(size * 0.9)), aN = Math.max(7, Math.round(size * 0.28));
-      seg(x0 + R, y0, x1 - R, y0, 0, -1, eN);
-      arc(x1 - R, y0 + R, -1.5708, 0, aN);
-      seg(x1, y0 + R, x1, y1 - R, 1, 0, eN);
-      arc(x1 - R, y1 - R, 0, 1.5708, aN);
-      seg(x1 - R, y1, x0 + R, y1, 0, 1, eN);
-      arc(x0 + R, y1 - R, 1.5708, 3.1416, aN);
-      seg(x0, y1 - R, x0, y0 + R, -1, 0, eN);
-      arc(x0 + R, y0 + R, 3.1416, 4.7124, aN);
+      if (circ) {
+        var cN = Math.max(64, Math.round(size * 2.4)), ci;
+        for (ci = 0; ci < cN; ci++) {
+          var ca = (ci + 0.5) / cN * TAU, cnx = Math.cos(ca), cny = Math.sin(ca), cy2 = ccy + cny * R;
+          pts.push({ x: ccx + cnx * R, y: cy2, nx: cnx, ny: cny, heat: Math.min(1.12, (circ ? 0.34 + 0.66 * heatAt(cy2) : heatAt(cy2)) * 1.1) });
+        }
+      } else {
+        seg(x0 + R, y0, x1 - R, y0, 0, -1, eN);
+        arc(x1 - R, y0 + R, -1.5708, 0, aN);
+        seg(x1, y0 + R, x1, y1 - R, 1, 0, eN);
+        arc(x1 - R, y1 - R, 0, 1.5708, aN);
+        seg(x1 - R, y1, x0 + R, y1, 0, 1, eN);
+        arc(x0 + R, y1 - R, 1.5708, 3.1416, aN);
+        seg(x0, y1 - R, x0, y0 + R, -1, 0, eN);
+        arc(x0 + R, y0 + R, 3.1416, 4.7124, aN);
+      }
       var cdf = new Float32Array(pts.length), acc = 0, i0;
       for (i0 = 0; i0 < pts.length; i0++) {
         acc += Math.pow(pts[i0].heat, 2.3);
@@ -27469,12 +27543,22 @@ window.ToreBots = (function() {
         tongues.push(tongue("corner", 1));
         for (i = 0; i < 2; i++) {
           var w = tongue("corner", i);
-          w.x = i === 0 ? x1 - R * 0.65 : x0 + R * 0.65;
-          w.y = y0 + R * 0.22;
-          w.nx *= 0.2;
-          w.ny = -1;
-          w.heat = 0.95;
-          w.hMul = rr(0.5, 1);
+          if (circ) {
+            var cwA = i === 0 ? -0.35 : -2.79, cwX = ccx + Math.cos(cwA) * R, cwY = ccy + Math.sin(cwA) * R, cwL = Math.hypot(cwX - ccx, cwY - ccy) || 1;
+            w.x = cwX;
+            w.y = cwY;
+            w.nx = (cwX - ccx) / cwL;
+            w.ny = (cwY - ccy) / cwL;
+            w.heat = 0.95;
+            w.hMul = rr(0.5, 1);
+          } else {
+            w.x = i === 0 ? x1 - R * 0.65 : x0 + R * 0.65;
+            w.y = y0 + R * 0.22;
+            w.nx *= 0.2;
+            w.ny = -1;
+            w.heat = 0.95;
+            w.hMul = rr(0.5, 1);
+          }
           tongues.push(w);
         }
       }
@@ -27489,10 +27573,32 @@ window.ToreBots = (function() {
         tongues.push(tongue("side", 1));
         tongues.push(tongue("side", 0));
       }
-      var nBot = size > 120 ? 3 : 2;
-      for (i = 0; i < nBot; i++) tongues.push(tongue("bottom", i, nBot));
+      var nBot = size > 120 ? 3 : 2, nBotC = Math.max(4, Math.round(size / 40));
+      if (circ) {
+        for (i = 0; i < nBotC; i++) tongues.push(tongue("bottom", i, nBotC));
+      } else {
+        for (i = 0; i < nBot; i++) tongues.push(tongue("bottom", i, nBot));
+      }
+      if (circ) {
+        var nRing = 8, ri;
+        for (ri = 0; ri < nRing; ri++) {
+          var rg = tongue("side", ri % 2 === 1 ? 1 : 0);
+          var ra = (ri + 0.5) / nRing * TAU, rx2 = ccx + Math.cos(ra) * R, ry2 = ccy + Math.sin(ra) * R;
+          rg.x = rx2;
+          rg.y = ry2;
+          rg.nx = Math.cos(ra);
+          rg.ny = Math.sin(ra);
+          rg.heat = cl(0.3 + 0.62 * (1 - cl((ry2 - y0) / size, 0, 1)), 0.28, 0.92);
+          rg.kind = "ring";
+          rg.power = 0.5;
+          rg.hMul = rr(0.45, 0.95);
+          rg.emitRate = rr(26, 40) * cl(S / 241, 0.34, 1.5) * rateK;
+          rg.width = size * 0.02 * (size < 100 ? 1.7 : 1);
+          tongues.push(rg);
+        }
+      }
       var nPl = cl(Math.round(size / 58), 3, 5);
-      for (i = 0; i < nPl; i++) plumes.push({ x: x0 + (i + 0.5) / nPl * size, phase: rn() * TAU, freq: rr(0.55, 1.5), wide: rr(0.24, 0.4), tall: rr(0.55, 1.05), deep: rn() < 0.4 });
+      for (i = 0; i < nPl; i++) plumes.push({ x: circ ? ccx + ((i + 0.5) / nPl - 0.5) * size * 0.5 : x0 + (i + 0.5) / nPl * size, phase: rn() * TAU, freq: rr(0.55, 1.5), wide: circ ? rr(0.16, 0.26) : rr(0.24, 0.4), tall: rr(0.55, 1.05), deep: rn() < 0.4 });
       var eAcc = 0, surge = 1, br = { v: 0.5, t: 0.5 }, tm = 0, fill = 1;
       var bandFor = function(t) {
         return t > 1 ? 0 : t > 0.78 ? 1 : t > 0.5 ? 2 : t > 0.26 ? 3 : 4;
