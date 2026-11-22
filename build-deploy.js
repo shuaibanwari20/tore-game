@@ -85,11 +85,11 @@ if (rasterURIs !== 0) {
   throw new Error('expected 0 raster data URIs in the bundle (images are separate files), got ' + rasterURIs);
 }
 const svgURIs = (html.match(/data:image\/svg\+xml/g) || []).length;
-if (svgURIs !== 2) {
+if (svgURIs !== 3) {
   // Two deliberate decorative SVG data URIs: the clubs v6 night
   // skyline and the card-back gold-star emblem (features batch
   // 2026-11-11, feature 15) — both self-contained CSS decor.
-  throw new Error('expected exactly 2 decorative SVG data URIs (club skyline + card-back emblem), got ' + svgURIs);
+  throw new Error('expected exactly 3 decorative SVG data URIs (club skyline + card-back emblem + shop star lattice), got ' + svgURIs);
 }
 // The stickers exception stays: exactly ONE sticker-path reference
 // may exist — the stickerURL() construction.
@@ -122,7 +122,7 @@ if (nCarpets !== 24) throw new Error('expected 24 carpet files (11 full + 11 thu
 // up41: the music player's files (1 song + 1 real cover — the owner
 // cut the list to his single pick on 2026-11-13).
 const nMusic = copyDir(path.join(PUB, 'music'), path.join(DEPLOY, 'music'), (f) => /\.(mp3|jpe?g)$/i.test(f));
-if (nMusic !== 60) throw new Error('expected 60 music files (30 songs + 30 covers), copied ' + nMusic);
+if (nMusic !== 200) throw new Error('expected 200 music files (100 songs + 100 covers), copied ' + nMusic);
 
 for (const f of ['manifest.webmanifest', 'sw.js', 'apple-touch-icon.png']) fs.copyFileSync(path.join(PUB, f), path.join(DEPLOY, f));
 const nIcons = copyDir(path.join(PUB, 'icons'), path.join(DEPLOY, 'icons'), (f) => /\.png$/i.test(f));
