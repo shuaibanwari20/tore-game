@@ -449,7 +449,7 @@ const STAKE_TIERS = [0, 100, 500, 1000, 5000]; // validated by the hosts too
 const SHOP_ITEMS = new Map([
   ['back2', 300], ['back3', 500], ['back4', 800], ['back5', 1200], ['back6', 2000],
   ['felt1', 400], ['felt2', 400], ['felt3', 600], ['felt4', 600], ['felt5', 800],
-  ['felt6', 800], ['felt7', 1000], ['felt8', 1000], ['felt9', 1500], ['felt10', 1500], ['felt12', 1900],
+  ['felt6', 800], ['felt7', 1000], ['felt8', 1000], ['felt9', 1500], ['felt10', 1500],
   // feat3 (owner picks 2026-11-14): avatar frames + chat styles
   ['fr1', 500], ['fr2', 900], ['fr3', 1400], ['fr4', 2200],
   ['chat1', 400], ['chat2', 800], ['chat3', 1300],
