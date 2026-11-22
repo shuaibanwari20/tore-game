@@ -1101,6 +1101,20 @@
     background-size: 34px 34px, 34px 34px, 100% 100%;
     background-repeat: repeat, repeat, no-repeat;
   }
+  /* up132: SHOP background texture (owner order 2026-11-22) — ONLY a
+     texture over the unchanged plum stack: a gold eight-point star
+     (khatam) lattice. Colours are exactly the shared rule's; shop
+     screen only. Third decorative SVG data URI (see build-deploy). */
+  #scr-shop {
+    background-color: #6d0d3f;
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23ffd982' stroke-opacity='.09'%3E%3Cpath d='M28 6 L50 28 L28 50 L6 28 Z'/%3E%3Cpath d='M13 13 H43 V43 H13 Z'/%3E%3C/g%3E%3Ccircle cx='28' cy='28' r='1.6' fill='%23ffd982' fill-opacity='.15'/%3E%3Ccircle cx='0' cy='0' r='1.4' fill='%23ffd982' fill-opacity='.10'/%3E%3Ccircle cx='56' cy='0' r='1.4' fill='%23ffd982' fill-opacity='.10'/%3E%3Ccircle cx='0' cy='56' r='1.4' fill='%23ffd982' fill-opacity='.10'/%3E%3Ccircle cx='56' cy='56' r='1.4' fill='%23ffd982' fill-opacity='.10'/%3E%3C/svg%3E"),
+      linear-gradient(45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(-45deg, rgba(255,255,255,.035) 1px, transparent 1.3px),
+      linear-gradient(180deg, #4a0727 0%, #7d1046 28%, #a1185c 52%, #8a1250 74%, #4a0727 100%);
+    background-size: 56px 56px, 34px 34px, 34px 34px, 100% 100%;
+    background-repeat: repeat, repeat, repeat, no-repeat;
+  }
   /* Friends screen (owner layout order 2026-11-08): a flex column —
      the list scrolls in .fr-scroll and the home screen's bottom nav
      is pinned at the foot with ملګري as the raised active item; no
