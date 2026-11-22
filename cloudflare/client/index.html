@@ -13012,7 +13012,6 @@ const STR = {
     felt9: "\u062A\u0631\u0646\u062C \u0633\u0648\u0631 \u06AB\u0644",
     felt10: "\u062A\u0631\u0646\u062C \u0698\u0648\u0631 \u0627\u0628\u064A",
     felt11: "\u0627\u0635\u0644\u064A \u0642\u0627\u0644\u06CC\u0646",
-    felt12: "\u062A\u0631\u0646\u062C \u062A\u0648\u0631 \u0637\u0644\u0627\u064A\u064A",
     back1: "\u0627\u0631\u063A\u0648\u0627\u0646\u064A \u0627\u0644\u0645\u0627\u0633",
     back2: "\u0637\u0644\u0627\u064A\u064A \u062C\u0627\u0644",
     back3: "\u0644\u0645\u0631\u064A\u0646",
@@ -13552,7 +13551,6 @@ const STR = {
     felt9: "\u062A\u0631\u0646\u062C \u0633\u0631\u062E \u06AF\u0644\u062F\u0627\u0631",
     felt10: "\u062A\u0631\u0646\u062C \u0646\u06CC\u0644\u06CC",
     felt11: "\u0642\u0627\u0644\u06CC\u0646 \u0627\u0635\u0644\u06CC",
-    felt12: "\u062A\u0631\u0646\u062C \u0633\u06CC\u0627\u0647 \u0637\u0644\u0627\u06CC\u06CC",
     back1: "\u0627\u0644\u0645\u0627\u0633 \u0628\u0646\u0641\u0634",
     back2: "\u062A\u0648\u0631\u06CC \u0637\u0644\u0627\u06CC\u06CC",
     back3: "\u062E\u0648\u0631\u0634\u06CC\u062F\u06CC",
@@ -14092,7 +14090,6 @@ const STR = {
     felt9: "Red Floral",
     felt10: "Deep Navy",
     felt11: "Original",
-    felt12: "Black Gold Medallion",
     back1: "Plum Diamonds",
     back2: "Gold Lattice",
     back3: "Sunburst",
@@ -15389,7 +15386,7 @@ function validAvatar(av) {
 function validFelt(n) {
   if (n === "ev1" && walletOwns("felt-ev1")) return "ev1";
   n = Number(n);
-  return Number.isInteger(n) && n >= 1 && n <= 12 ? n : 11;
+  return Number.isInteger(n) && n >= 1 && n <= 11 ? n : 11;
 }
 function validBack(n) {
   n = Number(n);
@@ -18257,7 +18254,7 @@ async function warmAssets() {
   const ranks = "23456789TJQKA", suits = "CDHS";
   for (const s of suits) for (const r of ranks) urls.push(ASSET("cards/" + r + s + ".png"));
   urls.push(ASSET("cards/back.png"));
-  for (let n = 1; n <= 12; n++) urls.push(THUMB("carpets/felt" + n + ".jpg"));
+  for (let n = 1; n <= 11; n++) urls.push(THUMB("carpets/felt" + n + ".jpg"));
   urls.push(ASSET("carpets/felt" + validFelt(profile.felt) + ".jpg"));
   const queue = urls.slice();
   let ok = 0;
@@ -19978,7 +19975,7 @@ function paintFelts() {
     if (pnm) pnm.textContent = T(mine === "ev1" ? "feltEv1" : "felt" + mine);
   }
   grid.innerHTML = "";
-  for (let n = 1; n <= 12; n++) {
+  for (let n = 1; n <= 11; n++) {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "felt-sw" + (mine === n ? " sel" : "");
@@ -21643,7 +21640,7 @@ function onSocialMsg(m) {
     }
   }
 }
-const SHOP_PRICES = { back2: 300, back3: 500, back4: 800, back5: 1200, back6: 2e3, felt1: 400, felt2: 400, felt3: 600, felt4: 600, felt5: 800, felt6: 800, felt7: 1e3, felt8: 1e3, felt9: 1500, felt10: 1500, felt12: 1900, fr1: 500, fr2: 900, fr3: 1400, fr4: 2200, chat1: 400, chat2: 800, chat3: 1300, back7: 1800, fr5: 2500, fr6: 3e3, "pack-emoji": 600, "pack-sticker": 900 };
+const SHOP_PRICES = { back2: 300, back3: 500, back4: 800, back5: 1200, back6: 2e3, felt1: 400, felt2: 400, felt3: 600, felt4: 600, felt5: 800, felt6: 800, felt7: 1e3, felt8: 1e3, felt9: 1500, felt10: 1500, fr1: 500, fr2: 900, fr3: 1400, fr4: 2200, chat1: 400, chat2: 800, chat3: 1300, back7: 1800, fr5: 2500, fr6: 3e3, "pack-emoji": 600, "pack-sticker": 900 };
 let myWallet = null;
 let shopTab = "coins";
 let chestTimer = null;
@@ -21901,8 +21898,7 @@ function renderShopLook(body) {
     addItem(backs, "back" + n, art, T("back" + n), validBack(profile.back) === n);
   }
   const felts = sect("feltSection");
-  for (let n = 1; n <= 12; n++) {
-    if (n === 11) continue;
+  for (let n = 1; n <= 10; n++) {
     const art = shopEl("div", "si-art");
     art.style.backgroundImage = 'url("' + THUMB("carpets/felt" + n + ".jpg") + '")';
     addItem(felts, "felt" + n, art, T("felt" + n), validFelt(profile.felt) === n);
