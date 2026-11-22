@@ -8309,25 +8309,41 @@ button:disabled {
   display: flex;
   gap: 8px;
   justify-content: center;
-  margin: 4px 10px 10px;
+  margin: 14px 10px 10px;
 }
 .shop-tabs {
   display: flex;
-  gap: 6px;
-  margin: 0 10px 10px;
+  gap: 8px;
+  margin: 0 10px 12px;
 }
 .shop-tab {
   flex: 1 1 0;
+  min-width: 0;
   width: auto;
   margin: 0;
   cursor: pointer;
-  padding: 9px 2px;
+  padding: 0 4px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   background: rgba(43, 6, 54, .72);
-  border: 1.5px solid rgba(255, 255, 255, .25);
-  border-radius: 14px;
+  border: 1.5px solid rgba(255, 255, 255, .22);
+  border-radius: 16px;
   color: #ffd7f2;
   font-size: 14px;
   font-weight: 800;
+  white-space: nowrap;
+}
+.shop-tab .stab-ic {
+  font-size: 17px;
+  line-height: 1;
+  flex: none;
+}
+.shop-tab .stab-tx {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .shop-tab.sel {
   background:
@@ -8337,11 +8353,19 @@ button:disabled {
       #8f1160);
   border-color: #ffd75e;
   color: #fff;
+  box-shadow: 0 4px 14px rgba(216, 27, 116, .45), inset 0 1px 0 rgba(255, 255, 255, .35);
 }
 #shop-body {
   margin: 0;
   padding: 2px 10px 18px;
   color: #fff;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+#scr-shop .shop-bal,
+#scr-shop .shop-tabs {
+  flex: none;
 }
 .shop-h {
   font-size: 16px;
@@ -12356,12 +12380,6 @@ button:disabled {
      in Settings exactly as before). NO purchase offers anywhere:
      there is no payment rail yet. -->
 <section id="scr-shop" class="hidden">
-  <div class="fr-scroll">
-    <div class="fr-inner">
-      <div class="cp-head">
-        <button class="fr-back" id="btn-shop-back">→</button>
-        <h2 id="shop-title">پلورنځی</h2>
-      </div>
       <div class="shop-bal">
         <span class="hm-pill"><svg class="coin-ic" aria-hidden="true"><use href="#coinSym"></use></svg> <b id="shop-coins">–</b></span>
         <span class="hm-pill gem">💎 <b id="shop-gems">–</b></span>
@@ -12373,8 +12391,6 @@ button:disabled {
         <button type="button" class="shop-tab" data-tab="look"></button>
       </div>
       <div id="shop-body"></div>
-    </div>
-  </div>
   <!-- up48: the shop is a shell screen now and carries its own
        copy of the bottom nav like every sibling page, with
        پلورنځی raised as the active item. -->
@@ -14061,7 +14077,7 @@ const STR = {
     gemsLbl: "\u0627\u0644\u0645\u0627\u0633",
     shopTitle: "\u0641\u0631\u0648\u0634\u06AF\u0627\u0647",
     shopTabCoins: "\u0633\u06A9\u0647",
-    shopTabGems: "\u0627\u0644\u0645\u0627\u0633",
+    shopTabGems: "\u0627\u0644\u0645\u0627\u0633\u200C\u0647\u0627",
     shopTabChests: "\u0635\u0646\u062F\u0648\u0642\u200C\u0647\u0627",
     shopTabLook: "\u0638\u0627\u0647\u0631\u06CC",
     bonusTitle: "\u062C\u0627\u06CC\u0632\u0647\u0654 \u0631\u0648\u0632\u0627\u0646\u0647",
@@ -22135,7 +22151,10 @@ $("#shnav-home").onclick = () => closeShop();
 $("#shnav-shop").onclick = () => {
 };
 $("#shnav-chat").onclick = () => openChats();
-$("#btn-shop-back").onclick = () => closeShop();
+{
+  const b = $("#btn-shop-back");
+  if (b) b.onclick = () => closeShop();
+}
 function stopChestTimer() {
   if (chestTimer) {
     clearInterval(chestTimer);
@@ -22153,7 +22172,8 @@ function renderShop() {
   if (title) title.textContent = T("shopTitle");
   document.querySelectorAll("#shop-tabs .shop-tab").forEach((b) => {
     b.classList.toggle("sel", b.dataset.tab === shopTab);
-    b.textContent = T("shopTab" + b.dataset.tab.charAt(0).toUpperCase() + b.dataset.tab.slice(1));
+    const TAB_ICONS = { coins: "\u{1FA99}", gems: "\u{1F48E}", chests: "\u{1F381}", look: "\u2728" };
+    b.innerHTML = '<span class="stab-ic">' + (TAB_ICONS[b.dataset.tab] || "") + '</span><span class="stab-tx">' + T("shopTab" + b.dataset.tab.charAt(0).toUpperCase() + b.dataset.tab.slice(1)) + "</span>";
   });
   paintWallet();
   const body = $("#shop-body");
@@ -22446,7 +22466,10 @@ function renderShopLook(body) {
   sArt.appendChild(sImg);
   addItem(packs, "pack-sticker", sArt, T("packSticker"), false);
 }
-$("#btn-shop-back").onclick = () => closeShop();
+{
+  const b = $("#btn-shop-back");
+  if (b) b.onclick = () => closeShop();
+}
 $("#btn-wallet-coins").onclick = () => openShop("coins");
 $("#btn-wallet-gems").onclick = () => openShop("gems");
 $("#btn-bonus").onclick = () => {
