@@ -1461,20 +1461,21 @@ button:disabled {
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   background: rgba(43, 6, 54, .78);
   border: 1.5px solid #eec95f;
   border-radius: 16px;
   color: #ffe98a;
   font-size: 12.5px;
   font-weight: 800;
-  padding: 4px 7px;
+  padding: 4px 8px;
   line-height: 1.15;
   box-shadow: 0 3px 8px rgba(0, 0, 0, .4);
 }
 .hm-pill b {
   color: #fff;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 .hm-pill.gem {
   border-color: #7dd7ff;
@@ -1493,6 +1494,13 @@ button:disabled {
   height: 19px;
   display: inline-block;
   vertical-align: -4px;
+  flex: none;
+}
+.gem-ic {
+  width: 17px;
+  height: 17px;
+  display: inline-block;
+  vertical-align: -3px;
   flex: none;
 }
 .shop-h .coin-ic {
@@ -1519,8 +1527,8 @@ button:disabled {
   border-radius: 18px;
   color: #4a2400;
   font-size: 14.5px;
-  font-weight: 900;
-  padding: 7px 16px;
+  font-weight: 800;
+  padding: 8px 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, .45);
 }
 .hm-bonus.hidden {
@@ -1880,7 +1888,8 @@ button:disabled {
   line-height: 1.5;
 }
 #notif-list .fr-empty::before {
-  content: "\1f514";
+  content: "\2605";
+  color: #ffd75e;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2254,7 +2263,7 @@ button:disabled {
 .hm-bigrow {
   display: flex;
   gap: 12px;
-  margin-top: 40px;
+  margin-top: 32px;
 }
 .hm-bigcard {
   flex: 1;
@@ -2376,7 +2385,7 @@ button:disabled {
 .biglabel b {
   display: block;
   font-size: 20px;
-  font-weight: 900;
+  font-weight: 800;
   line-height: 1.35;
   color: #fff;
   text-shadow: 0 2px 0 rgba(60, 0, 70, .4), 0 4px 10px rgba(0, 0, 0, .5);
@@ -2604,8 +2613,8 @@ button:disabled {
 }
 .hm-smallrow {
   display: flex;
-  gap: 11px;
-  margin-top: 42px;
+  gap: 12px;
+  margin-top: 40px;
 }
 .hm-small {
   flex: 1;
@@ -2624,8 +2633,8 @@ button:disabled {
       #42084c);
   position: relative;
   overflow: visible;
-  border: 2.5px solid rgba(255, 255, 255, .42);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, .5), inset 0 2px 0 rgba(255, 255, 255, .25);
+  border: 2px solid rgba(255, 255, 255, .42);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, .42), inset 0 2px 0 rgba(255, 255, 255, .25);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -5731,8 +5740,23 @@ button:disabled {
 .fr-empty {
   font-size: 13.5px;
   opacity: .8;
-  padding: 6px 2px;
+  padding: 8px 4px;
   line-height: 1.9;
+}
+.fr-empty.big {
+  text-align: center;
+  padding: 28px 12px 20px;
+  opacity: 1;
+  color: rgba(255, 255, 255, .78);
+  font-size: 14.5px;
+  line-height: 1.8;
+}
+.fr-empty.big .fr-star {
+  display: block;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 12px;
+  opacity: .55;
 }
 .hm-navitem {
   position: relative;
@@ -6926,17 +6950,17 @@ button:disabled {
   background: rgba(255, 255, 255, .08);
 }
 .pf-stats {
-  margin-top: 11px;
+  margin-top: 12px;
   background: rgba(43, 6, 54, .55);
   border-radius: 16px;
-  padding: 8px 13px 2px;
+  padding: 12px 16px 4px;
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, .35);
 }
 .pf-stats-title {
   position: relative;
   text-align: center;
   font-size: 15.5px;
-  font-weight: 900;
+  font-weight: 800;
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, .5);
   margin-bottom: 2px;
@@ -6966,8 +6990,8 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 4.5px 0;
+  gap: 12px;
+  padding: 8px 0;
   border-bottom: 1px solid rgba(255, 255, 255, .12);
 }
 .pf-stat:last-child {
@@ -6979,23 +7003,19 @@ button:disabled {
   color: #ffd7f2;
 }
 .pf-stat-val {
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 14.5px;
+  font-weight: 700;
   color: #fff;
-  background: rgba(0, 0, 0, .28);
-  border-radius: 9px;
-  padding: 3px 10px;
-  min-width: 52px;
-  text-align: center;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
 }
 #scr-profile .pf-card .pf-idnum,
 #scr-pview .pf-card .pf-idnum {
   color: #fff;
-  background: rgba(0, 0, 0, .28);
-  border-radius: 9px;
-  font-size: 18px;
-  letter-spacing: 3px;
-  padding: 3px 11px;
+  font-size: 16px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .pv2-actions {
   margin-top: 11px;
@@ -8340,6 +8360,11 @@ button:disabled {
   font-size: 17px;
   line-height: 1;
   flex: none;
+  display: flex;
+  align-items: center;
+}
+.shop-tab .stab-ic svg {
+  display: block;
 }
 .shop-tab .stab-tx {
   overflow: hidden;
@@ -8369,7 +8394,7 @@ button:disabled {
 }
 .shop-h {
   font-size: 16px;
-  font-weight: 900;
+  font-weight: 800;
   color: #ffd75e;
   margin: 4px 0 8px;
 }
@@ -11666,7 +11691,7 @@ button:disabled {
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><filter id="frfire" x="-25%" y="-25%" width="150%" height="150%"><feTurbulence type="fractalNoise" baseFrequency="0.08 0.13" numOctaves="2" seed="8" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="13"/></filter></defs></svg>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="nvGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset=".45" stop-color="#f7c948"/><stop offset="1" stop-color="#d18d06"/></linearGradient><linearGradient id="nvPink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb1e3"/><stop offset=".5" stop-color="#f0569f"/><stop offset="1" stop-color="#c2187a"/></linearGradient><linearGradient id="nvGreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8f5cd"/><stop offset=".5" stop-color="#3fce62"/><stop offset="1" stop-color="#1d9e4b"/></linearGradient><linearGradient id="nvBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe0ff"/><stop offset=".5" stop-color="#55a8f5"/><stop offset="1" stop-color="#2470c2"/></linearGradient><linearGradient id="nvWhite" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9d4ee"/></linearGradient><linearGradient id="clCoin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset="1" stop-color="#d18d06"/></linearGradient><linearGradient id="clGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe98a"/><stop offset="1" stop-color="#e0a408"/></linearGradient><linearGradient id="clViolet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b388ff"/><stop offset="1" stop-color="#6d28d9"/></linearGradient><symbol id="coinSym" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.4" fill="url(#clCoin)" stroke="#9c6d00" stroke-width="1.7"/><circle cx="12" cy="12" r="7.8" fill="none" stroke="#b57f00" stroke-width="1" opacity=".65"/><path d="M12 7.4l1.09 3.1 3.28.08-2.61 1.99.93 3.15L12 13.85l-2.69 1.87.93-3.15-2.61-1.99 3.28-.08z" fill="#a86e00"/></symbol></defs></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="nvGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset=".45" stop-color="#f7c948"/><stop offset="1" stop-color="#d18d06"/></linearGradient><linearGradient id="nvPink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb1e3"/><stop offset=".5" stop-color="#f0569f"/><stop offset="1" stop-color="#c2187a"/></linearGradient><linearGradient id="nvGreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8f5cd"/><stop offset=".5" stop-color="#3fce62"/><stop offset="1" stop-color="#1d9e4b"/></linearGradient><linearGradient id="nvBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe0ff"/><stop offset=".5" stop-color="#55a8f5"/><stop offset="1" stop-color="#2470c2"/></linearGradient><linearGradient id="nvWhite" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9d4ee"/></linearGradient><linearGradient id="clCoin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffedb0"/><stop offset="1" stop-color="#d18d06"/></linearGradient><linearGradient id="clGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe98a"/><stop offset="1" stop-color="#e0a408"/></linearGradient><linearGradient id="clViolet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b388ff"/><stop offset="1" stop-color="#6d28d9"/></linearGradient><linearGradient id="clGem" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bdf3ff"/><stop offset="1" stop-color="#38b6e8"/></linearGradient><symbol id="gemSym" viewBox="0 0 24 24"><path d="M7 3h10l4 6-9 12L3 9z" fill="url(#clGem)" stroke="#1d7fb8" stroke-width="1.4" stroke-linejoin="round"/><path d="M3 9h18M7 3l5 6 5-6M12 9v12" fill="none" stroke="#e8fbff" stroke-width="1" opacity=".7"/></symbol><symbol id="coinSym" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.4" fill="url(#clCoin)" stroke="#9c6d00" stroke-width="1.7"/><circle cx="12" cy="12" r="7.8" fill="none" stroke="#b57f00" stroke-width="1" opacity=".65"/><path d="M12 7.4l1.09 3.1 3.28.08-2.61 1.99.93 3.15L12 13.85l-2.69 1.87.93-3.15-2.61-1.99 3.28-.08z" fill="#a86e00"/></symbol></defs></svg>
 <div id="splash" aria-hidden="true">
   <div class="sp-city" aria-hidden="true"><svg viewBox="0 0 480 150" preserveAspectRatio="xMidYMax slice"><path fill="#8e4bd0" opacity=".38" d="M-6 150V62h54v88zM58 150V44h40v106zM112 150V70h58v80zM188 150V38h44v112zM248 150V60h62v90zM326 150V48h42v102zM384 150V66h56v84zM452 150V54h36v96z"/><path fill="#451c72" opacity=".92" d="M-10 150V88h48v62zM50 150V74h36v76zM100 150V96h52v54zM166 150V66h40v84zM222 150V90h58v60zM300 150V76h44v74zM360 150V94h52v56zM428 150V82h58v68z"/><path fill="#27094a" d="M-14 150v-42h56v42zM56 150v-50h44v50zM112 150v-36h60v36zM186 150v-46h38v46zM236 150v-40h54v40zM304 150v-48h16v48zM336 150v-38h48v38zM398 150v-44h66v44z"/><path fill="#27094a" d="M304 102a8 7 0 0 1 16 0z"/><path fill="#ffd98a" opacity=".85" d="M66 112h3v5h-3zM78 122h3v5h-3zM126 122h3v5h-3zM146 130h3v5h-3zM196 114h3v5h-3zM206 126h3v5h-3zM248 120h3v5h-3zM266 132h3v5h-3zM310 112h3v5h-3zM348 122h3v5h-3zM368 132h3v5h-3zM410 116h3v5h-3zM432 128h3v5h-3zM20 118h3v5h-3zM-2 130h3v5h-3z"/><path fill="#ffedbe" opacity=".9" d="M84 108h3v5h-3zM158 118h3v5h-3zM256 108h3v5h-3zM356 110h3v5h-3zM446 118h3v5h-3zM32 132h3v5h-3z"/><rect y="143" width="480" height="7" fill="#0d0122"/><path stroke="#0d0122" stroke-width="3" fill="none" stroke-linecap="round" d="M40 150c1-10 2-16 4-22M44 128c-6-4-11-3-15 1M44 128c-4-6-9-7-13-5M44 128c-1-7 2-11 6-12M44 128c4-5 9-6 13-3M44 128c6-2 11 0 14 4M448 150c-1-9-2-14-4-19M444 131c-6-4-11-3-14 1M444 131c-4-6-9-7-13-5M444 131c-1-6 2-10 6-11M444 131c4-5 9-5 12-3M444 131c6-2 10 0 13 4"/></svg></div>
   <div class="sp-title" dir="ltr">52 Online</div>
@@ -11691,11 +11716,11 @@ button:disabled {
              (owner order) — پلورنځی lives in the bottom nav now. -->
         <div class="hm-wallet">
           <button type="button" class="hm-pill" id="btn-wallet-coins" aria-label="سکه"><svg class="coin-ic" aria-hidden="true"><use href="#coinSym"></use></svg> <b id="wallet-coins">–</b></button>
-          <button type="button" class="hm-pill gem" id="btn-wallet-gems" aria-label="الماس">💎 <b id="wallet-gems">–</b></button>
+          <button type="button" class="hm-pill gem" id="btn-wallet-gems" aria-label="الماس"><svg class="gem-ic" aria-hidden="true"><use href="#gemSym"></use></svg> <b id="wallet-gems">–</b></button>
         </div>
         <!-- feat5: notifications bell — the badge is the unread
              count from the server inbox (s-init / s-notif). -->
-        <button class="hm-bell" id="btn-bell" aria-label="اعلان‌ها">🔔<span id="bell-badge" class="hidden"></span></button>
+        <button class="hm-bell" id="btn-bell" aria-label="اعلان‌ها"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="#ffe9a3" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10.5 3.17 10.5 4v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg><span id="bell-badge" class="hidden"></span></button>
         <button class="hm-gear" id="btn-settings" aria-label="امادګي">
           <svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="gearG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cdbfe8"/></linearGradient></defs><path fill-rule="evenodd" fill="url(#gearG)" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg>
         </button>
@@ -11703,7 +11728,7 @@ button:disabled {
 
       <!-- up47: the daily-bonus claim chip — visible only while
            the server says today's bonus is unclaimed. -->
-      <button type="button" class="hm-bonus hidden" id="btn-bonus">🎁 <span id="btn-bonus-txt">ورځنۍ جایزه</span></button>
+      <button type="button" class="hm-bonus hidden" id="btn-bonus"><span id="btn-bonus-txt">ورځنۍ جایزه</span></button>
 
       <div class="hm-hero">
         <div class="hm-suits"><span class="w">♠</span><span class="r">♥</span><span class="w">♣</span><span class="r">♦</span></div>
@@ -12382,7 +12407,7 @@ button:disabled {
 <section id="scr-shop" class="hidden">
       <div class="shop-bal">
         <span class="hm-pill"><svg class="coin-ic" aria-hidden="true"><use href="#coinSym"></use></svg> <b id="shop-coins">–</b></span>
-        <span class="hm-pill gem">💎 <b id="shop-gems">–</b></span>
+        <span class="hm-pill gem"><svg class="gem-ic" aria-hidden="true"><use href="#gemSym"></use></svg> <b id="shop-gems">–</b></span>
       </div>
       <div class="shop-tabs" id="shop-tabs">
         <button type="button" class="shop-tab" data-tab="coins"></button>
@@ -13374,6 +13399,8 @@ button:disabled {
 <script>"use strict";
 const $ = (s) => document.querySelector(s);
 const COIN_IC = '<svg class="coin-ic" aria-hidden="true"><use href="#coinSym"></use></svg>';
+const GEM_IC = '<svg class="gem-ic" aria-hidden="true"><use href="#gemSym"></use></svg>';
+const fmtNum = (n) => Number(n || 0).toLocaleString("en-US");
 const faNum = (n) => String(n);
 const LANG_CODES = ["ps", "fa", "en"];
 let LANG = (() => {
@@ -20836,7 +20863,7 @@ function renderLeaders() {
   box.innerHTML = "";
   const leaders = statsCache && Array.isArray(statsCache.leaders) ? statsCache.leaders : [];
   if (!leaders.length) {
-    box.appendChild(frEmpty(T("leadersEmpty")));
+    box.appendChild(frEmpty(T("leadersEmpty"), true));
     return;
   }
   leaders.slice(0, 10).forEach((pl, i) => {
@@ -22115,10 +22142,11 @@ function paintWallet() {
     const el = $(sel);
     if (el) el.textContent = v;
   };
-  set("#wallet-coins", myWallet ? String(myWallet.coins) : "\u2013");
-  set("#wallet-gems", myWallet ? String(myWallet.gems) : "\u2013");
-  set("#shop-coins", myWallet ? String(myWallet.coins) : "\u2013");
-  set("#shop-gems", myWallet ? String(myWallet.gems) : "\u2013");
+  const fmtN = (n) => Number(n || 0).toLocaleString("en-US");
+  set("#wallet-coins", myWallet ? fmtN(myWallet.coins) : "\u2013");
+  set("#wallet-gems", myWallet ? fmtN(myWallet.gems) : "\u2013");
+  set("#shop-coins", myWallet ? fmtN(myWallet.coins) : "\u2013");
+  set("#shop-gems", myWallet ? fmtN(myWallet.gems) : "\u2013");
   const chip = $("#btn-bonus");
   if (chip) chip.classList.toggle("hidden", !(myWallet && myWallet.bonusReady));
 }
@@ -22172,7 +22200,12 @@ function renderShop() {
   if (title) title.textContent = T("shopTitle");
   document.querySelectorAll("#shop-tabs .shop-tab").forEach((b) => {
     b.classList.toggle("sel", b.dataset.tab === shopTab);
-    const TAB_ICONS = { coins: "\u{1FA99}", gems: "\u{1F48E}", chests: "\u{1F381}", look: "\u2728" };
+    const TAB_ICONS = {
+      coins: COIN_IC,
+      gems: GEM_IC,
+      chests: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 11h16v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 20z" fill="#f59e0b"/><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h19A1.5 1.5 0 0 1 21 7.5V11H3z" fill="#ffb52e" transform="translate(-1.5 0)"/><rect x="10.6" y="6" width="2.8" height="15.5" fill="#d81b74"/><circle cx="12" cy="13.4" r="1.7" fill="#ffe98a" stroke="#a86e00" stroke-width=".8"/></svg>',
+      look: '<svg viewBox="0 0 56 56" width="18" height="18" aria-hidden="true"><g fill="none" stroke="#ffd982" stroke-width="3"><path d="M28 6 L50 28 L28 50 L6 28 Z"/><path d="M13 13 H43 V43 H13 Z"/></g></svg>'
+    };
     b.innerHTML = '<span class="stab-ic">' + (TAB_ICONS[b.dataset.tab] || "") + '</span><span class="stab-tx">' + T("shopTab" + b.dataset.tab.charAt(0).toUpperCase() + b.dataset.tab.slice(1)) + "</span>";
   });
   paintWallet();
@@ -22210,7 +22243,7 @@ function renderShopCoins(body) {
   body.appendChild(earn);
   const led = myWallet && myWallet.ledger || [];
   if (led.length) {
-    body.appendChild(shopEl("div", "shop-h", "\u{1F9FE} " + T("ledgerTitle")));
+    body.appendChild(shopEl("div", "shop-h", T("ledgerTitle")));
     const box = shopEl("div", "shop-ledger");
     const kindKey = { grant: "ledGrant", bonus: "ledBonus", chest: "ledChest", stake: "ledStake", win: "ledWin", refund: "ledRefund", buy: "ledBuy", gems: "ledGems", forfeit: "ledForfeit", admin: "ledAdmin" };
     led.forEach((e) => {
@@ -22222,7 +22255,7 @@ function renderShopCoins(body) {
       }
       row.appendChild(shopEl("span", "", label));
       const amt = shopEl("span", "shop-led-amt " + (e.amount > 0 ? "plus" : e.amount < 0 ? "minus" : ""));
-      amt.innerHTML = (e.amount > 0 ? "+" : "") + e.amount + " " + (e.cur === "gems" ? "\u{1F48E}" : COIN_IC);
+      amt.innerHTML = (e.amount > 0 ? "+" : e.amount < 0 ? "\u2212" : "") + fmtNum(Math.abs(e.amount)) + " " + (e.cur === "gems" ? GEM_IC : COIN_IC);
       row.appendChild(amt);
       box.appendChild(row);
     });
@@ -22230,9 +22263,13 @@ function renderShopCoins(body) {
   }
 }
 function renderShopGems(body) {
-  body.appendChild(shopEl("div", "shop-h", "\u{1F48E} " + T("gemsLbl")));
+  const gh = shopEl("div", "shop-h", "");
+  gh.innerHTML = GEM_IC + " " + T("gemsLbl");
+  body.appendChild(gh);
   const balance = myWallet ? myWallet.gems || 0 : 0;
-  body.appendChild(shopEl("div", "shop-count", T("gemsBalance") + ": \u{1F48E} " + balance));
+  const gc = shopEl("div", "shop-count", "");
+  gc.innerHTML = T("gemsBalance") + ": " + GEM_IC + " " + fmtNum(balance);
+  body.appendChild(gc);
   const packs = [
     { id: "gempack1", gems: 10, coins: 1e3 },
     { id: "gempack2", gems: 30, coins: 1800 },
@@ -22242,10 +22279,12 @@ function renderShopGems(body) {
   packs.forEach((pack) => {
     const card = shopEl("div", "shop-item shop-gem-row");
     const coinPrice = shopEl("span", "si-price", "");
-    coinPrice.innerHTML = COIN_IC + ' <span class="si-current">' + pack.coins + "</span>";
+    coinPrice.innerHTML = COIN_IC + ' <span class="si-current">' + fmtNum(pack.coins) + "</span>";
     card.appendChild(coinPrice);
     card.appendChild(shopEl("span", "shop-gem-equals", "="));
-    card.appendChild(shopEl("span", "shop-gem-amount", "\u{1F48E} " + pack.gems));
+    const ga = shopEl("span", "shop-gem-amount", "");
+    ga.innerHTML = GEM_IC + " " + pack.gems;
+    card.appendChild(ga);
     const btn = shopEl("button", "si-btn", T("shopBuy"));
     btn.type = "button";
     btn.onclick = () => {
@@ -22259,7 +22298,9 @@ function renderShopGems(body) {
   body.appendChild(shopEl("div", "shop-note", T("gemsFramesNote")));
 }
 function renderShopChests(body) {
-  body.appendChild(shopEl("div", "shop-chest-art", "\u{1F9F0}"));
+  const ca = shopEl("div", "shop-chest-art", "");
+  ca.innerHTML = '<svg viewBox="0 0 96 96" width="72" height="72" aria-hidden="true"><path d="M14 44a34 22 0 0 1 68 0z" fill="#a86e00"/><path d="M14 44a34 22 0 0 1 68 0" fill="none" stroke="#7a4d00" stroke-width="3"/><rect x="10" y="44" width="76" height="34" rx="6" fill="#8a5a00"/><rect x="10" y="44" width="76" height="34" rx="6" fill="none" stroke="#7a4d00" stroke-width="3"/><rect x="42" y="40" width="12" height="16" rx="3" fill="#ffd75e" stroke="#7a4d00" stroke-width="2.4"/><circle cx="48" cy="47" r="2.6" fill="#7a4d00"/><path d="M20 44h56" stroke="#ffd75e" stroke-width="3" opacity=".65"/></svg>';
+  body.appendChild(ca);
   body.appendChild(shopEl("div", "shop-h", T("chestTitle")));
   const next = myWallet ? myWallet.chestNext || 0 : 0;
   if (myWallet && next <= Date.now()) {
@@ -22318,12 +22359,12 @@ function renderShopLook(body) {
   const priceChip = (sku, showSaleOld, priceOverride) => {
     const gemItem = Object.prototype.hasOwnProperty.call(GEM_PRICES, sku);
     const price = priceOverride == null ? gemItem ? gemPrice(sku) : shopPrice(sku) : priceOverride;
-    const currency = gemItem ? "\u{1F48E}" : COIN_IC;
+    const currency = gemItem ? GEM_IC : COIN_IC;
     const chip = shopEl("span", "si-price", "");
-    chip.innerHTML = currency + ' <span class="si-current">' + price + "</span>";
+    chip.innerHTML = currency + ' <span class="si-current">' + fmtNum(price) + "</span>";
     const catalogue = gemItem ? GEM_PRICES : SHOP_PRICES;
     if (showSaleOld && socialEvent && catalogue[sku] && price < catalogue[sku]) {
-      chip.appendChild(shopEl("s", "si-old", String(catalogue[sku])));
+      chip.appendChild(shopEl("s", "si-old", fmtNum(catalogue[sku])));
     }
     return chip;
   };
@@ -23018,10 +23059,19 @@ function personRow(p, actions, opts) {
   row.appendChild(act);
   return row;
 }
-function frEmpty(text) {
+function frEmpty(text, big) {
   const d = document.createElement("div");
-  d.className = "fr-empty";
-  d.textContent = text;
+  d.className = "fr-empty" + (big ? " big" : "");
+  if (big) {
+    const sv = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    sv.setAttribute("viewBox", "0 0 56 56");
+    sv.setAttribute("class", "fr-star");
+    sv.innerHTML = '<g fill="none" stroke="#ffd982" stroke-width="1.6"><path d="M28 6 L50 28 L28 50 L6 28 Z"/><path d="M13 13 H43 V43 H13 Z"/></g><circle cx="28" cy="28" r="2.4" fill="#ffd982"/>';
+    d.appendChild(sv);
+  }
+  const t = document.createElement("div");
+  t.textContent = text;
+  d.appendChild(t);
   return d;
 }
 function renderFriends() {
@@ -23074,7 +23124,7 @@ function renderFriends() {
   });
   const listBox = $("#fr-list");
   listBox.innerHTML = "";
-  if (!socialData.friends.length) listBox.appendChild(frEmpty(T("frNoFriends")));
+  if (!socialData.friends.length) listBox.appendChild(frEmpty(T("frNoFriends"), true));
   socialData.friends.forEach((p) => {
     const actions = [frChatBtn(p)];
     if (p.ingame) {
