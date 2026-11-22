@@ -812,7 +812,10 @@ export default {
       // mobile carrier networks. This branch solves the challenge here
       // (stable egress) and forwards clean JSON. Game routes never use
       // /api/, so nothing below this line changes for the game.
-      return qfProxy(request, path + url.search);
+      return qfProxy(request, path + url.search).catch((e) => Response.json(
+        { ok: false, error: 'proxy_exception', detail: String((e && e.message) || e) },
+        { status: 502 },
+      ));
     }
 
     if (path.startsWith('/stickers/') && request.method === 'GET') {
@@ -1348,7 +1351,7 @@ function qfSolveChallenge(html) {
   const value = qfBytesToHex(dec);
   const cookie = `${nameMatch[1]}=${value}`;
   qfCachedCookie = cookie;
-  qfCachedCookieUntil = Date.now() + COOKIE_TTL_MS;
+  qfCachedCookieUntil = Date.now() + QF_COOKIE_TTL_MS;
   return cookie;
 }
 
