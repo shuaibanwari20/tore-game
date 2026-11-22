@@ -5459,6 +5459,9 @@ const STR = {
     shopOwned: 'لرې یې ✓',
     shopSoon: 'ژر راځي',
     gemsSoonTxt: 'الماس په بل پړاو کې راځي — اوس یې له لارې نشي اخیستل کېدای.',
+    gemsBalance: 'ستا الماس',
+    gemsFramesNote: 'چوکاتونه په الماسو اخیستل کېږي.',
+    ledGems: 'الماس',
     coinsHowTitle: 'سکه څنګه ترلاسه کېږي؟',
     earnGrant: 'د پیل ډالۍ: ۱۰۰۰ سکه',
     earnBonus: 'ورځنۍ جایزه: هره ورځ ۱۰۰ سکه',
@@ -5489,7 +5492,7 @@ const STR = {
     stakeTaken: (n) => 'شرط ونیول شو — هر لوبغاړي ' + n + ' سکه ورکړه',
     lockedPrice: (n) => '' + n,
     shopLockedHint: 'دا توکی په پلورنځي کې اخیستل کېږي',
-    errWalletPoor: 'سکه دې نه بسېږي',
+    errWalletPoor: 'موجودي دې نه بسېږي',
     errWalletOwned: 'دا توکی لا لرې',
     errWalletBonusWait: 'د نن جایزه دې لا اخیستې ده',
     errWalletChestWait: 'صندوق لا نه دی پرانیستل شوی',
@@ -5967,6 +5970,9 @@ const STR = {
     shopOwned: 'داریش ✓',
     shopSoon: 'به‌زودی',
     gemsSoonTxt: 'الماس در مرحلهٔ بعدی می‌آید — فعلاً قابل خرید نیست.',
+    gemsBalance: 'الماس تو',
+    gemsFramesNote: 'قاب‌ها با الماس خریده می‌شوند.',
+    ledGems: 'الماس',
     coinsHowTitle: 'سکه چطور به دست می‌آید؟',
     earnGrant: 'هدیهٔ شروع: ۱۰۰۰ سکه',
     earnBonus: 'جایزهٔ روزانه: هر روز ۱۰۰ سکه',
@@ -5997,7 +6003,7 @@ const STR = {
     stakeTaken: (n) => 'شرط گرفته شد — هر بازیکن ' + n + ' سکه داد',
     lockedPrice: (n) => '' + n,
     shopLockedHint: 'این مورد از فروشگاه خریده می‌شود',
-    errWalletPoor: 'سکه‌ات کافی نیست',
+    errWalletPoor: 'موجودی‌ات کافی نیست',
     errWalletOwned: 'این مورد را از قبل داری',
     errWalletBonusWait: 'جایزهٔ امروز را قبلاً گرفته‌ای',
     errWalletChestWait: 'صندوق هنوز باز نشده',
@@ -6475,6 +6481,9 @@ const STR = {
     shopOwned: 'Owned ✓',
     shopSoon: 'Coming soon',
     gemsSoonTxt: 'Gems arrive in the next phase — they cannot be bought yet.',
+    gemsBalance: 'Your gems',
+    gemsFramesNote: 'Frames are bought with gems.',
+    ledGems: 'Gems',
     coinsHowTitle: 'How do you earn coins?',
     earnGrant: 'Start gift: 1000 coins',
     earnBonus: 'Daily bonus: 100 coins every day',
@@ -6505,7 +6514,7 @@ const STR = {
     stakeTaken: (n) => 'Stakes taken — each player paid ' + n + ' coins',
     lockedPrice: (n) => '' + n,
     shopLockedHint: 'This item is bought in the shop',
-    errWalletPoor: 'Not enough coins',
+    errWalletPoor: 'Your balance is not enough',
     errWalletOwned: 'You already own this',
     errWalletBonusWait: "Today's bonus is already claimed",
     errWalletChestWait: 'The chest is not open yet',
@@ -14184,13 +14193,18 @@ function onSocialMsg(m) {
 // server catalogue in social-core.js — the server never trusts
 // a client number, so a stale copy here can only mislabel, never
 // mischarge.
-const SHOP_PRICES = { back2: 300, back3: 500, back4: 800, back5: 1200, back6: 2000, felt1: 400, felt2: 400, felt3: 600, felt4: 600, felt5: 800, felt6: 800, felt7: 1000, felt8: 1000, felt9: 1500, felt10: 1500, fr1: 500, fr2: 900, fr3: 1400, fr4: 2200, chat1: 400, chat2: 800, chat3: 1300, back7: 1800, fr5: 2500, fr6: 3000, 'pack-emoji': 600, 'pack-sticker': 900 };
+const SHOP_PRICES = { back2: 300, back3: 500, back4: 800, back5: 1200, back6: 2000, felt1: 400, felt2: 400, felt3: 600, felt4: 600, felt5: 800, felt6: 800, felt7: 1000, felt8: 1000, felt9: 1500, felt10: 1500, chat1: 400, chat2: 800, chat3: 1300, back7: 1800, 'pack-emoji': 600, 'pack-sticker': 900 };
+const GEM_PRICES = { fr1: 5, fr2: 10, fr3: 45, fr4: 10, fr5: 60, fr6: 75 };
 let myWallet = null;   // last wallet state from the server; null = not loaded yet
 let shopTab = 'coins';
 let chestTimer = null;
 
 function shopPrice(sku) {
   const p = SHOP_PRICES[sku] || 0;
+  return socialEvent ? Math.round(p * 0.8) : p; // feat3: the event sale is 20% off
+}
+function gemPrice(sku) {
+  const p = GEM_PRICES[sku] || 0;
   return socialEvent ? Math.round(p * 0.8) : p; // feat3: the event sale is 20% off
 }
 function walletOwns(sku) {
@@ -14295,7 +14309,7 @@ function renderShopCoins(body) {
   if (led.length) {
     body.appendChild(shopEl('div', 'shop-h', '🧾 ' + T('ledgerTitle')));
     const box = shopEl('div', 'shop-ledger');
-    const kindKey = { grant: 'ledGrant', bonus: 'ledBonus', chest: 'ledChest', stake: 'ledStake', win: 'ledWin', refund: 'ledRefund', buy: 'ledBuy', forfeit: 'ledForfeit', admin: 'ledAdmin' };
+    const kindKey = { grant: 'ledGrant', bonus: 'ledBonus', chest: 'ledChest', stake: 'ledStake', win: 'ledWin', refund: 'ledRefund', buy: 'ledBuy', gems: 'ledGems', forfeit: 'ledForfeit', admin: 'ledAdmin' };
     led.forEach((e) => {
       const row = shopEl('div', 'shop-led-row');
       let label = T(kindKey[e.kind] || 'ledBuy');
@@ -14314,9 +14328,27 @@ function renderShopCoins(body) {
 }
 function renderShopGems(body) {
   body.appendChild(shopEl('div', 'shop-h', '💎 ' + T('gemsLbl')));
-  body.appendChild(shopEl('div', 'shop-note', T('gemsSoonTxt')));
-  const chip = shopEl('div', 'shop-count', T('shopSoon'));
-  body.appendChild(chip);
+  const balance = myWallet ? (myWallet.gems || 0) : 0;
+  body.appendChild(shopEl('div', 'shop-count', T('gemsBalance') + ': 💎 ' + balance));
+  const packs = [
+    { id: 'gempack1', gems: 10, coins: 1000 },
+    { id: 'gempack2', gems: 30, coins: 1800 },
+    { id: 'gempack3', gems: 80, coins: 5000 },
+  ];
+  const grid = shopEl('div', 'shop-grid');
+  packs.forEach((pack) => {
+    const card = shopEl('div', 'shop-item');
+    card.appendChild(shopEl('div', 'si-art', '💎'));
+    card.appendChild(shopEl('div', 'si-name', pack.gems + ' 💎'));
+    const btn = shopEl('button', 'si-btn', '');
+    btn.innerHTML = T('shopBuy') + ' · ' + COIN_IC + ' ' + pack.coins;
+    btn.type = 'button';
+    btn.onclick = () => { connectSocial(); socialSend({ type: 's-wallet-gems', pack: pack.id }); };
+    card.appendChild(btn);
+    grid.appendChild(card);
+  });
+  body.appendChild(grid);
+  body.appendChild(shopEl('div', 'shop-note', T('gemsFramesNote')));
 }
 function renderShopChests(body) {
   body.appendChild(shopEl('div', 'shop-chest-art', '🧰'));
@@ -14368,6 +14400,7 @@ function renderShopLook(body) {
     cell.appendChild(artEl);
     cell.appendChild(shopEl('div', 'si-name', name));
     const owned = walletOwns(sku);
+    const gemItem = Object.prototype.hasOwnProperty.call(GEM_PRICES, sku);
     const btn = shopEl('button', 'si-btn' + (owned ? ' owned' : ''), '');
     btn.type = 'button';
     if (owned && onEquip) {
@@ -14378,11 +14411,17 @@ function renderShopLook(body) {
       btn.textContent = T('shopOwned');
       btn.disabled = true;
     } else {
-      btn.innerHTML = T('shopBuy') + ' · ' + COIN_IC + ' ' + shopPrice(sku);
-      if (socialEvent && SHOP_PRICES[sku] && shopPrice(sku) < SHOP_PRICES[sku]) {
-        btn.appendChild(shopEl('s', 'si-old', String(SHOP_PRICES[sku])));
+      const price = gemItem ? gemPrice(sku) : shopPrice(sku);
+      const currency = gemItem ? '💎' : COIN_IC;
+      btn.innerHTML = T('shopBuy') + ' · ' + currency + ' ' + price;
+      const catalogue = gemItem ? GEM_PRICES : SHOP_PRICES;
+      if (socialEvent && catalogue[sku] && price < catalogue[sku]) {
+        btn.appendChild(shopEl('s', 'si-old', String(catalogue[sku])));
       }
-      btn.onclick = () => { connectSocial(); socialSend({ type: 's-wallet-buy', sku }); };
+      btn.onclick = () => {
+        connectSocial();
+        socialSend({ type: 's-wallet-buy', sku });
+      };
     }
     cell.appendChild(btn);
     grid.appendChild(cell);
