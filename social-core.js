@@ -448,12 +448,19 @@ const SHOP_ITEMS = new Map([
   ['back2', 300], ['back3', 500], ['back4', 800], ['back5', 1200], ['back6', 2000],
   ['felt1', 400], ['felt2', 400], ['felt3', 600], ['felt4', 600], ['felt5', 800],
   ['felt6', 800], ['felt7', 1000], ['felt8', 1000], ['felt9', 1500], ['felt10', 1500],
-  // feat3 (owner picks 2026-11-14): avatar frames + chat styles
-  ['fr1', 500], ['fr2', 900], ['fr3', 1400], ['fr4', 2200],
+  // feat3 (owner picks 2026-11-14): chat styles
   ['chat1', 400], ['chat2', 800], ['chat3', 1300],
   // feat4 (owner picks 2026-11-15): special packs + animated cosmetics
-  ['back7', 1800], ['fr5', 2500], ['fr6', 3000],
+  ['back7', 1800],
   ['pack-emoji', 600], ['pack-sticker', 900],
+]);
+const GEM_SHOP_ITEMS = new Map([
+  ['fr1', 5], ['fr2', 10], ['fr3', 45], ['fr4', 10], ['fr5', 60], ['fr6', 75],
+]);
+const GEM_PACKS = new Map([
+  ['gempack1', { gems: 10, coins: 1000 }],
+  ['gempack2', { gems: 30, coins: 1800 }],
+  ['gempack3', { gems: 80, coins: 5000 }],
 ]);
 const FREE_COSMETICS = new Set(['back1', 'felt11']);
 
@@ -1065,8 +1072,10 @@ class SocialCore {
     this._persist();
     return w;
   }
-  _ledger(w, kind, amount, ref) {
-    w.ledger.push({ ts: Date.now(), kind, amount, balance: w.coins, ref: ref || '' });
+  _ledger(w, kind, amount, ref, cur, balance) {
+    const entry = { ts: Date.now(), kind, amount, balance: balance == null ? w.coins : balance, ref: ref || '' };
+    if (cur) entry.cur = cur;
+    w.ledger.push(entry);
     if (w.ledger.length > WALLET_LEDGER_CAP) w.ledger.splice(0, w.ledger.length - WALLET_LEDGER_CAP);
   }
   // The client-facing state: balances, owned skus, whether the
@@ -1134,18 +1143,39 @@ class SocialCore {
     this.walletSend(id);
     return true;
   }
-  // Shop purchase: the price comes from the server catalogue —
-  // the frame carries ONLY the sku, never an amount.
+  // Shop purchase: prices come from server catalogues — the client sends only a sku.
   walletBuy(id, sku) {
-    if (typeof sku !== 'string' || !SHOP_ITEMS.has(sku)) { this._error(id, 'walletBadSku'); return false; }
+    const isGem = typeof sku === 'string' && GEM_SHOP_ITEMS.has(sku);
+    const catalogue = isGem ? GEM_SHOP_ITEMS : SHOP_ITEMS;
+    if (typeof sku !== 'string' || !catalogue.has(sku)) { this._error(id, 'walletBadSku'); return false; }
     const w = this._wallet(id, true);
     if (w.owned.includes(sku)) { this._error(id, 'walletOwned'); this.walletSend(id); return false; }
-    let price = SHOP_ITEMS.get(sku);
+    let price = catalogue.get(sku);
     if (activeEvent(Date.now())) price = Math.round(price * (1 - EVENT_DISCOUNT)); // feat3 event sale
-    if (w.coins < price) { this._error(id, 'walletPoor'); this.walletSend(id); return false; }
-    w.coins -= price;
-    w.owned.push(sku);
-    this._ledger(w, 'buy', -price, sku);
+    const balance = isGem ? w.gems : w.coins;
+    if (balance < price) { this._error(id, 'walletPoor'); this.walletSend(id); return false; }
+    if (isGem) {
+      w.gems -= price;
+      w.owned.push(sku);
+      this._ledger(w, 'buy', -price, sku, 'gems', w.gems);
+    } else {
+      w.coins -= price;
+      w.owned.push(sku);
+      this._ledger(w, 'buy', -price, sku);
+    }
+    this._persist();
+    this.walletSend(id);
+    return true;
+  }
+  walletBuyGems(id, packId) {
+    if (typeof packId !== 'string' || !GEM_PACKS.has(packId)) { this._error(id, 'walletBadSku'); return false; }
+    const pack = GEM_PACKS.get(packId);
+    const w = this._wallet(id, true);
+    if (w.coins < pack.coins) { this._error(id, 'walletPoor'); this.walletSend(id); return false; }
+    w.coins -= pack.coins;
+    w.gems += pack.gems;
+    this._ledger(w, 'buy', -pack.coins, packId);
+    this._ledger(w, 'gems', pack.gems, packId, 'gems', w.gems);
     this._persist();
     this.walletSend(id);
     return true;
@@ -1669,6 +1699,7 @@ class SocialCore {
       case 's-wallet-bonus': return this.walletClaimBonus(id);
       case 's-wallet-chest': return this.walletClaimChest(id);
       case 's-wallet-buy': return this.walletBuy(id, msg.sku);
+      case 's-wallet-gems': return this.walletBuyGems(id, msg.pack);
       case 's-gift': return this.giftSend(id, msg.to, msg.amount);
       case 's-event-claim': return this.eventClaim(id);
       case 's-watch': return this.watch(id, msg.to);
