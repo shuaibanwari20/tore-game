@@ -2700,13 +2700,18 @@
      shell screen #scr-shop wears the shared plum stack (the
      #scr-profile override above); only the magenta #shop-body
      card keeps its gradient below. */
-  .shop-bal { display: flex; gap: 8px; justify-content: center; margin: 4px 10px 10px; }
-  .shop-tabs { display: flex; gap: 6px; margin: 0 10px 10px; }
-  .shop-tab { flex: 1 1 0; width: auto; margin: 0; cursor: pointer; padding: 9px 2px;
-    background: rgba(43,6,54,.72); border: 1.5px solid rgba(255,255,255,.25); border-radius: 14px;
-    color: #ffd7f2; font-size: 14px; font-weight: 800; }
-  .shop-tab.sel { background: linear-gradient(180deg, #d81b74, #8f1160); border-color: #ffd75e; color: #fff; }
-  #shop-body { margin: 0; padding: 2px 10px 18px; color: #fff; }
+  .shop-bal { display: flex; gap: 8px; justify-content: center; margin: 14px 10px 10px; }
+  .shop-tabs { display: flex; gap: 8px; margin: 0 10px 12px; }
+  .shop-tab { flex: 1 1 0; min-width: 0; width: auto; margin: 0; cursor: pointer; padding: 0 4px; height: 46px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    background: rgba(43,6,54,.72); border: 1.5px solid rgba(255,255,255,.22); border-radius: 16px;
+    color: #ffd7f2; font-size: 14px; font-weight: 800; white-space: nowrap; }
+  .shop-tab .stab-ic { font-size: 17px; line-height: 1; flex: none; }
+  .shop-tab .stab-tx { overflow: hidden; text-overflow: ellipsis; }
+  .shop-tab.sel { background: linear-gradient(180deg, #d81b74, #8f1160); border-color: #ffd75e; color: #fff;
+    box-shadow: 0 4px 14px rgba(216,27,116,.45), inset 0 1px 0 rgba(255,255,255,.35); }
+  #shop-body { margin: 0; padding: 2px 10px 18px; color: #fff; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  #scr-shop .shop-bal, #scr-shop .shop-tabs { flex: none; }
   .shop-h { font-size: 16px; font-weight: 900; color: #ffd75e; margin: 4px 0 8px; }
   .shop-note { font-size: 13.5px; line-height: 1.7; opacity: .92; margin: 6px 0; }
   .shop-earn { font-size: 14px; line-height: 1.9; }
@@ -4371,12 +4376,6 @@
      in Settings exactly as before). NO purchase offers anywhere:
      there is no payment rail yet. -->
 <section id="scr-shop" class="hidden">
-  <div class="fr-scroll">
-    <div class="fr-inner">
-      <div class="cp-head">
-        <button class="fr-back" id="btn-shop-back">→</button>
-        <h2 id="shop-title">پلورنځی</h2>
-      </div>
       <div class="shop-bal">
         <span class="hm-pill"><svg class="coin-ic" aria-hidden="true"><use href="#coinSym"></use></svg> <b id="shop-coins">–</b></span>
         <span class="hm-pill gem">💎 <b id="shop-gems">–</b></span>
@@ -4388,8 +4387,6 @@
         <button type="button" class="shop-tab" data-tab="look"></button>
       </div>
       <div id="shop-body"></div>
-    </div>
-  </div>
   <!-- up48: the shop is a shell screen now and carries its own
        copy of the bottom nav like every sibling page, with
        پلورنځی raised as the active item. -->
@@ -6042,7 +6039,7 @@ const STR = {
     gemsLbl: 'الماس',
     shopTitle: 'فروشگاه',
     shopTabCoins: 'سکه',
-    shopTabGems: 'الماس',
+    shopTabGems: 'الماس‌ها',
     shopTabChests: 'صندوق‌ها',
     shopTabLook: 'ظاهری',
     bonusTitle: 'جایزهٔ روزانه',
@@ -14348,7 +14345,7 @@ $('#shnav-clubs').onclick = () => openClubs();
 $('#shnav-home').onclick = () => closeShop();
 $('#shnav-shop').onclick = () => {};
 $('#shnav-chat').onclick = () => openChats();
-$('#btn-shop-back').onclick = () => closeShop();
+{ const b = $('#btn-shop-back'); if (b) b.onclick = () => closeShop(); }
 function stopChestTimer() { if (chestTimer) { clearInterval(chestTimer); chestTimer = null; } }
 function shopEl(tag, cls, text) {
   const el = document.createElement(tag);
@@ -14360,7 +14357,8 @@ function renderShop() {
   const title = $('#shop-title'); if (title) title.textContent = T('shopTitle');
   document.querySelectorAll('#shop-tabs .shop-tab').forEach((b) => {
     b.classList.toggle('sel', b.dataset.tab === shopTab);
-    b.textContent = T('shopTab' + b.dataset.tab.charAt(0).toUpperCase() + b.dataset.tab.slice(1));
+    const TAB_ICONS = { coins: '🪙', gems: '💎', chests: '🎁', look: '✨' };
+    b.innerHTML = '<span class="stab-ic">' + (TAB_ICONS[b.dataset.tab] || '') + '</span><span class="stab-tx">' + T('shopTab' + b.dataset.tab.charAt(0).toUpperCase() + b.dataset.tab.slice(1)) + '</span>';
   });
   paintWallet();
   const body = $('#shop-body');
@@ -14617,7 +14615,7 @@ function renderShopLook(body) {
   const sImg = document.createElement('img'); sImg.src = stickerURL('st17'); sImg.alt = ''; sArt.appendChild(sImg);
   addItem(packs, 'pack-sticker', sArt, T('packSticker'), false);
 }
-$('#btn-shop-back').onclick = () => closeShop();
+{ const b = $('#btn-shop-back'); if (b) b.onclick = () => closeShop(); }
 $('#btn-wallet-coins').onclick = () => openShop('coins');
 $('#btn-wallet-gems').onclick = () => openShop('gems');
 $('#btn-bonus').onclick = () => { connectSocial(); socialSend({ type: 's-wallet-bonus' }); };
