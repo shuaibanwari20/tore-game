@@ -7918,6 +7918,18 @@ button:disabled {
 .pavatar.fr2-host > svg {
   border-radius: inherit;
 }
+.pavatar.fr5-host {
+  overflow: visible;
+}
+.pavatar.fr5-host > img,
+.pavatar.fr5-host > svg {
+  border-radius: inherit;
+}
+.fr5-spin-canvas {
+  position: absolute;
+  pointer-events: none;
+  z-index: 4;
+}
 .pavatar.fr1-host > img,
 .pavatar.fr1-host > svg {
   border-radius: inherit;
@@ -16107,7 +16119,7 @@ function avatarEl(name, av, px, photo, frame) {
     d.innerHTML = AVATAR_ART[typeof av === "string" && AVATAR_ART[av] ? av : "av1"].svg;
   }
   if (d.dataset.frame) {
-    if (d.dataset.frame === "fr3" || d.dataset.frame === "fr1" || d.dataset.frame === "fr4" || d.dataset.frame === "fr2") d.classList.add(d.dataset.frame + "-host");
+    if (d.dataset.frame === "fr3" || d.dataset.frame === "fr1" || d.dataset.frame === "fr4" || d.dataset.frame === "fr2" || d.dataset.frame === "fr5") d.classList.add(d.dataset.frame + "-host");
     const r = document.createElement("span");
     r.className = "fr-ring " + d.dataset.frame + (!px || px >= 52 ? " fr-lg" : "");
     d.appendChild(r);
@@ -16132,6 +16144,12 @@ function avatarEl(name, av, px, photo, frame) {
     if (d.dataset.frame === "fr2" && (!px || px >= 52)) {
       try {
         attachVioletFrame(d, px || 56);
+      } catch (e) {
+      }
+    }
+    if (d.dataset.frame === "fr5" && (!px || px >= 52)) {
+      try {
+        attachSpinFireFrame(d, px || 56);
       } catch (e) {
       }
     }
@@ -29951,6 +29969,606 @@ window.ToreBots = (function() {
 
   installHooks();
   W.attachVioletFrame = attachVioletFrame;
+})(window, document);
+</script>
+
+<script>
+(function (W, D) {
+  var slots = [], timer = null, rafId = null, rafIsTimeout = false;
+  var lastFrame = 0, MAX = 6, FRAME_MS = 1000 / 30, hooked = false, pumpQueued = false;
+  var motionQuery = null, reducedMotion = false;
+
+  try {
+    if (W.matchMedia) {
+      motionQuery = W.matchMedia('(prefers-reduced-motion: reduce)');
+      reducedMotion = !!motionQuery.matches;
+    }
+  } catch (e0) {}
+
+  function contains(node) {
+    return !!(node && D.documentElement && D.documentElement.contains(node));
+  }
+
+  function hasLiveCanvas() {
+    var i;
+    for (i = 0; i < slots.length; i++) if (slots[i].canvas && slots[i].ctx) return true;
+    return false;
+  }
+
+  function removeCanvas(slot) {
+    try { if (slot.canvas && slot.canvas.parentNode) slot.canvas.parentNode.removeChild(slot.canvas); } catch (e1) {}
+    slot.canvas = null;
+    slot.ctx = null;
+    slot.w = 0;
+    slot.h = 0;
+    slot.needsDraw = true;
+  }
+
+  function removeSlot(slot) {
+    removeCanvas(slot);
+    slot.host = null;
+  }
+
+  function cancelAnimation() {
+    if (rafId === null) return;
+    try {
+      if (rafIsTimeout) W.clearTimeout(rafId);
+      else if (W.cancelAnimationFrame) W.cancelAnimationFrame(rafId);
+    } catch (e2) {}
+    rafId = null;
+  }
+
+  function stopIfEmpty() {
+    if (slots.length) return;
+    if (timer !== null) { W.clearInterval(timer); timer = null; }
+    cancelAnimation();
+    lastFrame = 0;
+  }
+
+  function scheduleAnimation() {
+    if (rafId !== null || reducedMotion || D.hidden || !hasLiveCanvas()) return;
+    if (W.requestAnimationFrame) {
+      rafIsTimeout = false;
+      rafId = W.requestAnimationFrame(animate);
+    } else {
+      rafIsTimeout = true;
+      rafId = W.setTimeout(function () { animate(+new Date()); }, 34);
+    }
+  }
+
+  function drawStaticFrames() {
+    var i;
+    if (D.hidden) return;
+    for (i = 0; i < slots.length; i++) {
+      if (slots[i].canvas && slots[i].ctx && slots[i].needsDraw) drawSlot(slots[i], 0);
+    }
+  }
+
+  function onVisibility() {
+    if (D.hidden) {
+      cancelAnimation();
+      return;
+    }
+    lastFrame = 0;
+    if (reducedMotion) drawStaticFrames();
+    else scheduleAnimation();
+  }
+
+  function onMotionChange(event) {
+    var next = event && typeof event.matches === 'boolean' ? event.matches : !!(motionQuery && motionQuery.matches);
+    if (next === reducedMotion) return;
+    reducedMotion = next;
+    if (reducedMotion) {
+      cancelAnimation();
+      var i;
+      for (i = 0; i < slots.length; i++) if (slots[i].canvas) slots[i].needsDraw = true;
+      drawStaticFrames();
+    } else {
+      lastFrame = 0;
+      scheduleAnimation();
+    }
+  }
+
+  function installHooks() {
+    if (hooked) return;
+    hooked = true;
+    try { D.addEventListener('visibilitychange', onVisibility, false); } catch (e3) {}
+    try {
+      if (motionQuery && motionQuery.addEventListener) motionQuery.addEventListener('change', onMotionChange, false);
+      else if (motionQuery && motionQuery.addListener) motionQuery.addListener(onMotionChange);
+    } catch (e4) {}
+  }
+
+  function ensureWatch() {
+    if (timer === null) timer = W.setInterval(tick, 100);
+  }
+
+  function queuePump() {
+    if (pumpQueued) return;
+    pumpQueued = true;
+    if (W.requestAnimationFrame) {
+      W.requestAnimationFrame(function () {
+        pumpQueued = false;
+        measureAvailable();
+        if (reducedMotion) drawStaticFrames();
+        else scheduleAnimation();
+      });
+    } else {
+      W.setTimeout(function () {
+        pumpQueued = false;
+        measureAvailable();
+        if (reducedMotion) drawStaticFrames();
+        else scheduleAnimation();
+      }, 0);
+    }
+  }
+
+  function attachSpinFireFrame(hostEl, sizePx) {
+    try {
+      if (!hostEl || !hostEl.appendChild || !hostEl.getBoundingClientRect) return;
+      var i;
+      for (i = 0; i < slots.length; i++) if (slots[i].host === hostEl) return;
+      slots.push({
+        host: hostEl,
+        sizeHint: parseFloat(sizePx) || 56,
+        canvas: null,
+        ctx: null,
+        w: 0,
+        h: 0,
+        ring: 0,
+        pad: 0,
+        radius: 0,
+        circle: false,
+        ratio: 1,
+        phase: Math.random() * 100,
+        needsDraw: true,
+        failed: false,
+        embers: []
+      });
+      installHooks();
+      ensureWatch();
+      queuePump();
+    } catch (e5) {}
+  }
+
+  function tick() {
+    try {
+      var i;
+      for (i = slots.length - 1; i >= 0; i--) {
+        if (!contains(slots[i].host)) {
+          removeSlot(slots[i]);
+          slots.splice(i, 1);
+        }
+      }
+      if (!slots.length) { stopIfEmpty(); return; }
+      measureAvailable();
+      if (reducedMotion) {
+        cancelAnimation();
+        drawStaticFrames();
+      } else if (D.hidden) {
+        cancelAnimation();
+      } else {
+        scheduleAnimation();
+      }
+      stopIfEmpty();
+    } catch (e6) {}
+  }
+
+  function makeCanvas(slot) {
+    var canvas;
+    try {
+      canvas = D.createElement('canvas');
+      canvas.className = 'fr5-spin-canvas';
+      canvas.setAttribute('aria-hidden', 'true');
+      canvas.style.position = 'absolute';
+      canvas.style.left = '0px';
+      canvas.style.top = '0px';
+      canvas.style.zIndex = '4';
+      canvas.style.display = 'block';
+      canvas.style.pointerEvents = 'none';
+      canvas.style.margin = '0';
+      canvas.style.padding = '0';
+      canvas.style.border = '0';
+      canvas.style.maxWidth = 'none';
+      canvas.style.maxHeight = 'none';
+      slot.host.appendChild(canvas);
+      slot.canvas = canvas;
+      slot.ctx = canvas.getContext && canvas.getContext('2d');
+      if (!slot.ctx) {
+        removeCanvas(slot);
+        slot.failed = true;
+        return false;
+      }
+      slot.needsDraw = true;
+      return true;
+    } catch (e7) {
+      if (canvas && canvas.parentNode) { try { canvas.parentNode.removeChild(canvas); } catch (e8) {} }
+      slot.canvas = null;
+      slot.ctx = null;
+      slot.failed = true;
+      return false;
+    }
+  }
+
+  function hostShape(host, width, height) {
+    var style = null, value = '', radius = 0, minSide = Math.min(width, height), circle = false;
+    try { if (W.getComputedStyle) style = W.getComputedStyle(host, null); } catch (e9) {}
+    if (style) value = style.borderRadius || style.borderTopLeftRadius || '';
+    if (!value && host.style) value = host.style.borderRadius || '';
+    radius = parseFloat(value);
+    if (!isFinite(radius)) radius = 0;
+    if (String(value).indexOf('%') >= 0) radius = minSide * radius / 100;
+    if (minSide > 0 && Math.abs(width - height) <= minSide * .08 && radius >= minSide * .45) circle = true;
+    if (circle) radius = minSide / 2;
+    else radius = Math.max(0, Math.min(radius, minSide / 2));
+    return { circle: circle, radius: radius };
+  }
+
+  function configureSlot(slot, rect, width, height) {
+    var minSide = Math.min(width, height);
+    var hint = slot.sizeHint > 0 ? slot.sizeHint : minSide;
+    var ring = Math.max(5, Math.min(26, hint * 0.11));
+    var pad = hint * 0.10 + 6;
+    var shape = hostShape(slot.host, width, height);
+    var ratio = Math.min(2, W.devicePixelRatio || 1);
+    var fullWidth = width + pad * 2;
+    var fullHeight = height + pad * 2;
+    var oldW = slot.w, oldH = slot.h, oldRing = slot.ring, oldPad = slot.pad;
+    var oldRadius = slot.radius, oldCircle = slot.circle, oldRatio = slot.ratio;
+    var pixelWidth = Math.max(1, Math.round(fullWidth * ratio));
+    var pixelHeight = Math.max(1, Math.round(fullHeight * ratio));
+
+    slot.w = width;
+    slot.h = height;
+    slot.ring = ring;
+    slot.pad = pad;
+    slot.radius = shape.radius;
+    slot.circle = shape.circle;
+    slot.ratio = ratio;
+    slot.rect = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+
+    if (Math.abs(oldW - width) > .5 || Math.abs(oldH - height) > .5 || Math.abs(oldRing - ring) > .25 ||
+        Math.abs(oldPad - pad) > .25 || Math.abs(oldRadius - shape.radius) > .25 || oldCircle !== shape.circle || oldRatio !== ratio) {
+      slot.needsDraw = true;
+      slot.canvas.style.left = (-pad) + 'px';
+      slot.canvas.style.top = (-pad) + 'px';
+      slot.canvas.style.width = fullWidth + 'px';
+      slot.canvas.style.height = fullHeight + 'px';
+    }
+
+    if (slot.canvas.width !== pixelWidth || slot.canvas.height !== pixelHeight) {
+      slot.canvas.width = pixelWidth;
+      slot.canvas.height = pixelHeight;
+      slot.needsDraw = true;
+    }
+  }
+
+  function measureAvailable() {
+    var live = 0, i, slot, rect, width, height;
+    for (i = 0; i < slots.length; i++) if (slots[i].canvas && slots[i].ctx) live++;
+    for (i = 0; i < slots.length; i++) {
+      slot = slots[i];
+      if (!contains(slot.host)) continue;
+      rect = slot.host.getBoundingClientRect();
+      width = rect.width || (rect.right - rect.left);
+      height = rect.height || (rect.bottom - rect.top);
+      if (!(width >= 52 && height >= 52)) {
+        if (slot.canvas) { removeCanvas(slot); live--; }
+        continue;
+      }
+      if (!slot.canvas) {
+        if (slot.failed || live >= MAX) continue;
+        if (!makeCanvas(slot)) continue;
+        live++;
+      }
+      configureSlot(slot, rect, width, height);
+    }
+  }
+
+  function tickTime() {
+    if (W.performance && W.performance.now) return W.performance.now();
+    return +new Date();
+  }
+
+  function animate(timestamp) {
+    rafId = null;
+    if (reducedMotion || D.hidden) return;
+    var now = typeof timestamp === 'number' ? timestamp : tickTime();
+    if (!lastFrame || now - lastFrame >= FRAME_MS) {
+      var i, time = now / 1000;
+      for (i = 0; i < slots.length; i++) if (slots[i].canvas && slots[i].ctx) drawSlot(slots[i], time);
+      lastFrame = now;
+    }
+    scheduleAnimation();
+  }
+
+  function fract(value) { return value - Math.floor(value); }
+
+  function hash(index, seed) {
+    var value = Math.sin((index + 1) * 127.1 + seed * 311.7) * 43758.5453123;
+    return fract(value);
+  }
+
+  function appendShape(ctx, slot, inset) {
+    var width = slot.w, height = slot.h;
+    if (slot.circle) {
+      var rx = Math.max(0, width / 2 - inset);
+      var ry = Math.max(0, height / 2 - inset);
+      ctx.moveTo(width / 2 + rx, height / 2);
+      ctx.ellipse(width / 2, height / 2, rx, ry, 0, 0, Math.PI * 2);
+      ctx.closePath();
+      return;
+    }
+
+    var x = inset, y = inset;
+    var boxWidth = width - inset * 2, boxHeight = height - inset * 2;
+    var radius = Math.max(0, Math.min(slot.radius - inset, boxWidth / 2, boxHeight / 2));
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + boxWidth - radius, y);
+    ctx.quadraticCurveTo(x + boxWidth, y, x + boxWidth, y + radius);
+    ctx.lineTo(x + boxWidth, y + boxHeight - radius);
+    ctx.quadraticCurveTo(x + boxWidth, y + boxHeight, x + boxWidth - radius, y + boxHeight);
+    ctx.lineTo(x + radius, y + boxHeight);
+    ctx.quadraticCurveTo(x, y + boxHeight, x, y + boxHeight - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
+
+  function perimeter(slot, inset) {
+    var width = slot.w, height = slot.h;
+    if (slot.circle) {
+      var rx = Math.max(0, width / 2 - inset), ry = Math.max(0, height / 2 - inset);
+      return Math.PI * (3 * (rx + ry) - Math.sqrt((3 * rx + ry) * (rx + 3 * ry)));
+    }
+    var boxWidth = width - inset * 2, boxHeight = height - inset * 2;
+    var radius = Math.max(0, Math.min(slot.radius - inset, boxWidth / 2, boxHeight / 2));
+    return 2 * (boxWidth - 2 * radius + boxHeight - 2 * radius) + Math.PI * 2 * radius;
+  }
+
+  function sampleBoundary(slot, fraction, inset) {
+    var width = slot.w, height = slot.h, u = fract(fraction);
+    if (slot.circle) {
+      var angle = -Math.PI / 2 + Math.PI * 2 * u;
+      var rx = Math.max(0, width / 2 - inset), ry = Math.max(0, height / 2 - inset);
+      var tangentX = -rx * Math.sin(angle), tangentY = ry * Math.cos(angle);
+      var tangentLength = Math.sqrt(tangentX * tangentX + tangentY * tangentY) || 1;
+      tangentX /= tangentLength;
+      tangentY /= tangentLength;
+      return {
+        x: width / 2 + Math.cos(angle) * rx,
+        y: height / 2 + Math.sin(angle) * ry,
+        tx: tangentX,
+        ty: tangentY,
+        nx: tangentY,
+        ny: -tangentX
+      };
+    }
+
+    var x = inset, y = inset, boxWidth = width - inset * 2, boxHeight = height - inset * 2;
+    var radius = Math.max(0, Math.min(slot.radius - inset, boxWidth / 2, boxHeight / 2));
+    var segments = [];
+    function addLine(x1, y1, x2, y2) {
+      var dx = x2 - x1, dy = y2 - y1, length = Math.sqrt(dx * dx + dy * dy);
+      if (length > .0001) segments.push({ type: 'line', x1: x1, y1: y1, dx: dx, dy: dy, length: length });
+    }
+    function addArc(cx, cy, start, end) {
+      var length = radius * (end - start);
+      if (length > .0001) segments.push({ type: 'arc', cx: cx, cy: cy, start: start, end: end, length: length });
+    }
+
+    addLine(x + radius, y, x + boxWidth - radius, y);
+    addArc(x + boxWidth - radius, y + radius, -Math.PI / 2, 0);
+    addLine(x + boxWidth, y + radius, x + boxWidth, y + boxHeight - radius);
+    addArc(x + boxWidth - radius, y + boxHeight - radius, 0, Math.PI / 2);
+    addLine(x + boxWidth - radius, y + boxHeight, x + radius, y + boxHeight);
+    addArc(x + radius, y + boxHeight - radius, Math.PI / 2, Math.PI);
+    addLine(x, y + boxHeight - radius, x, y + radius);
+    addArc(x + radius, y + radius, Math.PI, Math.PI * 1.5);
+
+    var total = 0, i, distance, chosen = null;
+    for (i = 0; i < segments.length; i++) total += segments[i].length;
+    if (!(total > 0)) return { x: x, y: y, tx: 1, ty: 0, nx: 0, ny: -1 };
+    distance = u * total;
+    chosen = segments[segments.length - 1];
+    for (i = 0; i < segments.length; i++) {
+      if (distance <= segments[i].length) { chosen = segments[i]; break; }
+      distance -= segments[i].length;
+    }
+
+    var px, py, tx, ty;
+    if (chosen.type === 'arc') {
+      var part = chosen.length ? distance / chosen.length : 0;
+      var arcAngle = chosen.start + (chosen.end - chosen.start) * part;
+      px = chosen.cx + radius * Math.cos(arcAngle);
+      py = chosen.cy + radius * Math.sin(arcAngle);
+      tx = -Math.sin(arcAngle);
+      ty = Math.cos(arcAngle);
+    } else {
+      var linePart = chosen.length ? Math.max(0, Math.min(1, distance / chosen.length)) : 0;
+      px = chosen.x1 + chosen.dx * linePart;
+      py = chosen.y1 + chosen.dy * linePart;
+      tx = chosen.dx / chosen.length;
+      ty = chosen.dy / chosen.length;
+    }
+    return { x: px, y: py, tx: tx, ty: ty, nx: ty, ny: -tx };
+  }
+
+  function clipOutside(ctx, slot) {
+    ctx.beginPath();
+    ctx.rect(-slot.pad, -slot.pad, slot.w + slot.pad * 2, slot.h + slot.pad * 2);
+    appendShape(ctx, slot, -slot.ring);
+    ctx.clip('evenodd');
+  }
+
+  function clipFrameBand(ctx, slot) {
+    ctx.beginPath();
+    appendShape(ctx, slot, -slot.ring);
+    appendShape(ctx, slot, 0);
+    ctx.clip('evenodd');
+  }
+
+  function drawOuterGlow(ctx, slot, time) {
+    var breath = .5 + .5 * Math.sin(time * 1.12 + slot.phase);
+    ctx.save();
+    clipOutside(ctx, slot);
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = .12 + breath * .08;
+    ctx.strokeStyle = '#ff7210';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = '#ff7210';
+    ctx.shadowBlur = 6 + breath * 5;
+    ctx.beginPath();
+    appendShape(ctx, slot, -slot.ring + .5);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawTongues(ctx, slot, time) {
+    var ring = slot.ring;
+    var middleInset = -ring * 0.5;
+    var edgeLength = perimeter(slot, middleInset);
+    var count = Math.max(14, Math.round(edgeLength / 10));
+
+    var i, salt, u, point, flick, height, lean, baseX, baseY, tipX, tipY;
+    var bw, rootWidth, width, startLeftX, startLeftY, startRightX, startRightY;
+    var c1lx, c1ly, c2lx, c2ly, c2rx, c2ry, c1rx, c1ry, plasma, core;
+
+    for (i = 0; i < count; i++) {
+      salt = hash(i, slot.phase);
+      u = fract((i + salt * 0.5) / count + time / 7.0 + slot.phase * 0.001);
+      point = sampleBoundary(slot, u, middleInset);
+      flick = .80 + .20 * Math.sin(time * 5.5 + i * 1.3 + slot.phase);
+      height = ring * (0.9 + salt * 0.7) * flick;
+      lean = ring * 0.44 * flick;
+      baseX = point.x;
+      baseY = point.y;
+      tipX = baseX + point.nx * height + point.tx * lean;
+      tipY = baseY + point.ny * height + point.ty * lean;
+      bw = ring * (0.18 + salt * 0.14);
+      rootWidth = bw * (0.85 + flick * 0.16);
+      width = bw * (0.7 + salt * 0.2);
+      startLeftX = baseX - point.tx * rootWidth * 0.5;
+      startLeftY = baseY - point.ty * rootWidth * 0.5;
+      startRightX = baseX + point.tx * rootWidth * 0.5;
+      startRightY = baseY + point.ty * rootWidth * 0.5;
+
+      c1lx = baseX + point.nx * height * 0.30 - point.tx * rootWidth * 0.62 + point.tx * lean * 0.12;
+      c1ly = baseY + point.ny * height * 0.30 - point.ty * rootWidth * 0.62 + point.ty * lean * 0.12;
+      c2lx = tipX - point.nx * height * 0.22 - point.tx * width * 0.22;
+      c2ly = tipY - point.ny * height * 0.22 - point.ty * width * 0.22;
+      c2rx = tipX - point.nx * height * 0.22 + point.tx * width * 0.22;
+      c2ry = tipY - point.ny * height * 0.22 + point.ty * width * 0.22;
+      c1rx = baseX + point.nx * height * 0.29 + point.tx * rootWidth * 0.62 + point.tx * lean * 0.12;
+      c1ry = baseY + point.ny * height * 0.29 + point.ty * rootWidth * 0.62 + point.ty * lean * 0.12;
+
+      plasma = ctx.createLinearGradient(baseX, baseY, tipX, tipY);
+      plasma.addColorStop(0, '#4a0b0b');
+      plasma.addColorStop(0.25, '#6d1414');
+      plasma.addColorStop(0.50, '#d84500');
+      plasma.addColorStop(0.72, '#ffb300');
+      plasma.addColorStop(0.88, '#ffe066');
+      plasma.addColorStop(1.00, '#fffbe8');
+
+      ctx.save();
+      ctx.globalAlpha = 0.82 + flick * 0.16;
+      ctx.fillStyle = plasma;
+      ctx.shadowColor = 'rgba(255,114,16,0.85)';
+      ctx.shadowBlur = ring * 0.34;
+      ctx.beginPath();
+      ctx.moveTo(startLeftX, startLeftY);
+      ctx.bezierCurveTo(c1lx, c1ly, c2lx, c2ly, tipX, tipY);
+      ctx.bezierCurveTo(c2rx, c2ry, c1rx, c1ry, startRightX, startRightY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      core = ctx.createLinearGradient(baseX, baseY, tipX, tipY);
+      core.addColorStop(0, '#ff3b0f');
+      core.addColorStop(0.45, '#ffd040');
+      core.addColorStop(1.00, '#ffffff');
+      ctx.globalAlpha = 0.57 + flick * 0.2;
+      ctx.strokeStyle = core;
+      ctx.lineWidth = Math.max(0.7, ring * 0.075);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(baseX + point.nx * ring * 0.12, baseY + point.ny * ring * 0.12);
+      ctx.quadraticCurveTo(
+        baseX + point.nx * height * 0.58 + point.tx * lean * 0.35,
+        baseY + point.ny * height * 0.58 + point.ty * lean * 0.35,
+        tipX,
+        tipY
+      );
+      ctx.stroke();
+      ctx.restore();
+
+      spawnEmber(slot, tipX, tipY, point.nx, point.ny, point.tx, point.ty);
+    }
+
+    drawEmbers(ctx, slot);
+  }
+
+  function spawnEmber(slot, x, y, nx, ny, tx, ty) {
+    if (slot.embers.length >= 40) return;
+    if (Math.random() > 0.15) return;
+    slot.embers.push({
+      x: x + (Math.random() - 0.5) * 4,
+      y: y + (Math.random() - 0.5) * 4,
+      vx: nx * (1.4 + Math.random() * 1.8) + tx * (Math.random() * 1.4 - 0.7),
+      vy: ny * (1.4 + Math.random() * 1.8) + ty * (Math.random() * 1.4 - 0.7),
+      life: 1.0,
+      maxLife: 0.45 + Math.random() * 0.75,
+      size: 1.4 + Math.random() * 2.6
+    });
+  }
+
+  function drawEmbers(ctx, slot) {
+    var dt = 1 / 30;
+    var i, e, a;
+    for (i = slot.embers.length - 1; i >= 0; i--) {
+      e = slot.embers[i];
+      e.x += e.vx * dt;
+      e.y += e.vy * dt;
+      e.vx *= 0.92;
+      e.vy *= 0.92;
+      e.life -= dt;
+      a = e.life / e.maxLife;
+      if (a <= 0) {
+        slot.embers.splice(i, 1);
+        continue;
+      }
+      ctx.save();
+      ctx.shadowColor = '#ffb300';
+      ctx.shadowBlur = 6;
+      ctx.fillStyle = 'rgba(255, 174, 45, ' + (a * 0.9) + ')';
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.size * a, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawSlot(slot, time) {
+    var ctx = slot.ctx;
+    var fullWidth = slot.w + slot.pad * 2, fullHeight = slot.h + slot.pad * 2;
+    ctx.setTransform(slot.ratio, 0, 0, slot.ratio, 0, 0);
+    ctx.clearRect(0, 0, fullWidth, fullHeight);
+    ctx.save();
+    ctx.translate(slot.pad, slot.pad);
+
+    drawOuterGlow(ctx, slot, time);
+
+    ctx.save();
+    clipFrameBand(ctx, slot);
+    drawTongues(ctx, slot, time);
+    ctx.restore();
+
+    ctx.restore();
+    slot.needsDraw = false;
+  }
+
+  installHooks();
+  W.attachSpinFireFrame = attachSpinFireFrame;
 })(window, document);
 </script>
 
