@@ -27185,7 +27185,7 @@ function renderLobbyClubPanel() {
           if (!this.takanSuits) this.takanSuits = [[], [], [], []];
           const repeat = this.takanSuits[seat].includes(suit);
           if (!repeat) this.takanSuits[seat].push(suit);
-          const suppressed = repeat && !!(this.botSeats && this.botSeats[seat]);
+          const suppressed = !!(this.botSeats && this.botSeats[seat]);
           if (!suppressed) {
             const team = teamOf(seat);
             this.takanCount[team]++;
@@ -27464,6 +27464,7 @@ window.ToreBots = (function() {
     const info = countSuits(round, seat);
     const dead = hand.filter((c) => info[G.suitOf(c)].unseen === 0);
     if (!dead.length) return null;
+    if (dead.length === hand.length) return cheapestGiveaway(dead);
     const captured = round.captured || [[], []];
     const myTeam = G.teamOf(seat);
     if (G.tawanOf(captured[myTeam]) > G.tawanOf(captured[1 - myTeam])) return null;
@@ -31583,7 +31584,7 @@ window.ToreBots = (function() {
           if (!this.takanSuits) this.takanSuits = [[], [], [], []];
           const repeat = this.takanSuits[seat].includes(suit);
           if (!repeat) this.takanSuits[seat].push(suit);
-          const suppressed = repeat && !!(this.botSeats && this.botSeats[seat]);
+          const suppressed = !!(this.botSeats && this.botSeats[seat]);
           if (!suppressed) {
             const team = teamOf(seat);
             this.takanCount[team]++;
@@ -31862,6 +31863,7 @@ window.ToreBots = (function() {
     const info = countSuits(round, seat);
     const dead = hand.filter((c) => info[G.suitOf(c)].unseen === 0);
     if (!dead.length) return null;
+    if (dead.length === hand.length) return cheapestGiveaway(dead);
     const captured = round.captured || [[], []];
     const myTeam = G.teamOf(seat);
     if (G.tawanOf(captured[myTeam]) > G.tawanOf(captured[1 - myTeam])) return null;
