@@ -3064,6 +3064,17 @@
     box-shadow: inset 0 2px 9px rgba(0,0,0,.4); padding: 10px 12px; color: #fff; }
   #ov-match .panel .row small { color: #ffd75e; opacity: 1; font-size: 12px; font-weight: 800; }
   #ov-match #ov-f-why { color: #ffd9f3; padding: 10px 4px 0; line-height: 1.6; }
+  /* up52 — the match-end panel breathes soft gold when MY team took
+     the match ('win' class on #ov-match, toggled in the match-end
+     block). 1.2 s, 2 iterations, then the panel rests. */
+  @keyframes fxWinGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 215, 94, 0); }
+    50% { box-shadow: 0 0 34px 6px rgba(255, 215, 94, 0.34); }
+  }
+  #ov-match.win .panel { animation: fxWinGlow 1.2s ease-in-out 2; }
+  @media (prefers-reduced-motion: reduce) {
+    #ov-match.win .panel { animation: none; }
+  }
   #ov-match #btn-newgame { margin-top: 14px; width: 100%; padding: 11px; border-radius: 14px; font-size: 17px; font-weight: 900; color: #fff;
     background: linear-gradient(180deg, #8bf25a, #4fce2e 52%, #2da01a);
     border: 2px solid rgba(255,255,255,.4);
@@ -12004,7 +12015,7 @@ function show13Burst(name) {
   void b.offsetWidth;
   b.classList.add('show');
 }
-// The round-end edge: vibration (F10) + takan burst (F28).
+// The round-end edge: vibration (F10) + takan burst (F28) + win FX (up52).
 function processRoundEndFx(r, myTeam) {
   const kind = takanRoundFx(r, myTeam);
   if (kind === 'strong') buzz([120, 50, 120]);
@@ -12014,6 +12025,14 @@ function processRoundEndFx(r, myTeam) {
   if (hasTakan) {
     const t = created[0] > created[1] ? 0 : 1;
     setTimeout(() => showTakanBurst(t === myTeam), 30);
+  }
+  // up52 — MY team takes the round: a gold spark burst from the table
+  // centre. celebrateFx re-checks burstsAllowed()/fxReducedMotion()
+  // itself; the wrapper is the same guard style as the frame engines.
+  if (r.winner === myTeam) {
+    try {
+      if (typeof celebrateFx === 'function') celebrateFx('round');
+    } catch (e) { /* FX must never break the round loop */ }
   }
 }
 window.ToreFx = { takanRoundFx, processRoundEndFx };
@@ -18689,10 +18708,20 @@ function render(st) {
     }
   }
   if (st.phase === 'matchEnd' && prevPhase !== 'matchEnd') {
-    if (st.matchWinner === myTeam) buzz([45, 40, 45]);
+    if (st.matchWinner === myTeam) {
+      buzz([45, 40, 45]);
+      // up52 — full confetti celebration on a match win, ~250 ms after
+      // the panel starts rising (same guard style as the frame engines).
+      setTimeout(() => {
+        try {
+          if (typeof celebrateFx === 'function') celebrateFx('match');
+        } catch (e) { /* FX must never break the sync loop */ }
+      }, 250);
+    }
   }
   prevPhase = st.phase;
   $('#ov-match').classList.toggle('show', st.phase === 'matchEnd');
+  $('#ov-match').classList.toggle('win', st.phase === 'matchEnd' && st.matchWinner === myTeam);
   paintRematch(st);
   if (st.phase === 'matchEnd') {
     $('#ov-match-title').textContent = st.matchWinner === myTeam ? T('matchWinTitle') : T('matchLoseTitle');
@@ -21736,6 +21765,266 @@ return module.exports; })();
   w.attachLeafFrame = attachLeafFrame;
 })(window, document);
 </script>
+<script>
+/* ============================================================
+   up52 — the win-celebration engine (client-only patch).
+
+   The visual layer the round-end / match-end edges were missing:
+     'round' — a gold spark burst from the table centre (~0.9 s),
+               gold/amber + a few plum accents.
+     'match' — a full confetti rain (~2.4 s) over the table and the
+               match-end panel; gold / plum / white / pink pieces
+               falling with gravity + sideways flutter + rotation.
+
+   Plain JS: no imports, no dependencies, ONE shared rAF loop.
+   Reuses the F28/up43 gates — burstsAllowed() and fxReducedMotion():
+   a celebration fired off-table, behind the playlist sheet, or under
+   reduced motion is DROPPED, never queued. The loop re-checks both
+   gates every frame, so an in-flight burst is killed the moment the
+   player leaves the table (the exact bug up43 was filed for) — and
+   hideBursts() itself needs no changes.
+
+   Canvas #fx-canvas: fixed, full-viewport, z-index 68 — above the
+   table and its overlays (the match-end panel included), below
+   #takanbanner / #burst13 (70), so the takan line always stays on top.
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var DPR_CAP = 2;              // retina sanity: never back the canvas
+                                // with more than 2x device pixels
+  var MAX_DT = 0.05;            // clamp big frame gaps (tab switches)
+
+  var GOLD = ['#ffd75e', '#eec95f', '#ffb52e', '#fff3c4']; // round palette
+  var PLUM = '#c77dff';         // ~20% accents in the round burst
+  var CONFETTI = ['#ffd75e', '#9d6bf5', '#ffffff', '#ff9de2']; // match
+
+  var canvas = null;
+  var ctx = null;
+  var vw = 0, vh = 0;           // viewport size, CSS px
+  var parts = [];               // one array, both particle kinds
+  var raf = 0;                  // the ONE shared loop handle
+  var lastTs = 0;
+  var resizeBound = false;
+
+  function rand(a, b) { return a + Math.random() * (b - a); }
+  function pick(arr) { return arr[(Math.random() * arr.length) | 0]; }
+
+  // up43 policy, reused: only fire while the table is the active
+  // screen, the playlist sheet is closed, and the OS does not ask
+  // for reduced motion. A gate that THROWS is treated as closed —
+  // drop, never queue. (If this block is ever run standalone, the
+  // typeof checks keep it alive; in the game both gates are real.)
+  function gatesOpen() {
+    try {
+      if (typeof burstsAllowed === 'function' && !burstsAllowed()) return false;
+      if (typeof fxReducedMotion === 'function' && fxReducedMotion()) return false;
+    } catch (e) { return false; }
+    return true;
+  }
+
+  // devicePixelRatio-aware, DPR capped at 2; re-run on every resize.
+  function sizeCanvas() {
+    if (!canvas || !ctx) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
+    vw = window.innerWidth ||
+      (document.documentElement && document.documentElement.clientWidth) || 0;
+    vh = window.innerHeight ||
+      (document.documentElement && document.documentElement.clientHeight) || 0;
+    canvas.width = Math.max(1, Math.round(vw * dpr));
+    canvas.height = Math.max(1, Math.round(vh * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  // Creates the canvas ONCE, lazily, and only when the DOM is ready —
+  // celebrateFx() before DOMContentLoaded is a silent no-op, never a throw.
+  function ensureCanvas() {
+    if (canvas) return true;
+    if (!document.body) return false;
+    canvas = document.getElementById('fx-canvas');
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      canvas.id = 'fx-canvas';
+      canvas.setAttribute('aria-hidden', 'true');
+      canvas.style.position = 'fixed';
+      canvas.style.inset = '0';
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      canvas.style.pointerEvents = 'none';
+      canvas.style.zIndex = '68';
+      document.body.appendChild(canvas);
+    }
+    ctx = canvas.getContext('2d');
+    if (!ctx) { canvas = null; return false; }
+    sizeCanvas();
+    if (!resizeBound) {
+      resizeBound = true;
+      window.addEventListener('resize', sizeCanvas);
+    }
+    return true;
+  }
+
+  // 'round' — ~46 sparks bursting radially from the table centre
+  // (biased slightly upward), ~20% plum, circles + small rects,
+  // gravity, fade out; everything is gone by ~0.9 s.
+  function spawnRound() {
+    var cx = vw * 0.5;
+    var cy = vh * 0.5;
+    for (var i = 0; i < 60; i++) {
+      var ang = Math.random() * 6.2832;
+      var sp = 130 + Math.random() * 310;
+      parts.push({
+        kind: 0,
+        x: cx,
+        y: cy,
+        vx: Math.cos(ang) * sp,
+        vy: Math.sin(ang) * sp - 70, // the upward bias
+        g: 780 + Math.random() * 240, // gravity, px/s^2
+        life: 0,
+        ttl: 0.75 + Math.random() * 0.35, // 0.75–1.10 s
+        size: 4 + Math.random() * 4,
+        shape: Math.random() < 0.4 ? 1 : 0, // 1 = small rect, 0 = circle
+        rot: Math.random() * 6.2832,
+        vrot: (Math.random() - 0.5) * 14,
+        col: Math.random() < 0.2 ? PLUM : pick(GOLD)
+      });
+    }
+  }
+
+  // 'match' — ~130 confetti pieces spawned across the top width,
+  // staggered above the viewport so they rain down; gravity with a
+  // capped fall speed, sideways flutter, rotation, paper tumble;
+  // life ~2.4 s, then the loop stops.
+  function spawnMatch() {
+    for (var i = 0; i < 130; i++) {
+      var d = Math.random();
+      parts.push({
+        kind: 1,
+        x: Math.random() * vw,
+        y: -14 - d * d * (vh * 0.85 + 40), // top-heavy stagger = rain
+        vx: (Math.random() - 0.5) * 44, // sideways drift, px/s
+        vy: 50 + Math.random() * 120,
+        g: 300 + Math.random() * 240,
+        vyMax: 260 + Math.random() * 190, // terminal fall speed
+        w: 5.5 + Math.random() * 5.5, // piece size, CSS px
+        h: 3.5 + Math.random() * 4.5,
+        flutA: 28 + Math.random() * 55, // flutter amplitude, px/s
+        flutF: 0.5 + Math.random(), // flutter frequency, Hz
+        flutP: Math.random() * 6.2832, // flutter phase
+        tumble: 2 + Math.random() * 4, // width-spin rate, Hz-ish
+        life: 0,
+        ttl: 2.4,
+        rot: Math.random() * 6.2832,
+        vrot: (Math.random() - 0.5) * 9,
+        col: pick(CONFETTI)
+      });
+    }
+  }
+
+  function drawPart(p) {
+    var u = p.life / p.ttl;
+    if (p.kind === 1) {
+      // confetti: stays bright, fades out over the last 30% of life
+      ctx.globalAlpha = u < 0.7 ? 1 : Math.max(0, (1 - u) / 0.3);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = p.col;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      // paper tumble: the piece is only as wide as its spin allows
+      ctx.scale(Math.max(0.14, Math.abs(Math.cos(p.flutP + u * 6.2832 * p.tumble))), 1);
+      ctx.fillRect(-p.w * 0.5, -p.h * 0.5, p.w, p.h);
+      ctx.restore();
+    } else {
+      // spark: bright flash, quadratic fade, gentle shrink
+      var a = 1 - u * u;
+      ctx.globalAlpha = a < 0.04 ? 0 : a;
+      ctx.globalCompositeOperation = 'lighter'; // gold glow on dark felt
+      ctx.fillStyle = p.col;
+      if (p.shape === 1) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        var s = p.size * (1.25 - 0.45 * u);
+        ctx.fillRect(-s * 0.5, -s * 0.3, s, s * 0.6);
+        ctx.restore();
+      } else {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(0.4, p.size * (0.6 - 0.25 * u)), 0, 6.2832);
+        ctx.fill();
+      }
+    }
+  }
+
+  function stopLoop() {
+    raf = 0;
+    lastTs = 0;
+    if (ctx) ctx.clearRect(0, 0, vw, vh); // the celebration is OVER — wipe
+  }
+
+  function step(ts) {
+    raf = 0;
+    var dt = lastTs ? (ts - lastTs) / 1000 : 0;
+    lastTs = ts;
+    if (dt < 0) dt = 0;
+    if (dt > MAX_DT) dt = MAX_DT;
+
+    // up43, honored mid-flight: table left or sheet opened since the
+    // last frame => every in-flight particle is dropped, not queued.
+    if (!gatesOpen()) parts.length = 0;
+
+    if (!parts.length) { stopLoop(); return; }
+
+    ctx.clearRect(0, 0, vw, vh);
+    var n = 0;
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      p.life += dt;
+      if (p.life >= p.ttl) continue;
+      p.vy += p.g * dt;
+      if (p.kind === 1) {
+        if (p.vy > p.vyMax) p.vy = p.vyMax;
+        p.x += (p.vx + Math.sin(p.flutP + p.life * p.flutF * 6.2832) * p.flutA) * dt;
+        p.y += p.vy * dt;
+        if (p.y - p.h > vh + 40) continue; // fully below the fold: done
+      } else {
+        p.vx -= p.vx * 1.6 * dt; // light air drag on sparks
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+      }
+      p.rot += p.vrot * dt;
+      if (p.x < -80 || p.x > vw + 80) continue; // blown out sideways
+      drawPart(p);
+      parts[n++] = p;
+    }
+    parts.length = n;
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+
+    if (!parts.length) { stopLoop(); return; } // loop stops when empty
+    raf = requestAnimationFrame(step);
+  }
+
+  function kick() {
+    if (raf) return; // the ONE shared loop — never a second one
+    lastTs = 0;
+    raf = requestAnimationFrame(step);
+  }
+
+  // Entry point. kind: 'round' (my team won the round) or
+  // 'match' (my team won the match). No-ops per the up43/F28 gates.
+  window.celebrateFx = function (kind) {
+    if (kind !== 'round' && kind !== 'match') return;
+    if (!document.body) return; // before DOM ready: no-op, never throw
+    if (!gatesOpen()) return; // off-table / sheet open / reduced motion
+    if (!ensureCanvas()) return;
+    if (kind === 'round') spawnRound();
+    else spawnMatch();
+    kick();
+  };
+})();
+</script>
+
 <script>
 /* OFFLINE ENGINE — generated by build-deploy.js from ../game.js + ../bots.js
    (the shared rules modules; the single source of truth — do not edit here). */
