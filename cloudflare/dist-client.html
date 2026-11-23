@@ -7930,6 +7930,18 @@ button:disabled {
   pointer-events: none;
   z-index: 4;
 }
+.pavatar.fr6-host {
+  overflow: visible;
+}
+.pavatar.fr6-host > img,
+.pavatar.fr6-host > svg {
+  border-radius: inherit;
+}
+.fr6-rainbow-canvas {
+  position: absolute;
+  pointer-events: none;
+  z-index: 4;
+}
 .pavatar.fr1-host > img,
 .pavatar.fr1-host > svg {
   border-radius: inherit;
@@ -16119,7 +16131,7 @@ function avatarEl(name, av, px, photo, frame) {
     d.innerHTML = AVATAR_ART[typeof av === "string" && AVATAR_ART[av] ? av : "av1"].svg;
   }
   if (d.dataset.frame) {
-    if (d.dataset.frame === "fr3" || d.dataset.frame === "fr1" || d.dataset.frame === "fr4" || d.dataset.frame === "fr2" || d.dataset.frame === "fr5") d.classList.add(d.dataset.frame + "-host");
+    if (d.dataset.frame === "fr3" || d.dataset.frame === "fr1" || d.dataset.frame === "fr4" || d.dataset.frame === "fr2" || d.dataset.frame === "fr5" || d.dataset.frame === "fr6") d.classList.add(d.dataset.frame + "-host");
     const r = document.createElement("span");
     r.className = "fr-ring " + d.dataset.frame + (!px || px >= 52 ? " fr-lg" : "");
     d.appendChild(r);
@@ -16150,6 +16162,12 @@ function avatarEl(name, av, px, photo, frame) {
     if (d.dataset.frame === "fr5" && (!px || px >= 52)) {
       try {
         attachSpinFireFrame(d, px || 56);
+      } catch (e) {
+      }
+    }
+    if (d.dataset.frame === "fr6" && (!px || px >= 52)) {
+      try {
+        attachRainbowFrame(d, px || 56);
       } catch (e) {
       }
     }
@@ -30569,6 +30587,613 @@ window.ToreBots = (function() {
 
   installHooks();
   W.attachSpinFireFrame = attachSpinFireFrame;
+})(window, document);
+</script>
+
+<script>(function(W, D) {
+  var slots = [], timer = null, rafId = null, rafIsTimeout = false;
+  var lastFrame = 0, MAX = 6, FRAME_MS = 1e3 / 30, hooked = false, pumpQueued = false;
+  var motionQuery = null, reducedMotion = false;
+  try {
+    if (W.matchMedia) {
+      motionQuery = W.matchMedia("(prefers-reduced-motion: reduce)");
+      reducedMotion = !!motionQuery.matches;
+    }
+  } catch (e0) {
+  }
+  function contains(node) {
+    return !!(node && D.documentElement && D.documentElement.contains(node));
+  }
+  function hasLiveCanvas() {
+    var i;
+    for (i = 0; i < slots.length; i++) if (slots[i].canvas && slots[i].ctx) return true;
+    return false;
+  }
+  function removeCanvas(slot) {
+    try {
+      if (slot.canvas && slot.canvas.parentNode) slot.canvas.parentNode.removeChild(slot.canvas);
+    } catch (e1) {
+    }
+    slot.canvas = null;
+    slot.ctx = null;
+    slot.w = 0;
+    slot.h = 0;
+    slot.needsDraw = true;
+  }
+  function removeSlot(slot) {
+    removeCanvas(slot);
+    try {
+      if (slot.host) slot.host.__fr6Rainbow = false;
+    } catch (e1b) {
+    }
+    slot.host = null;
+  }
+  function cancelAnimation() {
+    if (rafId === null) return;
+    try {
+      if (rafIsTimeout) W.clearTimeout(rafId);
+      else if (W.cancelAnimationFrame) W.cancelAnimationFrame(rafId);
+    } catch (e2) {
+    }
+    rafId = null;
+  }
+  function stopIfEmpty() {
+    if (slots.length) return;
+    if (timer !== null) {
+      W.clearInterval(timer);
+      timer = null;
+    }
+    cancelAnimation();
+    lastFrame = 0;
+  }
+  function scheduleAnimation() {
+    if (rafId !== null || reducedMotion || D.hidden || !hasLiveCanvas()) return;
+    if (W.requestAnimationFrame) {
+      rafIsTimeout = false;
+      rafId = W.requestAnimationFrame(animate);
+    } else {
+      rafIsTimeout = true;
+      rafId = W.setTimeout(function() {
+        animate(+/* @__PURE__ */ new Date());
+      }, 34);
+    }
+  }
+  function drawStaticFrames() {
+    var i;
+    if (D.hidden) return;
+    for (i = 0; i < slots.length; i++) {
+      if (slots[i].canvas && slots[i].ctx && slots[i].needsDraw) drawSlot(slots[i], 0);
+    }
+  }
+  function onVisibility() {
+    if (D.hidden) {
+      cancelAnimation();
+      return;
+    }
+    lastFrame = 0;
+    if (reducedMotion) drawStaticFrames();
+    else scheduleAnimation();
+  }
+  function onMotionChange(event) {
+    var next = event && typeof event.matches === "boolean" ? event.matches : !!(motionQuery && motionQuery.matches);
+    if (next === reducedMotion) return;
+    reducedMotion = next;
+    if (reducedMotion) {
+      cancelAnimation();
+      var i;
+      for (i = 0; i < slots.length; i++) if (slots[i].canvas) slots[i].needsDraw = true;
+      drawStaticFrames();
+    } else {
+      lastFrame = 0;
+      scheduleAnimation();
+    }
+  }
+  function installHooks() {
+    if (hooked) return;
+    hooked = true;
+    try {
+      D.addEventListener("visibilitychange", onVisibility, false);
+    } catch (e3) {
+    }
+    try {
+      if (motionQuery && motionQuery.addEventListener) motionQuery.addEventListener("change", onMotionChange, false);
+      else if (motionQuery && motionQuery.addListener) motionQuery.addListener(onMotionChange);
+    } catch (e4) {
+    }
+  }
+  function ensureWatch() {
+    if (timer === null) timer = W.setInterval(tick, 100);
+  }
+  function queuePump() {
+    if (pumpQueued) return;
+    pumpQueued = true;
+    if (W.requestAnimationFrame) {
+      W.requestAnimationFrame(function() {
+        pumpQueued = false;
+        measureAvailable();
+        if (reducedMotion) drawStaticFrames();
+        else scheduleAnimation();
+      });
+    } else {
+      W.setTimeout(function() {
+        pumpQueued = false;
+        measureAvailable();
+        if (reducedMotion) drawStaticFrames();
+        else scheduleAnimation();
+      }, 0);
+    }
+  }
+  function attachRainbowFrame(hostEl, sizePx) {
+    try {
+      if (!hostEl || !hostEl.appendChild || !hostEl.getBoundingClientRect) return;
+      if (hostEl.__fr6Rainbow) return;
+      hostEl.__fr6Rainbow = true;
+      var i;
+      for (i = 0; i < slots.length; i++) if (slots[i].host === hostEl) return;
+      slots.push({
+        host: hostEl,
+        sizeHint: parseFloat(sizePx) || 56,
+        canvas: null,
+        ctx: null,
+        w: 0,
+        h: 0,
+        ring: 0,
+        pad: 0,
+        radius: 0,
+        circle: false,
+        ratio: 1,
+        phase: Math.random() * 100,
+        lattice: null,
+        latticeRing: -1,
+        latticeW: 0,
+        latticeH: 0,
+        latticeRadius: -1,
+        latticeCircle: false,
+        needsDraw: true,
+        failed: false
+      });
+      installHooks();
+      ensureWatch();
+      queuePump();
+    } catch (e5) {
+    }
+  }
+  function tick() {
+    try {
+      var i;
+      for (i = slots.length - 1; i >= 0; i--) {
+        if (!contains(slots[i].host)) {
+          removeSlot(slots[i]);
+          slots.splice(i, 1);
+        }
+      }
+      if (!slots.length) {
+        stopIfEmpty();
+        return;
+      }
+      measureAvailable();
+      if (reducedMotion) {
+        cancelAnimation();
+        drawStaticFrames();
+      } else if (D.hidden) {
+        cancelAnimation();
+      } else {
+        scheduleAnimation();
+      }
+      stopIfEmpty();
+    } catch (e6) {
+    }
+  }
+  function makeCanvas(slot) {
+    var canvas;
+    try {
+      canvas = D.createElement("canvas");
+      canvas.className = "fr6-rainbow-canvas";
+      canvas.setAttribute("aria-hidden", "true");
+      canvas.style.position = "absolute";
+      canvas.style.left = "0px";
+      canvas.style.top = "0px";
+      canvas.style.zIndex = "4";
+      canvas.style.display = "block";
+      canvas.style.pointerEvents = "none";
+      canvas.style.margin = "0";
+      canvas.style.padding = "0";
+      canvas.style.border = "0";
+      canvas.style.maxWidth = "none";
+      canvas.style.maxHeight = "none";
+      slot.host.appendChild(canvas);
+      slot.canvas = canvas;
+      slot.ctx = canvas.getContext && canvas.getContext("2d");
+      if (!slot.ctx) {
+        removeCanvas(slot);
+        slot.failed = true;
+        return false;
+      }
+      slot.needsDraw = true;
+      return true;
+    } catch (e7) {
+      if (canvas && canvas.parentNode) {
+        try {
+          canvas.parentNode.removeChild(canvas);
+        } catch (e8) {
+        }
+      }
+      slot.canvas = null;
+      slot.ctx = null;
+      slot.failed = true;
+      return false;
+    }
+  }
+  function hostShape(host, width, height) {
+    var style = null, value = "", radius = 0, minSide = Math.min(width, height), circle = false;
+    try {
+      if (W.getComputedStyle) style = W.getComputedStyle(host, null);
+    } catch (e9) {
+    }
+    if (style) value = style.borderRadius || style.borderTopLeftRadius || "";
+    if (!value && host.style) value = host.style.borderRadius || "";
+    radius = parseFloat(value);
+    if (!isFinite(radius)) radius = 0;
+    if (String(value).indexOf("%") >= 0) radius = minSide * radius / 100;
+    if (minSide > 0 && Math.abs(width - height) <= minSide * 0.08 && radius >= minSide * 0.45) circle = true;
+    if (circle) radius = minSide / 2;
+    else radius = Math.max(0, Math.min(radius, minSide / 2));
+    return { circle, radius };
+  }
+  function configureSlot(slot, rect, width, height) {
+    var minSide = Math.min(width, height);
+    var hint = slot.sizeHint > 0 ? slot.sizeHint : minSide;
+    var scale = hint ? minSide / hint : 1;
+    var ring = Math.max(5, Math.min(24, hint * 0.1 * scale));
+    var pad = Math.max(4, hint * 0.12 * scale + 8);
+    var shape = hostShape(slot.host, width, height);
+    var ratio = Math.min(2, W.devicePixelRatio || 1);
+    var fullWidth = width + pad * 2;
+    var fullHeight = height + pad * 2;
+    var oldW = slot.w, oldH = slot.h, oldRing = slot.ring, oldPad = slot.pad;
+    var oldRadius = slot.radius, oldCircle = slot.circle, oldRatio = slot.ratio;
+    var pixelWidth = Math.max(1, Math.round(fullWidth * ratio));
+    var pixelHeight = Math.max(1, Math.round(fullHeight * ratio));
+    slot.w = width;
+    slot.h = height;
+    slot.ring = ring;
+    slot.pad = pad;
+    slot.radius = shape.radius;
+    slot.circle = shape.circle;
+    slot.ratio = ratio;
+    slot.rect = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+    if (Math.abs(oldW - width) > 0.5 || Math.abs(oldH - height) > 0.5 || Math.abs(oldRing - ring) > 0.25 || Math.abs(oldPad - pad) > 0.25 || Math.abs(oldRadius - shape.radius) > 0.25 || oldCircle !== shape.circle || oldRatio !== ratio) {
+      slot.needsDraw = true;
+      slot.canvas.style.left = -pad + "px";
+      slot.canvas.style.top = -pad + "px";
+      slot.canvas.style.width = fullWidth + "px";
+      slot.canvas.style.height = fullHeight + "px";
+    }
+    if (slot.canvas.width !== pixelWidth || slot.canvas.height !== pixelHeight) {
+      slot.canvas.width = pixelWidth;
+      slot.canvas.height = pixelHeight;
+      slot.needsDraw = true;
+    }
+  }
+  function measureAvailable() {
+    var live = 0, i, slot, rect, width, height;
+    for (i = 0; i < slots.length; i++) if (slots[i].canvas && slots[i].ctx) live++;
+    for (i = 0; i < slots.length; i++) {
+      slot = slots[i];
+      if (!contains(slot.host)) continue;
+      rect = slot.host.getBoundingClientRect();
+      width = rect.width || rect.right - rect.left;
+      height = rect.height || rect.bottom - rect.top;
+      if (!(width >= 52 && height >= 52)) {
+        if (slot.canvas) {
+          removeCanvas(slot);
+          live--;
+        }
+        continue;
+      }
+      if (!slot.canvas) {
+        if (slot.failed || live >= MAX) continue;
+        if (!makeCanvas(slot)) continue;
+        live++;
+      }
+      configureSlot(slot, rect, width, height);
+    }
+  }
+  function tickTime() {
+    if (W.performance && W.performance.now) return W.performance.now();
+    return +/* @__PURE__ */ new Date();
+  }
+  function animate(timestamp) {
+    rafId = null;
+    if (reducedMotion || D.hidden) return;
+    var now = typeof timestamp === "number" ? timestamp : tickTime();
+    if (!lastFrame || now - lastFrame >= FRAME_MS) {
+      var i, time = now / 1e3;
+      for (i = 0; i < slots.length; i++) if (slots[i].canvas && slots[i].ctx) drawSlot(slots[i], time);
+      lastFrame = now;
+    }
+    scheduleAnimation();
+  }
+  function fract(value) {
+    return value - Math.floor(value);
+  }
+  function appendShape(ctx, slot, inset) {
+    var width = slot.w, height = slot.h;
+    if (slot.circle) {
+      var rx = Math.max(0, width / 2 - inset);
+      var ry = Math.max(0, height / 2 - inset);
+      ctx.moveTo(width / 2 + rx, height / 2);
+      ctx.ellipse(width / 2, height / 2, rx, ry, 0, 0, Math.PI * 2);
+      ctx.closePath();
+      return;
+    }
+    var x = inset, y = inset;
+    var boxWidth = width - inset * 2, boxHeight = height - inset * 2;
+    var radius = Math.max(0, Math.min(slot.radius - inset, boxWidth / 2, boxHeight / 2));
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + boxWidth - radius, y);
+    ctx.quadraticCurveTo(x + boxWidth, y, x + boxWidth, y + radius);
+    ctx.lineTo(x + boxWidth, y + boxHeight - radius);
+    ctx.quadraticCurveTo(x + boxWidth, y + boxHeight, x + boxWidth - radius, y + boxHeight);
+    ctx.lineTo(x + radius, y + boxHeight);
+    ctx.quadraticCurveTo(x, y + boxHeight, x, y + boxHeight - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
+  function perimeter(slot, inset) {
+    var width = slot.w, height = slot.h;
+    if (slot.circle) {
+      var rx = Math.max(0, width / 2 - inset), ry = Math.max(0, height / 2 - inset);
+      return Math.PI * (3 * (rx + ry) - Math.sqrt((3 * rx + ry) * (rx + 3 * ry)));
+    }
+    var boxWidth = width - inset * 2, boxHeight = height - inset * 2;
+    var radius = Math.max(0, Math.min(slot.radius - inset, boxWidth / 2, boxHeight / 2));
+    return 2 * (boxWidth - 2 * radius + boxHeight - 2 * radius) + Math.PI * 2 * radius;
+  }
+  function sampleBoundary(slot, fraction, inset) {
+    var width = slot.w, height = slot.h, u = fract(fraction);
+    if (slot.circle) {
+      var angle = -Math.PI / 2 + Math.PI * 2 * u;
+      var rx = Math.max(0, width / 2 - inset), ry = Math.max(0, height / 2 - inset);
+      var tangentX = -rx * Math.sin(angle), tangentY = ry * Math.cos(angle);
+      var tangentLength = Math.sqrt(tangentX * tangentX + tangentY * tangentY) || 1;
+      tangentX /= tangentLength;
+      tangentY /= tangentLength;
+      return {
+        x: width / 2 + Math.cos(angle) * rx,
+        y: height / 2 + Math.sin(angle) * ry,
+        tx: tangentX,
+        ty: tangentY,
+        nx: tangentY,
+        ny: -tangentX
+      };
+    }
+    var x = inset, y = inset, boxWidth = width - inset * 2, boxHeight = height - inset * 2;
+    var radius = Math.max(0, Math.min(slot.radius - inset, boxWidth / 2, boxHeight / 2));
+    var segments = [];
+    function addLine(x1, y1, x2, y2) {
+      var dx = x2 - x1, dy = y2 - y1, length = Math.sqrt(dx * dx + dy * dy);
+      if (length > 1e-4) segments.push({ type: "line", x1, y1, dx, dy, length });
+    }
+    function addArc(cx, cy, start, end) {
+      var length = radius * (end - start);
+      if (length > 1e-4) segments.push({ type: "arc", cx, cy, start, end, length });
+    }
+    addLine(x + radius, y, x + boxWidth - radius, y);
+    addArc(x + boxWidth - radius, y + radius, -Math.PI / 2, 0);
+    addLine(x + boxWidth, y + radius, x + boxWidth, y + boxHeight - radius);
+    addArc(x + boxWidth - radius, y + boxHeight - radius, 0, Math.PI / 2);
+    addLine(x + boxWidth - radius, y + boxHeight, x + radius, y + boxHeight);
+    addArc(x + radius, y + boxHeight - radius, Math.PI / 2, Math.PI);
+    addLine(x, y + boxHeight - radius, x, y + radius);
+    addArc(x + radius, y + radius, Math.PI, Math.PI * 1.5);
+    var total = 0, i, distance, chosen = null;
+    for (i = 0; i < segments.length; i++) total += segments[i].length;
+    if (!(total > 0)) return { x, y, tx: 1, ty: 0, nx: 0, ny: -1 };
+    distance = u * total;
+    chosen = segments[segments.length - 1];
+    for (i = 0; i < segments.length; i++) {
+      if (distance <= segments[i].length) {
+        chosen = segments[i];
+        break;
+      }
+      distance -= segments[i].length;
+    }
+    var px, py, tx, ty;
+    if (chosen.type === "arc") {
+      var part = chosen.length ? distance / chosen.length : 0;
+      var arcAngle = chosen.start + (chosen.end - chosen.start) * part;
+      px = chosen.cx + radius * Math.cos(arcAngle);
+      py = chosen.cy + radius * Math.sin(arcAngle);
+      tx = -Math.sin(arcAngle);
+      ty = Math.cos(arcAngle);
+    } else {
+      var linePart = chosen.length ? Math.max(0, Math.min(1, distance / chosen.length)) : 0;
+      px = chosen.x1 + chosen.dx * linePart;
+      py = chosen.y1 + chosen.dy * linePart;
+      tx = chosen.dx / chosen.length;
+      ty = chosen.dy / chosen.length;
+    }
+    return { x: px, y: py, tx, ty, nx: ty, ny: -tx };
+  }
+  function clipOutside(ctx, slot) {
+    ctx.beginPath();
+    ctx.rect(-slot.pad, -slot.pad, slot.w + slot.pad * 2, slot.h + slot.pad * 2);
+    appendShape(ctx, slot, -slot.ring);
+    ctx.clip("evenodd");
+  }
+  function clipFrameBand(ctx, slot) {
+    ctx.beginPath();
+    appendShape(ctx, slot, -slot.ring);
+    appendShape(ctx, slot, 0);
+    ctx.clip("evenodd");
+  }
+  var SEG_DEG = 5;
+  var SEGS = Math.round(360 / SEG_DEG);
+  var SPECTRUM = [
+    [0, [255, 40, 58]],
+    [26, [255, 92, 22]],
+    [50, [255, 156, 8]],
+    [76, [252, 212, 18]],
+    [104, [190, 255, 26]],
+    [140, [40, 255, 112]],
+    [172, [22, 250, 192]],
+    [196, [24, 228, 255]],
+    [226, [54, 146, 255]],
+    [258, [92, 96, 255]],
+    [290, [166, 76, 255]],
+    [324, [238, 56, 255]],
+    [348, [255, 52, 164]],
+    [360, [255, 40, 58]]
+  ];
+  function spectrumAt(deg) {
+    deg = (deg % 360 + 360) % 360;
+    var i;
+    for (i = 1; i < SPECTRUM.length; i++) {
+      if (deg <= SPECTRUM[i][0]) {
+        var a = SPECTRUM[i - 1], b = SPECTRUM[i];
+        var k = (deg - a[0]) / (b[0] - a[0]);
+        return [
+          a[1][0] + (b[1][0] - a[1][0]) * k,
+          a[1][1] + (b[1][1] - a[1][1]) * k,
+          a[1][2] + (b[1][2] - a[1][2]) * k
+        ];
+      }
+    }
+    return SPECTRUM[0][1].slice();
+  }
+  var SEG_RGB = [];
+  var SEG_W = [];
+  (function() {
+    var i, c;
+    for (i = 0; i < SEGS; i++) {
+      var rgb = spectrumAt(i * SEG_DEG);
+      var mean = (rgb[0] + rgb[1] + rgb[2]) / 3;
+      var boost = 1.26;
+      var out = [];
+      for (c = 0; c < 3; c++) out.push(Math.max(0, Math.min(255, mean + (rgb[c] - mean) * boost)));
+      rgb = out;
+      SEG_RGB.push(rgb);
+      var lum = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
+      SEG_W.push(Math.max(0.92, Math.min(1.42, Math.pow(0.62 / Math.max(lum, 0.08), 0.34))));
+    }
+  })();
+  function tint(rgb, whiteAmt, alpha) {
+    var r = Math.round(rgb[0] + (255 - rgb[0]) * whiteAmt);
+    var g = Math.round(rgb[1] + (255 - rgb[1]) * whiteAmt);
+    var b = Math.round(rgb[2] + (255 - rgb[2]) * whiteAmt);
+    return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+  }
+  var LAYERS = {
+    bloom: [[0, 0.08, 0.072], [0.34, 0.05, 0.048], [0.66, 0.02, 0.018], [1, 0, 0]],
+    halo: [[0, 0.16, 0.19], [0.16, 0.09, 0.13], [0.4, 0.035, 0.05], [0.72, 0.015, 0.013], [1, 0, 0]],
+    glow: [[0, 0.24, 0.56], [0.26, 0.12, 0.36], [0.55, 0.045, 0.105], [1, 0, 0]],
+    crisp: [[0, 0.46, 1], [0.3, 0.26, 0.92], [0.58, 0.1, 0.29], [1, 0, 0]],
+    hot: [[0, 0.86, 1], [0.3, 0.56, 0.64], [0.62, 0.22, 0.15], [1, 0.1, 0]]
+  };
+  var SPRITE_SIZE = 64;
+  var spriteCache = {};
+  var spriteLife = [];
+  var SPRITE_MAX = 380;
+  function sprite(layer, seg) {
+    var key = layer + ":" + seg;
+    var hit = spriteCache[key];
+    if (hit) return hit;
+    var cv, g, r, grad, i, st, stops = LAYERS[layer], col = SEG_RGB[seg];
+    try {
+      cv = D.createElement("canvas");
+      cv.width = SPRITE_SIZE;
+      cv.height = SPRITE_SIZE;
+      g = cv.getContext && cv.getContext("2d");
+      if (!g) return null;
+      r = SPRITE_SIZE / 2;
+      grad = g.createRadialGradient(r, r, 0, r, r, r);
+      for (i = 0; i < stops.length; i++) {
+        st = stops[i];
+        grad.addColorStop(st[0], tint(col, st[1], st[2]));
+      }
+      g.fillStyle = grad;
+      g.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+    } catch (e10) {
+      return null;
+    }
+    if (spriteLife.length >= SPRITE_MAX) {
+      delete spriteCache[spriteLife.shift()];
+    }
+    spriteCache[key] = cv;
+    spriteLife.push(key);
+    return cv;
+  }
+  function sampleLattice(slot) {
+    var middleInset = -slot.ring * 0.5;
+    var edgeLength = perimeter(slot, middleInset);
+    if (!(edgeLength > 0)) return null;
+    var count = Math.max(8, Math.round(edgeLength / 2));
+    var xs = [], ys = [], i, point;
+    for (i = 0; i < count; i++) {
+      point = sampleBoundary(slot, i / count, middleInset);
+      xs.push(point.x);
+      ys.push(point.y);
+    }
+    return { n: count, xs, ys, length: edgeLength };
+  }
+  function rainbowPass(ctx, slot, time, lattice, layer, dest, spacing, alpha, breath) {
+    if (!lattice) return;
+    var step = Math.max(1, Math.round(spacing / 2));
+    var half = dest / 2;
+    var i, u, spriteImage, hue, seg, pulse;
+    for (i = 0; i < lattice.n; i += step) {
+      u = i / lattice.n;
+      hue = u * 360 - time * 60 + 9 * Math.sin(Math.PI * 2 * u - time * 0.9);
+      seg = Math.round((hue % 360 + 360) % 360 / SEG_DEG) % SEGS;
+      spriteImage = sprite(layer, seg);
+      if (!spriteImage) continue;
+      pulse = 0.84 + 0.16 * Math.sin(Math.PI * 2 * (u - time / 9));
+      ctx.globalAlpha = alpha * breath * pulse * SEG_W[seg];
+      ctx.drawImage(spriteImage, lattice.xs[i] - half, lattice.ys[i] - half, dest, dest);
+    }
+  }
+  function drawSlot(slot, time) {
+    var ctx = slot.ctx;
+    var ring = slot.ring;
+    var fullWidth = slot.w + slot.pad * 2, fullHeight = slot.h + slot.pad * 2;
+    var breath = 0.93 + 0.07 * Math.sin(time * Math.PI * 2 / 4.6);
+    var small = slot.w < 90;
+    var lattice;
+    var bloomDest = Math.min(ring * 6, (slot.pad + ring * 0.5) * 2);
+    if (!slot.lattice || slot.latticeRing !== ring || slot.latticeW !== slot.w || slot.latticeH !== slot.h || slot.latticeRadius !== slot.radius || slot.latticeCircle !== slot.circle) {
+      slot.lattice = sampleLattice(slot);
+      slot.latticeRing = ring;
+      slot.latticeW = slot.w;
+      slot.latticeH = slot.h;
+      slot.latticeRadius = slot.radius;
+      slot.latticeCircle = slot.circle;
+    }
+    lattice = slot.lattice;
+    ctx.setTransform(slot.ratio, 0, 0, slot.ratio, 0, 0);
+    ctx.clearRect(0, 0, fullWidth, fullHeight);
+    ctx.save();
+    ctx.translate(slot.pad, slot.pad);
+    ctx.save();
+    clipOutside(ctx, slot);
+    ctx.globalCompositeOperation = "lighter";
+    rainbowPass(ctx, slot, time, lattice, "bloom", bloomDest, small ? 2.6 : 9, 0.052, breath);
+    rainbowPass(ctx, slot, time, lattice, "halo", small ? ring * 3.4 : ring * 3.2, small ? 1.5 : 5, 0.104, breath);
+    ctx.restore();
+    ctx.save();
+    clipFrameBand(ctx, slot);
+    ctx.globalCompositeOperation = "lighter";
+    rainbowPass(ctx, slot, time, lattice, "glow", ring * 1.8, small ? 1 : 3, 0.16, breath);
+    rainbowPass(ctx, slot, time, lattice, "crisp", ring * 0.95, small ? 0.7 : 2, 0.34, breath);
+    rainbowPass(ctx, slot, time, lattice, "hot", ring * 0.4, small ? 0.6 : 1.6, 0.285, breath);
+    ctx.restore();
+    ctx.restore();
+    ctx.globalAlpha = 1;
+    slot.needsDraw = false;
+  }
+  installHooks();
+  W.attachRainbowFrame = attachRainbowFrame;
 })(window, document);
 </script>
 
