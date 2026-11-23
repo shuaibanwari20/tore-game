@@ -156,8 +156,8 @@ class Round {
     this.wonTricks = [0, 0, 0, 0];         // won-trick pile size per seat
     this.takanCount = [0, 0];              // تکان events per team this round
     this.takanBy = [[], []];               // seats that gave each تکان, per team
-    this.takanSuits = [[], [], [], []];    // suits each SEAT has takan'd this round (BOT NO-REPEAT LAW reads this)
-    this.botSeats = [false, false, false, false]; // seats held by bots (hosts set this; Match copies its own in startRound) — a BOT seat's repeat takan of a suit creates no claim
+    this.takanSuits = [[], [], [], []];    // suits each SEAT has takan'd this round (bots.js reads this to steer leads)
+    this.botSeats = [false, false, false, false]; // seats held by bots (hosts set this; Match copies its own in startRound) — a BOT seat's takan NEVER creates a claim (BOT NO-TAKAN LAW)
     this.armed13 = false;                  // up46: the leader ARMED «13» for the pending lead (see arm13/play)
     this.thirteen = null;                  // up46: a resolved «13»: { seat, team, suit, card, count } — count = that suit in the other three hands (partner included)
     this.finished = false;
@@ -238,18 +238,19 @@ class Round {
     if (this.trick.length === 0) {
       if (this.othersVoidIn(suitOf(card), seat)) {
         const suit = suitOf(card);
-        // Per-seat takan history (BOT NO-REPEAT LAW, owner order
-        // 2026-11-09: «فقط دفعهٔ اول تکان حساب می‌شود»): every takan
-        // lead is remembered per seat+suit. For a BOT seat only the
-        // FIRST takan of a suit ever counts — a repeat lead of the
-        // same suit by the same bot creates NO claim (suppressed
-        // silently here; the partner's first lead of the same suit is
-        // the partner's own first and still counts). Human seats are
-        // untouched: every human takan counts, exactly as before.
+        // Per-seat takan history: every takan lead is remembered
+        // per seat+suit (bots.js reads it to steer its leads).
+        // BOT NO-TAKAN LAW (owner order 2026-11-23: «بات‌ها باید
+        // هیچ وقت تکان نکنن» — supersedes the 2026-11-09 no-repeat
+        // law): a BOT seat's takan NEVER counts — first or repeat,
+        // every bot takan lead is suppressed silently here (no
+        // count, no claim, no event; the card still plays as a
+        // normal lead). Human seats are untouched: every human
+        // takan counts, exactly as before.
         if (!this.takanSuits) this.takanSuits = [[], [], [], []]; // revived legacy state
         const repeat = this.takanSuits[seat].includes(suit);
         if (!repeat) this.takanSuits[seat].push(suit);
-        const suppressed = repeat && !!(this.botSeats && this.botSeats[seat]);
+        const suppressed = !!(this.botSeats && this.botSeats[seat]);
         if (!suppressed) {
           const team = teamOf(seat);
           this.takanCount[team]++;
@@ -318,7 +319,7 @@ class Match {
     this.rng = rng;
     this.bankedTawan = [0, 0];   // match-long tawan bank: each round's final tawan banks by the ten-bands (see bankAmount)
     this.pendingTakan = [0, 0];  // تکان معلق: pending claims per team — each claim takes TAKAN_CLAIM_AMOUNT from the OTHER team's bank once it reaches TAKAN_CLAIM_MIN_BANK
-    this.botSeats = [false, false, false, false]; // seats held by bots — hosts set this; copied into every new Round (BOT NO-REPEAT LAW)
+    this.botSeats = [false, false, false, false]; // seats held by bots — hosts set this; copied into every new Round (BOT NO-TAKAN LAW)
     this.roundNo = 0;
     this.history = [];   // per-round: {roundNo, cardTawan, thirteen, thirteenPenalty, takanCount, takanBy, tawan, banked, qsTieBoost, takanCancelled, claimsCreated, claimsExecuted, pendingTakan, bankedTawan, qsTeam}
     this.finished = false;
