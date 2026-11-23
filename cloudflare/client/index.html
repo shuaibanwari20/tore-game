@@ -7911,6 +7911,13 @@ button:disabled {
 .pavatar.fr4-host > svg {
   border-radius: inherit;
 }
+.pavatar.fr2-host {
+  overflow: visible;
+}
+.pavatar.fr2-host > img,
+.pavatar.fr2-host > svg {
+  border-radius: inherit;
+}
 .pavatar.fr1-host > img,
 .pavatar.fr1-host > svg {
   border-radius: inherit;
@@ -16100,7 +16107,7 @@ function avatarEl(name, av, px, photo, frame) {
     d.innerHTML = AVATAR_ART[typeof av === "string" && AVATAR_ART[av] ? av : "av1"].svg;
   }
   if (d.dataset.frame) {
-    if (d.dataset.frame === "fr3" || d.dataset.frame === "fr1" || d.dataset.frame === "fr4") d.classList.add(d.dataset.frame + "-host");
+    if (d.dataset.frame === "fr3" || d.dataset.frame === "fr1" || d.dataset.frame === "fr4" || d.dataset.frame === "fr2") d.classList.add(d.dataset.frame + "-host");
     const r = document.createElement("span");
     r.className = "fr-ring " + d.dataset.frame + (!px || px >= 52 ? " fr-lg" : "");
     d.appendChild(r);
@@ -16119,6 +16126,12 @@ function avatarEl(name, av, px, photo, frame) {
     if (d.dataset.frame === "fr4" && (!px || px >= 52)) {
       try {
         attachLeafFrame(d, px || 56);
+      } catch (e) {
+      }
+    }
+    if (d.dataset.frame === "fr2" && (!px || px >= 52)) {
+      try {
+        attachVioletFrame(d, px || 56);
       } catch (e) {
       }
     }
@@ -29279,6 +29292,668 @@ window.ToreBots = (function() {
   w.attachLeafFrame = attachLeafFrame;
 })(window, document);
 </script>
+<script>
+(function (W, D) {
+  var slots = [], timer = null, rafId = null, rafIsTimeout = false;
+  var lastFrame = 0, MAX = 6, FRAME_MS = 1000 / 30, hooked = false, pumpQueued = false;
+  var motionQuery = null, reducedMotion = false;
+
+  try {
+    if (W.matchMedia) {
+      motionQuery = W.matchMedia('(prefers-reduced-motion: reduce)');
+      reducedMotion = !!motionQuery.matches;
+    }
+  } catch (e0) {}
+
+  function contains(node) {
+    return !!(node && D.documentElement && D.documentElement.contains(node));
+  }
+
+  function hasLiveCanvas() {
+    var i;
+    for (i = 0; i < slots.length; i++) if (slots[i].canvas && slots[i].ctx) return true;
+    return false;
+  }
+
+  function removeCanvas(slot) {
+    try { if (slot.canvas && slot.canvas.parentNode) slot.canvas.parentNode.removeChild(slot.canvas); } catch (e1) {}
+    slot.canvas = null;
+    slot.ctx = null;
+    slot.w = 0;
+    slot.h = 0;
+    slot.needsDraw = true;
+  }
+
+  function removeSlot(slot) {
+    removeCanvas(slot);
+    slot.host = null;
+  }
+
+  function cancelAnimation() {
+    if (rafId === null) return;
+    try {
+      if (rafIsTimeout) W.clearTimeout(rafId);
+      else if (W.cancelAnimationFrame) W.cancelAnimationFrame(rafId);
+    } catch (e2) {}
+    rafId = null;
+  }
+
+  function stopIfEmpty() {
+    if (slots.length) return;
+    if (timer !== null) { W.clearInterval(timer); timer = null; }
+    cancelAnimation();
+    lastFrame = 0;
+  }
+
+  function scheduleAnimation() {
+    if (rafId !== null || reducedMotion || D.hidden || !hasLiveCanvas()) return;
+    if (W.requestAnimationFrame) {
+      rafIsTimeout = false;
+      rafId = W.requestAnimationFrame(animate);
+    } else {
+      rafIsTimeout = true;
+      rafId = W.setTimeout(function () { animate(+new Date()); }, 34);
+    }
+  }
+
+  function drawStaticFrames() {
+    var i;
+    if (D.hidden) return;
+    for (i = 0; i < slots.length; i++) {
+      if (slots[i].canvas && slots[i].ctx && slots[i].needsDraw) drawSlot(slots[i], 0);
+    }
+  }
+
+  function onVisibility() {
+    if (D.hidden) {
+      cancelAnimation();
+      return;
+    }
+    lastFrame = 0;
+    if (reducedMotion) drawStaticFrames();
+    else scheduleAnimation();
+  }
+
+  function onMotionChange(event) {
+    var next = event && typeof event.matches === 'boolean' ? event.matches : !!(motionQuery && motionQuery.matches);
+    if (next === reducedMotion) return;
+    reducedMotion = next;
+    if (reducedMotion) {
+      cancelAnimation();
+      var i;
+      for (i = 0; i < slots.length; i++) if (slots[i].canvas) slots[i].needsDraw = true;
+      drawStaticFrames();
+    } else {
+      lastFrame = 0;
+      scheduleAnimation();
+    }
+  }
+
+  function installHooks() {
+    if (hooked) return;
+    hooked = true;
+    try { D.addEventListener('visibilitychange', onVisibility, false); } catch (e3) {}
+    try {
+      if (motionQuery && motionQuery.addEventListener) motionQuery.addEventListener('change', onMotionChange, false);
+      else if (motionQuery && motionQuery.addListener) motionQuery.addListener(onMotionChange);
+    } catch (e4) {}
+  }
+
+  function ensureWatch() {
+    if (timer === null) timer = W.setInterval(tick, 100);
+  }
+
+  function queuePump() {
+    if (pumpQueued) return;
+    pumpQueued = true;
+    if (W.requestAnimationFrame) {
+      W.requestAnimationFrame(function () {
+        pumpQueued = false;
+        measureAvailable();
+        if (reducedMotion) drawStaticFrames();
+        else scheduleAnimation();
+      });
+    } else {
+      W.setTimeout(function () {
+        pumpQueued = false;
+        measureAvailable();
+        if (reducedMotion) drawStaticFrames();
+        else scheduleAnimation();
+      }, 0);
+    }
+  }
+
+  function attachVioletFrame(hostEl, sizePx) {
+    try {
+      if (!hostEl || !hostEl.appendChild || !hostEl.getBoundingClientRect) return;
+      var i;
+      for (i = 0; i < slots.length; i++) if (slots[i].host === hostEl) return;
+      slots.push({
+        host: hostEl,
+        sizeHint: parseFloat(sizePx) || 56,
+        canvas: null,
+        ctx: null,
+        w: 0,
+        h: 0,
+        ring: 0,
+        pad: 0,
+        radius: 0,
+        circle: false,
+        ratio: 1,
+        phase: Math.random() * 100,
+        needsDraw: true,
+        failed: false
+      });
+      installHooks();
+      ensureWatch();
+      queuePump();
+    } catch (e5) {}
+  }
+
+  function tick() {
+    try {
+      var i;
+      for (i = slots.length - 1; i >= 0; i--) {
+        if (!contains(slots[i].host)) {
+          removeSlot(slots[i]);
+          slots.splice(i, 1);
+        }
+      }
+      if (!slots.length) { stopIfEmpty(); return; }
+      measureAvailable();
+      if (reducedMotion) {
+        cancelAnimation();
+        drawStaticFrames();
+      } else if (D.hidden) {
+        cancelAnimation();
+      } else {
+        scheduleAnimation();
+      }
+      stopIfEmpty();
+    } catch (e6) {}
+  }
+
+  function makeCanvas(slot) {
+    var canvas;
+    try {
+      canvas = D.createElement('canvas');
+      canvas.className = 'fr2-violet-canvas';
+      canvas.setAttribute('aria-hidden', 'true');
+      canvas.style.position = 'absolute';
+      canvas.style.left = '0px';
+      canvas.style.top = '0px';
+      canvas.style.zIndex = '4';
+      canvas.style.display = 'block';
+      canvas.style.pointerEvents = 'none';
+      canvas.style.margin = '0';
+      canvas.style.padding = '0';
+      canvas.style.border = '0';
+      canvas.style.maxWidth = 'none';
+      canvas.style.maxHeight = 'none';
+      slot.host.appendChild(canvas);
+      slot.canvas = canvas;
+      slot.ctx = canvas.getContext && canvas.getContext('2d');
+      if (!slot.ctx) {
+        removeCanvas(slot);
+        slot.failed = true;
+        return false;
+      }
+      slot.needsDraw = true;
+      return true;
+    } catch (e7) {
+      if (canvas && canvas.parentNode) { try { canvas.parentNode.removeChild(canvas); } catch (e8) {} }
+      slot.canvas = null;
+      slot.ctx = null;
+      slot.failed = true;
+      return false;
+    }
+  }
+
+  function hostShape(host, width, height) {
+    var style = null, value = '', radius = 0, minSide = Math.min(width, height), circle = false;
+    try { if (W.getComputedStyle) style = W.getComputedStyle(host, null); } catch (e9) {}
+    if (style) value = style.borderRadius || style.borderTopLeftRadius || '';
+    if (!value && host.style) value = host.style.borderRadius || '';
+    radius = parseFloat(value);
+    if (!isFinite(radius)) radius = 0;
+    if (String(value).indexOf('%') >= 0) radius = minSide * radius / 100;
+    if (minSide > 0 && Math.abs(width - height) <= minSide * .08 && radius >= minSide * .45) circle = true;
+    if (circle) radius = minSide / 2;
+    else radius = Math.max(0, Math.min(radius, minSide / 2));
+    return { circle: circle, radius: radius };
+  }
+
+  function configureSlot(slot, rect, width, height) {
+    var minSide = Math.min(width, height);
+    var hint = slot.sizeHint > 0 ? slot.sizeHint : minSide;
+    var scale = hint ? minSide / hint : 1;
+    var ring = Math.max(3, Math.min(14, hint * .043 * scale));
+    var pad = Math.max(hint * .07 * scale, ring + 1);
+    var shape = hostShape(slot.host, width, height);
+    var ratio = Math.min(2, W.devicePixelRatio || 1);
+    var fullWidth = width + pad * 2;
+    var fullHeight = height + pad * 2;
+    var oldW = slot.w, oldH = slot.h, oldRing = slot.ring, oldPad = slot.pad;
+    var oldRadius = slot.radius, oldCircle = slot.circle, oldRatio = slot.ratio;
+    var pixelWidth = Math.max(1, Math.round(fullWidth * ratio));
+    var pixelHeight = Math.max(1, Math.round(fullHeight * ratio));
+
+    slot.w = width;
+    slot.h = height;
+    slot.ring = ring;
+    slot.pad = pad;
+    slot.radius = shape.radius;
+    slot.circle = shape.circle;
+    slot.ratio = ratio;
+    slot.rect = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+
+    if (Math.abs(oldW - width) > .5 || Math.abs(oldH - height) > .5 || Math.abs(oldRing - ring) > .25 ||
+        Math.abs(oldPad - pad) > .25 || Math.abs(oldRadius - shape.radius) > .25 || oldCircle !== shape.circle || oldRatio !== ratio) {
+      slot.needsDraw = true;
+      slot.canvas.style.left = (-pad) + 'px';
+      slot.canvas.style.top = (-pad) + 'px';
+      slot.canvas.style.width = fullWidth + 'px';
+      slot.canvas.style.height = fullHeight + 'px';
+    }
+
+    if (slot.canvas.width !== pixelWidth || slot.canvas.height !== pixelHeight) {
+      slot.canvas.width = pixelWidth;
+      slot.canvas.height = pixelHeight;
+      slot.needsDraw = true;
+    }
+  }
+
+  function measureAvailable() {
+    var live = 0, i, slot, rect, width, height;
+    for (i = 0; i < slots.length; i++) if (slots[i].canvas && slots[i].ctx) live++;
+    for (i = 0; i < slots.length; i++) {
+      slot = slots[i];
+      if (!contains(slot.host)) continue;
+      rect = slot.host.getBoundingClientRect();
+      width = rect.width || (rect.right - rect.left);
+      height = rect.height || (rect.bottom - rect.top);
+      if (!(width >= 52 && height >= 52)) {
+        if (slot.canvas) { removeCanvas(slot); live--; }
+        continue;
+      }
+      if (!slot.canvas) {
+        if (slot.failed || live >= MAX) continue;
+        if (!makeCanvas(slot)) continue;
+        live++;
+      }
+      configureSlot(slot, rect, width, height);
+    }
+  }
+
+  function tickTime() {
+    if (W.performance && W.performance.now) return W.performance.now();
+    return +new Date();
+  }
+
+  function animate(timestamp) {
+    rafId = null;
+    if (reducedMotion || D.hidden) return;
+    var now = typeof timestamp === 'number' ? timestamp : tickTime();
+    if (!lastFrame || now - lastFrame >= FRAME_MS) {
+      var i, time = now / 1000;
+      for (i = 0; i < slots.length; i++) if (slots[i].canvas && slots[i].ctx) drawSlot(slots[i], time);
+      lastFrame = now;
+    }
+    scheduleAnimation();
+  }
+
+  function fract(value) { return value - Math.floor(value); }
+
+  function hash(index, seed) {
+    var value = Math.sin((index + 1) * 127.1 + seed * 311.7) * 43758.5453123;
+    return fract(value);
+  }
+
+  function appendShape(ctx, slot, inset) {
+    var width = slot.w, height = slot.h;
+    if (slot.circle) {
+      var rx = Math.max(0, width / 2 - inset);
+      var ry = Math.max(0, height / 2 - inset);
+      ctx.moveTo(width / 2 + rx, height / 2);
+      ctx.ellipse(width / 2, height / 2, rx, ry, 0, 0, Math.PI * 2);
+      ctx.closePath();
+      return;
+    }
+
+    var x = inset, y = inset;
+    var boxWidth = width - inset * 2, boxHeight = height - inset * 2;
+    var radius = Math.max(0, Math.min(slot.radius - inset, boxWidth / 2, boxHeight / 2));
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + boxWidth - radius, y);
+    ctx.quadraticCurveTo(x + boxWidth, y, x + boxWidth, y + radius);
+    ctx.lineTo(x + boxWidth, y + boxHeight - radius);
+    ctx.quadraticCurveTo(x + boxWidth, y + boxHeight, x + boxWidth - radius, y + boxHeight);
+    ctx.lineTo(x + radius, y + boxHeight);
+    ctx.quadraticCurveTo(x, y + boxHeight, x, y + boxHeight - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
+
+  function perimeter(slot, inset) {
+    var width = slot.w, height = slot.h;
+    if (slot.circle) {
+      var rx = Math.max(0, width / 2 - inset), ry = Math.max(0, height / 2 - inset);
+      return Math.PI * (3 * (rx + ry) - Math.sqrt((3 * rx + ry) * (rx + 3 * ry)));
+    }
+    var boxWidth = width - inset * 2, boxHeight = height - inset * 2;
+    var radius = Math.max(0, Math.min(slot.radius - inset, boxWidth / 2, boxHeight / 2));
+    return 2 * (boxWidth - 2 * radius + boxHeight - 2 * radius) + Math.PI * 2 * radius;
+  }
+
+  function sampleBoundary(slot, fraction, inset) {
+    var width = slot.w, height = slot.h, u = fract(fraction);
+    if (slot.circle) {
+      var angle = -Math.PI / 2 + Math.PI * 2 * u;
+      var rx = Math.max(0, width / 2 - inset), ry = Math.max(0, height / 2 - inset);
+      var tangentX = -rx * Math.sin(angle), tangentY = ry * Math.cos(angle);
+      var tangentLength = Math.sqrt(tangentX * tangentX + tangentY * tangentY) || 1;
+      tangentX /= tangentLength;
+      tangentY /= tangentLength;
+      return {
+        x: width / 2 + Math.cos(angle) * rx,
+        y: height / 2 + Math.sin(angle) * ry,
+        tx: tangentX,
+        ty: tangentY,
+        nx: tangentY,
+        ny: -tangentX
+      };
+    }
+
+    var x = inset, y = inset, boxWidth = width - inset * 2, boxHeight = height - inset * 2;
+    var radius = Math.max(0, Math.min(slot.radius - inset, boxWidth / 2, boxHeight / 2));
+    var segments = [];
+    function addLine(x1, y1, x2, y2) {
+      var dx = x2 - x1, dy = y2 - y1, length = Math.sqrt(dx * dx + dy * dy);
+      if (length > .0001) segments.push({ type: 'line', x1: x1, y1: y1, dx: dx, dy: dy, length: length });
+    }
+    function addArc(cx, cy, start, end) {
+      var length = radius * (end - start);
+      if (length > .0001) segments.push({ type: 'arc', cx: cx, cy: cy, start: start, end: end, length: length });
+    }
+
+    addLine(x + radius, y, x + boxWidth - radius, y);
+    addArc(x + boxWidth - radius, y + radius, -Math.PI / 2, 0);
+    addLine(x + boxWidth, y + radius, x + boxWidth, y + boxHeight - radius);
+    addArc(x + boxWidth - radius, y + boxHeight - radius, 0, Math.PI / 2);
+    addLine(x + boxWidth - radius, y + boxHeight, x + radius, y + boxHeight);
+    addArc(x + radius, y + boxHeight - radius, Math.PI / 2, Math.PI);
+    addLine(x, y + boxHeight - radius, x, y + radius);
+    addArc(x + radius, y + radius, Math.PI, Math.PI * 1.5);
+
+    var total = 0, i, distance, chosen = null;
+    for (i = 0; i < segments.length; i++) total += segments[i].length;
+    if (!(total > 0)) return { x: x, y: y, tx: 1, ty: 0, nx: 0, ny: -1 };
+    distance = u * total;
+    chosen = segments[segments.length - 1];
+    for (i = 0; i < segments.length; i++) {
+      if (distance <= segments[i].length) { chosen = segments[i]; break; }
+      distance -= segments[i].length;
+    }
+
+    var px, py, tx, ty;
+    if (chosen.type === 'arc') {
+      var part = chosen.length ? distance / chosen.length : 0;
+      var arcAngle = chosen.start + (chosen.end - chosen.start) * part;
+      px = chosen.cx + radius * Math.cos(arcAngle);
+      py = chosen.cy + radius * Math.sin(arcAngle);
+      tx = -Math.sin(arcAngle);
+      ty = Math.cos(arcAngle);
+    } else {
+      var linePart = chosen.length ? Math.max(0, Math.min(1, distance / chosen.length)) : 0;
+      px = chosen.x1 + chosen.dx * linePart;
+      py = chosen.y1 + chosen.dy * linePart;
+      tx = chosen.dx / chosen.length;
+      ty = chosen.dy / chosen.length;
+    }
+    return { x: px, y: py, tx: tx, ty: ty, nx: ty, ny: -tx };
+  }
+
+  function clipOutside(ctx, slot) {
+    ctx.beginPath();
+    ctx.rect(-slot.pad, -slot.pad, slot.w + slot.pad * 2, slot.h + slot.pad * 2);
+    appendShape(ctx, slot, -slot.ring);
+    ctx.clip('evenodd');
+  }
+
+  function clipFrameBand(ctx, slot) {
+    ctx.beginPath();
+    appendShape(ctx, slot, -slot.ring);
+    appendShape(ctx, slot, 0);
+    ctx.clip('evenodd');
+  }
+
+  function drawOuterAuraAndWisps(ctx, slot, time) {
+    var breath = .5 + .5 * Math.sin(time * 1.12 + slot.phase);
+    ctx.save();
+    clipOutside(ctx, slot);
+    ctx.globalCompositeOperation = 'screen';
+
+    ctx.save();
+    ctx.globalAlpha = slot.w < 90 ? .20 + breath * .11 : .18 + breath * .16;
+    ctx.strokeStyle = '#c77dff';
+    ctx.lineWidth = slot.w < 90 ? .8 : 1.35;
+    ctx.shadowColor = '#c77dff';
+    ctx.shadowBlur = slot.w < 90 ? 3.5 + breath * 2 : 10 + breath * 7;
+    ctx.beginPath();
+    appendShape(ctx, slot, -slot.ring + .35);
+    ctx.stroke();
+    ctx.restore();
+
+    var count = slot.w < 90 ? 3 : 7;
+    var i, salt, drift, u, point, distance, centerX, centerY, length, width, angle, wisp;
+    for (i = 0; i < count; i++) {
+      salt = hash(i + 30, slot.phase);
+      drift = Math.sin(time * (.62 + salt * .18) + i * 1.83 + slot.phase) * (slot.w < 90 ? 1.35 : 4.2);
+      u = fract(i / count + time * (.0042 + salt * .0008) + slot.phase * .0013);
+      point = sampleBoundary(slot, u, -slot.ring);
+      distance = slot.w < 90 ? 1.5 + salt * 1.25 : 3.5 + salt * 4.5;
+      centerX = point.x + point.nx * distance + point.tx * drift;
+      centerY = point.y + point.ny * distance + point.ty * drift;
+      length = slot.w < 90 ? 6 + salt * 3 : 16 + salt * 14;
+      width = slot.w < 90 ? .45 + salt * .25 : 1.25 + salt * 1.15;
+      angle = Math.atan2(point.ty, point.tx);
+
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(angle);
+      ctx.globalAlpha = slot.w < 90 ? .30 : .42;
+      ctx.shadowColor = 'rgba(199,125,255,.72)';
+      ctx.shadowBlur = slot.w < 90 ? .9 : 3.6;
+      ctx.filter = slot.w < 90 ? 'none' : 'blur(1.15px)';
+      wisp = ctx.createLinearGradient(-length / 2, 0, length / 2, 0);
+      wisp.addColorStop(0, 'rgba(91,42,134,0)');
+      wisp.addColorStop(.32, 'rgba(91,42,134,.28)');
+      wisp.addColorStop(.68, 'rgba(199,125,255,.42)');
+      wisp.addColorStop(1, 'rgba(243,232,255,0)');
+      ctx.fillStyle = wisp;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, length / 2, width, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function drawBandNebula(ctx, slot, time) {
+    var count = slot.w < 90 ? 2 : 8;
+    var i, salt, u, point, normalDrift, length, width, haze;
+    for (i = 0; i < count; i++) {
+      salt = hash(i + 70, slot.phase);
+      u = fract(i / count + time * (.003 + salt * .001) + slot.phase * .0021);
+      point = sampleBoundary(slot, u, -slot.ring * .5);
+      normalDrift = Math.sin(time * .8 + i * 2.1 + slot.phase) * slot.ring * .12;
+      length = slot.w < 90 ? 4.5 + salt * 2 : 17 + salt * 15;
+      width = slot.w < 90 ? .45 + salt * .18 : 1.6 + salt * 1.15;
+
+      ctx.save();
+      ctx.translate(point.x + point.nx * normalDrift, point.y + point.ny * normalDrift);
+      ctx.rotate(Math.atan2(point.ty, point.tx));
+      ctx.globalAlpha = slot.w < 90 ? .30 : .38;
+      ctx.filter = slot.w < 90 ? 'none' : 'blur(1.25px)';
+      haze = ctx.createLinearGradient(-length / 2, 0, length / 2, 0);
+      haze.addColorStop(0, 'rgba(91,42,134,0)');
+      haze.addColorStop(.38, 'rgba(91,42,134,.38)');
+      haze.addColorStop(.72, 'rgba(199,125,255,.48)');
+      haze.addColorStop(1, 'rgba(243,232,255,0)');
+      ctx.fillStyle = haze;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, length / 2, width, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawCoreRing(ctx, slot, time) {
+    var width = slot.w, height = slot.h, ring = slot.ring;
+    var pulse = .5 + .5 * Math.sin(time * 1.35 + slot.phase * 1.7);
+    var base = ctx.createLinearGradient(-ring, height, width + ring, 0);
+    base.addColorStop(0, 'rgba(91,42,134,.96)');
+    base.addColorStop(.33, 'rgba(72,34,103,.94)');
+    base.addColorStop(.61, 'rgba(199,125,255,.78)');
+    base.addColorStop(1, 'rgba(91,42,134,.94)');
+    ctx.fillStyle = base;
+    ctx.fillRect(-ring - 1, -ring - 1, width + ring * 2 + 2, height + ring * 2 + 2);
+
+    var core = ctx.createLinearGradient(0, height * .08, width, height * .92);
+    core.addColorStop(0, 'rgba(91,42,134,.28)');
+    core.addColorStop(.3, 'rgba(199,125,255,.36)');
+    core.addColorStop(.58, 'rgba(91,42,134,.58)');
+    core.addColorStop(.84, 'rgba(199,125,255,.38)');
+    core.addColorStop(1, 'rgba(91,42,134,.24)');
+    ctx.beginPath();
+    appendShape(ctx, slot, -ring * .51);
+    ctx.globalAlpha = .78;
+    ctx.strokeStyle = core;
+    ctx.lineWidth = ring * .68;
+    ctx.shadowColor = '#c77dff';
+    ctx.shadowBlur = slot.w < 90 ? 1.2 : ring * (.45 + pulse * .25);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.globalAlpha = slot.w < 90 ? .64 : .52 + pulse * .1;
+    ctx.beginPath();
+    appendShape(ctx, slot, -.42);
+    ctx.lineWidth = slot.w < 90 ? .48 : .8;
+    ctx.strokeStyle = 'rgba(243,232,255,.86)';
+    ctx.stroke();
+
+    ctx.globalAlpha = slot.w < 90 ? .42 : .34;
+    ctx.beginPath();
+    appendShape(ctx, slot, -ring + .46);
+    ctx.lineWidth = slot.w < 90 ? .42 : .72;
+    ctx.strokeStyle = 'rgba(199,125,255,.78)';
+    ctx.stroke();
+  }
+
+  function drawTongues(ctx, slot, time) {
+    var ring = slot.ring, middleInset = -ring * .5;
+    var edgeLength = perimeter(slot, middleInset);
+    var small = slot.w < 90;
+    var count = small ? Math.max(15, Math.round(edgeLength / 11.7)) : Math.round(edgeLength / 17.4);
+    var i, salt, u, point, pulse, baseOffset, baseX, baseY, height, lean, tipX, tipY;
+    var width, rootWidth, startLeftX, startLeftY, startRightX, startRightY;
+    var c1lx, c1ly, c2lx, c2ly, c2rx, c2ry, c1rx, c1ry, plasma, core;
+
+    for (i = 0; i < count; i++) {
+      salt = hash(i, slot.phase);
+      u = fract((i + .18 + salt * .5) / count + time * (small ? .0041 : .0034) + slot.phase * .0009);
+      point = sampleBoundary(slot, u, middleInset);
+      pulse = .5 + .5 * Math.sin(time * (1.28 + salt * .55) + i * 2.17 + slot.phase);
+      baseOffset = ring * (.39 + salt * .035);
+      baseX = point.x - point.nx * baseOffset;
+      baseY = point.y - point.ny * baseOffset;
+      height = ring * (.72 + pulse * .17 + (i % 9 === 0 ? .065 : 0));
+      lean = ring * (Math.sin(time * .92 + i * 1.61 + slot.phase) * .105 + (salt - .5) * .15);
+      tipX = baseX + point.nx * height + point.tx * lean;
+      tipY = baseY + point.ny * height + point.ty * lean;
+      width = ring * (small ? .23 + salt * .1 : .25 + salt * .16);
+      rootWidth = width * (.85 + pulse * .16);
+      startLeftX = baseX - point.tx * rootWidth * .5;
+      startLeftY = baseY - point.ty * rootWidth * .5;
+      startRightX = baseX + point.tx * rootWidth * .5;
+      startRightY = baseY + point.ty * rootWidth * .5;
+
+      c1lx = baseX + point.nx * height * .30 - point.tx * rootWidth * .62 + point.tx * lean * .12;
+      c1ly = baseY + point.ny * height * .30 - point.ty * rootWidth * .62 + point.ty * lean * .12;
+      c2lx = tipX - point.nx * height * .22 - point.tx * width * .22;
+      c2ly = tipY - point.ny * height * .22 - point.ty * width * .22;
+      c2rx = tipX - point.nx * height * .22 + point.tx * width * .22;
+      c2ry = tipY - point.ny * height * .22 + point.ty * width * .22;
+      c1rx = baseX + point.nx * height * .29 + point.tx * rootWidth * .62 + point.tx * lean * .12;
+      c1ry = baseY + point.ny * height * .29 + point.ty * rootWidth * .62 + point.ty * lean * .12;
+
+      plasma = ctx.createLinearGradient(baseX, baseY, tipX, tipY);
+      plasma.addColorStop(0, '#5b2a86');
+      plasma.addColorStop(.38, '#c77dff');
+      plasma.addColorStop(.79, '#c77dff');
+      plasma.addColorStop(1, '#f3e8ff');
+
+      ctx.save();
+      ctx.globalAlpha = small ? .87 : .82 + pulse * .16;
+      ctx.fillStyle = plasma;
+      ctx.shadowColor = 'rgba(199,125,255,.82)';
+      ctx.shadowBlur = small ? .7 : ring * .34;
+      ctx.beginPath();
+      ctx.moveTo(startLeftX, startLeftY);
+      ctx.bezierCurveTo(c1lx, c1ly, c2lx, c2ly, tipX, tipY);
+      ctx.bezierCurveTo(c2rx, c2ry, c1rx, c1ry, startRightX, startRightY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      core = ctx.createLinearGradient(baseX, baseY, tipX, tipY);
+      core.addColorStop(0, 'rgba(243,232,255,0)');
+      core.addColorStop(.62, 'rgba(243,232,255,.24)');
+      core.addColorStop(1, 'rgba(243,232,255,.9)');
+      ctx.globalAlpha = small ? .72 : .57 + pulse * .2;
+      ctx.strokeStyle = core;
+      ctx.lineWidth = small ? .43 : Math.max(.7, ring * .075);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(baseX + point.nx * ring * .12, baseY + point.ny * ring * .12);
+      ctx.quadraticCurveTo(
+        baseX + point.nx * height * .58 + point.tx * lean * .35,
+        baseY + point.ny * height * .58 + point.ty * lean * .35,
+        tipX,
+        tipY
+      );
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawSlot(slot, time) {
+    var ctx = slot.ctx;
+    var fullWidth = slot.w + slot.pad * 2, fullHeight = slot.h + slot.pad * 2;
+    ctx.setTransform(slot.ratio, 0, 0, slot.ratio, 0, 0);
+    ctx.clearRect(0, 0, fullWidth, fullHeight);
+    ctx.save();
+    ctx.translate(slot.pad, slot.pad);
+
+    drawOuterAuraAndWisps(ctx, slot, time);
+
+    ctx.save();
+    clipFrameBand(ctx, slot);
+    drawCoreRing(ctx, slot, time);
+    drawBandNebula(ctx, slot, time);
+    drawTongues(ctx, slot, time);
+    ctx.restore();
+
+    ctx.restore();
+    slot.needsDraw = false;
+  }
+
+  installHooks();
+  W.attachVioletFrame = attachVioletFrame;
+})(window, document);
+</script>
+
 <script>(function() {
   "use strict";
   var DPR_CAP = 2;
