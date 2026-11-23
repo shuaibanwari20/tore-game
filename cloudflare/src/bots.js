@@ -29,18 +29,19 @@
  *    AGAINST our own bank for the opponents, so avoid dead suits; lead
  *    a cheap non-scoring card from a live suit. Only when every lead is
  *    a dead suit (or every card scores) take the cheapest way out.
- *  - NO-REPEAT TAKAN LAW (owner order, 2026-11-09 — ABSOLUTE, not a
- *    preference): a bot NEVER leads a suit it has already takan'd this
- *    round while it still holds ANY card of another suit — the other
- *    suits are played to exhaustion first. Only when nothing but the
- *    already-takan'd suit remains may it be led again, and that repeat
- *    creates NO claim (the engine counts only a bot's FIRST takan of
- *    each suit per round — see game.js).
+ *  - BOT NO-TAKAN LAW (owner order, 2026-11-23 — ABSOLUTE, supersedes
+ *    the 2026-11-09 no-repeat law): bots NEVER takan. pickLead never
+ *    chooses a takan lead while any other lead exists, and the engine
+ *    suppresses EVERY bot-seat takan — first or repeat, forced or
+ *    not, it creates NO claim and no takan event (see game.js).
  *  - «13» POLICY (up46): a bot declares «13» ONLY on a PROVABLY clean
  *    call (counting: the suit's unseen = 0) and only when ending now
  *    is not worse for its team (captured ≤ the opponents'). Never on
  *    a guess — a wrong call hands the rivals one claim per held card
- *    against the bot's own team. See plan13.
+ *    against the bot's own team. EXCEPTION (owner order 2026-11-23):
+ *    when EVERY card in hand is provably dead, leading would be a
+ *    takan — the bot MUST declare «13» instead, score aside. See
+ *    plan13.
  *
  * CARD COUNTING (up45, owner order 2026-11-12 «همه روبات ها را قوی
  * کن تا هیچ خطا نده»): the bot counts every card played this round
@@ -141,11 +142,12 @@ function shedCard(round, seat, cards, gated) {
 }
 
 function pickLead(round, seat, legal) {
-  // NO-REPEAT TAKAN LAW (absolute): suits this bot has already takan'd
+  // BOT NO-TAKAN LAW (absolute): suits this bot has already takan'd
   // this round are BANNED as leads while any card of another suit
   // remains in hand — no exceptions, no weighing. Only when the hand
   // holds nothing but banned suits does the ban lift (the forced
-  // re-lead; it creates no claim — game.js counts first takans only).
+  // lead; like every bot takan it creates NO claim — game.js
+  // suppresses all bot-seat takans).
   const banned = (round.takanSuits && round.takanSuits[seat]) || [];
   let base = legal;
   if (banned.length) {
@@ -190,10 +192,13 @@ function pickLead(round, seat, legal) {
 
 /**
  * «13» PLAN (up46): on a LEAD, the card to declare «13» with — or
- * null to play normally. Declares ONLY when BOTH: PROVABLY CLEAN
- * (countSuits: a suit in hand with unseen === 0 — nobody else can
- * hold it; never a guess, a wrong call costs one claim per held
+ * null to play normally. Voluntary declarations need BOTH: PROVABLY
+ * CLEAN (countSuits: a suit in hand with unseen === 0 — nobody else
+ * can hold it; never a guess, a wrong call costs one claim per held
  * card) AND NOT WORSE (its team captured ≤ the opponents' tawan).
+ * FORCED case (owner order 2026-11-23): if EVERY remaining card is
+ * provably dead, the lead would be a takan — bots never takan, so
+ * the bot MUST declare «13» instead, with no score condition.
  * Card = cheapest giveaway among the dead suits. Deterministic.
  * (Hosts: on non-null, arm13 + play the card — the round ends.)
  */
@@ -204,6 +209,12 @@ function plan13(round, seat) {
   const info = countSuits(round, seat);
   const dead = hand.filter((c) => info[G.suitOf(c)].unseen === 0);
   if (!dead.length) return null;
+  // FORCED «13» (owner order, 2026-11-23: «اگر مجبور شوه باید ۱۳
+  // کنه»): when EVERY card left in hand is provably dead, any lead
+  // would be a takan — and bots never takan. The bot counts its
+  // suits itself (حساب) and MUST declare «13» with its cheapest
+  // giveaway instead, whatever the captured score says.
+  if (dead.length === hand.length) return cheapestGiveaway(dead);
   const captured = round.captured || [[], []];
   const myTeam = G.teamOf(seat);
   if (G.tawanOf(captured[myTeam]) > G.tawanOf(captured[1 - myTeam])) return null;
