@@ -702,6 +702,12 @@ export class GameServer {
         body && body.uid, body && body.currency, body && body.amount);
       return Response.json(r, { status: r.ok ? 200 : (r.error === 'notfound' ? 404 : 400) });
     }
+    if (reqPath === '/internal/admin/badge') {
+      const r = core.adminBadge(
+        { email: (body && body.adminEmail) || '', sub: (body && body.adminSub) || '' },
+        body && body.uid, body && body.badge, body && body.op);
+      return Response.json(r, { status: r.ok ? 200 : (r.error === 'notfound' ? 404 : 400) });
+    }
     if (reqPath === '/internal/admin/grants') {
       return Response.json({ ok: true, grants: core.adminGrantsList(20) });
     }
