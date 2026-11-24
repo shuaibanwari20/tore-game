@@ -52,6 +52,7 @@
  *   GET  /auth/me                 session user JSON (+ isAdmin), or 401
  *   GET  /admin/player?id=        admin only: a player's balances
  *   POST /admin/grant             admin only: grant/deduct coins|gems
+ *   POST /admin/badge             admin only: grant/revoke a manual badge {playerId, badge, op}
  *   GET  /admin/grants            admin only: recent admin grants
  *   GET  /auth/google             start Google OAuth (PKCE)
  *   GET  /auth/google/callback    Google OAuth callback
@@ -100,7 +101,7 @@ export { GameServer };
 
 // bump the ?v= suffix on every client rebuild to bust the edge cache
 const CLIENT_URL_DEFAULT =
-  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261123-notakan1';
+  'https://raw.githubusercontent.com/shuaibanwari20/tore-game/main/cloudflare/dist-client.html?v=20261124-badges1';
 // The PREVIOUS client version's URL — last-resort fallback for
 // serveClient (see the header comment): that build was live long
 // enough that its edge copies are warm in the POPs, so when a fresh
@@ -1048,6 +1049,17 @@ export default {
         if (!/^\d{6}$/.test(playerId)) return Response.json({ ok: false, error: 'bad id' }, { status: 400 });
         return call('grant', {
           uid: playerId, currency: body && body.currency, amount: body && body.amount,
+          adminEmail: user.email, adminSub: user.sub,
+        });
+      }
+      if (path === '/admin/badge' && request.method === 'POST') {
+        let body = null;
+        try { body = await request.json(); } catch { body = null; }
+        const playerId = body && typeof body.playerId === 'string' ? body.playerId
+          : (body && typeof body.uid === 'string' ? body.uid : '');
+        if (!/^\d{6}$/.test(playerId)) return Response.json({ ok: false, error: 'bad id' }, { status: 400 });
+        return call('badge', {
+          uid: playerId, badge: body && body.badge, op: body && body.op,
           adminEmail: user.email, adminSub: user.sub,
         });
       }
