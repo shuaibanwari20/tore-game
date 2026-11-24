@@ -2914,7 +2914,8 @@ button:disabled {
 #scr-shop,
 #scr-playlist,
 #scr-admin,
-#scr-adetail {
+#scr-adetail,
+#scr-tourney {
   position: fixed;
   inset: 0;
   height: 100vh;
@@ -3015,7 +3016,8 @@ button:disabled {
 #scr-shop,
 #scr-playlist,
 #scr-admin,
-#scr-adetail {
+#scr-adetail,
+#scr-tourney {
   display: flex;
   flex-direction: column;
   overflow-y: hidden;
@@ -11734,6 +11736,414 @@ button:disabled {
     transform: scaleY(1);
   }
 }
+.bdg-sec {
+  margin: 14px 0 6px;
+  padding: 12px;
+  border-radius: 14px;
+  background:
+    linear-gradient(
+      180deg,
+      #2a1433,
+      #1c0d24);
+  border: 1px solid #4a2a57;
+  color: #f3e9d2;
+}
+.bdg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.bdg-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #e8c464;
+  letter-spacing: .2px;
+}
+.bdg-sub {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #b9a3c4;
+  margin: 3px 0 0;
+}
+.bdg-group {
+  font-size: 12px;
+  font-weight: 700;
+  color: #c9b6d6;
+  margin: 12px 0 8px;
+}
+.bdg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  gap: 12px 8px;
+}
+.bdg-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+.bdg-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  min-width: 0;
+}
+.bdg-medal {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  background:
+    radial-gradient(
+      circle at 35% 30%,
+      #ffe9a3 0%,
+      #d9a93a 45%,
+      #8a5d12 100%);
+  box-shadow: 0 2px 0 #5a3a08, 0 4px 10px rgba(0, 0, 0, .35);
+  color: #3b2406;
+}
+.bdg-medal svg {
+  width: 28px;
+  height: 28px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.bdg-medal.special {
+  box-shadow:
+    0 0 0 3px #1c0d24,
+    0 0 0 5px #e8c464,
+    0 4px 12px rgba(232, 196, 100, .35);
+}
+.bdg-medal.locked {
+  background:
+    radial-gradient(
+      circle at 35% 30%,
+      #8a8190 0%,
+      #4c4553 60%,
+      #2e2834 100%);
+  color: #9a909f;
+  box-shadow: inset 0 0 0 1px #5a5262, 0 2px 6px rgba(0, 0, 0, .3);
+  filter: grayscale(.6) brightness(.85);
+}
+.bdg-medal.sm {
+  width: 38px;
+  height: 38px;
+}
+.bdg-medal.sm svg {
+  width: 19px;
+  height: 19px;
+}
+.bdg-name {
+  font-size: 11px;
+  line-height: 1.3;
+  color: #f3e9d2;
+  max-width: 84px;
+  overflow-wrap: anywhere;
+}
+.bdg-item.locked .bdg-name {
+  color: #9a909f;
+}
+.bdg-prog {
+  font-size: 10px;
+  color: #e8c464;
+  background: rgba(0, 0, 0, .3);
+  border-radius: 8px;
+  padding: 1px 7px;
+}
+.bdg-empty {
+  font-size: 12px;
+  color: #b9a3c4;
+  padding: 6px 0;
+}
+.bdg-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bdg-admrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, .25);
+  border: 1px solid #4a2a57;
+}
+.bdg-admrow .bdg-medal {
+  width: 40px;
+  height: 40px;
+}
+.bdg-admrow .bdg-medal svg {
+  width: 20px;
+  height: 20px;
+}
+.bdg-admrow .bdg-nm {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}
+.bdg-btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background:
+    linear-gradient(
+      180deg,
+      #f0cd6a,
+      #b9862a);
+  color: #2a1606;
+  box-shadow: 0 2px 0 #6b4a12;
+}
+.bdg-btn.revoke {
+  background:
+    linear-gradient(
+      180deg,
+      #8a7f93,
+      #5b5165);
+  color: #f3e9d2;
+  box-shadow: 0 2px 0 #2e2834;
+}
+.bdg-btn:active {
+  transform: translateY(1px);
+}
+.bdg-btn:disabled {
+  opacity: .55;
+  cursor: default;
+}
+.bdg-msg {
+  font-size: 12px;
+  color: #ff9e9e;
+  min-height: 16px;
+  margin-top: 4px;
+}
+.tn-ic {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 auto;
+}
+.tn-open {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 10px 0;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #6a3d7a;
+  background:
+    linear-gradient(
+      135deg,
+      #3a1846,
+      #22102c);
+  color: #f3e9d2;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.tn-open .tn-ic {
+  width: 30px;
+  height: 30px;
+  color: #e8c464;
+}
+.tn-open-t {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #e8c464;
+}
+.tn-open-s {
+  display: block;
+  font-size: 11px;
+  color: #b9a3c4;
+  margin-top: 2px;
+}
+#scr-tourney {
+  min-height: 100%;
+  background:
+    linear-gradient(
+      180deg,
+      #2a1433,
+      #130818);
+  color: #f3e9d2;
+}
+.tn-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.tn-back {
+  border: 0;
+  background: rgba(255, 255, 255, .06);
+  color: #e8c464;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.tn-back .tn-ic {
+  width: 20px;
+  height: 20px;
+}
+.tn-title {
+  margin: 0;
+  flex: 1;
+  font-size: 17px;
+  color: #e8c464;
+}
+.tn-week {
+  font-size: 11px;
+  color: #b9a3c4;
+}
+.tn-body {
+  padding: 0 12px 24px;
+}
+.tn-champ {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      135deg,
+      #4a2a0a,
+      #2a1606);
+  border: 1px solid #d9a93a;
+  box-shadow: 0 0 0 3px rgba(232, 196, 100, .12);
+}
+.tn-crown {
+  color: #ffe08a;
+  display: flex;
+}
+.tn-crown .tn-ic {
+  width: 44px;
+  height: 44px;
+  stroke-width: 1.6;
+  fill: rgba(255, 224, 138, .15);
+}
+.tn-champ-l {
+  font-size: 11px;
+  color: #f0cd6a;
+}
+.tn-champ-n {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff4d6;
+  overflow-wrap: anywhere;
+}
+.tn-champ-p {
+  font-size: 11px;
+  color: #e2c98a;
+}
+.tn-champ-none {
+  font-size: 12px;
+  color: #c9b6d6;
+}
+.tn-rule {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #c9b6d6;
+  margin: 12px 2px;
+}
+.tn-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  margin-bottom: 6px;
+  background: rgba(0, 0, 0, .2);
+  border: 1px solid #3e2450;
+}
+.tn-row.me {
+  outline: 2px solid #e8c464;
+  background: rgba(232, 196, 100, .12);
+}
+.tn-rank {
+  width: 24px;
+  text-align: center;
+  font-weight: 700;
+  color: #e8c464;
+}
+.tn-em {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #3a1846;
+  color: #e8c464;
+  font-weight: 700;
+  flex: 0 0 34px;
+}
+.tn-meta {
+  flex: 1;
+  min-width: 0;
+}
+.tn-sub {
+  font-size: 11px;
+  color: #b9a3c4;
+}
+.tn-pts {
+  font-weight: 700;
+  color: #e8c464;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.tn-ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      180deg,
+      #f0cd6a,
+      #b9862a);
+  color: #2a1606;
+  font-size: 11px;
+  font-weight: 700;
+  margin-inline-start: 8px;
+  vertical-align: middle;
+}
+.tn-ribbon .tn-ic {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+  stroke: #2a1606;
+}
+.tn-cpts {
+  font-size: 12px;
+  color: #e8c464;
+  margin-top: 4px;
+}
 </style>
 </head>
 <body>
@@ -12293,6 +12703,18 @@ button:disabled {
           <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-level-lbl">کچه</span><span class="pf-stat-val" id="pf-stat-level">1</span></div>
           <div class="pf-xpbar"><div class="pf-xpfill" id="pf-xp-fill"></div></div>
         </div>
+<section class="bdg-sec" id="pf-badges" aria-labelledby="pf-badges-title">
+  <div class="bdg-head">
+    <div>
+      <h3 class="bdg-title" id="pf-badges-title"></h3>
+      <p class="bdg-sub" id="pf-badges-sub"></p>
+    </div>
+  </div>
+  <div class="bdg-group" id="pf-badges-manual-h"></div>
+  <div id="pf-badges-manual"></div>
+  <div class="bdg-group" id="pf-badges-auto-h"></div>
+  <div id="pf-badges-auto"></div>
+</section>
         <button type="button" class="pf-leadersbtn" id="btn-leaders">د اونۍ غوره لوبغاړي</button>
         <button type="button" class="pf-leadersbtn hidden" id="btn-admin">ادمین</button>
         <button type="button" id="btn-logout" class="st-logout" aria-label="له حسابه وتل">
@@ -12374,6 +12796,10 @@ button:disabled {
           <div class="pf-stat"><span class="pf-stat-lbl" id="pv2-stat-won-lbl">ګټلي</span><span class="pf-stat-val" id="pv2-stat-won">…</span></div>
           <div class="pf-stat"><span class="pf-stat-lbl" id="pv2-stat-lost-lbl">بایللي</span><span class="pf-stat-val" id="pv2-stat-lost">…</span></div>
         </div>
+<section class="bdg-sec" id="pv-badges">
+  <div class="bdg-group" id="pv-badges-h"></div>
+  <div class="bdg-row" id="pv-badges-row"></div>
+</section>
       </div>
     </div>
   </div>
@@ -12440,6 +12866,21 @@ button:disabled {
       <span class="nl" id="ldnav-chat-lbl">چت</span>
     </button>
   </nav>
+</section>
+
+<section id="scr-tourney" class="hidden" aria-labelledby="tn-title">
+  <header class="tn-head">
+    <button type="button" class="tn-back" id="tn-back" aria-label="back">
+      <svg class="tn-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
+    <h2 class="tn-title" id="tn-title"></h2>
+    <span class="tn-week" id="tn-week"></span>
+  </header>
+  <div class="tn-body">
+    <div class="tn-champ" id="tn-champ"></div>
+    <p class="tn-rule" id="tn-rule"></p>
+    <div id="tn-list"></div>
+  </div>
 </section>
 
 <!-- ======== SHOP (پلورنځی — up47 money system, phases 1+2) ========
@@ -12584,6 +13025,10 @@ button:disabled {
         <button class="ad-ghost" id="ad-notice-send">ارسال اعلان</button>
       </div>
       <button class="ad-danger wide" id="ad-ban">⛔ بن‌کردن بازیکن</button>
+<section class="bdg-sec" id="ad-badges" aria-labelledby="ad-badges-title">
+  <h3 class="bdg-title" id="ad-badges-title"></h3>
+  <div class="bdg-admin" id="ad-badges-list"></div>
+</section>
       <div class="ad-h">🧾 تاریخچهٔ کیف پول</div>
       <div class="ad-card" id="ad-p-ledger"></div>
     </div>
@@ -12605,6 +13050,13 @@ button:disabled {
         <button type="button" id="btn-cl-create" class="cl-createbtn"></button>
         <button type="button" class="cl-xbtn" id="btn-cl-home" aria-label="close"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
       </div>
+<button type="button" class="tn-open" id="btn-tourney">
+  <svg class="tn-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a2 2 0 0 0 2 3M16 6h3a2 2 0 0 1-2 3"/><path d="M12 13v3M9 20h6M9.5 16h5v4h-5z"/></svg>
+  <span>
+    <span class="tn-open-t" id="tn-open-title"></span>
+    <span class="tn-open-s" id="tn-open-sub"></span>
+  </span>
+</button>
       <div class="fr-searchrow hidden" id="cl-searchrow">
         <input id="cl-search-inp" type="text" maxlength="40">
         <button id="btn-cl-search"></button>
@@ -12743,12 +13195,14 @@ button:disabled {
       </div>
       <div class="cp-cov" id="cp-cov"></div>
       <div class="cl-name cp-name" id="cp-name"></div>
+      <span class="tn-ribbon hidden" id="cp-ribbon"></span>
       <div class="pf-idrow">
         <span class="pf-label" id="cp-id-lbl">ID</span>
         <button type="button" class="pf-idnum" id="cp-id-num" dir="ltr">…</button>
       </div>
       <div class="cl-sub" id="cp-count"></div>
       <div class="cl-sub hidden" id="cp-vsrecord"></div>
+      <div class="tn-cpts" id="cp-tpts"></div>
       <p class="cl-desc" id="cl-desc"></p>
       <div class="cl-sub" id="cl-created"></div>
       <!-- clubs v7: the settings/edit FORM is deleted — this
@@ -13999,6 +14453,54 @@ const STR = {
     selectedTag: "\u2713 \u0648\u067C\u0627\u06A9\u0644 \u0634\u0648",
     suits: { H: "\u0644\u0627\u0644", D: "\u062E\u069A\u062A", C: "\u067E\u0634\u0647", S: "\u0642\u0631\u0647" },
     ranks: { A: "\u0622\u0633", K: "\u067E\u0627\u0686\u0627", Q: "\u0645\u0627\u062A\u06A9\u0647", J: "\u063A\u0644\u0627\u0645", T: "\u0644\u0633", "9": "\u0646\u0647\u0647", "8": "\u0627\u062A\u0647", "7": "\u0627\u0648\u0648\u0647", "6": "\u0634\u067E\u0696", "5": "\u067E\u0646\u0681\u0647", "4": "\u0685\u0644\u0648\u0631", "3": "\u062F\u0631\u06D0", "2": "\u062F\u0648\u0647" },
+    bdgA_clubber: "\u062F \u0628\u0627\u0634\u06AB\u0627\u0647 \u063A\u0693\u06CC",
+    bdgA_firstwin: "\u0644\u0648\u0645\u0693\u06CD \u0628\u0631\u06CC\u0627",
+    bdgA_games100: "\u06F1\u06F0\u06F0 \u0644\u0648\u0628\u06D0",
+    bdgA_games500: "\u06F5\u06F0\u06F0 \u0644\u0648\u0628\u06D0",
+    bdgA_level10: "\u062F\u0631\u062C\u0647 \u06F1\u06F0",
+    bdgA_level5: "\u062F\u0631\u062C\u0647 \u06F5",
+    bdgA_wins10: "\u06F1\u06F0 \u0628\u0631\u06CC\u0627\u0648\u06D0",
+    bdgA_wins100: "\u06F1\u06F0\u06F0 \u0628\u0631\u06CC\u0627\u0648\u06D0",
+    bdgA_wins50: "\u06F5\u06F0 \u0628\u0631\u06CC\u0627\u0648\u06D0",
+    bdgAd_clubber: "\u062F \u06CC\u0648\u06D0 \u0628\u0627\u0634\u06AB\u0627\u0647 \u063A\u0693\u06CC \u0634\u0626",
+    bdgAd_firstwin: "\u0644\u0648\u0645\u0693\u06CD \u0644\u0648\u0628\u0647 \u0648\u06AB\u067C\u0626",
+    bdgAd_games100: "\u06F1\u06F0\u06F0 \u0644\u0648\u0628\u06D0 \u0648\u06A9\u0693\u0626",
+    bdgAd_games500: "\u06F5\u06F0\u06F0 \u0644\u0648\u0628\u06D0 \u0648\u06A9\u0693\u0626",
+    bdgAd_level10: "\u062F\u0631\u062C\u06D0 \u06F1\u06F0 \u062A\u0647 \u0648\u0631\u0633\u06D0\u0696\u0626",
+    bdgAd_level5: "\u062F\u0631\u062C\u06D0 \u06F5 \u062A\u0647 \u0648\u0631\u0633\u06D0\u0696\u0626",
+    bdgAd_wins10: "\u06F1\u06F0 \u0644\u0648\u0628\u06D0 \u0648\u06AB\u067C\u0626",
+    bdgAd_wins100: "\u06F1\u06F0\u06F0 \u0644\u0648\u0628\u06D0 \u0648\u06AB\u067C\u0626",
+    bdgAd_wins50: "\u06F5\u06F0 \u0644\u0648\u0628\u06D0 \u0648\u06AB\u067C\u0626",
+    bdgAuto: "\u062F \u0644\u0648\u0628\u06D0 \u0646\u069A\u0627\u0646\u0648\u0646\u0647",
+    bdgErr: "\u06A9\u0693\u0646\u0647 \u0646\u0627\u06A9\u0627\u0645\u0647 \u0634\u0648\u0647",
+    bdgGrant: "\u0648\u0631\u06A9\u0648\u0644",
+    bdgM_champ: "\u0627\u062A\u0644",
+    bdgM_helper: "\u062F \u0644\u0648\u0628\u06D0 \u0645\u0631\u0633\u062A\u0646\u062F\u0648\u06CC",
+    bdgM_honor: "\u0627\u0641\u062A\u062E\u0627\u0631\u064A \u0644\u0648\u0628\u063A\u0627\u0693\u06CC",
+    bdgM_star: "\u062F \u0644\u0648\u0628\u06D0 \u0633\u062A\u0648\u0631\u06CC",
+    bdgM_vip: "\u0681\u0627\u0646\u06AB\u0693\u06CC \u063A\u0693\u06CC",
+    bdgManual: "\u0681\u0627\u0646\u06AB\u0693\u064A \u0646\u069A\u0627\u0646\u0648\u0646\u0647",
+    bdgMd_champ: "\u062F \u0681\u0627\u0646\u06AB\u0693\u064A \u0642\u0647\u0631\u0645\u0627\u0646\u06CD \u0646\u069A\u0647",
+    bdgMd_helper: "\u062F \u0646\u0648\u0631\u0648 \u0644\u0648\u0628\u063A\u0627\u0693\u0648 \u062F \u0645\u0631\u0633\u062A\u06D0 \u0644\u067E\u0627\u0631\u0647",
+    bdgMd_honor: "\u062F \u0627\u062F\u0645\u06CC\u0646 \u0644\u062E\u0648\u0627 \u062F \u0681\u0627\u0646\u06AB\u0693\u064A \u0648\u06CC\u0627\u0693 \u0646\u069A\u0647",
+    bdgMd_star: "\u062F \u0689\u06D0\u0631\u06D0 \u069A\u06D0 \u0644\u0648\u0628\u06D0 \u0644\u067E\u0627\u0631\u0647",
+    bdgMd_vip: "\u062F \u0648\u06CC\u0698\u0647 \u063A\u0693\u06CC\u062A\u0648\u0628 \u0646\u069A\u0647",
+    bdgNone: "\u062A\u0631 \u0627\u0648\u0633\u0647 \u0646\u069A\u0647 \u0646\u0634\u062A\u0647",
+    bdgRevoke: "\u0644\u0631\u06D0 \u06A9\u0648\u0644",
+    bdgSub: "\u0681\u0627\u0646\u06AB\u0693\u064A \u0646\u069A\u0627\u0646\u0648\u0646\u0647 \u062F \u0627\u062F\u0645\u06CC\u0646 \u0644\u062E\u0648\u0627 \u0648\u0631\u06A9\u0648\u0644 \u06A9\u06D0\u0696\u064A\u061B \u062F \u0644\u0648\u0628\u06D0 \u0646\u069A\u0627\u0646\u0648\u0646\u0647 \u062F \u0644\u0627\u0633\u062A\u0647 \u0631\u0627\u0648\u0693\u0646\u0648 \u0633\u0631\u0647 \u062E\u0644\u0627\u0635\u06D0\u0696\u064A.",
+    bdgTitle: "\u0646\u069A\u0627\u0646\u0648\u0646\u0647",
+    tnClubPts: "\u062F \u062F\u06D0 \u0627\u0648\u0646\u06CD \u0627\u0645\u062A\u06CC\u0627\u0632\u0648\u0646\u0647",
+    tnEmpty: "\u062F\u06D0 \u0627\u0648\u0646\u06CD \u0644\u0627 \u062A\u0631 \u0627\u0648\u0633\u0647 \u062F \u0628\u0627\u0634\u06AB\u0627\u0647\u0648\u0646\u0648 \u062A\u0631\u0645\u0646\u0681 \u0647\u06D0\u0685 \u0644\u0648\u0628\u0647 \u0646\u0647 \u062F\u0647 \u0634\u0648\u06D0",
+    tnLastChamp: "\u062F \u062A\u06D0\u0631\u06D0 \u0627\u0648\u0646\u06CD \u0642\u0647\u0631\u0645\u0627\u0646",
+    tnMembers: "\u063A\u0693\u064A",
+    tnNoChamp: "\u062F \u062A\u06D0\u0631\u06D0 \u0627\u0648\u0646\u06CD \u0642\u0647\u0631\u0645\u0627\u0646 \u0646\u0634\u062A\u0647",
+    tnOpenSub: "\u062F \u0628\u0627\u0634\u06AB\u0627\u0647\u0648\u0646\u0648 \u062A\u0631\u0645\u0646\u0681 \u0633\u06CC\u0627\u0644\u064A",
+    tnOpenTitle: "\u062F \u0627\u0648\u0646\u06CD \u062A\u0648\u0631\u0646\u0645\u0646\u062A",
+    tnPts: "\u0627\u0645\u062A\u06CC\u0627\u0632\u0647",
+    tnRibbon: "\u062F \u0627\u0648\u0646\u06CD \u0642\u0647\u0631\u0645\u0627\u0646",
+    tnRule: "\u062F \u0628\u0627\u0634\u06AB\u0627\u0647 \u067E\u0631 \u0628\u0627\u0634\u06AB\u0627\u0647 \u0647\u0631\u0647 \u0628\u0631\u06CC\u0627 \u06F3 \u0627\u0645\u062A\u06CC\u0627\u0632\u0647 \u062F\u0647. \u0627\u0648\u0646\u06CD \u062F \u06A9\u0627\u0628\u0644 \u062F \u0648\u062E\u062A \u0644\u0647 \u0645\u062E\u06D0 \u0634\u0645\u06D0\u0631\u0644 \u06A9\u06D0\u0696\u064A.",
+    tnTitle: "\u062F \u0628\u0627\u0634\u06AB\u0627\u0647\u0648\u0646\u0648 \u0627\u0648\u0646\u06CC\u0632\u0647 \u062A\u0648\u0631\u0646\u0645\u0646\u062A",
+    tnWeek: "\u0627\u0648\u0646\u06CD",
     avatars: { av1: "\u0627\u0635\u0644\u064A", av2: "\u062D\u0627\u062C\u064A \u0635\u0627\u062D\u0628", av3: "\u0644\u0646\u06AB\u06CD \u0648\u0627\u0644\u0627", av4: "\u067E\u06A9\u0648\u0644 \u0648\u0627\u0644\u0627", av5: "\u06A9\u0627\u06A9\u0627", av6: "\u0639\u0635\u0631\u064A \u0681\u0648\u0627\u0646", av7: "\u0633\u067E\u06CC\u0646 \u0696\u06CC\u0631\u06CC", av8: "\u062F\u0648\u062F\u06CC\u0632\u0647 \u0645\u06D0\u0631\u0645\u0646", av9: "\u0681\u0648\u0627\u0646\u0647 \u0627\u0646\u062C\u0644\u06CD", av10: "\u0628\u0648\u0631\u0642\u0647 \u0648\u0627\u0644\u0627", av11: "\u062A\u0646\u06A9\u06CC \u0681\u0648\u0627\u0646", av12: "\u0645\u0644\u0627 \u0635\u0627\u062D\u0628" }
   },
   fa: {
@@ -14541,6 +15043,54 @@ const STR = {
     selectedTag: "\u2713 \u0627\u0646\u062A\u062E\u0627\u0628 \u0634\u062F",
     suits: { H: "\u0644\u0627\u0644", D: "\u062E\u0634\u062A", C: "\u067E\u0634\u0647", S: "\u0642\u0631\u0647" },
     ranks: { A: "\u0622\u0633", K: "\u0634\u0627\u0647", Q: "\u0645\u0627\u062A\u06A9\u0647", J: "\u063A\u0644\u0627\u0645", T: "\u062F\u0647", "9": "\u0646\u0647", "8": "\u0647\u0634\u062A", "7": "\u0647\u0641\u062A", "6": "\u0634\u0634", "5": "\u067E\u0646\u062C", "4": "\u0686\u0647\u0627\u0631", "3": "\u0633\u0647", "2": "\u062F\u0648" },
+    bdgA_clubber: "\u0639\u0636\u0648 \u0628\u0627\u0634\u06AF\u0627\u0647",
+    bdgA_firstwin: "\u0627\u0648\u0644\u06CC\u0646 \u0628\u0631\u062F",
+    bdgA_games100: "\u06F1\u06F0\u06F0 \u0628\u0627\u0632\u06CC",
+    bdgA_games500: "\u06F5\u06F0\u06F0 \u0628\u0627\u0632\u06CC",
+    bdgA_level10: "\u0633\u0637\u062D \u06F1\u06F0",
+    bdgA_level5: "\u0633\u0637\u062D \u06F5",
+    bdgA_wins10: "\u06F1\u06F0 \u0628\u0631\u062F",
+    bdgA_wins100: "\u06F1\u06F0\u06F0 \u0628\u0631\u062F",
+    bdgA_wins50: "\u06F5\u06F0 \u0628\u0631\u062F",
+    bdgAd_clubber: "\u0639\u0636\u0648 \u06CC\u06A9 \u0628\u0627\u0634\u06AF\u0627\u0647 \u0634\u0648\u06CC\u062F",
+    bdgAd_firstwin: "\u0627\u0648\u0644\u06CC\u0646 \u0628\u0627\u0632\u06CC \u0631\u0627 \u0628\u0628\u0631\u06CC\u062F",
+    bdgAd_games100: "\u06F1\u06F0\u06F0 \u0628\u0627\u0632\u06CC \u0627\u0646\u062C\u0627\u0645 \u062F\u0647\u06CC\u062F",
+    bdgAd_games500: "\u06F5\u06F0\u06F0 \u0628\u0627\u0632\u06CC \u0627\u0646\u062C\u0627\u0645 \u062F\u0647\u06CC\u062F",
+    bdgAd_level10: "\u0628\u0647 \u0633\u0637\u062D \u06F1\u06F0 \u0628\u0631\u0633\u06CC\u062F",
+    bdgAd_level5: "\u0628\u0647 \u0633\u0637\u062D \u06F5 \u0628\u0631\u0633\u06CC\u062F",
+    bdgAd_wins10: "\u06F1\u06F0 \u0628\u0627\u0632\u06CC \u0628\u0628\u0631\u06CC\u062F",
+    bdgAd_wins100: "\u06F1\u06F0\u06F0 \u0628\u0627\u0632\u06CC \u0628\u0628\u0631\u06CC\u062F",
+    bdgAd_wins50: "\u06F5\u06F0 \u0628\u0627\u0632\u06CC \u0628\u0628\u0631\u06CC\u062F",
+    bdgAuto: "\u0646\u0634\u0627\u0646\u200C\u0647\u0627\u06CC \u0628\u0627\u0632\u06CC",
+    bdgErr: "\u0639\u0645\u0644\u06CC\u0627\u062A \u0646\u0627\u0645\u0648\u0641\u0642 \u0628\u0648\u062F",
+    bdgGrant: "\u0627\u0639\u0637\u0627",
+    bdgM_champ: "\u0642\u0647\u0631\u0645\u0627\u0646",
+    bdgM_helper: "\u06CC\u0627\u0648\u0631 \u0628\u0627\u0632\u06CC",
+    bdgM_honor: "\u0628\u0627\u0632\u06CC\u06A9\u0646 \u0627\u0641\u062A\u062E\u0627\u0631\u06CC",
+    bdgM_star: "\u0633\u062A\u0627\u0631\u0647\u0654 \u0628\u0627\u0632\u06CC",
+    bdgM_vip: "\u0639\u0636\u0648 \u0648\u06CC\u0698\u0647",
+    bdgManual: "\u0646\u0634\u0627\u0646\u200C\u0647\u0627\u06CC \u0648\u06CC\u0698\u0647",
+    bdgMd_champ: "\u0646\u0634\u0627\u0646 \u0648\u06CC\u0698\u0647\u0654 \u0642\u0647\u0631\u0645\u0627\u0646\u06CC",
+    bdgMd_helper: "\u0628\u0631\u0627\u06CC \u06A9\u0645\u06A9 \u0628\u0647 \u0633\u0627\u06CC\u0631 \u0628\u0627\u0632\u06CC\u06A9\u0646\u0627\u0646",
+    bdgMd_honor: "\u0646\u0634\u0627\u0646 \u0648\u06CC\u0698\u0647 \u0627\u0641\u062A\u062E\u0627\u0631 \u0627\u0632 \u0633\u0648\u06CC \u0627\u062F\u0645\u06CC\u0646",
+    bdgMd_star: "\u0628\u0631\u0627\u06CC \u0628\u0627\u0632\u06CC \u062F\u0631\u062E\u0634\u0627\u0646",
+    bdgMd_vip: "\u0646\u0634\u0627\u0646 \u0639\u0636\u0648\u06CC\u062A \u0648\u06CC\u0698\u0647",
+    bdgNone: "\u0647\u0646\u0648\u0632 \u0646\u0634\u0627\u0646\u06CC \u0646\u062F\u0627\u0631\u06CC\u062F",
+    bdgRevoke: "\u062D\u0630\u0641",
+    bdgSub: "\u0646\u0634\u0627\u0646\u200C\u0647\u0627\u06CC \u0648\u06CC\u0698\u0647 \u0631\u0627 \u0627\u062F\u0645\u06CC\u0646 \u0645\u06CC\u200C\u062F\u0647\u062F\u061B \u0646\u0634\u0627\u0646\u200C\u0647\u0627\u06CC \u0628\u0627\u0632\u06CC \u0628\u0627 \u062F\u0633\u062A\u0627\u0648\u0631\u062F \u0628\u0627\u0632 \u0645\u06CC\u200C\u0634\u0648\u0646\u062F.",
+    bdgTitle: "\u0646\u0634\u0627\u0646\u200C\u0647\u0627",
+    tnClubPts: "\u0627\u0645\u062A\u06CC\u0627\u0632 \u0627\u06CC\u0646 \u0647\u0641\u062A\u0647",
+    tnEmpty: "\u0627\u06CC\u0646 \u0647\u0641\u062A\u0647 \u0647\u0646\u0648\u0632 \u0628\u0627\u0632\u06CC\u200C\u0627\u06CC \u0645\u06CC\u0627\u0646 \u0628\u0627\u0634\u06AF\u0627\u0647\u200C\u0647\u0627 \u062B\u0628\u062A \u0646\u0634\u062F\u0647",
+    tnLastChamp: "\u0642\u0647\u0631\u0645\u0627\u0646 \u0647\u0641\u062A\u0647 \u06AF\u0630\u0634\u062A\u0647",
+    tnMembers: "\u0639\u0636\u0648",
+    tnNoChamp: "\u0642\u0647\u0631\u0645\u0627\u0646 \u0647\u0641\u062A\u0647 \u06AF\u0630\u0634\u062A\u0647\u200C\u0627\u06CC \u0648\u062C\u0648\u062F \u0646\u062F\u0627\u0631\u062F",
+    tnOpenSub: "\u0631\u0642\u0627\u0628\u062A \u0645\u06CC\u0627\u0646 \u0628\u0627\u0634\u06AF\u0627\u0647\u200C\u0647\u0627",
+    tnOpenTitle: "\u062A\u0648\u0631\u0646\u0645\u0646\u062A \u0647\u0641\u062A\u06AF\u06CC",
+    tnPts: "\u0627\u0645\u062A\u06CC\u0627\u0632",
+    tnRibbon: "\u0642\u0647\u0631\u0645\u0627\u0646 \u0647\u0641\u062A\u0647",
+    tnRule: "\u0647\u0631 \u0628\u0631\u062F \u0628\u0627\u0634\u06AF\u0627\u0647 \u0628\u0631 \u0628\u0627\u0634\u06AF\u0627\u0647 \u06F3 \u0627\u0645\u062A\u06CC\u0627\u0632 \u062F\u0627\u0631\u062F. \u0647\u0641\u062A\u0647 \u0628\u0631 \u0627\u0633\u0627\u0633 \u0648\u0642\u062A \u06A9\u0627\u0628\u0644 \u062D\u0633\u0627\u0628 \u0645\u06CC\u200C\u0634\u0648\u062F.",
+    tnTitle: "\u062A\u0648\u0631\u0646\u0645\u0646\u062A \u0647\u0641\u062A\u06AF\u06CC \u0628\u0627\u0634\u06AF\u0627\u0647\u200C\u0647\u0627",
+    tnWeek: "\u0647\u0641\u062A\u0647",
     avatars: { av1: "\u067E\u06CC\u0634\u200C\u0641\u0631\u0636", av2: "\u062D\u0627\u062C\u06CC \u0635\u0627\u062D\u0628", av3: "\u0644\u0646\u06AF\u06CC\u200C\u0648\u0627\u0644\u0627", av4: "\u067E\u06A9\u0648\u0644\u200C\u0648\u0627\u0644\u0627", av5: "\u06A9\u0627\u06A9\u0647", av6: "\u062C\u0648\u0627\u0646 \u0645\u062F\u0631\u0646", av7: "\u0631\u06CC\u0634\u200C\u0633\u0641\u06CC\u062F", av8: "\u0628\u0627\u0646\u0648\u06CC \u0633\u0646\u062A\u06CC", av9: "\u062F\u062E\u062A\u0631 \u062C\u0648\u0627\u0646", av10: "\u0628\u0631\u0642\u0639\u0647\u200C\u067E\u0648\u0634", av11: "\u0646\u0648\u062C\u0648\u0627\u0646", av12: "\u0645\u0644\u0627 \u0635\u0627\u062D\u0628" }
   },
   en: {
@@ -15083,6 +15633,54 @@ const STR = {
     selectedTag: "\u2713 Selected",
     suits: { H: "Hearts", D: "Diamonds", C: "Clubs", S: "Spades" },
     ranks: { A: "Ace", K: "King", Q: "Queen", J: "Jack", T: "Ten", "9": "Nine", "8": "Eight", "7": "Seven", "6": "Six", "5": "Five", "4": "Four", "3": "Three", "2": "Two" },
+    bdgA_clubber: "Club member",
+    bdgA_firstwin: "First win",
+    bdgA_games100: "100 matches",
+    bdgA_games500: "500 matches",
+    bdgA_level10: "Level 10",
+    bdgA_level5: "Level 5",
+    bdgA_wins10: "10 wins",
+    bdgA_wins100: "100 wins",
+    bdgA_wins50: "50 wins",
+    bdgAd_clubber: "Join a club",
+    bdgAd_firstwin: "Win your first match",
+    bdgAd_games100: "Play 100 matches",
+    bdgAd_games500: "Play 500 matches",
+    bdgAd_level10: "Reach level 10",
+    bdgAd_level5: "Reach level 5",
+    bdgAd_wins10: "Win 10 matches",
+    bdgAd_wins100: "Win 100 matches",
+    bdgAd_wins50: "Win 50 matches",
+    bdgAuto: "Achievements",
+    bdgErr: "Action failed",
+    bdgGrant: "Grant",
+    bdgM_champ: "Champion",
+    bdgM_helper: "Game Helper",
+    bdgM_honor: "Honorary Player",
+    bdgM_star: "Game Star",
+    bdgM_vip: "VIP",
+    bdgManual: "Special",
+    bdgMd_champ: "A special championship mark",
+    bdgMd_helper: "For helping other players",
+    bdgMd_honor: "A special honour from the admin",
+    bdgMd_star: "For outstanding play",
+    bdgMd_vip: "Special membership",
+    bdgNone: "No badges yet",
+    bdgRevoke: "Revoke",
+    bdgSub: "Special badges are granted by the admin; achievement badges unlock through play.",
+    bdgTitle: "Badges",
+    tnClubPts: "This week's points",
+    tnEmpty: "No club-vs-club matches this week yet",
+    tnLastChamp: "Last week's champion",
+    tnMembers: "members",
+    tnNoChamp: "No champion last week",
+    tnOpenSub: "Club against club",
+    tnOpenTitle: "Weekly tournament",
+    tnPts: "pts",
+    tnRibbon: "Weekly champion",
+    tnRule: "Each club-vs-club win earns 3 points. The week follows Kabul time.",
+    tnTitle: "Weekly Club Tournament",
+    tnWeek: "Week",
     avatars: { av1: "Default", av2: "Haji Sahib", av3: "Turban Man", av4: "Pakol Man", av5: "Kaka", av6: "Modern Youth", av7: "White Beard", av8: "Traditional Lady", av9: "Young Girl", av10: "Burqa Lady", av11: "Teenager", av12: "Mullah Sahib" }
   }
 };
@@ -20898,6 +21496,7 @@ function renderProfileStats() {
   if (c) c.textContent = clubData && clubData.club && clubData.club.name || T("pfStatNone");
   const cn = $("#pf-stat-country");
   if (cn) cn.textContent = profile.country ? dispCountry(profile.country) : "";
+  renderProfileBadges();
 }
 function requestStats() {
   connectSocial();
@@ -20916,6 +21515,305 @@ function paintMatchStats() {
   const fill = $("#pf-xp-fill");
   if (fill) fill.style.width = Math.max(0, Math.min(100, (st.levelXp || 0) / Math.max(1, st.levelNeed || 1) * 100)) + "%";
 }
+let myBadgesCache = [];
+const BADGE_ICONS = {
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a2 2 0 0 0 2 3M16 6h3a2 2 0 0 1-2 3"/><path d="M12 13v3M9 20h6M9.5 16h5v4h-5z"/>',
+  star: '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.6l-5.3 2.9 1.2-6L3.4 9.3l6-.7z"/>',
+  crown: '<path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/><path d="M5 19h14"/>',
+  target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>',
+  shield: '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/>',
+  flag: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
+  laurel: '<path d="M6.8 19.6C5 15.6 5.2 10.2 7.8 6.2M17.2 19.6c1.8-4 1.6-9.4-1-13.4"/><path d="M7.6 9.5C6.2 9.3 5 8.5 4.4 7.4M8 13c-1.4-.1-2.7-.8-3.4-1.9M8.9 16.3c-1.4 0-2.8-.6-3.6-1.6M16.4 9.5c1.4-.2 2.6-1 3.2-2.1M16 13c1.4-.1 2.7-.8 3.4-1.9M15.1 16.3c1.4 0 2.8-.6 3.6-1.6"/>',
+  burst: '<path d="M12 2.5l2 3.3 3.8-.9.4 3.8 3.6 1.5-2.1 3.2 2.1 3.2-3.6 1.5-.4 3.8-3.8-.9-2 3.3-2-3.3-3.8.9-.4-3.8-3.6-1.5 2.1-3.2-2.1-3.2 3.6-1.5.4-3.8 3.8.9z"/>',
+  gem: '<path d="M7 4h10l4 5-9 11L3 9z"/><path d="M3 9h18M9 4l-2 5 5 11 5-11-2-5"/>',
+  guard: '<path d="M12 3l6.5 2.6v4.8c0 4-2.7 7-6.5 8.6-3.8-1.6-6.5-4.6-6.5-8.6V5.6z"/><path d="M8 12.5l2.2 2.2c.6.6 1.5.6 2.1 0l1.7-1.7 1.7 1.7"/>'
+};
+const BADGE_AUTO = [
+  { id: "firstwin", icon: "flag", metric: "w", need: 1 },
+  { id: "wins10", icon: "target", metric: "w", need: 10 },
+  { id: "wins50", icon: "star", metric: "w", need: 50 },
+  { id: "wins100", icon: "crown", metric: "w", need: 100 },
+  { id: "games100", icon: "shield", metric: "p", need: 100 },
+  { id: "games500", icon: "trophy", metric: "p", need: 500 },
+  { id: "level5", icon: "star", metric: "level", need: 5 },
+  { id: "level10", icon: "crown", metric: "level", need: 10 },
+  { id: "clubber", icon: "flag", metric: "club", need: 1 }
+];
+const BADGE_MANUAL = [
+  { id: "honor", icon: "laurel" },
+  { id: "star", icon: "burst" },
+  { id: "champ", icon: "crown" },
+  { id: "vip", icon: "gem" },
+  { id: "helper", icon: "guard" }
+];
+function bdgSvg(icon) {
+  return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (BADGE_ICONS[icon] || "") + "</svg>";
+}
+function bdgMetric(metric, st, hasClub) {
+  if (metric === "club") return hasClub ? 1 : 0;
+  if (metric === "level") return st && st.level || 1;
+  return st && st[metric] || 0;
+}
+function autoBadgeStates(st, hasClub) {
+  return BADGE_AUTO.map((b) => {
+    const cur = bdgMetric(b.metric, st, hasClub);
+    const earned = cur >= b.need;
+    return {
+      id: b.id,
+      icon: b.icon,
+      name: T("bdgA_" + b.id),
+      desc: T("bdgAd_" + b.id),
+      earned,
+      special: false,
+      prog: earned ? "" : Math.min(cur, b.need) + "/" + b.need
+    };
+  });
+}
+function manualBadgeStates(list) {
+  const have = Array.isArray(list) ? list : [];
+  return BADGE_MANUAL.map((b) => ({
+    id: b.id,
+    icon: b.icon,
+    name: T("bdgM_" + b.id),
+    desc: T("bdgMd_" + b.id),
+    earned: have.indexOf(b.id) !== -1,
+    special: true,
+    prog: ""
+  }));
+}
+function myManualBadges() {
+  return Array.isArray(myBadgesCache) ? myBadgesCache : [];
+}
+function badgeItemEl(b, opts) {
+  const sm = !!(opts && opts.sm);
+  const el = document.createElement("div");
+  el.className = "bdg-item" + (b.earned ? "" : " locked");
+  el.title = b.desc || "";
+  const medal = document.createElement("span");
+  medal.className = "bdg-medal" + (b.special ? " special" : "") + (b.earned ? "" : " locked") + (sm ? " sm" : "");
+  medal.innerHTML = bdgSvg(b.icon);
+  el.appendChild(medal);
+  const nm = document.createElement("div");
+  nm.className = "bdg-name";
+  nm.textContent = b.name || "";
+  el.appendChild(nm);
+  if (!b.earned && b.prog) {
+    const pr = document.createElement("span");
+    pr.className = "bdg-prog";
+    pr.textContent = b.prog;
+    el.appendChild(pr);
+  }
+  return el;
+}
+function renderProfileBadges() {
+  if (!$("#pf-badges")) return;
+  const setTxt = (sel, txt) => {
+    const el = $(sel);
+    if (el) el.textContent = txt;
+  };
+  setTxt("#pf-badges-title", T("bdgTitle"));
+  setTxt("#pf-badges-sub", T("bdgSub"));
+  setTxt("#pf-badges-manual-h", T("bdgManual"));
+  setTxt("#pf-badges-auto-h", T("bdgAuto"));
+  const manual = $("#pf-badges-manual");
+  const auto = $("#pf-badges-auto");
+  if (manual) {
+    manual.innerHTML = "";
+    manual.className = "bdg-grid";
+    manualBadgeStates(myManualBadges()).forEach((b) => manual.appendChild(badgeItemEl(b)));
+  }
+  if (auto) {
+    auto.innerHTML = "";
+    auto.className = "bdg-grid";
+    const st = statsCache && statsCache.stats || null;
+    const hasClub = !!(clubData && clubData.club && clubData.club.name);
+    autoBadgeStates(st, hasClub).forEach((b) => auto.appendChild(badgeItemEl(b)));
+  }
+}
+function renderPviewBadges(person, stats) {
+  const row = $("#pv-badges-row");
+  if (!row) return;
+  const h = $("#pv-badges-h");
+  if (h) h.textContent = T("bdgTitle");
+  row.innerHTML = "";
+  const p = person || {};
+  const st = Object.assign({}, stats || p.stats || {}, { level: p.level || 1 });
+  const earned = manualBadgeStates(p.badges).concat(autoBadgeStates(st, !!p.club)).filter((b) => b.earned);
+  if (!earned.length) {
+    const e = document.createElement("div");
+    e.className = "bdg-empty";
+    e.textContent = T("bdgNone");
+    row.appendChild(e);
+    return;
+  }
+  earned.forEach((b) => row.appendChild(badgeItemEl(b, { sm: true })));
+}
+function renderAdetailBadges(p) {
+  const box = $("#ad-badges-list");
+  if (!box) return;
+  const t = $("#ad-badges-title");
+  if (t) t.textContent = T("bdgTitle");
+  box.innerHTML = "";
+  const have = p && Array.isArray(p.badges) ? p.badges : [];
+  BADGE_MANUAL.forEach((b) => {
+    const on = have.indexOf(b.id) !== -1;
+    const row = document.createElement("div");
+    row.className = "bdg-admrow";
+    const medal = document.createElement("span");
+    medal.className = "bdg-medal special" + (on ? "" : " locked");
+    medal.innerHTML = bdgSvg(b.icon);
+    const nm = document.createElement("div");
+    nm.className = "bdg-nm";
+    nm.textContent = T("bdgM_" + b.id);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "bdg-btn" + (on ? " revoke" : "");
+    btn.textContent = on ? T("bdgRevoke") : T("bdgGrant");
+    btn.onclick = () => admToggleBadge(p, b.id, on ? "revoke" : "grant");
+    row.appendChild(medal);
+    row.appendChild(nm);
+    row.appendChild(btn);
+    box.appendChild(row);
+  });
+  const msg = document.createElement("div");
+  msg.className = "bdg-msg";
+  msg.id = "ad-badges-msg";
+  box.appendChild(msg);
+}
+async function admToggleBadge(p, badge, op) {
+  if (!p || !p.uid) return;
+  const msg = $("#ad-badges-msg");
+  if (msg) msg.textContent = "";
+  const res = await admApi("/admin/badge", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ uid: p.uid, badge, op })
+  });
+  if (!res.ok || !res.j || !res.j.ok) {
+    renderAdetailBadges(p);
+    const m2 = $("#ad-badges-msg");
+    if (m2) m2.textContent = T("bdgErr");
+    return;
+  }
+  p.badges = Array.isArray(res.j.badges) ? res.j.badges : [];
+  renderAdetailBadges(p);
+}
+let tourneyCache = null;
+function tnSvgCrown() {
+  return '<svg class="tn-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/><path d="M5 19h14"/></svg>';
+}
+function tnEmblemEl(emblem, name) {
+  if (typeof clEmblemEl === "function") return clEmblemEl(emblem, 34);
+  const s = document.createElement("span");
+  s.className = "tn-em";
+  s.textContent = (name || "?").charAt(0);
+  return s;
+}
+function requestTourney() {
+  connectSocial();
+  socialSend({ type: "s-tourney" });
+}
+function openTourney() {
+  $("#scr-clubs").classList.add("hidden");
+  $("#scr-tourney").classList.remove("hidden");
+  renderTourney();
+  requestTourney();
+}
+function closeTourney() {
+  $("#scr-tourney").classList.add("hidden");
+  openClubs();
+}
+function renderTourney() {
+  const t = tourneyCache || { week: "", rows: [], champ: null, myCid: null };
+  const setTxt = (sel, txt) => {
+    const el = $(sel);
+    if (el) el.textContent = txt;
+  };
+  setTxt("#tn-title", T("tnTitle"));
+  setTxt("#tn-week", t.week ? T("tnWeek") + ": " + t.week : "");
+  setTxt("#tn-rule", T("tnRule"));
+  const champ = $("#tn-champ");
+  if (champ) {
+    champ.innerHTML = "";
+    if (t.champ) {
+      const ic = document.createElement("span");
+      ic.className = "tn-crown";
+      ic.innerHTML = tnSvgCrown();
+      const meta = document.createElement("div");
+      const l = document.createElement("div");
+      l.className = "tn-champ-l";
+      l.textContent = T("tnLastChamp");
+      const nm = document.createElement("div");
+      nm.className = "tn-champ-n";
+      nm.textContent = t.champ.name || "";
+      const pt = document.createElement("div");
+      pt.className = "tn-champ-p";
+      pt.textContent = String(t.champ.pts || 0) + " " + T("tnPts");
+      meta.appendChild(l);
+      meta.appendChild(nm);
+      meta.appendChild(pt);
+      champ.appendChild(ic);
+      champ.appendChild(meta);
+    } else {
+      const none = document.createElement("div");
+      none.className = "tn-champ-none";
+      none.textContent = T("tnNoChamp");
+      champ.appendChild(none);
+    }
+  }
+  const list = $("#tn-list");
+  if (!list) return;
+  list.innerHTML = "";
+  const rows = Array.isArray(t.rows) ? t.rows : [];
+  if (!rows.length) {
+    list.appendChild(frEmpty(T("tnEmpty"), true));
+    return;
+  }
+  rows.forEach((r, i) => {
+    const row = document.createElement("div");
+    row.className = "tn-row" + (t.myCid && r.cid === t.myCid ? " me" : "");
+    const rank = document.createElement("span");
+    rank.className = "tn-rank";
+    rank.textContent = String(i + 1);
+    const meta = document.createElement("div");
+    meta.className = "tn-meta";
+    const nm = document.createElement("div");
+    nm.className = "fr-name";
+    nm.textContent = r.name || "";
+    const sub = document.createElement("div");
+    sub.className = "tn-sub";
+    sub.textContent = String(r.members || 0) + " " + T("tnMembers");
+    meta.appendChild(nm);
+    meta.appendChild(sub);
+    const pts = document.createElement("span");
+    pts.className = "tn-pts";
+    pts.textContent = String(r.pts || 0) + " " + T("tnPts");
+    row.appendChild(rank);
+    row.appendChild(tnEmblemEl(r.emblem, r.name));
+    row.appendChild(meta);
+    row.appendChild(pts);
+    list.appendChild(row);
+  });
+}
+function renderTourneyEntry() {
+  const a = $("#tn-open-title");
+  if (a) a.textContent = T("tnOpenTitle");
+  const b = $("#tn-open-sub");
+  if (b) b.textContent = T("tnOpenSub");
+}
+function paintClubTourney(club) {
+  const rib = $("#cp-ribbon");
+  if (rib) {
+    rib.innerHTML = tnSvgCrown() + "<span>" + T("tnRibbon") + "</span>";
+    rib.classList.toggle("hidden", !(club && club.champ));
+  }
+  const pts = $("#cp-tpts");
+  if (pts) pts.textContent = club ? T("tnClubPts") + ": " + String(club.tpts || 0) : "";
+}
+const tnOpenBtn = $("#btn-tourney");
+if (tnOpenBtn) tnOpenBtn.onclick = () => openTourney();
+const tnBackBtn = $("#tn-back");
+if (tnBackBtn) tnBackBtn.onclick = () => closeTourney();
 function openLeaders() {
   $("#scr-profile").classList.add("hidden");
   $("#scr-leaders").classList.remove("hidden");
@@ -21495,6 +22393,7 @@ async function openAdetail(uid) {
       lb.appendChild(row);
     });
   } else lb.innerHTML = '<div class="fr-empty">\u062A\u0631\u0627\u06A9\u0646\u0634\u06CC \u062B\u0628\u062A \u0646\u0634\u062F\u0647</div>';
+  renderAdetailBadges(ADM.player);
 }
 $("#btn-adetail-back").onclick = () => {
   $("#scr-adetail").classList.add("hidden");
@@ -21892,6 +22791,7 @@ function onSocialMsg(m) {
     setToreSetting("invisible", false);
     renderMyId();
     if (m.wallet) setWallet(m.wallet);
+    if (Array.isArray(m.badges)) myBadgesCache = m.badges;
     if (m.event !== void 0) setSocialEvent(m.event);
     if (m.refs) setRefs(m.refs);
     if (m.notifs) {
@@ -21943,8 +22843,14 @@ function onSocialMsg(m) {
     if (dmPeer && dmPeer.id === m.id) paintDmPeer();
   } else if (m.type === "s-stats") {
     statsCache = { stats: m.stats || null, leaders: m.leaders || [] };
+    if (Array.isArray(m.badges)) myBadgesCache = m.badges;
     paintMatchStats();
     renderLeaders();
+    renderProfileBadges();
+  } else if (m.type === "s-tourney") {
+    tourneyCache = m;
+    renderTourney();
+    renderTourneyEntry();
   } else if (m.type === "s-watch-state") {
     if (m.code) spectateGame(m.code);
   } else if (m.type === "s-notif") {
@@ -22978,6 +23884,7 @@ function renderPview(d) {
     closePlayerProfile();
     requestWatch(target);
   } : null;
+  renderPviewBadges(d);
 }
 function renderPviewFriendBtn() {
   const btn = $("#btn-pv2-friend");
@@ -24401,6 +25308,7 @@ function renderClubPage() {
   $("#cp-name").textContent = c.name || "";
   $("#cp-id-num").textContent = c.cid;
   $("#cp-count").textContent = T("clMemberCount", c.count);
+  paintClubTourney(c);
   const vsRec = c.clubSummary && c.clubSummary.vsRecord || c.vsRecord || null;
   let vsW = 0, vsL = 0;
   if (vsRec) Object.keys(vsRec).forEach((k) => {
@@ -24548,6 +25456,7 @@ function renderClubs() {
   $("#cl-podium-title").textContent = T("clTopClubs");
   $("#cl-search-title").textContent = T("clSearchTitle");
   $("#btn-cl-search").textContent = T("clSearchBtn");
+  renderTourneyEntry();
   $("#cl-search-inp").placeholder = T("clSearchPh");
   $("#cl-members-title").textContent = T("clMembers");
   $("#cl-chat-title").textContent = T("clChatTitle");
