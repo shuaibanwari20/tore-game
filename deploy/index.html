@@ -1067,7 +1067,7 @@
      behind a dark emerald veil, its own scroll. Opened from the
      bottom nav (and from the lobby's friends button); it floats
      above home/lobby/table without disturbing the game screens. */
-  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-pview, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders, #scr-shop, #scr-playlist, #scr-admin, #scr-adetail {
+  #scr-friends, #scr-dm, #scr-chats, #scr-profile, #scr-pview, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders, #scr-shop, #scr-playlist, #scr-admin, #scr-adetail, #scr-tourney {
     position: fixed; inset: 0; height: 100vh; height: 100dvh; height: var(--app-h, 100dvh); z-index: 30;
     overflow-x: hidden;
     /* The home screen's dark emerald veil, without the carpet photo:
@@ -1127,7 +1127,7 @@
   #scr-friends { display: flex; flex-direction: column; overflow-y: hidden; }
   /* Chat + profile pages (owner order 2026-11-08): same family as the
      friends screen — scrolling content, bottom nav pinned at the foot. */
-  #scr-chats, #scr-profile, #scr-pview, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders, #scr-shop, #scr-playlist, #scr-admin, #scr-adetail { display: flex; flex-direction: column; overflow-y: hidden; }
+  #scr-chats, #scr-profile, #scr-pview, #scr-clubs, #scr-clubpage, #scr-clubmembers, #scr-clubseatreqs, #scr-picker, #scr-leaders, #scr-shop, #scr-playlist, #scr-admin, #scr-adetail, #scr-tourney { display: flex; flex-direction: column; overflow-y: hidden; }
   .fr-scroll { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; width: 100%; }
   #scr-friends .hm-nav, #scr-chats .hm-nav, #scr-profile .hm-nav, #scr-clubs .hm-nav, #scr-clubpage .hm-nav, #scr-clubmembers .hm-nav, #scr-clubseatreqs .hm-nav, #scr-picker .hm-nav, #scr-leaders .hm-nav, #scr-shop .hm-nav, #scr-admin .hm-nav { margin: 0; flex: none; width: 100%; }
   /* chat list rows: the whole row is the tap target into the DM view */
@@ -3680,6 +3680,67 @@
   .mp-eq i:nth-child(1) { height: 60%; } .mp-eq i:nth-child(2) { height: 100%; animation-delay: .25s; } .mp-eq i:nth-child(3) { height: 45%; animation-delay: .5s; }
   #mplayer.paused .mp-eq i, .mp-row.cur.paused .mp-eq i { animation-play-state: paused; }
   @keyframes mpEq { 0%, 100% { transform: scaleY(.5); } 50% { transform: scaleY(1); } }
+/* ---- badges (نشان‌ها) ---- */
+.bdg-sec{margin:14px 0 6px;padding:12px;border-radius:14px;background:linear-gradient(180deg,#2a1433,#1c0d24);border:1px solid #4a2a57;color:#f3e9d2}
+.bdg-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.bdg-title{margin:0;font-size:15px;font-weight:700;color:#e8c464;letter-spacing:.2px}
+.bdg-sub{font-size:11px;line-height:1.5;color:#b9a3c4;margin:3px 0 0}
+.bdg-group{font-size:12px;font-weight:700;color:#c9b6d6;margin:12px 0 8px}
+.bdg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:12px 8px}
+.bdg-row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
+.bdg-item{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;min-width:0}
+.bdg-medal{position:relative;width:58px;height:58px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;background:radial-gradient(circle at 35% 30%,#ffe9a3 0%,#d9a93a 45%,#8a5d12 100%);box-shadow:0 2px 0 #5a3a08,0 4px 10px rgba(0,0,0,.35);color:#3b2406}
+.bdg-medal svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.bdg-medal.special{box-shadow:0 0 0 3px #1c0d24,0 0 0 5px #e8c464,0 4px 12px rgba(232,196,100,.35)}
+.bdg-medal.locked{background:radial-gradient(circle at 35% 30%,#8a8190 0%,#4c4553 60%,#2e2834 100%);color:#9a909f;box-shadow:inset 0 0 0 1px #5a5262,0 2px 6px rgba(0,0,0,.3);filter:grayscale(.6) brightness(.85)}
+.bdg-medal.sm{width:38px;height:38px}
+.bdg-medal.sm svg{width:19px;height:19px}
+.bdg-name{font-size:11px;line-height:1.3;color:#f3e9d2;max-width:84px;overflow-wrap:anywhere}
+.bdg-item.locked .bdg-name{color:#9a909f}
+.bdg-prog{font-size:10px;color:#e8c464;background:rgba(0,0,0,.3);border-radius:8px;padding:1px 7px}
+.bdg-empty{font-size:12px;color:#b9a3c4;padding:6px 0}
+.bdg-admin{display:flex;flex-direction:column;gap:8px}
+.bdg-admrow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:12px;background:rgba(0,0,0,.25);border:1px solid #4a2a57}
+.bdg-admrow .bdg-medal{width:40px;height:40px}
+.bdg-admrow .bdg-medal svg{width:20px;height:20px}
+.bdg-admrow .bdg-nm{flex:1;min-width:0;font-size:13px}
+.bdg-btn{border:0;border-radius:10px;padding:7px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;background:linear-gradient(180deg,#f0cd6a,#b9862a);color:#2a1606;box-shadow:0 2px 0 #6b4a12}
+.bdg-btn.revoke{background:linear-gradient(180deg,#8a7f93,#5b5165);color:#f3e9d2;box-shadow:0 2px 0 #2e2834}
+.bdg-btn:active{transform:translateY(1px)}
+.bdg-btn:disabled{opacity:.55;cursor:default}
+.bdg-msg{font-size:12px;color:#ff9e9e;min-height:16px;margin-top:4px}
+
+/* ---- weekly club tournament (تورنمنت هفتگی باشگاه‌ها) ---- */
+.tn-ic{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.tn-open{display:flex;align-items:center;gap:10px;width:100%;margin:10px 0;padding:12px;border-radius:14px;border:1px solid #6a3d7a;background:linear-gradient(135deg,#3a1846,#22102c);color:#f3e9d2;font:inherit;text-align:start;cursor:pointer}
+.tn-open .tn-ic{width:30px;height:30px;color:#e8c464}
+.tn-open-t{display:block;font-size:14px;font-weight:700;color:#e8c464}
+.tn-open-s{display:block;font-size:11px;color:#b9a3c4;margin-top:2px}
+#scr-tourney{min-height:100%;background:linear-gradient(180deg,#2a1433,#130818);color:#f3e9d2}
+.tn-head{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.tn-back{border:0;background:rgba(255,255,255,.06);color:#e8c464;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.tn-back .tn-ic{width:20px;height:20px}
+.tn-title{margin:0;flex:1;font-size:17px;color:#e8c464}
+.tn-week{font-size:11px;color:#b9a3c4}
+.tn-body{padding:0 12px 24px}
+.tn-champ{display:flex;align-items:center;gap:12px;padding:14px;border-radius:16px;background:linear-gradient(135deg,#4a2a0a,#2a1606);border:1px solid #d9a93a;box-shadow:0 0 0 3px rgba(232,196,100,.12)}
+.tn-crown{color:#ffe08a;display:flex}
+.tn-crown .tn-ic{width:44px;height:44px;stroke-width:1.6;fill:rgba(255,224,138,.15)}
+.tn-champ-l{font-size:11px;color:#f0cd6a}
+.tn-champ-n{font-size:17px;font-weight:700;color:#fff4d6;overflow-wrap:anywhere}
+.tn-champ-p{font-size:11px;color:#e2c98a}
+.tn-champ-none{font-size:12px;color:#c9b6d6}
+.tn-rule{font-size:12px;line-height:1.7;color:#c9b6d6;margin:12px 2px}
+.tn-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;margin-bottom:6px;background:rgba(0,0,0,.2);border:1px solid #3e2450}
+.tn-row.me{outline:2px solid #e8c464;background:rgba(232,196,100,.12)}
+.tn-rank{width:24px;text-align:center;font-weight:700;color:#e8c464}
+.tn-em{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#3a1846;color:#e8c464;font-weight:700;flex:0 0 34px}
+.tn-meta{flex:1;min-width:0}
+.tn-sub{font-size:11px;color:#b9a3c4}
+.tn-pts{font-weight:700;color:#e8c464;font-size:13px;white-space:nowrap}
+.tn-ribbon{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:linear-gradient(180deg,#f0cd6a,#b9862a);color:#2a1606;font-size:11px;font-weight:700;margin-inline-start:8px;vertical-align:middle}
+.tn-ribbon .tn-ic{width:14px;height:14px;stroke-width:2;stroke:#2a1606}
+.tn-cpts{font-size:12px;color:#e8c464;margin-top:4px}
 </style>
 </head>
 <body>
@@ -4239,6 +4300,18 @@
           <div class="pf-stat"><span class="pf-stat-lbl" id="pf-stat-level-lbl">کچه</span><span class="pf-stat-val" id="pf-stat-level">1</span></div>
           <div class="pf-xpbar"><div class="pf-xpfill" id="pf-xp-fill"></div></div>
         </div>
+<section class="bdg-sec" id="pf-badges" aria-labelledby="pf-badges-title">
+  <div class="bdg-head">
+    <div>
+      <h3 class="bdg-title" id="pf-badges-title"></h3>
+      <p class="bdg-sub" id="pf-badges-sub"></p>
+    </div>
+  </div>
+  <div class="bdg-group" id="pf-badges-manual-h"></div>
+  <div id="pf-badges-manual"></div>
+  <div class="bdg-group" id="pf-badges-auto-h"></div>
+  <div id="pf-badges-auto"></div>
+</section>
         <button type="button" class="pf-leadersbtn" id="btn-leaders">د اونۍ غوره لوبغاړي</button>
         <button type="button" class="pf-leadersbtn hidden" id="btn-admin">ادمین</button>
         <button type="button" id="btn-logout" class="st-logout" aria-label="له حسابه وتل">
@@ -4320,6 +4393,10 @@
           <div class="pf-stat"><span class="pf-stat-lbl" id="pv2-stat-won-lbl">ګټلي</span><span class="pf-stat-val" id="pv2-stat-won">…</span></div>
           <div class="pf-stat"><span class="pf-stat-lbl" id="pv2-stat-lost-lbl">بایللي</span><span class="pf-stat-val" id="pv2-stat-lost">…</span></div>
         </div>
+<section class="bdg-sec" id="pv-badges">
+  <div class="bdg-group" id="pv-badges-h"></div>
+  <div class="bdg-row" id="pv-badges-row"></div>
+</section>
       </div>
     </div>
   </div>
@@ -4386,6 +4463,21 @@
       <span class="nl" id="ldnav-chat-lbl">چت</span>
     </button>
   </nav>
+</section>
+
+<section id="scr-tourney" class="hidden" aria-labelledby="tn-title">
+  <header class="tn-head">
+    <button type="button" class="tn-back" id="tn-back" aria-label="back">
+      <svg class="tn-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
+    <h2 class="tn-title" id="tn-title"></h2>
+    <span class="tn-week" id="tn-week"></span>
+  </header>
+  <div class="tn-body">
+    <div class="tn-champ" id="tn-champ"></div>
+    <p class="tn-rule" id="tn-rule"></p>
+    <div id="tn-list"></div>
+  </div>
 </section>
 
 <!-- ======== SHOP (پلورنځی — up47 money system, phases 1+2) ========
@@ -4530,6 +4622,10 @@
         <button class="ad-ghost" id="ad-notice-send">ارسال اعلان</button>
       </div>
       <button class="ad-danger wide" id="ad-ban">⛔ بن‌کردن بازیکن</button>
+<section class="bdg-sec" id="ad-badges" aria-labelledby="ad-badges-title">
+  <h3 class="bdg-title" id="ad-badges-title"></h3>
+  <div class="bdg-admin" id="ad-badges-list"></div>
+</section>
       <div class="ad-h">🧾 تاریخچهٔ کیف پول</div>
       <div class="ad-card" id="ad-p-ledger"></div>
     </div>
@@ -4551,6 +4647,13 @@
         <button type="button" id="btn-cl-create" class="cl-createbtn"></button>
         <button type="button" class="cl-xbtn" id="btn-cl-home" aria-label="close"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
       </div>
+<button type="button" class="tn-open" id="btn-tourney">
+  <svg class="tn-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a2 2 0 0 0 2 3M16 6h3a2 2 0 0 1-2 3"/><path d="M12 13v3M9 20h6M9.5 16h5v4h-5z"/></svg>
+  <span>
+    <span class="tn-open-t" id="tn-open-title"></span>
+    <span class="tn-open-s" id="tn-open-sub"></span>
+  </span>
+</button>
       <div class="fr-searchrow hidden" id="cl-searchrow">
         <input id="cl-search-inp" type="text" maxlength="40">
         <button id="btn-cl-search"></button>
@@ -4689,12 +4792,14 @@
       </div>
       <div class="cp-cov" id="cp-cov"></div>
       <div class="cl-name cp-name" id="cp-name"></div>
+      <span class="tn-ribbon hidden" id="cp-ribbon"></span>
       <div class="pf-idrow">
         <span class="pf-label" id="cp-id-lbl">ID</span>
         <button type="button" class="pf-idnum" id="cp-id-num" dir="ltr">…</button>
       </div>
       <div class="cl-sub" id="cp-count"></div>
       <div class="cl-sub hidden" id="cp-vsrecord"></div>
+      <div class="tn-cpts" id="cp-tpts"></div>
       <p class="cl-desc" id="cl-desc"></p>
       <div class="cl-sub" id="cl-created"></div>
       <!-- clubs v7: the settings/edit FORM is deleted — this
@@ -5926,6 +6031,54 @@ const STR = {
     selectedTag: '✓ وټاکل شو',
     suits: { H: 'لال', D: 'خښت', C: 'پشه', S: 'قره' },
     ranks: { A: 'آس', K: 'پاچا', Q: 'ماتکه', J: 'غلام', T: 'لس', '9': 'نهه', '8': 'اته', '7': 'اووه', '6': 'شپږ', '5': 'پنځه', '4': 'څلور', '3': 'درې', '2': 'دوه' },
+    bdgA_clubber: 'د باشګاه غړی',
+    bdgA_firstwin: 'لومړۍ بریا',
+    bdgA_games100: '۱۰۰ لوبې',
+    bdgA_games500: '۵۰۰ لوبې',
+    bdgA_level10: 'درجه ۱۰',
+    bdgA_level5: 'درجه ۵',
+    bdgA_wins10: '۱۰ بریاوې',
+    bdgA_wins100: '۱۰۰ بریاوې',
+    bdgA_wins50: '۵۰ بریاوې',
+    bdgAd_clubber: 'د یوې باشګاه غړی شئ',
+    bdgAd_firstwin: 'لومړۍ لوبه وګټئ',
+    bdgAd_games100: '۱۰۰ لوبې وکړئ',
+    bdgAd_games500: '۵۰۰ لوبې وکړئ',
+    bdgAd_level10: 'درجې ۱۰ ته ورسېږئ',
+    bdgAd_level5: 'درجې ۵ ته ورسېږئ',
+    bdgAd_wins10: '۱۰ لوبې وګټئ',
+    bdgAd_wins100: '۱۰۰ لوبې وګټئ',
+    bdgAd_wins50: '۵۰ لوبې وګټئ',
+    bdgAuto: 'د لوبې نښانونه',
+    bdgErr: 'کړنه ناکامه شوه',
+    bdgGrant: 'ورکول',
+    bdgM_champ: 'اتل',
+    bdgM_helper: 'د لوبې مرستندوی',
+    bdgM_honor: 'افتخاري لوبغاړی',
+    bdgM_star: 'د لوبې ستوری',
+    bdgM_vip: 'ځانګړی غړی',
+    bdgManual: 'ځانګړي نښانونه',
+    bdgMd_champ: 'د ځانګړي قهرمانۍ نښه',
+    bdgMd_helper: 'د نورو لوبغاړو د مرستې لپاره',
+    bdgMd_honor: 'د ادمین لخوا د ځانګړي ویاړ نښه',
+    bdgMd_star: 'د ډېرې ښې لوبې لپاره',
+    bdgMd_vip: 'د ویژه غړیتوب نښه',
+    bdgNone: 'تر اوسه نښه نشته',
+    bdgRevoke: 'لرې کول',
+    bdgSub: 'ځانګړي نښانونه د ادمین لخوا ورکول کېږي؛ د لوبې نښانونه د لاسته راوړنو سره خلاصېږي.',
+    bdgTitle: 'نښانونه',
+    tnClubPts: 'د دې اونۍ امتیازونه',
+    tnEmpty: 'دې اونۍ لا تر اوسه د باشګاهونو ترمنځ هېڅ لوبه نه ده شوې',
+    tnLastChamp: 'د تېرې اونۍ قهرمان',
+    tnMembers: 'غړي',
+    tnNoChamp: 'د تېرې اونۍ قهرمان نشته',
+    tnOpenSub: 'د باشګاهونو ترمنځ سیالي',
+    tnOpenTitle: 'د اونۍ تورنمنت',
+    tnPts: 'امتیازه',
+    tnRibbon: 'د اونۍ قهرمان',
+    tnRule: 'د باشګاه پر باشګاه هره بریا ۳ امتیازه ده. اونۍ د کابل د وخت له مخې شمېرل کېږي.',
+    tnTitle: 'د باشګاهونو اونیزه تورنمنت',
+    tnWeek: 'اونۍ',
     avatars: { av1: 'اصلي', av2: 'حاجي صاحب', av3: 'لنګۍ والا', av4: 'پکول والا', av5: 'کاکا', av6: 'عصري ځوان', av7: 'سپین ږیری', av8: 'دودیزه مېرمن', av9: 'ځوانه انجلۍ', av10: 'بورقه والا', av11: 'تنکی ځوان', av12: 'ملا صاحب' },
   },
   fa: {
@@ -6437,6 +6590,54 @@ const STR = {
     selectedTag: '✓ انتخاب شد',
     suits: { H: 'لال', D: 'خشت', C: 'پشه', S: 'قره' },
     ranks: { A: 'آس', K: 'شاه', Q: 'ماتکه', J: 'غلام', T: 'ده', '9': 'نه', '8': 'هشت', '7': 'هفت', '6': 'شش', '5': 'پنج', '4': 'چهار', '3': 'سه', '2': 'دو' },
+    bdgA_clubber: 'عضو باشگاه',
+    bdgA_firstwin: 'اولین برد',
+    bdgA_games100: '۱۰۰ بازی',
+    bdgA_games500: '۵۰۰ بازی',
+    bdgA_level10: 'سطح ۱۰',
+    bdgA_level5: 'سطح ۵',
+    bdgA_wins10: '۱۰ برد',
+    bdgA_wins100: '۱۰۰ برد',
+    bdgA_wins50: '۵۰ برد',
+    bdgAd_clubber: 'عضو یک باشگاه شوید',
+    bdgAd_firstwin: 'اولین بازی را ببرید',
+    bdgAd_games100: '۱۰۰ بازی انجام دهید',
+    bdgAd_games500: '۵۰۰ بازی انجام دهید',
+    bdgAd_level10: 'به سطح ۱۰ برسید',
+    bdgAd_level5: 'به سطح ۵ برسید',
+    bdgAd_wins10: '۱۰ بازی ببرید',
+    bdgAd_wins100: '۱۰۰ بازی ببرید',
+    bdgAd_wins50: '۵۰ بازی ببرید',
+    bdgAuto: 'نشان‌های بازی',
+    bdgErr: 'عملیات ناموفق بود',
+    bdgGrant: 'اعطا',
+    bdgM_champ: 'قهرمان',
+    bdgM_helper: 'یاور بازی',
+    bdgM_honor: 'بازیکن افتخاری',
+    bdgM_star: 'ستارهٔ بازی',
+    bdgM_vip: 'عضو ویژه',
+    bdgManual: 'نشان‌های ویژه',
+    bdgMd_champ: 'نشان ویژهٔ قهرمانی',
+    bdgMd_helper: 'برای کمک به سایر بازیکنان',
+    bdgMd_honor: 'نشان ویژه افتخار از سوی ادمین',
+    bdgMd_star: 'برای بازی درخشان',
+    bdgMd_vip: 'نشان عضویت ویژه',
+    bdgNone: 'هنوز نشانی ندارید',
+    bdgRevoke: 'حذف',
+    bdgSub: 'نشان‌های ویژه را ادمین می‌دهد؛ نشان‌های بازی با دستاورد باز می‌شوند.',
+    bdgTitle: 'نشان‌ها',
+    tnClubPts: 'امتیاز این هفته',
+    tnEmpty: 'این هفته هنوز بازی‌ای میان باشگاه‌ها ثبت نشده',
+    tnLastChamp: 'قهرمان هفته گذشته',
+    tnMembers: 'عضو',
+    tnNoChamp: 'قهرمان هفته گذشته‌ای وجود ندارد',
+    tnOpenSub: 'رقابت میان باشگاه‌ها',
+    tnOpenTitle: 'تورنمنت هفتگی',
+    tnPts: 'امتیاز',
+    tnRibbon: 'قهرمان هفته',
+    tnRule: 'هر برد باشگاه بر باشگاه ۳ امتیاز دارد. هفته بر اساس وقت کابل حساب می‌شود.',
+    tnTitle: 'تورنمنت هفتگی باشگاه‌ها',
+    tnWeek: 'هفته',
     avatars: { av1: 'پیش‌فرض', av2: 'حاجی صاحب', av3: 'لنگی‌والا', av4: 'پکول‌والا', av5: 'کاکه', av6: 'جوان مدرن', av7: 'ریش‌سفید', av8: 'بانوی سنتی', av9: 'دختر جوان', av10: 'برقعه‌پوش', av11: 'نوجوان', av12: 'ملا صاحب' },
   },
   en: {
@@ -6948,6 +7149,54 @@ const STR = {
     selectedTag: '✓ Selected',
     suits: { H: 'Hearts', D: 'Diamonds', C: 'Clubs', S: 'Spades' },
     ranks: { A: 'Ace', K: 'King', Q: 'Queen', J: 'Jack', T: 'Ten', '9': 'Nine', '8': 'Eight', '7': 'Seven', '6': 'Six', '5': 'Five', '4': 'Four', '3': 'Three', '2': 'Two' },
+    bdgA_clubber: 'Club member',
+    bdgA_firstwin: 'First win',
+    bdgA_games100: '100 matches',
+    bdgA_games500: '500 matches',
+    bdgA_level10: 'Level 10',
+    bdgA_level5: 'Level 5',
+    bdgA_wins10: '10 wins',
+    bdgA_wins100: '100 wins',
+    bdgA_wins50: '50 wins',
+    bdgAd_clubber: 'Join a club',
+    bdgAd_firstwin: 'Win your first match',
+    bdgAd_games100: 'Play 100 matches',
+    bdgAd_games500: 'Play 500 matches',
+    bdgAd_level10: 'Reach level 10',
+    bdgAd_level5: 'Reach level 5',
+    bdgAd_wins10: 'Win 10 matches',
+    bdgAd_wins100: 'Win 100 matches',
+    bdgAd_wins50: 'Win 50 matches',
+    bdgAuto: 'Achievements',
+    bdgErr: 'Action failed',
+    bdgGrant: 'Grant',
+    bdgM_champ: 'Champion',
+    bdgM_helper: 'Game Helper',
+    bdgM_honor: 'Honorary Player',
+    bdgM_star: 'Game Star',
+    bdgM_vip: 'VIP',
+    bdgManual: 'Special',
+    bdgMd_champ: 'A special championship mark',
+    bdgMd_helper: 'For helping other players',
+    bdgMd_honor: 'A special honour from the admin',
+    bdgMd_star: 'For outstanding play',
+    bdgMd_vip: 'Special membership',
+    bdgNone: 'No badges yet',
+    bdgRevoke: 'Revoke',
+    bdgSub: 'Special badges are granted by the admin; achievement badges unlock through play.',
+    bdgTitle: 'Badges',
+    tnClubPts: 'This week\'s points',
+    tnEmpty: 'No club-vs-club matches this week yet',
+    tnLastChamp: 'Last week\'s champion',
+    tnMembers: 'members',
+    tnNoChamp: 'No champion last week',
+    tnOpenSub: 'Club against club',
+    tnOpenTitle: 'Weekly tournament',
+    tnPts: 'pts',
+    tnRibbon: 'Weekly champion',
+    tnRule: 'Each club-vs-club win earns 3 points. The week follows Kabul time.',
+    tnTitle: 'Weekly Club Tournament',
+    tnWeek: 'Week',
     avatars: { av1: 'Default', av2: 'Haji Sahib', av3: 'Turban Man', av4: 'Pakol Man', av5: 'Kaka', av6: 'Modern Youth', av7: 'White Beard', av8: 'Traditional Lady', av9: 'Young Girl', av10: 'Burqa Lady', av11: 'Teenager', av12: 'Mullah Sahib' },
   },
 };
@@ -13149,6 +13398,7 @@ function renderProfileStats() {
   if (c) c.textContent = (clubData && clubData.club && clubData.club.name) || T('pfStatNone');
   const cn = $('#pf-stat-country');
   if (cn) cn.textContent = profile.country ? dispCountry(profile.country) : '';
+  renderProfileBadges();
 }
 // Match شمېرې (played / won / lost) + the weekly leaders ride one
 // social payload: {type:'s-stats'} -> {stats:{p,w,l}, leaders}.
@@ -13168,6 +13418,315 @@ function paintMatchStats() {
   const fill = $('#pf-xp-fill');
   if (fill) fill.style.width = Math.max(0, Math.min(100, ((st.levelXp || 0) / Math.max(1, st.levelNeed || 1)) * 100)) + '%';
 }
+let myBadgesCache = [];   // owner's manual badges (ride s-init + s-stats)
+// ---------- badges (نشان‌ها) ----------
+// AUTO badges are derived here from the stats object + club membership
+// (no server state). MANUAL badges are ids in the player's badges[]
+// list, set by the admin (server: adminBadge).
+const BADGE_ICONS = {
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a2 2 0 0 0 2 3M16 6h3a2 2 0 0 1-2 3"/><path d="M12 13v3M9 20h6M9.5 16h5v4h-5z"/>',
+  star: '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.6l-5.3 2.9 1.2-6L3.4 9.3l6-.7z"/>',
+  crown: '<path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/><path d="M5 19h14"/>',
+  target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>',
+  shield: '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/>',
+  flag: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
+  laurel: '<path d="M6.8 19.6C5 15.6 5.2 10.2 7.8 6.2M17.2 19.6c1.8-4 1.6-9.4-1-13.4"/><path d="M7.6 9.5C6.2 9.3 5 8.5 4.4 7.4M8 13c-1.4-.1-2.7-.8-3.4-1.9M8.9 16.3c-1.4 0-2.8-.6-3.6-1.6M16.4 9.5c1.4-.2 2.6-1 3.2-2.1M16 13c1.4-.1 2.7-.8 3.4-1.9M15.1 16.3c1.4 0 2.8-.6 3.6-1.6"/>',
+  burst: '<path d="M12 2.5l2 3.3 3.8-.9.4 3.8 3.6 1.5-2.1 3.2 2.1 3.2-3.6 1.5-.4 3.8-3.8-.9-2 3.3-2-3.3-3.8.9-.4-3.8-3.6-1.5 2.1-3.2-2.1-3.2 3.6-1.5.4-3.8 3.8.9z"/>',
+  gem: '<path d="M7 4h10l4 5-9 11L3 9z"/><path d="M3 9h18M9 4l-2 5 5 11 5-11-2-5"/>',
+  guard: '<path d="M12 3l6.5 2.6v4.8c0 4-2.7 7-6.5 8.6-3.8-1.6-6.5-4.6-6.5-8.6V5.6z"/><path d="M8 12.5l2.2 2.2c.6.6 1.5.6 2.1 0l1.7-1.7 1.7 1.7"/>'
+};
+// Auto catalogue: id, icon, the stat it reads, and the threshold.
+const BADGE_AUTO = [
+  { id: 'firstwin', icon: 'flag',   metric: 'w',     need: 1 },
+  { id: 'wins10',   icon: 'target', metric: 'w',     need: 10 },
+  { id: 'wins50',   icon: 'star',   metric: 'w',     need: 50 },
+  { id: 'wins100',  icon: 'crown',  metric: 'w',     need: 100 },
+  { id: 'games100', icon: 'shield', metric: 'p',     need: 100 },
+  { id: 'games500', icon: 'trophy', metric: 'p',     need: 500 },
+  { id: 'level5',   icon: 'star',   metric: 'level', need: 5 },
+  { id: 'level10',  icon: 'crown',  metric: 'level', need: 10 },
+  { id: 'clubber',  icon: 'flag',   metric: 'club',  need: 1 }
+];
+// Manual catalogue (mirrors server BADGE_MANUAL_IDS).
+const BADGE_MANUAL = [
+  { id: 'honor',  icon: 'laurel' },
+  { id: 'star',   icon: 'burst' },
+  { id: 'champ',  icon: 'crown' },
+  { id: 'vip',    icon: 'gem' },
+  { id: 'helper', icon: 'guard' }
+];
+function bdgSvg(icon) {
+  return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (BADGE_ICONS[icon] || '') + '</svg>';
+}
+function bdgMetric(metric, st, hasClub) {
+  if (metric === 'club') return hasClub ? 1 : 0;
+  if (metric === 'level') return (st && st.level) || 1;
+  return (st && st[metric]) || 0;
+}
+// Auto badge states from a stats object {p,w,l,level} + club membership.
+function autoBadgeStates(st, hasClub) {
+  return BADGE_AUTO.map((b) => {
+    const cur = bdgMetric(b.metric, st, hasClub);
+    const earned = cur >= b.need;
+    return {
+      id: b.id, icon: b.icon,
+      name: T('bdgA_' + b.id), desc: T('bdgAd_' + b.id),
+      earned, special: false,
+      prog: earned ? '' : (Math.min(cur, b.need) + '/' + b.need)
+    };
+  });
+}
+// Manual badge states from the player's badges[] id list.
+function manualBadgeStates(list) {
+  const have = Array.isArray(list) ? list : [];
+  return BADGE_MANUAL.map((b) => ({
+    id: b.id, icon: b.icon,
+    name: T('bdgM_' + b.id), desc: T('bdgMd_' + b.id),
+    earned: have.indexOf(b.id) !== -1, special: true, prog: ''
+  }));
+}
+// The owner's own manual badges (from the owner init/profile payload).
+function myManualBadges() {
+  return Array.isArray(myBadgesCache) ? myBadgesCache : [];
+}
+// One badge tile (profile grid / player-view row / compact).
+function badgeItemEl(b, opts) {
+  const sm = !!(opts && opts.sm);
+  const el = document.createElement('div');
+  el.className = 'bdg-item' + (b.earned ? '' : ' locked');
+  el.title = b.desc || '';
+  const medal = document.createElement('span');
+  medal.className = 'bdg-medal' + (b.special ? ' special' : '') + (b.earned ? '' : ' locked') + (sm ? ' sm' : '');
+  medal.innerHTML = bdgSvg(b.icon);
+  el.appendChild(medal);
+  const nm = document.createElement('div');
+  nm.className = 'bdg-name';
+  nm.textContent = b.name || '';
+  el.appendChild(nm);
+  if (!b.earned && b.prog) {
+    const pr = document.createElement('span');
+    pr.className = 'bdg-prog';
+    pr.textContent = b.prog;
+    el.appendChild(pr);
+  }
+  return el;
+}
+// PROFILE (own): manual first (special gold ring), then auto grid.
+function renderProfileBadges() {
+  if (!$('#pf-badges')) return;
+  const setTxt = (sel, txt) => { const el = $(sel); if (el) el.textContent = txt; };
+  setTxt('#pf-badges-title', T('bdgTitle'));
+  setTxt('#pf-badges-sub', T('bdgSub'));
+  setTxt('#pf-badges-manual-h', T('bdgManual'));
+  setTxt('#pf-badges-auto-h', T('bdgAuto'));
+  const manual = $('#pf-badges-manual');
+  const auto = $('#pf-badges-auto');
+  if (manual) {
+    manual.innerHTML = '';
+    manual.className = 'bdg-grid';
+    manualBadgeStates(myManualBadges()).forEach((b) => manual.appendChild(badgeItemEl(b)));
+  }
+  if (auto) {
+    auto.innerHTML = '';
+    auto.className = 'bdg-grid';
+    const st = (statsCache && statsCache.stats) || null;
+    const hasClub = !!(clubData && clubData.club && clubData.club.name);
+    autoBadgeStates(st, hasClub).forEach((b) => auto.appendChild(badgeItemEl(b)));
+  }
+}
+// PLAYER VIEW: compact row, EARNED only. `person` = person payload,
+// `stats` = {p,w,l} when the payload carries it (else person.stats).
+function renderPviewBadges(person, stats) {
+  const row = $('#pv-badges-row');
+  if (!row) return;
+  const h = $('#pv-badges-h');
+  if (h) h.textContent = T('bdgTitle');
+  row.innerHTML = '';
+  const p = person || {};
+  const st = Object.assign({}, stats || p.stats || {}, { level: p.level || 1 });
+  const earned = manualBadgeStates(p.badges).concat(autoBadgeStates(st, !!p.club))
+    .filter((b) => b.earned);
+  if (!earned.length) {
+    const e = document.createElement('div');
+    e.className = 'bdg-empty';
+    e.textContent = T('bdgNone');
+    row.appendChild(e);
+    return;
+  }
+  earned.forEach((b) => row.appendChild(badgeItemEl(b, { sm: true })));
+}
+// ADMIN detail: one row per manual badge with a grant/revoke button.
+function renderAdetailBadges(p) {
+  const box = $('#ad-badges-list');
+  if (!box) return;
+  const t = $('#ad-badges-title');
+  if (t) t.textContent = T('bdgTitle');
+  box.innerHTML = '';
+  const have = (p && Array.isArray(p.badges)) ? p.badges : [];
+  BADGE_MANUAL.forEach((b) => {
+    const on = have.indexOf(b.id) !== -1;
+    const row = document.createElement('div');
+    row.className = 'bdg-admrow';
+    const medal = document.createElement('span');
+    medal.className = 'bdg-medal special' + (on ? '' : ' locked');
+    medal.innerHTML = bdgSvg(b.icon);
+    const nm = document.createElement('div');
+    nm.className = 'bdg-nm';
+    nm.textContent = T('bdgM_' + b.id);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'bdg-btn' + (on ? ' revoke' : '');
+    btn.textContent = on ? T('bdgRevoke') : T('bdgGrant');
+    btn.onclick = () => admToggleBadge(p, b.id, on ? 'revoke' : 'grant');
+    row.appendChild(medal);
+    row.appendChild(nm);
+    row.appendChild(btn);
+    box.appendChild(row);
+  });
+  const msg = document.createElement('div');
+  msg.className = 'bdg-msg';
+  msg.id = 'ad-badges-msg';
+  box.appendChild(msg);
+}
+// Grant/revoke one manual badge via the gated Worker route, then repaint.
+async function admToggleBadge(p, badge, op) {
+  if (!p || !p.uid) return;
+  const msg = $('#ad-badges-msg');
+  if (msg) msg.textContent = '';
+  const res = await admApi('/admin/badge', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uid: p.uid, badge: badge, op: op })
+  });
+  if (!res.ok || !res.j || !res.j.ok) {
+    renderAdetailBadges(p);
+    const m2 = $('#ad-badges-msg');
+    if (m2) m2.textContent = T('bdgErr');
+    return;
+  }
+  p.badges = Array.isArray(res.j.badges) ? res.j.badges : [];
+  renderAdetailBadges(p);
+}
+
+// ---------- weekly club tournament (تورنمنت هفتگی باشگاه‌ها) ----------
+let tourneyCache = null;   // last s-tourney reply: { week, rows, champ, myCid }
+function tnSvgCrown() {
+  return '<svg class="tn-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/><path d="M5 19h14"/></svg>';
+}
+// Club emblem: reuse the game's emblem renderer when present.
+function tnEmblemEl(emblem, name) {
+  if (typeof clEmblemEl === 'function') return clEmblemEl(emblem, 34);
+  const s = document.createElement('span');
+  s.className = 'tn-em';
+  s.textContent = (name || '?').charAt(0);
+  return s;
+}
+function requestTourney() {
+  connectSocial();
+  socialSend({ type: 's-tourney' });
+}
+function openTourney() {
+  $('#scr-clubs').classList.add('hidden');
+  $('#scr-tourney').classList.remove('hidden');
+  renderTourney();
+  requestTourney();
+}
+function closeTourney() {
+  $('#scr-tourney').classList.add('hidden');
+  openClubs();
+}
+function renderTourney() {
+  const t = tourneyCache || { week: '', rows: [], champ: null, myCid: null };
+  const setTxt = (sel, txt) => { const el = $(sel); if (el) el.textContent = txt; };
+  setTxt('#tn-title', T('tnTitle'));
+  setTxt('#tn-week', t.week ? T('tnWeek') + ': ' + t.week : '');
+  setTxt('#tn-rule', T('tnRule'));
+  // last week's champion banner
+  const champ = $('#tn-champ');
+  if (champ) {
+    champ.innerHTML = '';
+    if (t.champ) {
+      const ic = document.createElement('span');
+      ic.className = 'tn-crown';
+      ic.innerHTML = tnSvgCrown();
+      const meta = document.createElement('div');
+      const l = document.createElement('div');
+      l.className = 'tn-champ-l';
+      l.textContent = T('tnLastChamp');
+      const nm = document.createElement('div');
+      nm.className = 'tn-champ-n';
+      nm.textContent = t.champ.name || '';
+      const pt = document.createElement('div');
+      pt.className = 'tn-champ-p';
+      pt.textContent = String(t.champ.pts || 0) + ' ' + T('tnPts');
+      meta.appendChild(l);
+      meta.appendChild(nm);
+      meta.appendChild(pt);
+      champ.appendChild(ic);
+      champ.appendChild(meta);
+    } else {
+      const none = document.createElement('div');
+      none.className = 'tn-champ-none';
+      none.textContent = T('tnNoChamp');
+      champ.appendChild(none);
+    }
+  }
+  // this week's standings
+  const list = $('#tn-list');
+  if (!list) return;
+  list.innerHTML = '';
+  const rows = Array.isArray(t.rows) ? t.rows : [];
+  if (!rows.length) { list.appendChild(frEmpty(T('tnEmpty'), true)); return; }
+  rows.forEach((r, i) => {
+    const row = document.createElement('div');
+    row.className = 'tn-row' + (t.myCid && r.cid === t.myCid ? ' me' : '');
+    const rank = document.createElement('span');
+    rank.className = 'tn-rank';
+    rank.textContent = String(i + 1);
+    const meta = document.createElement('div');
+    meta.className = 'tn-meta';
+    const nm = document.createElement('div');
+    nm.className = 'fr-name';
+    nm.textContent = r.name || '';
+    const sub = document.createElement('div');
+    sub.className = 'tn-sub';
+    sub.textContent = String(r.members || 0) + ' ' + T('tnMembers');
+    meta.appendChild(nm);
+    meta.appendChild(sub);
+    const pts = document.createElement('span');
+    pts.className = 'tn-pts';
+    pts.textContent = String(r.pts || 0) + ' ' + T('tnPts');
+    row.appendChild(rank);
+    row.appendChild(tnEmblemEl(r.emblem, r.name));
+    row.appendChild(meta);
+    row.appendChild(pts);
+    list.appendChild(row);
+  });
+}
+// Clubs-screen entry labels (called from renderClubs, see K8).
+function renderTourneyEntry() {
+  const a = $('#tn-open-title');
+  if (a) a.textContent = T('tnOpenTitle');
+  const b = $('#tn-open-sub');
+  if (b) b.textContent = T('tnOpenSub');
+}
+// Club page: gold «قهرمان هفته» ribbon for the reigning champion, plus
+// this week's points. `club` = clubData.club (clubSummary fields).
+function paintClubTourney(club) {
+  const rib = $('#cp-ribbon');
+  if (rib) {
+    rib.innerHTML = tnSvgCrown() + '<span>' + T('tnRibbon') + '</span>';
+    rib.classList.toggle('hidden', !(club && club.champ));
+  }
+  const pts = $('#cp-tpts');
+  if (pts) pts.textContent = club ? (T('tnClubPts') + ': ' + String(club.tpts || 0)) : '';
+}
+// Button wiring (the DOM exists by the time this script runs, like #btn-admin).
+const tnOpenBtn = $('#btn-tourney');
+if (tnOpenBtn) tnOpenBtn.onclick = () => openTourney();
+const tnBackBtn = $('#tn-back');
+if (tnBackBtn) tnBackBtn.onclick = () => closeTourney();
+
 // ---------- weekly leaders (د اونۍ غوره لوبغاړي) ----------
 function openLeaders() {
   $('#scr-profile').classList.add('hidden');
@@ -13607,6 +14166,7 @@ async function openAdetail(uid) {
       row.appendChild(end); lb.appendChild(row);
     });
   } else lb.innerHTML = '<div class="fr-empty">تراکنشی ثبت نشده</div>';
+  renderAdetailBadges(ADM.player);
 }
 $('#btn-adetail-back').onclick = () => { $('#scr-adetail').classList.add('hidden'); $('#scr-admin').classList.remove('hidden'); admGo(ADM.tab); };
 function admSetCur(c) { ADM.cur = c; $('#ad-cur-coins').classList.toggle('sel', c === 'coins'); $('#ad-cur-gems').classList.toggle('sel', c === 'gems'); }
@@ -14028,6 +14588,7 @@ function onSocialMsg(m) {
     setToreSetting('invisible', false);
     renderMyId();
     if (m.wallet) setWallet(m.wallet); // up47: the wallet rides s-init
+    if (Array.isArray(m.badges)) myBadgesCache = m.badges; // up141: manual badges ride s-init
     if (m.event !== undefined) setSocialEvent(m.event); // feat3: seasonal event state
     if (m.refs) setRefs(m.refs); // feat3: referral totals
     if (m.notifs) { notifList = m.notifs; notifUnread = m.notifUnread || 0; paintNotifBadge(); } // feat5: the inbox rides s-init
@@ -14066,8 +14627,14 @@ function onSocialMsg(m) {
     if (dmPeer && dmPeer.id === m.id) paintDmPeer();
   } else if (m.type === 's-stats') {
     statsCache = { stats: m.stats || null, leaders: m.leaders || [] };
+    if (Array.isArray(m.badges)) myBadgesCache = m.badges; // up141
     paintMatchStats();
     renderLeaders();
+    renderProfileBadges();
+  } else if (m.type === 's-tourney') {
+    tourneyCache = m;
+    renderTourney();
+    renderTourneyEntry();
   } else if (m.type === 's-watch-state') {
     if (m.code) spectateGame(m.code);
   } else if (m.type === 's-notif') {
@@ -15061,6 +15628,7 @@ function renderPview(d) {
     closePlayerProfile(); // restores the origin screen first — requestWatch reads it for spectateReturn
     requestWatch(target);
   } : null;
+  renderPviewBadges(d);
 }
 function renderPviewFriendBtn() {
   const btn = $('#btn-pv2-friend');
@@ -16567,6 +17135,7 @@ function renderClubPage() {
   $('#cp-name').textContent = c.name || '';
   $('#cp-id-num').textContent = c.cid;
   $('#cp-count').textContent = T('clMemberCount', c.count);
+  paintClubTourney(c);
   const vsRec = (c.clubSummary && c.clubSummary.vsRecord) || c.vsRecord || null;
   let vsW = 0, vsL = 0;
   if (vsRec) Object.keys(vsRec).forEach((k) => { vsW += (vsRec[k] && vsRec[k].w) || 0; vsL += (vsRec[k] && vsRec[k].l) || 0; });
@@ -16730,6 +17299,7 @@ function renderClubs() {
   $('#cl-podium-title').textContent = T('clTopClubs');
   $('#cl-search-title').textContent = T('clSearchTitle');
   $('#btn-cl-search').textContent = T('clSearchBtn');
+  renderTourneyEntry();
   $('#cl-search-inp').placeholder = T('clSearchPh');
   $('#cl-members-title').textContent = T('clMembers');
   $('#cl-chat-title').textContent = T('clChatTitle');
