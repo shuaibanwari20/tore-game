@@ -372,6 +372,24 @@ function kabulWeekKey(ts) {
   const week = 1 + Math.round((date - first) / (7 * 24 * 3600 * 1000));
   return isoYear + '-W' + String(week).padStart(2, '0');
 }
+// up141: the previous Kabul week is the week key of the instant seven days
+// earlier (Kabul is a fixed +04:30, no DST). Keys are zero-padded
+// 'YYYY-Www', so string order is time order.
+function tourneyPrevWeek(now) {
+  return kabulWeekKey((typeof now === 'number' ? now : Date.now()) - 7 * 24 * 3600 * 1000);
+}
+// A club's tournament week map, tolerant of legacy clubs without the field.
+function tourneyMapOf(club) {
+  if (!club.tourney || typeof club.tourney !== 'object' || Array.isArray(club.tourney)) club.tourney = {};
+  return club.tourney;
+}
+// Read-only points for one week (never creates the map).
+function tourneyPtsOf(club, week) {
+  const m = club && club.tourney;
+  if (!m || typeof m !== 'object' || Array.isArray(m)) return 0;
+  const v = m[week];
+  return (typeof v === 'number' && v > 0) ? v : 0;
+}
 
 // ============================================================ WALLET
 // Money system (up47, phases 1+2 — owner-approved plan, modelled
@@ -436,6 +454,14 @@ const WALLET_CHEST_COINS = 50;        // سکه per free chest
 const WALLET_CHEST_MS = 4 * 3600 * 1000; // chest cooldown: 4 hours
 const WALLET_LEDGER_CAP = 100;        // newest entries kept per wallet
 const ADMIN_GRANT_CAP = { coins: 1000000, gems: 100000 }; // up111: per-grant caps for the owner's admin panel
+// up141: manual (admin-granted) badge catalogue. These ids are the storage
+// and wire keys; the client holds the matching names/icons/descriptions.
+const BADGE_MANUAL_IDS = Object.freeze(['honor', 'star', 'champ', 'vip', 'helper']);
+const BADGE_OPS = Object.freeze(['grant', 'revoke']);
+// up141: weekly club tournament — a club-vs-club win earns the winner club
+// this many points for the current Kabul week.
+const TOURNEY_WIN_PTS = 3;
+const TOURNEY_TOP = 10;
 const ADMIN_GRANTS_KEEP = 200;        // up111: admin audit-log entries kept
 const ADMIN_LOG_KEEP = 200;           // up112: unified admin action log entries kept
 const STAKE_TIERS = [0, 100, 500, 1000, 5000]; // validated by the hosts too
@@ -618,6 +644,7 @@ class SocialCore {
     // adminGrant(), read by the Worker /admin/grants route. Rides
     // serialize()/load() with the wallet state.
     this.adminGrants = [];
+    this.tourneyChamp = null;   // up141: { week, cid, name, pts } — champion of the last COMPLETED Kabul week
     // up112: the unified admin action log (grants, bans, notices,
     // broadcasts — newest first) for the separate admin panel.
     this.adminLog = [];
@@ -652,6 +679,7 @@ class SocialCore {
       escrows: Object.fromEntries(this.escrows),
       adminGrants: this.adminGrants,
       adminLog: this.adminLog,
+      tourneyChamp: this.tourneyChamp,
       referrals: Object.fromEntries(this.referrals),
       notifs: Object.fromEntries(this.notifs),
       pushSubs: Object.fromEntries(this.pushSubs),
@@ -693,6 +721,9 @@ class SocialCore {
     this.adminLog = Array.isArray(data.adminLog)
       ? data.adminLog.filter((g) => g && typeof g === 'object') : [];
     if (this.adminLog.length > ADMIN_LOG_KEEP) this.adminLog.length = ADMIN_LOG_KEEP;
+    // up141: last completed week's club-tournament champion (older
+    // snapshots carry none).
+    this.tourneyChamp = (data.tourneyChamp && typeof data.tourneyChamp === 'object') ? data.tourneyChamp : null;
     for (const e of this.escrows.values()) {
       if (!e || typeof e !== 'object') continue;
       if (!Array.isArray(e.stakes)) e.stakes = [];
@@ -742,6 +773,7 @@ class SocialCore {
     // defaults in place so every reader can trust the shape.
     for (const c of this.clubs.values()) {
       if (!c || typeof c !== 'object') continue;
+      if (!c.tourney || typeof c.tourney !== 'object' || Array.isArray(c.tourney)) c.tourney = {}; // up141
       if (c.cover !== CLUB_COVER_CUSTOM && !CLUB_COVERS.includes(c.cover)) c.cover = 'mountains';
       if (typeof c.coverV !== 'number' || !(c.coverV >= 0)) c.coverV = 0;
       if (typeof c.country !== 'string') c.country = '';
@@ -937,8 +969,8 @@ class SocialCore {
   }
   person(id) {
     const r = this.directory.get(id);
-    if (!r) return { id, name: '', avatar: 'av1', photo: '', country: '', uid: null, online: this.isOnline(id), ingame: this.isInGame(id), inlobby: this.isInLobby(id), dnd: false, frame: '', chatStyle: '', level: 1 };
-    return { id: r.id, name: r.name, avatar: r.avatar, photo: r.photo, country: r.country, uid: r.uid ? String(r.uid) : null, online: this.isOnline(id), ingame: this.isInGame(id), inlobby: this.isInLobby(id), dnd: !!r.dnd, frame: r.frame || '', chatStyle: r.chatStyle || '', level: levelOf((this.stats.get(id) || {}).xp || 0) };
+    if (!r) return { id, name: '', avatar: 'av1', photo: '', country: '', uid: null, online: this.isOnline(id), ingame: this.isInGame(id), inlobby: this.isInLobby(id), dnd: false, frame: '', chatStyle: '', level: 1, badges: [] };
+    return { id: r.id, name: r.name, avatar: r.avatar, photo: r.photo, country: r.country, uid: r.uid ? String(r.uid) : null, online: this.isOnline(id), ingame: this.isInGame(id), inlobby: this.isInLobby(id), dnd: !!r.dnd, frame: r.frame || '', chatStyle: r.chatStyle || '', level: levelOf((this.stats.get(id) || {}).xp || 0), badges: this.badgesOf(id) };
   }
   // F46: person() as seen BY a specific viewer. When the subject
   // runs invisible mode and the viewer is someone else, the
@@ -1051,7 +1083,7 @@ class SocialCore {
     }
   }
   statsReply(id) {
-    this._send(id, { type: 's-stats', stats: this.statsOf(id), leaders: this.weeklyLeaders(10) });
+    this._send(id, { type: 's-stats', stats: this.statsOf(id), leaders: this.weeklyLeaders(10), badges: this.badgesOf(id) });
   }
 
   // ---------- wallet (up47 — see the WALLET banner) ----------
@@ -1300,6 +1332,7 @@ class SocialCore {
     const rec = this.directory.get(id);
     return {
       uid: String(uid), name: p.name, level: st.level, xp: st.xp,
+      badges: this.badgesOf(id), // up141: manual badges (admin detail grant/revoke UI)
       coins: w ? w.coins : null, gems: w ? w.gems : null,
       // up112: the separate panel's full player view.
       avatar: p.avatar, photo: p.photo, country: p.country,
@@ -1363,6 +1396,42 @@ class SocialCore {
   adminGrantsList(limit) {
     const n = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 50) : 20;
     return this.adminGrants.slice(0, n);
+  }
+
+  // ---------- manual badges (up141, admin-granted) ----------
+  // Storage: the player's DIRECTORY record gains `badges: []` (it persists
+  // with the social state like every directory field). Legacy records have
+  // no such field, so every reader goes through badgesOf(). Ids are checked
+  // against BADGE_MANUAL_IDS on write AND on read, so a stale or unknown id
+  // in storage can never reach a client.
+  badgesOf(id) {
+    const r = this.directory.get(id);
+    if (!r || !Array.isArray(r.badges)) return [];
+    return r.badges.filter((b) => BADGE_MANUAL_IDS.includes(b));
+  }
+  // Admin-only (reached through the DO internal action 'badge', which the
+  // Worker only calls after the /admin/* email gate). Mirrors adminGrant:
+  // same uid lookup, same unified audit log, same persist, and the target
+  // gets a fresh stats push (which now carries their badge list).
+  adminBadge(admin, uid, badgeId, op) {
+    if (!BADGE_OPS.includes(op)) return { ok: false, error: 'badop' };
+    if (!BADGE_MANUAL_IDS.includes(badgeId)) return { ok: false, error: 'badbadge' };
+    const id = this._idByUid(typeof uid === 'string' ? uid : String(uid || ''));
+    if (!id) return { ok: false, error: 'notfound' };
+    const r = this.directory.get(id);
+    let list = this.badgesOf(id);
+    if (op === 'grant') {
+      if (!list.includes(badgeId)) list = [...list, badgeId];   // no duplicates
+    } else {
+      list = list.filter((b) => b !== badgeId);
+    }
+    r.badges = list;
+    this._adminLog(admin, 'badge', { target: id, uid: String(uid), name: this.person(id).name, badge: badgeId, op });
+    this._persist();
+    if (this.isOnline(id)) this.statsReply(id);
+    const cid = this.clubOf.get(id);
+    if (cid) this.fanClub(cid);
+    return { ok: true, target: id, uid: String(uid), badge: badgeId, op, badges: list.slice() };
   }
 
   // ---------- admin panel (up112) ----------
@@ -1600,6 +1669,9 @@ class SocialCore {
       // up112: the admin ban flag survives re-hello the same way
       // (set ONLY from the admin panel, never by hello).
       banned: !!(prev && prev.banned),
+      // up141: manual (admin-granted) badges survive re-hello the same
+      // way (set ONLY from the admin panel, never by hello).
+      badges: (prev && Array.isArray(prev.badges)) ? prev.badges.filter((b) => BADGE_MANUAL_IDS.includes(b)) : [],
       photoV: (prev && typeof prev.photoV === 'number' && prev.photoV > 0) ? prev.photoV : 0,
       lastSeen: Date.now(),
     });
@@ -1618,7 +1690,7 @@ class SocialCore {
     // included) and its state rides s-init, so the home balance
     // pills paint with the very first social frame.
     this._wallet(id, true);
-    this._send(id, { type: 's-init', me: id, uid: uid || null, dnd: !!(prev && prev.dnd), invisible: !!(prev && prev.invisible), ...this.listsFor(id), stats: this.statsOf(id), leaders: this.weeklyLeaders(10), wallet: this.walletState(id), event: this.eventState(), refs: this.referralStats(id), notifs: this.notifsFor(id), notifUnread: this.notifUnread(id) });
+    this._send(id, { type: 's-init', me: id, uid: uid || null, dnd: !!(prev && prev.dnd), invisible: !!(prev && prev.invisible), ...this.listsFor(id), stats: this.statsOf(id), leaders: this.weeklyLeaders(10), wallet: this.walletState(id), event: this.eventState(), refs: this.referralStats(id), notifs: this.notifsFor(id), notifUnread: this.notifUnread(id), badges: this.badgesOf(id) });
     this.refreshClub(id, true); // the clubs state rides right behind the init
   }
 
@@ -1695,6 +1767,7 @@ class SocialCore {
       case 's-dnd': return this.setDnd(id, msg.on);
       case 's-invisible': return this.setInvisible(id, msg.on);
       case 's-stats': return this.statsReply(id);
+      case 's-tourney': return this.tourneyReply(id);
       case 's-wallet': return this.walletSend(id);
       case 's-wallet-bonus': return this.walletClaimBonus(id);
       case 's-wallet-chest': return this.walletClaimChest(id);
@@ -2119,6 +2192,9 @@ class SocialCore {
           l: (v && typeof v.l === 'number') ? v.l : 0,
         }]))
         : {},
+      // up141: weekly tournament — this week's points + reigning-champion flag.
+      tpts: this._tourneyPtsNow(club),
+      champ: this._champCidAt(Date.now()) === club.cid,
       count: club.members.length, created: club.created, relation,
     };
   }
@@ -2256,6 +2332,7 @@ class SocialCore {
       announcement: '',
       poll: null,
       vsRecord: {},
+      tourney: {},
       owner: id, created: Date.now(),
       members: [{ id, role: 'owner', ts: Date.now() }],
     };
@@ -3101,6 +3178,9 @@ class SocialCore {
     const clubA = this.clubs.get(cidA);
     const clubB = this.clubs.get(cidB);
     if (!clubA || !clubB) return;
+    // up141: settle last week's tournament champion BEFORE this result
+    // is written (lazy rollover; a no-op once the week is settled).
+    this._tourneyRollover(Date.now());
     const bump = (club, otherCid, won) => {
       if (!club.vsRecord || typeof club.vsRecord !== 'object' || Array.isArray(club.vsRecord)) club.vsRecord = {};
       const cur = club.vsRecord[otherCid];
@@ -3113,9 +3193,86 @@ class SocialCore {
     };
     bump(clubA, cidB, winnerCid === cidA);
     bump(clubB, cidA, winnerCid === cidB);
+    // up141: tournament — the WINNER club gains this week's points.
+    this._tourneyAdd(winnerCid === cidA ? clubA : clubB, kabulWeekKey(Date.now()), TOURNEY_WIN_PTS);
     this._persistClubs();
     this.fanClub(cidA);
     this.fanClub(cidB);
+  }
+
+  // ---------- weekly club tournament (up141) ----------
+  // Points live on each club (tourney[weekKey]); the champion of the most
+  // recently COMPLETED week lives on the core as tourneyChamp. Rollover is
+  // lazy: the first vs-result write or standings read in a new week settles
+  // it, exactly once per week.
+  _tourneyAdd(club, week, pts) {
+    const m = tourneyMapOf(club);
+    m[week] = (typeof m[week] === 'number' ? m[week] : 0) + pts;
+  }
+  // Pure: the top club of one week (points > 0), or null.
+  // Ties → more members first, then lower cid (deterministic).
+  _tourneyTop(week) {
+    let best = null;
+    for (const club of this.clubs.values()) {
+      const pts = tourneyPtsOf(club, week);
+      if (!(pts > 0)) continue;
+      const members = club.members.length;
+      const better = !best
+        || pts > best.pts
+        || (pts === best.pts && members > best.members)
+        || (pts === best.pts && members === best.members && club.cid < best.cid);
+      if (better) best = { cid: club.cid, name: club.name, pts, members };
+    }
+    return best;
+  }
+  // Mutating. Settles the previous week's champion once per week, then
+  // prunes club week maps to {previous, current} so storage stays bounded.
+  _tourneyRollover(now) {
+    const prev = tourneyPrevWeek(now);
+    if (this.tourneyChamp && this.tourneyChamp.week === prev) return;
+    const top = this._tourneyTop(prev);
+    this.tourneyChamp = top
+      ? { week: prev, cid: top.cid, name: top.name, pts: top.pts }
+      : { week: prev, cid: '', name: '', pts: 0 };   // a quiet week: no champion
+    const cur = kabulWeekKey(now);
+    for (const club of this.clubs.values()) {
+      if (!club.tourney || typeof club.tourney !== 'object') continue;
+      for (const k of Object.keys(club.tourney)) {
+        if (k !== prev && k !== cur) delete club.tourney[k];
+      }
+    }
+    this._persist();
+    this._persistClubs();
+  }
+  // Read-only champion cid for summaries: clubSummary must never mutate,
+  // so this answers from the stored champ or computes it without storing.
+  _champCidAt(now) {
+    const prev = tourneyPrevWeek(now);
+    if (this.tourneyChamp && this.tourneyChamp.week === prev) return this.tourneyChamp.cid || '';
+    const top = this._tourneyTop(prev);
+    return top ? top.cid : '';
+  }
+  _tourneyPtsNow(club) {
+    return tourneyPtsOf(club, kabulWeekKey(Date.now()));
+  }
+  // {type:'s-tourney'}: this week's top clubs, the reigning champion of
+  // last week, and the viewer's own club id.
+  tourneyReply(id) {
+    const now = Date.now();
+    this._tourneyRollover(now);
+    const week = kabulWeekKey(now);
+    const rows = [];
+    for (const club of this.clubs.values()) {
+      const pts = tourneyPtsOf(club, week);
+      if (pts > 0) rows.push({ cid: club.cid, name: club.name, emblem: club.emblem, pts, members: club.members.length });
+    }
+    rows.sort((a, b) => (b.pts - a.pts)
+      || (b.members - a.members)
+      || (a.cid < b.cid ? -1 : (a.cid > b.cid ? 1 : 0)));
+    const c = this.tourneyChamp;
+    const champ = (c && c.cid) ? { cid: c.cid, name: c.name, pts: c.pts } : null;
+    const myCid = this.clubOf.get(id) || null;
+    this._send(id, { type: 's-tourney', week, rows: rows.slice(0, TOURNEY_TOP), champ, myCid });
   }
 
   // ---------- club voice room (runtime only) ----------
